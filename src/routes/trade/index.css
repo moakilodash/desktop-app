@@ -1,0 +1,7 @@
+body {
+  background-image: url('/bg-green.png'), url('/bg-blue.png');
+  background-repeat: no-repeat, no-repeat;
+  background-position:
+    20% 200px,
+    90% top;
+}

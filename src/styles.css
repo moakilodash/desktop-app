@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  font-family: Mulish, sans-serif;
+}
+
+body {
+  background: theme('colors.background');
+  color: theme('colors.white');
+}

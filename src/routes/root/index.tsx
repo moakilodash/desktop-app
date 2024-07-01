@@ -1,0 +1,36 @@
+import { useEffect } from 'react'
+import { Outlet, useNavigate } from 'react-router-dom'
+
+import { INIT_PATH, TRADE_PATH } from '../../app/router/paths'
+import { Layout } from '../../components/Layout'
+import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
+
+export const RootRoute = () => {
+  const navigate = useNavigate()
+  const [nodeInfo, nodeInfoResponse] = nodeApi.endpoints.nodeInfo.useLazyQuery()
+
+  useEffect(() => {
+    async function run() {
+      const nodeInfoResponse = await nodeInfo()
+
+      if (nodeInfoResponse.isError) {
+        navigate(INIT_PATH)
+      } else {
+        navigate(TRADE_PATH)
+      }
+    }
+    run()
+  }, [navigate, nodeInfo])
+
+  return (
+    <Layout>
+      {nodeInfoResponse.isSuccess ? <Outlet /> : null}
+
+      {nodeInfoResponse.isError ? (
+        <div className="text-center text-xl">
+          The node is not running. Please try restarting the app.
+        </div>
+      ) : null}
+    </Layout>
+  )
+}
