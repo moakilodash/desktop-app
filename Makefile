@@ -9,23 +9,23 @@ REPO_URL = https://github.com/RGB-Tools/rgb-lightning-node
 PROJECT_DIR = $(ROOT_DIR)/$(PROJECT_NAME)
 BIN_DIR = $(ROOT_DIR)/bin
 
-all: check_cargo debug
+all: check_dependencies check_cargo_env debug
 
 clone_repo:
 	@if [ ! -d "$(PROJECT_NAME)" ]; then \
 		git clone $(REPO_URL) --recurse-submodules --shallow-submodules; \
 	fi
 
-release: check_cargo clone_repo
+release: check_dependencies check_cargo_env clone_repo
 	cd $(PROJECT_DIR) && $(CARGO) build --release --manifest-path $(PROJECT_DIR)/Cargo.toml
 	@mkdir -p $(BIN_DIR)
-	@mv $(BUILD_DIR)/release/$(PROJECT_NAME) $(BIN_DIR)/
+	@cp $(TARGET) $(BIN_DIR)/
 	@rm -rf $(PROJECT_DIR)
 
-debug: check_cargo clone_repo
+debug: check_dependencies check_cargo_env clone_repo
 	cd $(PROJECT_DIR) && $(CARGO) build --manifest-path $(PROJECT_DIR)/Cargo.toml
 	@mkdir -p $(BIN_DIR)
-	@mv $(BUILD_DIR)/debug/$(PROJECT_NAME) $(BIN_DIR)/
+	@cp $(BUILD_DIR)/debug/$(PROJECT_NAME) $(BIN_DIR)/
 	@rm -rf $(PROJECT_DIR)
 
 build: debug
@@ -41,30 +41,66 @@ clean:
 	@rm -rf $(PROJECT_DIR)
 	@rm -rf $(BIN_DIR)
 
-test: check_cargo clone_repo
+test: check_dependencies check_cargo_env clone_repo
 	cd $(PROJECT_DIR) && $(CARGO) test --manifest-path $(PROJECT_DIR)/Cargo.toml
 	@rm -rf $(BUILD_DIR)
 	@rm -rf $(PROJECT_DIR)
 
 check_cargo:
 	@command -v cargo >/dev/null 2>&1 || { \
-		echo >&2 "Cargo is not installed. Installing..."; \
-		curl https://sh.rustup.rs -sSf | sh -s -- -y; \
-		if [ -n "$$ZSH_VERSION" ]; then \
-			echo "source $$HOME/.cargo/env" >> $$HOME/.zshrc; \
-			source $$HOME/.zshrc; \
-		elif [ -n "$$BASH_VERSION" ]; then \
-			echo "source $$HOME/.cargo/env" >> $$HOME/.bashrc; \
-			source $$HOME/.bashrc; \
-		else \
-			source $$HOME/.cargo/env; \
-		fi; \
+		echo >&2 "Cargo is not installed."; \
+		echo >&2 "Please install Cargo by following these steps:"; \
+		echo >&2 "1. Download and install rustup: https://rustup.rs/"; \
+		echo >&2 "2. After installation, run 'source $$HOME/.cargo/env' to configure your shell."; \
+		exit 1; \
 	}
+
+check_cargo_env: check_cargo
+	@command -v cargo >/dev/null 2>&1 || { \
+		echo "source $$HOME/.cargo/env" >> $$HOME/.bashrc && \
+		source $$HOME/.cargo/env; \
+	}
+
+check_curl:
+	@command -v curl >/dev/null 2>&1 || { \
+		echo >&2 "Error: 'curl' is not installed. Please install 'curl' and try again."; \
+		exit 1; \
+	}
+
+check_openssl:
+	@command -v pkg-config >/dev/null 2>&1 || { \
+		echo >&2 "pkg-config is not installed."; \
+		echo >&2 "Please install pkg-config by running:"; \
+		echo >&2 "sudo apt-get install -y pkg-config"; \
+		exit 1; \
+	}
+	@pkg-config --exists openssl || { \
+		echo >&2 "OpenSSL development libraries are not installed."; \
+		echo >&2 "Please install OpenSSL development libraries by running:"; \
+		echo >&2 "sudo apt-get install -y libssl-dev"; \
+		exit 1; \
+	}
+
+check_dependencies: check_curl check_openssl
+	@if [ "$(OS)" = "Darwin" ]; then \
+		command -v cc >/dev/null 2>&1 || { \
+			echo >&2 "Compiler 'cc' not found. Installing Xcode command line tools..."; \
+			xcode-select --install; \
+		}; \
+	elif [ "$(OS)" = "Linux" ]; then \
+		command -v cc >/dev/null 2>&1 || { \
+			echo >&2 "Compiler 'cc' not found. Installing gcc..."; \
+			sudo apt-get update && sudo apt-get install -y build-essential; \
+		}; \
+	else \
+		echo >&2 "Unsupported OS. Please install gcc or clang manually."; \
+		exit 1; \
+	fi
 
 help:
 	@echo "Makefile for the Rust project"
 	@echo "Available commands:"
-	@echo "  make all         - Clone, check cargo and build the project in debug mode (default)"
+	@echo "  make all         - Clone, check dependencies, check cargo and build the project in debug mode (default)"
 	@echo "  make release     - Compile the project in release mode"
 	@echo "  make debug       - Compile the project in debug mode"
 	@echo "  make build       - Alias for 'make debug'"
@@ -74,4 +110,4 @@ help:
 	@echo "  make test        - Run the tests"
 	@echo "  make help        - Show this help message"
 
-.PHONY: all release debug run run-debug clean test help check_cargo clone_repo build
+.PHONY: all release debug run run-debug clean test help check_cargo check_cargo_env check_dependencies check_curl check_openssl clone_repo build
