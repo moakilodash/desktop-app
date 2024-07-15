@@ -44,7 +44,7 @@ export const Step1 = (props: Props) => {
             onSelect={setAssetId}
             options={[
               { label: ASSET_ID_TO_TICKER[BTC_ASSET_ID], value: BTC_ASSET_ID },
-              ...(assets.data?.assets.map((asset) => ({
+              ...(assets.data?.nia.map((asset) => ({
                 label: asset.ticker,
                 value: asset.asset_id,
               })) ?? []),

@@ -39,16 +39,30 @@ interface OpenChannelResponse {
   temporary_channel_id: string
 }
 
-interface ListAssetsResponse {
-  assets: {
-    asset_id: string
-    ticker: string
-    name: string
-    precision: number
-    issued_supply: number
-    timestamp: number
-  }[]
+interface Balance {
+  settled: number
+  future: number
+  spendable: number
 }
+
+interface NiaAsset {
+  asset_id: string
+  asset_iface: string
+  ticker: string
+  name: string
+  details: string | null
+  precision: number
+  issued_supply: number
+  timestamp: number
+  added_at: number
+  balance: Balance
+  media: string | null
+}
+
+interface ListAssetsResponse {
+  nia: NiaAsset[]
+}
+
 interface CloseChannelRequest {
   channel_id: string
   peer_pubkey: string
@@ -315,7 +329,13 @@ export const nodeApi = createApi({
       }),
     }),
     listAssets: builder.query<ListAssetsResponse, void>({
-      query: () => '/listassets',
+      query: () => ({
+        body: {
+          filter_asset_schemas: ["Nia"]
+        },
+        method: 'POST',
+        url: '/listassets',
+      }),
     }),
     listChannels: builder.query<ListChannelsResponse, void>({
       query: () => '/listchannels',

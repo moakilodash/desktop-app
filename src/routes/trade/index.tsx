@@ -83,7 +83,6 @@ export const Component = () => {
     nodeApi.endpoints.listChannels.useLazyQuery()
   const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
   const [taker] = nodeApi.endpoints.taker.useLazyQuery()
-  const [createChannel] = makerApi.endpoints.createChannel.useLazyQuery()
   const [initSwap] = makerApi.endpoints.initSwap.useLazyQuery()
   const [execSwap] = makerApi.endpoints.execSwap.useLazyQuery()
 
@@ -342,7 +341,6 @@ export const Component = () => {
     subscriptionState,
     setSubscriptionState,
     listChannelsResponse,
-    createChannel,
     pubKey,
   ])
 

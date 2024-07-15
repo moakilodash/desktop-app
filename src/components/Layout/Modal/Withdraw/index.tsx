@@ -38,7 +38,7 @@ export const WithdrawModalContent = () => {
 
   const availableAssets = [
     { label: ASSET_ID_TO_TICKER[BTC_ASSET_ID], value: BTC_ASSET_ID },
-    ...(assets.data?.assets.map((asset) => ({
+    ...(assets.data?.nia.map((asset) => ({
       label: asset.ticker,
       value: asset.asset_id,
     })) ?? []),

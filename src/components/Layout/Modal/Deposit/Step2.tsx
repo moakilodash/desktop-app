@@ -142,7 +142,7 @@ export const Step2 = (props: Props) => {
                 <div className="text-xs">
                   <span className="font-light">Available:</span> {balance}{' '}
                   {
-                    assetsResponse.data?.assets.find(
+                    assetsResponse.data?.nia.find(
                       (a) => a.asset_id === props.assetId
                     )?.ticker
                   }
@@ -164,7 +164,7 @@ export const Step2 = (props: Props) => {
 
                 <div className="bg-blue-dark rounded-r flex items-center pr-4 text-cyan">
                   {
-                    assetsResponse.data?.assets.find(
+                    assetsResponse.data?.nia.find(
                       (a) => a.asset_id === props.assetId
                     )?.ticker
                   }

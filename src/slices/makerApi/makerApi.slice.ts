@@ -14,12 +14,6 @@ interface LSPS0ErrorHandling {
   data?: Record<string, any>;
 }
 
-interface CreateChannelRequest {
-  public_key: string
-  asset_id: string
-  asset_amount: number
-}
-
 interface GetAssetsResponse {
   assets: {
     asset_id: string
@@ -143,37 +137,33 @@ interface Lsps1GetOrderRequest {
 
 interface Lsps1GetOrderResponse extends Lsps1CreateOrderResponse {}
 
-const dynamicBaseQuery = async (args, api, extraOptions) => {
+// List trading pairs
+export interface TradingPair {
+  base_asset: string;
+  base_asset_id: string;
+  quote_asset: string;
+  quote_asset_id: string;
+  is_active: boolean;
+  min_order_size: number;
+  max_order_size: number;
+  price_precision: number;
+  quantity_precision: number;
+}
+
+interface GetPairsResponse {
+  pairs: TradingPair[];
+}
+
+const dynamicBaseQuery = async (args: any, api: any, extraOptions: any) => {
   const state = api.getState();
   const baseUrl = state.settings.defaultLspUrl || 'http://localhost:8000';
-  
   const rawBaseQuery = fetchBaseQuery({ baseUrl });
   return rawBaseQuery(args, api, extraOptions);
 };
 
-
 export const makerApi = createApi({
-  // baseQuery: fetchBaseQuery({
-  //   // baseUrl: useSelector(state => state.settings.defaultLspUrl) || 'http://localhost:8000'
-  //   baseUrl: 'http://localhost:8000'
-  // }),
   baseQuery: dynamicBaseQuery,
   endpoints: (builder) => ({
-    createChannel: builder.query<void, CreateChannelRequest>({
-      query: (body) => ({
-        body,
-        method: 'POST',
-        url: '/channel',
-      }),
-    }),
-
-    execSwap: builder.query<void, ExecSwapRequest>({
-      query: (body) => ({
-        body,
-        method: 'POST',
-        url: '/execswap',
-      }),
-    }),
     get_info: builder.query<Lsps1GetInfoResponse, void>({
       query: () => '/api/v1/lsps1/get_info',
     }),
@@ -191,14 +181,24 @@ export const makerApi = createApi({
         url: '/api/v1/lsps1/get_order',
       })
     }),
-    getassets: builder.query<GetAssetsResponse, void>({
-      query: () => '/list_assets',
+    // getassets: builder.query<GetAssetsResponse, void>({
+    //   query: () => '/list_assets',
+    // }),
+    getPairs: builder.query<GetPairsResponse, void>({
+      query: () => '/api/v1/market/pairs',
     }),
     initSwap: builder.query<InitSwapResponse, InitSwapRequest>({
       query: (body) => ({
         body,
         method: 'POST',
-        url: '/initswap',
+        url: '/api/v1/swaps/init',
+      }),
+    }),
+    execSwap: builder.query<void, ExecSwapRequest>({
+      query: (body) => ({
+        body,
+        method: 'POST',
+        url: '/api/v1/swaps/execute',
       }),
     }),
   }),
