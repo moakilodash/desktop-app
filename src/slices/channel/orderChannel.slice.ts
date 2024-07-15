@@ -8,55 +8,55 @@ import * as z from 'zod'
 import { RootState } from '../../app/store'
 import { MIN_CHANNEL_CAPACITY } from '../../constants'
 
-export const NewChannelFormSchema = z.object({
+export const OrderChannelFormSchema = z.object({
   assetAmount: z.z.number().gte(0),
   assetId: z.string(),
-  assetTicker: z.string(),
   capacitySat: z.z
     .number()
     .min(MIN_CHANNEL_CAPACITY, 'Minimum amount is 50000 satoshis')
     .max(100000000, 'Maximum amount is 100000000 satoshis'),
-  pubKeyAndAddress: z.string().regex(/^([a-zA-Z0-9]{66})@.+/),
+  channelExpireBlocks: z.z.number().gte(0),
+  clientBalanceSat: z.z.number().gte(0),
 })
 
-export type TNewChannelForm = z.infer<typeof NewChannelFormSchema>
+export type TChannelRequestForm = z.infer<typeof OrderChannelFormSchema>
 
 interface SliceState {
   forms: {
-    new: TNewChannelForm
+    request: TChannelRequestForm
   }
 }
 
 export const initialState: SliceState = {
   forms: {
-    new: {
+    request: {
       assetAmount: 0,
       assetId: '',
-      assetTicker: '',
       capacitySat: MIN_CHANNEL_CAPACITY,
-      pubKeyAndAddress: '',
+      channelExpireBlocks: 1008,
+      clientBalanceSat: 0, // 1 week
     },
   },
 }
 
-export const channelSlice = createSlice({
+export const orderChannelSlice = createSlice({
   initialState,
   name: 'channel',
   reducers: {
-    setNewChannelForm: (
+    setChannelRequestForm: (
       state,
-      action: PayloadAction<Partial<SliceState['forms']['new']>>
+      action: PayloadAction<Partial<SliceState['forms']['request']>>
     ) => {
-      state.forms.new = {
-        ...state.forms.new,
+      state.forms.request = {
+        ...state.forms.request,
         ...action.payload,
       }
     },
   },
 })
 
-export const channelSliceActions = {
-  ...channelSlice.actions,
+export const orderChannelSliceActions = {
+  ...orderChannelSlice.actions,
 }
 
 // Selectors
@@ -66,6 +66,6 @@ const formSelector = createDraftSafeSelector(
   (_state: RootState, formKey: keyof SliceState['forms']) => formKey,
   (state, formKey) => state.forms[formKey]
 )
-export const channelSliceSelectors = {
+export const orderChannelSliceSelectors = {
   form: formSelector,
 }

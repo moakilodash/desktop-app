@@ -1,32 +1,35 @@
-import { useState, useCallback } from 'react';
-import QRCode from 'qrcode.react';
-import { CopyToClipboard } from 'react-copy-to-clipboard';
-import { ClipLoader } from 'react-spinners';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import QRCode from 'qrcode.react'
+import { useState, useCallback } from 'react'
+import { CopyToClipboard } from 'react-copy-to-clipboard'
+import { ClipLoader } from 'react-spinners'
+import { ToastContainer, toast } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 interface Props {
-  onBack: VoidFunction;
-  loading: boolean;
-  order: any;
+  onBack: VoidFunction
+  loading: boolean
+  order: any
 }
 
 export const Step2 = (props: Props) => {
-  const [paymentMethod, setPaymentMethod] = useState('lightning');
-  const { onBack, loading, order } = props;
+  const [paymentMethod, setPaymentMethod] = useState('lightning')
+  const { onBack, loading, order } = props
 
-  const paymentURI = paymentMethod === 'lightning'
-    ? `lightning:${order?.payment?.bolt11_invoice}`
-    : `bitcoin:${order?.payment?.onchain_address}?amount=${order?.payment?.order_total_sat / 100000000}`;
+  const paymentURI =
+    paymentMethod === 'lightning'
+      ? `lightning:${order?.payment?.bolt11_invoice}`
+      : `bitcoin:${order?.payment?.onchain_address}?amount=${order?.payment?.order_total_sat / 100000000}`
 
   const handleCopy = useCallback(() => {
-    toast.success('Invoice copied to clipboard!');
-  }, []);
+    toast.success('Invoice copied to clipboard!')
+  }, [])
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-800 text-white">
       <div className="text-center mt-6">
-        <h3 className="text-2xl font-semibold mb-4">Pay for the requested channel</h3>
+        <h3 className="text-2xl font-semibold mb-4">
+          Pay for the requested channel
+        </h3>
         <div className="flex justify-center mb-4">
           <button
             className={`px-4 py-2 ${paymentMethod === 'lightning' ? 'bg-blue-500 text-white' : 'bg-gray-700 text-gray-400'} rounded-l-lg focus:outline-none`}
@@ -44,13 +47,20 @@ export const Step2 = (props: Props) => {
         <div className="mt-4">
           {loading ? (
             <div className="flex justify-center items-center h-64">
-              <ClipLoader size={50} color={"#123abc"} loading={loading} />
+              <ClipLoader color={'#123abc'} loading={loading} size={50} />
             </div>
           ) : (
             <div className="flex flex-col items-center">
-              <QRCode value={paymentURI} size={256} />
+              <QRCode size={256} value={paymentURI} />
               <div className="mt-2 flex items-center space-x-2">
-                <CopyToClipboard text={paymentMethod === 'lightning' ? order?.payment?.bolt11_invoice : order?.payment?.onchain_address} onCopy={handleCopy}>
+                <CopyToClipboard
+                  onCopy={handleCopy}
+                  text={
+                    paymentMethod === 'lightning'
+                      ? order?.payment?.bolt11_invoice
+                      : order?.payment?.onchain_address
+                  }
+                >
                   <button className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none">
                     Copy Invoice
                   </button>
@@ -63,15 +73,26 @@ export const Step2 = (props: Props) => {
           <h4 className="text-xl mb-2">Payment Recap</h4>
           <div className="flex justify-between">
             <span>Amount:</span>
-            <span>{(order?.payment?.order_total_sat / 100000000).toFixed(8)} BTC</span>
+            <span>
+              {(order?.payment?.order_total_sat / 100000000).toFixed(8)} BTC
+            </span>
           </div>
           <div className="flex justify-between">
             <span>Fee:</span>
-            <span>{(order?.payment?.fee_total_sat / 100000000).toFixed(8)} BTC</span>
+            <span>
+              {(order?.payment?.fee_total_sat / 100000000).toFixed(8)} BTC
+            </span>
           </div>
           <div className="flex justify-between font-bold">
             <span>Total:</span>
-            <span>{((order?.payment?.order_total_sat + order?.payment?.fee_total_sat) / 100000000).toFixed(8)} BTC</span>
+            <span>
+              {(
+                (order?.payment?.order_total_sat +
+                  order?.payment?.fee_total_sat) /
+                100000000
+              ).toFixed(8)}{' '}
+              BTC
+            </span>
           </div>
         </div>
       </div>
@@ -85,5 +106,5 @@ export const Step2 = (props: Props) => {
       </div>
       <ToastContainer />
     </div>
-  );
+  )
 }

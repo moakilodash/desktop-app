@@ -1,48 +1,207 @@
-import './index.css'
+import Decimal from 'decimal.js'
+import {
+  RefreshCw,
+  Zap,
+  ArrowUpRight,
+  ArrowDownRight,
+  Info,
+} from 'lucide-react'
+import React, { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
-import { useCallback, useEffect } from 'react'
-
+import { WALLET_HISTORY_PATH } from '../../app/router/paths'
 import { useAppDispatch } from '../../app/store/hooks'
-import { ASSET_ID_TO_TICKER, BTC_ASSET_ID } from '../../constants'
+import { ChannelCard } from '../../components/ChannelCard'
+import { BTC_ASSET_ID } from '../../constants'
+import { numberFormatter } from '../../helpers/number'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 import { uiSliceActions } from '../../slices/ui/ui.slice'
+import './index.css'
 
-import { Row } from './Row'
+interface CardProps {
+  children: React.ReactNode
+  className?: string
+}
+
+const Card: React.FC<CardProps> = ({ children, className = '' }) => (
+  <div className={`bg-section-lighter rounded-lg shadow p-4 ${className}`}>
+    {children}
+  </div>
+)
+
+interface AssetRowProps {
+  asset: {
+    ticker: string
+    name: string
+    asset_id: string
+  }
+  onChainBalance: number
+  offChainBalance: number
+}
+
+const AssetRow: React.FC<AssetRowProps> = ({
+  asset,
+  onChainBalance,
+  offChainBalance,
+}) => {
+  const dispatch = useAppDispatch()
+  const navigate = useNavigate()
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).catch((err) => {
+      console.error('Failed to copy: ', err)
+    })
+  }
+
+  return (
+    <div className="grid grid-cols-4 gap-2 even:bg-blue-dark rounded items-center">
+      <div
+        className="py-3 px-4 text-sm truncate cursor-pointer"
+        onClick={() => copyToClipboard(asset.ticker)}
+      >
+        <div className="font-bold">{asset.ticker}</div>
+        <div>{asset.name}</div>
+      </div>
+
+      <div className="text-sm py-3 px-4">
+        <div className="font-bold">
+          {numberFormatter.format(offChainBalance)}
+        </div>
+      </div>
+
+      <div className="text-sm py-3 px-4">
+        <div className="font-bold">
+          {numberFormatter.format(onChainBalance)}
+        </div>
+      </div>
+
+      <div className="text-sm py-3 pl-4 pr-6 flex justify-between">
+        <button
+          className="text-cyan underline font-bold"
+          onClick={() =>
+            dispatch(
+              uiSliceActions.setModal({
+                assetId: asset.asset_id,
+                type: 'deposit',
+              })
+            )
+          }
+        >
+          Deposit
+        </button>
+
+        <button
+          className="text-red underline font-bold"
+          onClick={() =>
+            dispatch(
+              uiSliceActions.setModal({
+                assetId: asset.asset_id,
+                type: 'withdraw',
+              })
+            )
+          }
+        >
+          Withdraw
+        </button>
+
+        <button
+          className="text-purple underline font-bold"
+          onClick={() => navigate(WALLET_HISTORY_PATH)}
+        >
+          History
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export const Component = () => {
   const dispatch = useAppDispatch()
-
   const [address, addressResponse] = nodeApi.endpoints.address.useLazyQuery()
   const [assets, assetsResponse] = nodeApi.endpoints.listAssets.useLazyQuery()
   const [btcBalance, btcBalanceResponse] =
     nodeApi.endpoints.btcBalance.useLazyQuery()
+  const [listChannels, listChannelsResponse] =
+    nodeApi.endpoints.listChannels.useLazyQuery()
+  const [assetBalance] = nodeApi.endpoints.assetBalance.useLazyQuery()
 
-  const refreshBalance = useCallback(() => {
+  const [assetBalances, setAssetBalances] = useState({})
+
+  const refreshData = useCallback(() => {
+    // address()
+    assets()
     btcBalance()
-    setTimeout(() => {
-      refreshBalance()
-    }, 3000)
-  }, [btcBalance])
+    listChannels()
+  }, [assets, btcBalance, listChannels])
 
   useEffect(() => {
-    address()
-    assets()
-    refreshBalance()
-  }, [address, assets, refreshBalance])
+    refreshData()
+    const intervalId = setInterval(refreshData, 3000)
+    return () => clearInterval(intervalId)
+  }, [refreshData])
+
+  useEffect(() => {
+    const fetchAssetBalances = async () => {
+      const newBalances = {}
+      for (const asset of assetsResponse.data?.assets || []) {
+        if (asset.asset_id === BTC_ASSET_ID) {
+          const btcData = btcBalanceResponse.data
+          const channels = listChannelsResponse.data?.channels || []
+          const offChainBalance = new Decimal(
+            channels
+              .filter((c) => c.asset_id === BTC_ASSET_ID)
+              .reduce((acc, c) => acc + c.outbound_balance_msat, 0)
+          )
+            .mul(0.00000001)
+            .toNumber()
+          newBalances[BTC_ASSET_ID] = {
+            offChain: offChainBalance,
+            onChain: btcData?.vanilla.settled || 0,
+          }
+        } else {
+          const balance = await assetBalance({ asset_id: asset.asset_id })
+          newBalances[asset.asset_id] = {
+            offChain: balance.data?.offchain_outbound || 0,
+            onChain: balance.data?.spendable || 0,
+          }
+        }
+      }
+      setAssetBalances(newBalances)
+    }
+
+    if (assetsResponse.data) {
+      fetchAssetBalances()
+    }
+  }, [
+    assetsResponse.data,
+    btcBalanceResponse.data,
+    listChannelsResponse.data,
+    assetBalance,
+  ])
+
+  const channels = listChannelsResponse?.data?.channels || []
+  const totalBalance = channels.reduce(
+    (sum, channel) => sum + channel.asset_local_amount,
+    0
+  )
+  const totalInboundLiquidity = channels.reduce(
+    (sum, channel) => sum + channel.inbound_balance_msat / 1000,
+    0
+  )
+  const totalOutboundLiquidity = channels.reduce(
+    (sum, channel) => sum + channel.outbound_balance_msat / 1000,
+    0
+  )
 
   return (
     <div className="w-full bg-blue-dark py-8 px-6 rounded space-y-4">
       <div className="bg-section-lighter rounded p-8">
-        <div className="mb-4 text-right">
-          BTC Address: {addressResponse?.data?.address}
-        </div>
-
         <div className="flex items-center mb-8">
-          <div className="text-2xl flex-1">Wallet Dashboard</div>
+          <div className="text-2xl flex-1 text-white">Wallet Dashboard</div>
 
           <div className="flex items-center space-x-2">
             <button
-              className="px-6 py-3 rounded border text-lg font-bold border-cyan"
+              className="px-6 py-3 rounded border text-lg font-bold border-cyan text-white"
               onClick={() =>
                 dispatch(
                   uiSliceActions.setModal({
@@ -56,7 +215,7 @@ export const Component = () => {
             </button>
 
             <button
-              className="px-6 py-3 rounded border text-lg font-bold border-red"
+              className="px-6 py-3 rounded border text-lg font-bold border-red text-white"
               onClick={() =>
                 dispatch(
                   uiSliceActions.setModal({
@@ -69,76 +228,114 @@ export const Component = () => {
               Withdraw
             </button>
 
-            <button className="px-6 py-3 rounded border text-lg font-bold border-cyan">
+            <button
+              className="px-6 py-3 rounded border text-lg font-bold border-cyan text-white"
+              onClick={() =>
+                dispatch(
+                  uiSliceActions.setModal({
+                    type: 'openChannel',
+                  })
+                )
+              }
+            >
               Open New Channel
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 space-x-4">
-          <div className="bg-blue-dark p-6 rounded font-semibold space-y-3">
-            <div className="text-grey-light">BTC</div>
-            <div className="text-2xl">
-              {btcBalanceResponse.data?.vanilla.spendable ?? 0}
+        <div className="grid grid-cols-3 gap-4 mb-8">
+          <Card>
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-sm font-medium text-grey-light">
+                Total Balance
+              </h2>
+              <Zap className="h-4 w-4 text-grey-light" />
             </div>
+            <div className="text-2xl font-bold text-white">
+              {numberFormatter.format(totalBalance)} sats
+            </div>
+          </Card>
+          <Card>
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-sm font-medium text-grey-light">
+                Total Inbound Liquidity
+              </h2>
+              <ArrowDownRight className="h-4 w-4 text-grey-light" />
+            </div>
+            <div className="text-2xl font-bold text-white">
+              {numberFormatter.format(totalInboundLiquidity)} sats
+            </div>
+          </Card>
+          <Card>
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-sm font-medium text-grey-light">
+                Total Outbound Liquidity
+              </h2>
+              <ArrowUpRight className="h-4 w-4 text-grey-light" />
+            </div>
+            <div className="text-2xl font-bold text-white">
+              {numberFormatter.format(totalOutboundLiquidity)} sats
+            </div>
+          </Card>
+        </div>
+
+        <div className="bg-blue-dark rounded p-6">
+          <div className="flex items-center mb-4">
+            <div className="text-2xl flex-1 text-white">List of Assets</div>
+            <button
+              className="px-4 py-2 rounded border text-sm font-bold border-cyan text-white flex items-center"
+              onClick={refreshData}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Refresh
+            </button>
+          </div>
+
+          <div>
+            <div className="grid grid-cols-4 text-grey-light">
+              <div className="py-3 px-4">Asset</div>
+              <div className="py-3 px-4">Off Chain</div>
+              <div className="py-3 px-4">On Chain</div>
+              <div className="py-3 px-4">Actions</div>
+            </div>
+
+            {assetsResponse.data?.nia.map((asset) => (
+              <AssetRow
+                asset={asset}
+                key={asset.asset_id}
+                offChainBalance={assetBalances[asset.asset_id]?.offChain || 0}
+                onChainBalance={assetBalances[asset.asset_id]?.onChain || 0}
+              />
+            ))}
           </div>
         </div>
       </div>
 
       <div className="bg-section-lighter rounded p-8">
-        <div className="flex items-center">
-          <div className="text-2xl flex-1">List of Assets</div>
-
-          {/* <div */}
-          {/*   className="flex items-center space-x-2 cursor-pointer" */}
-          {/*   onClick={() => setAreZeroBalancesHidden((state) => !state)} */}
-          {/* > */}
-          {/*   <div */}
-          {/*     className={twJoin( */}
-          {/*       'flex-auto w-4 h-4 rounded border-2 border-grey-lighter', */}
-          {/*       areZeroBalancesHidden ? 'bg-grey-lighter' : null */}
-          {/*     )} */}
-          {/*   /> */}
-          {/**/}
-          {/*   <div className="text-grey-lighter">Hide 0 balances</div> */}
-          {/* </div> */}
-        </div>
-
-        {/* <div className="py-6 flex items-stretch"> */}
-        {/*   <input */}
-        {/*     className="px-6 py-4 w-full border border-divider border-r-0 bg-blue-dark rounded-l outline-none" */}
-        {/*     placeholder="Search Asset" */}
-        {/*     type="text" */}
-        {/*   /> */}
-        {/**/}
-        {/*   <div className="flex items-center pr-6 bg-blue-dark border border-divider border-l-0 rounded-r"> */}
-        {/*     <SearchIcon /> */}
-        {/*   </div> */}
-        {/* </div> */}
-
-        <div>
-          <div className="grid grid-cols-4 text-grey-light">
-            <div className="py-3 px-4">Asset</div>
-            <div className="py-3 px-4">Off Chain</div>
-            <div className="py-3 px-4">On Chain</div>
-            <div className="py-3 px-4">Actions</div>
+        <div className="text-2xl mb-4 text-white">Lightning Channels</div>
+        {channels.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {channels.map((channel) => (
+              <ChannelCard
+                channel={channel}
+                key={channel.channel_id}
+                onClose={refreshData}
+              />
+            ))}
           </div>
+        ) : (
+          <div className="text-lg text-grey-light text-center">
+            You don't have any open channels yet.
+          </div>
+        )}
+      </div>
 
-          <Row
-            assetId={BTC_ASSET_ID}
-            assetName="Bitcoin"
-            assetTicker={ASSET_ID_TO_TICKER[BTC_ASSET_ID]}
-          />
-
-          {assetsResponse.data?.assets.map((a) => (
-            <Row
-              assetId={a.asset_id}
-              assetName={a.name}
-              assetTicker={a.ticker}
-              key={a.asset_id}
-            />
-          ))}
-        </div>
+      <div className="flex items-center space-x-2 text-sm text-grey-light mt-4">
+        <Info className="h-4 w-4" />
+        <p>
+          Channel liquidity changes as you send and receive payments. Keep your
+          channels balanced for optimal performance.
+        </p>
       </div>
     </div>
   )

@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
-import { satoshiToBTC } from '../../helpers/number'  
+
+import { satoshiToBTC } from '../../helpers/number'
 
 interface InitRequest {
   password: string
@@ -28,12 +29,11 @@ interface BackupRequest {
 }
 
 interface OpenChannelRequest {
-  asset_amount?: number;
-  asset_id?: string;
-  capacity_sat: number;
-  peer_pubkey_and_addr: string;
+  asset_amount?: number
+  asset_id?: string
+  capacity_sat: number
+  peer_pubkey_and_addr: string
 }
-
 
 interface OpenChannelResponse {
   temporary_channel_id: string
@@ -331,7 +331,7 @@ export const nodeApi = createApi({
     listAssets: builder.query<ListAssetsResponse, void>({
       query: () => ({
         body: {
-          filter_asset_schemas: ["Nia"]
+          filter_asset_schemas: ['Nia'],
         },
         method: 'POST',
         url: '/listassets',
@@ -378,19 +378,19 @@ export const nodeApi = createApi({
         const requestBody: any = {
           capacity_sat: body.capacity_sat,
           peer_pubkey_and_addr: body.peer_pubkey_and_addr,
-          push_msat: 3100000,  
-          public: true,        
-          with_anchors: true
-        };
+          public: true,
+          push_msat: 3100000,
+          with_anchors: true,
+        }
         if (body.asset_amount && body.asset_amount > 0) {
-          requestBody.asset_amount = body.asset_amount;
-          requestBody.asset_id = body.asset_id;
+          requestBody.asset_amount = body.asset_amount
+          requestBody.asset_id = body.asset_id
         }
         return {
           body: requestBody,
           method: 'POST',
           url: '/openchannel',
-        };
+        }
       },
     }),
     restore: builder.query<void, RestoreRequest>({

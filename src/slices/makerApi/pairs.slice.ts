@@ -5,12 +5,14 @@ import {
   createDraftSafeSelector,
   createSlice,
 } from '@reduxjs/toolkit'
+import { v4 as uuidv4 } from 'uuid'
 import { z } from 'zod'
 
+import { WebSocketService } from '../../app/hubs/websocketService'
 import { RootState } from '../../app/store'
-import { WebSocketService } from '../../app/hubs/websocketService';
-import { v4 as uuidv4 } from 'uuid';
 
+// Initialize the WebSocket service
+const wsService = WebSocketService.getInstance()
 
 const jsonFromString = z.string().transform((s) => JSON.parse(s))
 
@@ -52,8 +54,6 @@ export type TExecutionFeedsPriceUpdate = z.infer<
   typeof ExecutionFeedsPriceUpdate
 >
 
-const STARRED_PAIRS_LOCAL_STORAGE_KEY = 'starredPairs'
-
 export interface PairFeed {
   buyPrice: number
   id: string
@@ -67,7 +67,6 @@ export interface PairFeed {
 export type PairsState = {
   assets: string[]
   feed: Record<string, PairFeed>
-  starred: string[]
   values: {
     asset: string
     currency: string
@@ -79,17 +78,9 @@ export type PairsState = {
   ticker: Record<string, number>
 }
 
-const getStarredPairs = (): string[] => {
-  const localStorageValue = localStorage.getItem(
-    STARRED_PAIRS_LOCAL_STORAGE_KEY
-  )
-  return localStorageValue ? JSON.parse(localStorageValue) : []
-}
-
 const initialState: PairsState = {
   assets: [],
   feed: {},
-  starred: getStarredPairs(),
   ticker: {},
   values: [],
 }
@@ -99,21 +90,21 @@ const subscribePair = createAsyncThunk(
   async (payload: { pair: string; size: number }, thunkAPI) => {
     const state = thunkAPI.getState() as RootState
     const pair = getFeedSelector(state, payload.pair)
-    const clientId = uuidv4();
+    const clientId = uuidv4()
 
     if (pair && pair.size !== payload.size) {
-      await thunkAPI.dispatch(unsubscribePair({ pair: payload.pair, size: pair.size }));
+      await thunkAPI.dispatch(
+        unsubscribePair({ pair: payload.pair, size: pair.size })
+      )
     }
 
     if (!pair || pair.size !== payload.size) {
-      wsService.sendMessage('SubscribePairPriceChannel', 
-      {
+      wsService.sendMessage('SubscribePairPriceChannel', {
         action: 'subscribe',
+        clientId: clientId,
         pair: payload.pair,
         size: payload.size,
-        clientId: clientId,
-      });
-      
+      })
     }
   }
 )
@@ -121,15 +112,13 @@ const subscribePair = createAsyncThunk(
 const unsubscribePair = createAsyncThunk(
   'pairs/unsubscribe',
   async (payload: { pair: string; size: number }) => {
-    const clientId = uuidv4();
-    wsService.sendMessage('UnsubscribePairPriceChannel', 
-      {
-        action: 'unsubscribe',
-        pair: payload.pair,
-        size: payload.size,
-        clientId: clientId,
-      }
-    );
+    const clientId = uuidv4()
+    wsService.sendMessage('UnsubscribePairPriceChannel', {
+      action: 'unsubscribe',
+      clientId: clientId,
+      pair: payload.pair,
+      size: payload.size,
+    })
   }
 )
 
@@ -142,11 +131,12 @@ const resubscribeAll = createAsyncThunk(
     activeFeedKeys.forEach((k) => {
       const pair = getFeedSelector(state, k)
       if (pair) {
-        subscribePair({ pair: k, size: pair.size })
+        thunkAPI.dispatch(subscribePair({ pair: k, size: pair.size }))
       }
     })
   }
 )
+
 const executionPairs = createAction<TExecutionPairs['data']>(
   EXECUTION_PAIRS_SUBJECT.value
 )
@@ -162,115 +152,73 @@ export const pairsSlice = createSlice({
         state.values = action.payload.map((p) => ({
           asset: p.asset,
           currency: p.currency,
-          isDisabled: false,
+          isDisabled: p.maxSize <= 0,
           maxSize: p.maxSize,
           minSize: p.minSize,
           name: p.name,
         }))
-        state.assets = Array.from(
-          new Set(
-            action.payload.reduce<string[]>(
-              (acc, p) => [...acc, p.asset, p.currency],
-              []
-            )
-          )
-        )
+        state.assets = [...new Set(action.payload.map((p) => p.asset).sort())]
       })
       .addCase(executionFeedsPriceUpdate, (state, action) => {
-        /** If the feed is not in the state, add it
-         * else if the feed is in the state, check if the timestamp is more than 1 second old
-         **/
-        const feed = state.feed[action.payload.pair]
+        const { id, pair, size, ...otherValues } = action.payload
 
-        if (
-          !feed ||
-          (feed &&
-            feed.size !== action.payload.size &&
-            feed.pair !== action.payload.pair)
-        ) {
-          state.feed[action.payload.pair] = {
-            buyPrice: action.payload.buyPrice,
-            id: action.payload.id,
-            markPrice: action.payload.markPrice,
-            pair: action.payload.pair,
-            sellPrice: action.payload.sellPrice,
-            size: action.payload.size,
-            timestamp: action.payload.timestamp,
-          }
-        } else {
-          const lastFeedTimestamp = new Date(feed.timestamp).getTime()
-
-          if (
-            new Date(action.payload.timestamp).getTime() - lastFeedTimestamp >=
-            1000
-          ) {
-            state.feed[action.payload.pair] = {
-              buyPrice: action.payload.buyPrice,
-              id: action.payload.id,
-              markPrice: action.payload.markPrice,
-              pair: action.payload.pair,
-              sellPrice: action.payload.sellPrice,
-              size: action.payload.size,
-              timestamp: action.payload.timestamp,
-            }
-          }
+        state.feed[pair] = {
+          id,
+          pair,
+          size,
+          ...otherValues,
         }
+        state.ticker[pair] = Date.now()
       })
   },
   initialState,
   name: 'pairs',
   reducers: {
-    toggleStarred: (state, action) => {
-      const pair = action.payload
-      const isStarred = state.starred.includes(pair)
-      if (isStarred) {
-        state.starred = state.starred.filter((p) => p !== pair)
-      } else {
-        state.starred.push(pair)
-      }
-      localStorage.setItem(
-        STARRED_PAIRS_LOCAL_STORAGE_KEY,
-        JSON.stringify(state.starred)
-      )
-    },
     updatePrice: (state, action: PayloadAction<PairFeed>) => {
-      const { pair, ...priceData } = action.payload;
-      console.log('updatePrice', pair, priceData);
-      state.feed[pair] = { ...state.feed[pair], ...priceData };
+      const { pair, ...values } = action.payload
+      if (state.feed[pair]) {
+        state.feed[pair] = {
+          ...state.feed[pair],
+          ...values,
+        }
+      }
     },
   },
 })
 
-// Selectors
-type State = { pairs: PairsState }
-
-const selfSelector = (state: State) => state.pairs
-const starredSelector = (state: State) => state.pairs?.starred
-
-const pairSelector = (_state: { pairs: PairsState }, pair: string) => pair
-const getFeedSelector = createDraftSafeSelector(
-  [selfSelector, pairSelector, starredSelector],
-  (state, pair, starred) => {
-    const pairFeed = state?.feed[pair]
-    return pairFeed
-      ? { ...pairFeed, isStarred: starred.includes(pair) }
-      : undefined
-  }
-)
-
-const activeFeedsSelector = createDraftSafeSelector([selfSelector], (state) =>
-  Object.keys(state.feed)
-)
-
-export const pairsSliceSelectors = {
-  getFeed: getFeedSelector,
-}
-
-// Actions
 export const pairsSliceActions = {
   ...pairsSlice.actions,
+  executionFeedsPriceUpdate,
+  executionPairs,
   resubscribeAll,
   subscribePair,
   unsubscribePair,
-  updatePrice: createAction<PairFeed>('pairs/updatePrice'),
 }
+
+// Selectors
+export const getValuesSelector = (state: RootState): PairsState['values'] =>
+  state.pairs.values
+
+export const activeFeedsSelector = createDraftSafeSelector(
+  (state: RootState) => state.pairs.feed,
+  (feed) =>
+    Object.keys(feed).filter((k) => {
+      const f = feed[k]
+      return f.size > 0
+    })
+)
+
+export const getFeedSelector = createDraftSafeSelector(
+  (state: RootState) => state.pairs.feed,
+  (_state: RootState, pair: string) => pair,
+  (feed, pair) => feed[pair]
+)
+
+// Export all selectors
+export const pairsSliceSelectors = {
+  activeFeedsSelector,
+  getFeed: getFeedSelector,
+  getValuesSelector,
+}
+
+export const pairsReducer = pairsSlice.reducer

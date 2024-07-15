@@ -1,291 +1,435 @@
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useCallback, useEffect, useState } from 'react';
-import { Controller, SubmitHandler, useForm } from 'react-hook-form';
-import { useAppDispatch, useAppSelector } from '../../app/store/hooks';
-import { Select } from '../../components/Select';
-import { CheckmarkIcon } from '../../icons/Checkmark';
+import { ChevronDownIcon, CopyIcon, CheckIcon } from 'lucide-react'
+import React, { useCallback, useEffect, useState } from 'react'
+import { Controller, SubmitHandler, useForm } from 'react-hook-form'
+import { toast, ToastContainer } from 'react-toastify'
+
+import { useAppDispatch } from '../../app/store/hooks'
+import { Select } from '../../components/Select'
+import { MIN_CHANNEL_CAPACITY, MAX_CHANNEL_CAPACITY } from '../../constants'
 import {
-  ChannelRequestFormSchema,
-  channelSliceActions,
-  channelSliceSelectors,
-} from '../../slices/channel/channel.slice';
-import { makerApi } from '../../slices/makerApi/makerApi.slice';
-import { MIN_CHANNEL_CAPACITY, MAX_CHANNEL_CAPACITY } from '../../constants';
-import { FormError } from './FormError';
-import { toast, ToastContainer } from 'react-toastify';
+  // OrderChannelFormSchema,
+  orderChannelSliceActions,
+  // orderChannelSliceSelectors,
+  initialState,
+} from '../../slices/channel/orderChannel.slice'
+import { makerApi } from '../../slices/makerApi/makerApi.slice'
+
+import { FormError } from './FormError'
 
 interface Props {
-  onBack: VoidFunction;
-  onNext: VoidFunction;
+  onBack: VoidFunction
+  onNext: VoidFunction
 }
 
 interface AssetInfo {
-  name: string;
-  ticker: string;
-  asset_id: string;
-  precision: number;
-  min_initial_client_amount: number;
-  max_initial_client_amount: number;
-  min_initial_lsp_amount: number;
-  max_initial_lsp_amount: number;
-  min_channel_amount: number;
-  max_channel_amount: number;
+  name: string
+  ticker: string
+  asset_id: string
+  precision: number
+  min_initial_client_amount: number
+  max_initial_client_amount: number
+  min_initial_lsp_amount: number
+  max_initial_lsp_amount: number
+  min_channel_amount: number
+  max_channel_amount: number
 }
 
 interface FormFields {
-  capacitySat: number;
-  clientBalanceSat: number;
-  assetId: string;
-  assetAmount: number;
-  channelExpireBlocks: number;
+  capacitySat: number
+  clientBalanceSat: number
+  assetId: string
+  assetAmount: number
+  channelExpireBlocks: number
 }
 
-export const Step1 = (props: Props) => {
-  const channelRequestForm = useAppSelector((state) =>
-    channelSliceSelectors.form(state, 'request')
-  );
+interface AssetOptionProps {
+  assetInfo: AssetInfo
+  assetId: string
+  onSelect: (value: string) => void
+}
 
-  const dispatch = useAppDispatch();
-  const [maxCapacity, setMaxCapacity] = useState<number>(MAX_CHANNEL_CAPACITY);
-  const [assetMap, setAssetMap] = useState<Record<string, AssetInfo>>({});
-  const [addAsset, setAddAsset] = useState(true);
-  const [getInfoRequest, getInfoResponse] = makerApi.endpoints.get_info.useLazyQuery();
-  const [getInfoError, setGetInfoError] = useState(false);
+const AssetOption: React.FC<AssetOptionProps> = ({
+  assetInfo,
+  assetId,
+  onSelect,
+}) => {
+  const [copied, setCopied] = useState(false)
 
-  const { register, handleSubmit, setValue, control, watch, formState } = useForm<FormFields>({
-    resolver: zodResolver(ChannelRequestFormSchema),
-    defaultValues: {
-      ...channelRequestForm
-    },
-    criteriaMode: "all",
-  });
+  const copyToClipboard = (e) => {
+    e.stopPropagation()
+    navigator.clipboard.writeText(assetId).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
 
-  const assetAmount = watch('assetAmount');
-  const capacitySat = watch('capacitySat');
-  const clientBalanceSat = watch('clientBalanceSat');
-  const assetId = watch('assetId');
+  return (
+    <div
+      className="flex justify-between items-center p-3 hover:bg-gray-700 cursor-pointer"
+      onClick={() => onSelect(assetId)}
+    >
+      <div className="flex items-center">
+        {/* <img 
+          src={assetIcons[assetInfo.ticker] || '/icons/default.svg'} 
+          alt={assetInfo.ticker}
+          className="w-6 h-6 mr-2"
+        /> */}
+        <div>
+          <div className="font-medium">{`${assetInfo.name} (${assetInfo.ticker})`}</div>
+          <div className="text-sm text-gray-400 break-all">{assetId}</div>
+        </div>
+      </div>
+      <button
+        className="p-1 hover:bg-gray-600 rounded"
+        onClick={copyToClipboard}
+      >
+        {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
+      </button>
+    </div>
+  )
+}
 
+interface AssetSelectorProps {
+  control: any
+  name: string
+  assetMap: Record<string, AssetInfo>
+}
+
+const AssetSelector: React.FC<AssetSelectorProps> = ({
+  control,
+  name,
+  assetMap,
+}) => {
+  const [isOpen, setIsOpen] = useState(false)
+
+  return (
+    <Controller
+      control={control}
+      name={name}
+      render={({ field }) => {
+        const selectedAsset = assetMap[field.value]
+        return (
+          <div className="relative">
+            <div
+              className="bg-gray-700 p-3 rounded-md flex justify-between items-center cursor-pointer"
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              {field.value && selectedAsset ? (
+                <div className="flex items-center">
+                  {/* <img 
+                    src={assetIcons[selectedAsset.ticker] || '/icons/default.svg'} 
+                    alt={selectedAsset.ticker}
+                    className="w-6 h-6 mr-2"
+                  /> */}
+                  <span>{`${selectedAsset.name} (${selectedAsset.ticker})`}</span>
+                </div>
+              ) : (
+                <span>Select an asset</span>
+              )}
+              <ChevronDownIcon size={20} />
+            </div>
+            {isOpen && (
+              <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto">
+                {Object.entries(assetMap).map(([assetId, assetInfo]) => (
+                  <AssetOption
+                    assetId={assetId}
+                    assetInfo={assetInfo}
+                    key={assetId}
+                    onSelect={(value) => {
+                      field.onChange(value)
+                      setIsOpen(false)
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+            {field.value && selectedAsset && (
+              <div className="mt-2 text-sm text-gray-400 break-all">
+                Asset ID: {field.value}
+              </div>
+            )}
+          </div>
+        )
+      }}
+    />
+  )
+}
+
+export const Step1: React.FC<Props> = ({ onBack, onNext }) => {
+  const dispatch = useAppDispatch()
+  const [maxCapacity, setMaxCapacity] = useState<number>(MAX_CHANNEL_CAPACITY)
+  const [assetMap, setAssetMap] = useState<Record<string, AssetInfo>>({})
+  const [addAsset, setAddAsset] = useState(true)
+  const [getInfoRequest, getInfoResponse] =
+    makerApi.endpoints.get_info.useLazyQuery()
+
+  const form = useForm<FormFields>({
+    defaultValues: initialState.forms.request,
+    // resolver: zodResolver(
+    //   OrderChannelFormSchema.pick({
+    //     capacitySat: true,
+    //     clientBalanceSat: true,
+    //     assetId: true,
+    //     assetAmount: true,
+    //     channelExpireBlocks: true,
+    //   })
+    // ),
+  })
+  const { control, handleSubmit, register, setValue, watch, formState } = form
+
+  const assetAmount = watch('assetAmount')
+  const capacitySat = watch('capacitySat')
+  const clientBalanceSat = watch('clientBalanceSat')
+  const assetId = watch('assetId')
 
   useEffect(() => {
-    getInfoRequest();
-  }, [getInfoRequest]);
+    getInfoRequest()
+  }, [getInfoRequest])
 
   useEffect(() => {
     if (getInfoResponse.isSuccess && getInfoResponse.data?.assets) {
-      const tmpMap: Record<string, AssetInfo> = {};
+      const tmpMap: Record<string, AssetInfo> = {}
       getInfoResponse.data.assets.forEach((asset) => {
-        tmpMap[asset.asset_id] = asset; // Corrected to use asset_id instead of ticker
-      });
-      setAssetMap(tmpMap);
+        tmpMap[asset.asset_id] = asset
+      })
+      setAssetMap(tmpMap)
     } else if (getInfoResponse.isError) {
-      toast.error('There was an error fetching the assets. Please try again later.');
+      toast.error(
+        'There was an error fetching the assets. Please try again later.'
+      )
     }
-  }, [getInfoResponse]);
-  
-  const handleAmountChange = (setter: (value: string) => void) => (value: string) => {
-    const numericValue = parseInt(value.replace(/,/g, ''), 10);
-    if (!isNaN(numericValue)) {
-      setter(value);
+  }, [getInfoResponse])
+
+  const handleAmountChange =
+    (setter: (value: number) => void) => (value: string) => {
+      const numericValue = parseInt(value.replace(/,/g, ''), 10)
+      if (!isNaN(numericValue)) {
+        setter(numericValue)
+      }
     }
-  };
+
+  useEffect(() => {
+    const subscription = watch((value) => {
+      dispatch(orderChannelSliceActions.setChannelRequestForm(value))
+    })
+    return () => subscription.unsubscribe()
+  }, [watch, dispatch])
 
   const onSubmit: SubmitHandler<FormFields> = useCallback(
     (data) => {
-      console.log(data);
-      dispatch(channelSliceActions.setChannelRequestForm({ ...data }));
-      props.onNext();
+      console.log(data)
+      dispatch(orderChannelSliceActions.setChannelRequestForm(data))
+      // console.log(channelRequestForm);
+      onNext()
     },
-    [dispatch, props]
-  );
+    [dispatch, onNext]
+  )
 
-  const maxAssetAmount = assetId ? assetMap[assetId]?.max_channel_amount || maxCapacity : maxCapacity;
+  const maxAssetAmount = assetId
+    ? assetMap[assetId]?.max_channel_amount || maxCapacity
+    : maxCapacity
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="text-center mb-10">
-        <h3 className="text-2xl font-semibold mb-4">Request an RGB Channel from LSP - Step 1</h3>
-        <h4 className="text-lg font-medium mb-2">Select asset and amount for the requested channel</h4>
-      </div>
-      
-      <div className="px-20">
-        <div className="flex mb-10">
-          <input
-            className="px-6 py-4 w-full border border-divider border-r-0 bg-blue-dark outline-none rounded-l"
-            {...register('pubKeyAndAddress')}
-            placeholder="Paste the Public Key Here"
-            readOnly
-            type="text"
-            value="https://localhost:8000"
-          />
-          <div className="bg-blue-dark border border-divider border-l-0 rounded-r flex items-center px-6">
-            <CheckmarkIcon />
+    <form
+      className="bg-gray-900 text-white p-8 rounded-lg shadow-lg"
+      onSubmit={handleSubmit(onSubmit)}
+    >
+      <h3 className="text-3xl font-bold mb-6 text-center">
+        Request an RGB Channel from LSP
+      </h3>
+      <h4 className="text-xl font-semibold mb-8 text-center text-gray-300">
+        Select asset and amount for the requested channel
+      </h4>
+
+      <div className="space-y-8">
+        <div className="bg-gray-800 p-6 rounded-lg">
+          <label className="block text-sm font-medium mb-2">
+            Channel Capacity (sats)
+          </label>
+          <div className="flex items-center space-x-4">
+            <input
+              {...register('capacitySat', { valueAsNumber: true })}
+              className="bg-gray-700 text-white px-4 py-2 rounded-md w-full"
+              max={maxCapacity}
+              min={MIN_CHANNEL_CAPACITY}
+              onChange={(e) =>
+                handleAmountChange(setValue.bind(null, 'capacitySat'))(
+                  e.target.value
+                )
+              }
+              placeholder="Enter amount"
+              type="number"
+            />
+            <span className="text-lg font-semibold w-24 text-right">
+              {capacitySat.toLocaleString()}
+            </span>
           </div>
+          <input
+            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer mt-4"
+            max={maxCapacity}
+            min={MIN_CHANNEL_CAPACITY}
+            onChange={(e) =>
+              handleAmountChange(setValue.bind(null, 'capacitySat'))(
+                e.target.value
+              )
+            }
+            step="1000"
+            type="range"
+            value={capacitySat}
+          />
+          {formState.errors.capacitySat && (
+            <p className="text-red-500 text-sm mt-2">
+              {formState.errors.capacitySat.message}
+            </p>
+          )}
         </div>
 
-        <div className="bg-section-lighter px-6 py-6 rounded divide-y divide-divider">
-          <div className="py-6">
-            <div className="text-xs mb-3">Select channel capacity</div>
-            <div className="flex space-x-2">
-              <div className="flex-1">
-                <input
-                  {...register('capacitySat', { valueAsNumber: true })}
-                  className="rounded bg-blue-dark px-4 py-3 w-full outline-none"
-                  type="text"
-                  min={MIN_CHANNEL_CAPACITY}
-                  max={maxCapacity}
-                  placeholder="Enter amount"
-                  onChange={(e) => handleAmountChange(setValue.bind(null, 'capacitySat'))(e.target.value)}
-                  value={capacitySat.toLocaleString()}
-                />
-                <input
-                  type="range"
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-                  min={MIN_CHANNEL_CAPACITY}
-                  max={maxCapacity}
-                  value={capacitySat}
-                  onChange={(e) => handleAmountChange(setValue.bind(null, 'capacitySat'))(e.target.value)}
-                  step="1"
-                />
-                {formState.errors.capacitySat && (
-                  <div className="text-sm text-red mt-2">
-                    <p className="text-red-500 text-xs italic">{formState.errors.capacitySat.message}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="py-6">
-            <div className="text-xs mb-3">Select your channel liquidity</div>
-            <div className="flex space-x-2">
-              <div className="flex-1">
-                <input
-                  {...register('clientBalanceSat', { valueAsNumber: true })}
-                  className="rounded bg-blue-dark px-4 py-3 w-full outline-none"
-                  type="text"
-                  min={0}
-                  max={capacitySat}
-                  placeholder="Enter amount"
-                  onChange={(e) => handleAmountChange(setValue.bind(null, 'clientBalanceSat'))(e.target.value)}
-                  value={clientBalanceSat.toLocaleString()}
-                />
-                <input
-                  type="range"
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-                  min={0}
-                  max={capacitySat}
-                  value={clientBalanceSat}
-                  onChange={(e) => handleAmountChange(setValue.bind(null, 'clientBalanceSat'))(e.target.value)}
-                  step="1"
-                />
-                {formState.errors.clientBalanceSat && (
-                  <div className="text-sm text-red mt-2">
-                    <p className="text-red-500 text-xs italic">{formState.errors.clientBalanceSat.message}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="py-6">
-            <div className="text-xs mb-3">Select channel lock duration</div>
-            <Controller
-              control={control}
-              name="channelExpireBlocks"
-              render={({ field }) => (
-                <Select 
-                  active={field.value}
-                  onSelect={(value) => field.onChange(parseInt(value))}
-                  options={[
-                    { label: '1 week', value: 6 * 24 * 7 },
-                    { label: '1 month', value: 6 * 24 * 30 },
-                    { label: '6 months', value: 6 * 24 * 30 * 6 },
-                  ]}
-                  theme="dark"
-                />
-              )}
+        <div className="bg-gray-800 p-6 rounded-lg">
+          <label className="block text-sm font-medium mb-2">
+            Your Channel Liquidity (sats)
+          </label>
+          <div className="flex items-center space-x-4">
+            <input
+              {...register('clientBalanceSat', { valueAsNumber: true })}
+              className="bg-gray-700 text-white px-4 py-2 rounded-md w-full"
+              max={capacitySat}
+              min={0}
+              onChange={(e) =>
+                handleAmountChange(setValue.bind(null, 'clientBalanceSat'))(
+                  e.target.value
+                )
+              }
+              placeholder="Enter amount"
+              type="number"
             />
+            <span className="text-lg font-semibold w-24 text-right">
+              {clientBalanceSat.toLocaleString()}
+            </span>
           </div>
+          <input
+            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer mt-4"
+            max={capacitySat}
+            min={0}
+            onChange={(e) =>
+              handleAmountChange(setValue.bind(null, 'clientBalanceSat'))(
+                e.target.value
+              )
+            }
+            step="1000"
+            type="range"
+            value={clientBalanceSat}
+          />
+          {formState.errors.clientBalanceSat && (
+            <p className="text-red-500 text-sm mt-2">
+              {formState.errors.clientBalanceSat.message}
+            </p>
+          )}
+        </div>
 
-          <div className="py-6">
-            <div className="checkbox-container">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={addAsset}
-                  onChange={(e) => setAddAsset(e.target.checked)}
-                  className="checkbox-input"
-                />
-                Add Asset
-              </label>
-            </div>
-            {addAsset && (
-              <>
-                <div className="text-xs mb-3">Select asset</div>
-                <Controller
+        <div className="bg-gray-800 p-6 rounded-lg">
+          <label className="block text-sm font-medium mb-2">
+            Channel Lock Duration
+          </label>
+          <Controller
+            control={control}
+            name="channelExpireBlocks"
+            render={({ field }) => (
+              <Select
+                active={field.value}
+                onSelect={(value) => field.onChange(parseInt(value))}
+                options={[
+                  { label: '1 week', value: 6 * 24 * 7 },
+                  { label: '1 month', value: 6 * 24 * 30 },
+                  { label: '6 months', value: 6 * 24 * 30 * 6 },
+                ]}
+                theme="dark"
+              />
+            )}
+          />
+        </div>
+
+        <div className="bg-gray-800 p-6 rounded-lg">
+          <label className="flex items-center space-x-3 mb-4">
+            <input
+              checked={addAsset}
+              className="form-checkbox h-5 w-5 text-purple-500"
+              onChange={(e) => setAddAsset(e.target.checked)}
+              type="checkbox"
+            />
+            <span className="text-lg font-medium">Add Asset</span>
+          </label>
+
+          {addAsset && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Select Asset
+                </label>
+                <AssetSelector
+                  assetMap={assetMap}
                   control={control}
                   name="assetId"
-                  render={({ field }) => (
-                    <Select
-                      active={field.value}
-                      onSelect={field.onChange}
-                      options={Object.entries(assetMap).map(([assetId, assetInfo]) => ({
-                        label: `${assetInfo.name} (${assetInfo.ticker})`,
-                        value: assetInfo.asset_id,
-                      }))}
-                      theme="dark"
-                    />
-                  )}
                 />
-                {assetId && (
-                  <>
-                    <div className="text-xs mb-3">Select amount of the asset</div>
-                    <div className="flex space-x-2">
-                      <div className="flex-1">
-                        <input
-                          {...register('assetAmount', { valueAsNumber: true })}
-                          className="rounded bg-blue-dark px-4 py-3 w-full outline-none"
-                          type="number"
-                          min={0}
-                          max={assetMap[assetId]?.max_channel_amount || 10000}
-                          placeholder="Enter amount"
-                          onChange={(e) => handleAmountChange(setValue.bind(null, 'assetAmount'))(e.target.value)}
-                          value={assetAmount}
-                        />
-                        <input
-                          type="range"
-                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-                          min={0}
-                          max={assetMap[assetId]?.max_channel_amount || 10000}
-                          value={assetAmount}
-                          onChange={(e) => handleAmountChange(setValue.bind(null, 'assetAmount'))(e.target.value)}
-                          step="1"
-                        />
-                        {formState.errors.assetAmount && (
-                          <div className="text-sm text-red mt-2">
-                            <p className="text-red-500 text-xs italic">{formState.errors.assetAmount.message}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-          </div>
+              </div>
+
+              {assetId && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Asset Amount
+                  </label>
+                  <div className="flex items-center space-x-4">
+                    <input
+                      {...register('assetAmount', { valueAsNumber: true })}
+                      className="bg-gray-700 text-white px-4 py-2 rounded-md w-full"
+                      max={maxAssetAmount}
+                      min={0}
+                      onChange={(e) =>
+                        handleAmountChange(setValue.bind(null, 'assetAmount'))(
+                          e.target.value
+                        )
+                      }
+                      placeholder="Enter amount"
+                      type="number"
+                    />
+                    <span className="text-lg font-semibold w-24 text-right">
+                      {assetAmount.toLocaleString()}
+                    </span>
+                  </div>
+                  <input
+                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer mt-4"
+                    max={maxAssetAmount}
+                    min={0}
+                    onChange={(e) =>
+                      handleAmountChange(setValue.bind(null, 'assetAmount'))(
+                        e.target.value
+                      )
+                    }
+                    step="1"
+                    type="range"
+                    value={assetAmount}
+                  />
+                  {formState.errors.assetAmount && (
+                    <p className="text-red-500 text-sm mt-2">
+                      {formState.errors.assetAmount.message}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="flex justify-end mt-20">
+      <div className="flex justify-end space-x-4 mt-10">
         <button
-          className="px-6 py-3 rounded text-lg font-medium text-grey-light"
-          onClick={props.onBack}
+          className="px-6 py-3 rounded-lg text-lg font-medium text-gray-300 hover:text-white transition-colors"
+          onClick={onBack}
           type="button"
         >
           Go Back
         </button>
         <button
-          className="px-6 py-3 rounded border text-lg font-bold border-purple"
+          className="px-6 py-3 rounded-lg text-lg font-bold bg-purple-600 hover:bg-purple-700 transition-colors"
           type="submit"
         >
           Next Step
@@ -293,6 +437,7 @@ export const Step1 = (props: Props) => {
       </div>
 
       {!formState.isSubmitSuccessful && formState.isSubmitted && <FormError />}
+      <ToastContainer />
     </form>
-  );
-};
+  )
+}

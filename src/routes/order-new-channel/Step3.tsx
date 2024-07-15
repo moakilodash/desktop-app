@@ -1,8 +1,14 @@
-import { useNavigate } from 'react-router-dom';
-import { TRADE_PATH } from '../../app/router/paths';
+import { useNavigate } from 'react-router-dom'
 
-export const Step3 = ({ paymentStatus }) => {
-  const navigate = useNavigate();
+import { TRADE_PATH } from '../../app/router/paths'
+
+interface Step3Props {
+  paymentStatus: string | null
+}
+
+// eslint-disable-next-line react/prop-types
+export const Step3: React.FC<Step3Props> = ({ paymentStatus }) => {
+  const navigate = useNavigate()
 
   return (
     <div className="flex flex-col items-center justify-center">
@@ -17,9 +23,12 @@ export const Step3 = ({ paymentStatus }) => {
           <p>There was an issue with your payment. Please try again.</p>
         </>
       )}
-      <button className="px-6 py-3 rounded border text-lg font-bold border-purple mt-6" onClick={() => navigate(TRADE_PATH)}>
+      <button
+        className="px-6 py-3 rounded border text-lg font-bold border-purple mt-6"
+        onClick={() => navigate(TRADE_PATH)}
+      >
         Finish
       </button>
     </div>
-  );
-};
+  )
+}

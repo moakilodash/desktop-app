@@ -1,12 +1,12 @@
 import { combineReducers, configureStore } from '@reduxjs/toolkit'
 
+import { WebSocketService } from '../../app/hubs/websocketService'
 import { channelSlice } from '../../slices/channel/channel.slice'
 import { makerApi } from '../../slices/makerApi/makerApi.slice.ts'
 import { pairsSlice } from '../../slices/makerApi/pairs.slice.ts'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
-import { uiSlice } from '../../slices/ui/ui.slice'
 import { settingsSlice } from '../../slices/settings/settings.slice'
-import { WebSocketService } from '../../app/hubs/websocketService';
+import { uiSlice } from '../../slices/ui/ui.slice'
 
 const rootReducer = combineReducers({
   [nodeApi.reducerPath]: nodeApi.reducer,
@@ -26,7 +26,7 @@ export const store: any = configureStore({
 })
 
 // Initialize the WebSocket service with the store
-WebSocketService.getInstance().initializeStore(store);
+WebSocketService.getInstance().initializeStore(store)
 
 export type RootState = ReturnType<typeof store.getState>
 export type AppDispatch = typeof store.dispatch

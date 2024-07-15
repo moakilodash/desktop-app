@@ -1,9 +1,27 @@
-import { useCallback, useEffect } from 'react'
-import { twJoin } from 'tailwind-merge'
-import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
-import { Row } from './Row'
+import {
+  RefreshCw,
+  Zap,
+  ArrowUpRight,
+  ArrowDownRight,
+  Info,
+} from 'lucide-react'
+import React, { useCallback, useEffect } from 'react'
+// import { twJoin } from 'tailwind-merge'
 
-const COL_CLASS_NAME = 'py-3 px-4 font-medium'
+import { ChannelCard } from '../../components/ChannelCard'
+import { numberFormatter } from '../../helpers/number'
+import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
+
+interface CardProps {
+  children: React.ReactNode
+  className?: string
+}
+
+const Card: React.FC<CardProps> = ({ children, className = '' }) => (
+  <div className={`bg-section-lighter rounded-lg shadow p-4 ${className}`}>
+    {children}
+  </div>
+)
 
 export const Component = () => {
   const [listChannels, listChannelsResponse] =
@@ -17,47 +35,95 @@ export const Component = () => {
     refreshChannels()
   }, [refreshChannels])
 
+  const channels = listChannelsResponse?.data?.channels ?? []
+  const totalBalance = channels.reduce(
+    (sum, channel) => sum + channel.asset_local_amount,
+    0
+  )
+  const totalInboundLiquidity = channels.reduce(
+    (sum, channel) => sum + channel.inbound_balance_msat / 1000,
+    0
+  )
+  const totalOutboundLiquidity = channels.reduce(
+    (sum, channel) => sum + channel.outbound_balance_msat / 1000,
+    0
+  )
+
   return (
     <div className="bg-blue-dark py-8 px-6 rounded w-full">
       <div className="flex justify-between items-center mb-8">
-        <div className="text-2xl font-semibold text-white">Wallet Dashboard</div>
+        <div className="text-2xl font-semibold text-white">
+          Lightning Wallet Dashboard
+        </div>
         <button
-          className="px-6 py-3 rounded border text-lg font-bold border-cyan text-white hover:bg-cyan hover:text-blue-dark transition"
+          className="px-6 py-3 rounded border text-lg font-bold border-cyan text-white hover:bg-cyan hover:text-blue-dark transition flex items-center"
           onClick={refreshChannels}
         >
+          <RefreshCw className="mr-2 h-4 w-4" />
           Refresh
         </button>
       </div>
 
-      <div className="bg-section-lighter rounded-b py-8 px-6">
-        {(listChannelsResponse?.data?.channels ?? []).length > 0 ? (
-          <>
-            <div className="grid grid-cols-12 font-medium text-grey-light mb-4">
-              <div className={twJoin(COL_CLASS_NAME, 'col-span-2')}>Channel ID</div>
-              <div className={twJoin(COL_CLASS_NAME, 'col-span-2')}>PubKey</div>
-              <div className={twJoin(COL_CLASS_NAME)}>Capacity (SAT)</div>
-              <div className={twJoin(COL_CLASS_NAME)}>Local Balance</div>
-              <div className={twJoin(COL_CLASS_NAME)}>Remote Balance</div>
-              <div className={twJoin(COL_CLASS_NAME)}>Outbound (mSAT)</div>
-              <div className={twJoin(COL_CLASS_NAME)}>Inbound (mSAT)</div>
-              <div className={twJoin(COL_CLASS_NAME)}>Asset</div>
-              <div className={twJoin(COL_CLASS_NAME, 'col-span-2')}>Channel Status</div>
-              <div className={COL_CLASS_NAME}>Actions</div>
-            </div>
+      <div className="grid gap-4 md:grid-cols-3 mb-8">
+        <Card>
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-sm font-medium text-grey-light">
+              Total Balance
+            </h2>
+            <Zap className="h-4 w-4 text-grey-light" />
+          </div>
+          <div className="text-2xl font-bold text-white">
+            {numberFormatter.format(totalBalance)} sats
+          </div>
+        </Card>
+        <Card>
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-sm font-medium text-grey-light">
+              Total Inbound Liquidity
+            </h2>
+            <ArrowDownRight className="h-4 w-4 text-grey-light" />
+          </div>
+          <div className="text-2xl font-bold text-white">
+            {numberFormatter.format(totalInboundLiquidity)} sats
+          </div>
+        </Card>
+        <Card>
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-sm font-medium text-grey-light">
+              Total Outbound Liquidity
+            </h2>
+            <ArrowUpRight className="h-4 w-4 text-grey-light" />
+          </div>
+          <div className="text-2xl font-bold text-white">
+            {numberFormatter.format(totalOutboundLiquidity)} sats
+          </div>
+        </Card>
+      </div>
 
-            {listChannelsResponse?.data?.channels.map((channel) => (
-              <Row
-                {...channel}
+      <div className="bg-section-lighter rounded-lg py-8 px-6">
+        {channels.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {channels.map((channel) => (
+              <ChannelCard
+                channel={channel}
                 key={channel.channel_id}
                 onClose={refreshChannels}
               />
             ))}
-          </>
+          </div>
         ) : (
-          <div className="text-lg text-grey-light">
+          <div className="text-lg text-grey-light text-center">
             You don't have any open channels yet.
           </div>
         )}
+      </div>
+
+      <div className="flex items-center space-x-2 text-sm text-grey-light mt-4">
+        <Info className="h-4 w-4" />
+        <p>
+          Channel liquidity changes as you send and receive payments. Keep your
+          channels balanced for optimal performance.
+        </p>
       </div>
     </div>
   )
