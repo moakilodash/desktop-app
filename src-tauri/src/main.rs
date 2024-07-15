@@ -12,7 +12,7 @@ use tauri::Manager;
 struct Config {
     network: String,
     datapath: String,
-    electrum_connection_url: String,
+    rpc_connection_url: String,
 }
 
 impl Default for Config {
@@ -20,7 +20,7 @@ impl Default for Config {
         Self {
             network: "regtest".to_string(),
             datapath: "../bin/dataldk".to_string(),
-            electrum_connection_url: "user:password@localhost:18443".to_string(),
+            rpc_connection_url: "user:password@localhost:18443".to_string(),
         }
     }
 }
@@ -37,12 +37,12 @@ fn load_config(config_path: &Path) -> Config {
     }
 }
 
-fn run_rgb_lightning_node(network: &str, datapath: &str, electrum_connection_url: &str) -> Child {
+fn run_rgb_lightning_node(network: &str, datapath: &str, rpc_connection_url: &str) -> Child {
     let mut executable_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     executable_path.push("../bin/rgb-lightning-node");
 
     Command::new(executable_path)
-        .args(&[electrum_connection_url, datapath])
+        .args(&[rpc_connection_url, datapath])
         .args(&["--daemon-listening-port", "3001"])
         .args(&["--ldk-peer-listening-port", "9736"])
         .args(&["--network", network])
@@ -65,17 +65,17 @@ fn main() {
 
     let network = config.network;
     let datapath = data_path.to_str().unwrap().to_string();
-    let electrum_connection_url = config.electrum_connection_url;
+    let rpc_connection_url = config.rpc_connection_url;
 
     println!("Network: {}", network);
     println!("Data Path: {}", datapath);
-    println!("Electrum Connection URL: {}", electrum_connection_url);
+    println!("Electrum Connection URL: {}", rpc_connection_url);
 
     // Use Arc and Mutex to share the child process reference safely
     let child_process = Arc::new(Mutex::new(Some(run_rgb_lightning_node(
         &network,
         &datapath,
-        &electrum_connection_url,
+        &rpc_connection_url,
     ))));
 
     let child_process_clone = Arc::clone(&child_process);
