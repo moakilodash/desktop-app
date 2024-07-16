@@ -6,17 +6,17 @@ import {
 import * as z from 'zod'
 
 import { RootState } from '../../app/store'
-import { MIN_CHANNEL_CAPACITY } from '../../constants'
+import { MIN_CHANNEL_CAPACITY, MAX_CHANNEL_CAPACITY } from '../../constants'
 
 export const OrderChannelFormSchema = z.object({
-  assetAmount: z.z.number().gte(0),
+  assetAmount: z.number().gte(0),
   assetId: z.string(),
-  capacitySat: z.z
+  capacitySat: z
     .number()
     .min(MIN_CHANNEL_CAPACITY, 'Minimum amount is 50000 satoshis')
-    .max(100000000, 'Maximum amount is 100000000 satoshis'),
-  channelExpireBlocks: z.z.number().gte(0),
-  clientBalanceSat: z.z.number().gte(0),
+    .max(MAX_CHANNEL_CAPACITY, 'Maximum amount is 100000000 satoshis'),
+  channelExpireBlocks: z.number().gte(0),
+  clientBalanceSat: z.number().gte(0),
 })
 
 export type TChannelRequestForm = z.infer<typeof OrderChannelFormSchema>
@@ -33,24 +33,25 @@ export const initialState: SliceState = {
       assetAmount: 0,
       assetId: '',
       capacitySat: MIN_CHANNEL_CAPACITY,
-      channelExpireBlocks: 1008,
-      clientBalanceSat: 0, // 1 week
+      channelExpireBlocks: 1008, // 1 week
+      clientBalanceSat: 0,
     },
   },
 }
-
 export const orderChannelSlice = createSlice({
   initialState,
-  name: 'channel',
+  name: 'orderChannel',
   reducers: {
     setChannelRequestForm: (
       state,
       action: PayloadAction<Partial<SliceState['forms']['request']>>
     ) => {
+      console.log('Updating Redux store:', action.payload)
       state.forms.request = {
         ...state.forms.request,
         ...action.payload,
       }
+      console.log('Updated Redux store:', state.forms.request)
     },
   },
 })

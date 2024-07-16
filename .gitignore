@@ -23,5 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 
+
 # Node data
+bin/
 bin/dataldk

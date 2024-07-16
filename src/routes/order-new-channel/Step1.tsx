@@ -1,24 +1,25 @@
-import { ChevronDownIcon, CopyIcon, CheckIcon } from 'lucide-react'
+import { zodResolver } from '@hookform/resolvers/zod'
 import React, { useCallback, useEffect, useState } from 'react'
-import { Controller, SubmitHandler, useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { toast, ToastContainer } from 'react-toastify'
 
-import { useAppDispatch } from '../../app/store/hooks'
+import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
+import { AssetSelector } from '../../components/AssetSelector'
 import { Select } from '../../components/Select'
 import { MIN_CHANNEL_CAPACITY, MAX_CHANNEL_CAPACITY } from '../../constants'
 import {
-  // OrderChannelFormSchema,
-  orderChannelSliceActions,
-  // orderChannelSliceSelectors,
+  OrderChannelFormSchema,
+  TChannelRequestForm,
+  orderChannelSliceSelectors,
   initialState,
 } from '../../slices/channel/orderChannel.slice'
 import { makerApi } from '../../slices/makerApi/makerApi.slice'
 
 import { FormError } from './FormError'
+import 'react-toastify/dist/ReactToastify.css'
 
 interface Props {
-  onBack: VoidFunction
-  onNext: VoidFunction
+  onNext: (data: TChannelRequestForm) => void
 }
 
 interface AssetInfo {
@@ -35,147 +36,32 @@ interface AssetInfo {
 }
 
 interface FormFields {
-  capacitySat: number
-  clientBalanceSat: number
-  assetId: string
   assetAmount: number
-  channelExpireBlocks: number
-}
-
-interface AssetOptionProps {
-  assetInfo: AssetInfo
   assetId: string
-  onSelect: (value: string) => void
+  capacitySat: number
+  channelExpireBlocks: number
+  clientBalanceSat: number
 }
 
-const AssetOption: React.FC<AssetOptionProps> = ({
-  assetInfo,
-  assetId,
-  onSelect,
-}) => {
-  const [copied, setCopied] = useState(false)
-
-  const copyToClipboard = (e) => {
-    e.stopPropagation()
-    navigator.clipboard.writeText(assetId).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
-  }
-
-  return (
-    <div
-      className="flex justify-between items-center p-3 hover:bg-gray-700 cursor-pointer"
-      onClick={() => onSelect(assetId)}
-    >
-      <div className="flex items-center">
-        {/* <img 
-          src={assetIcons[assetInfo.ticker] || '/icons/default.svg'} 
-          alt={assetInfo.ticker}
-          className="w-6 h-6 mr-2"
-        /> */}
-        <div>
-          <div className="font-medium">{`${assetInfo.name} (${assetInfo.ticker})`}</div>
-          <div className="text-sm text-gray-400 break-all">{assetId}</div>
-        </div>
-      </div>
-      <button
-        className="p-1 hover:bg-gray-600 rounded"
-        onClick={copyToClipboard}
-      >
-        {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
-      </button>
-    </div>
-  )
-}
-
-interface AssetSelectorProps {
-  control: any
-  name: string
-  assetMap: Record<string, AssetInfo>
-}
-
-const AssetSelector: React.FC<AssetSelectorProps> = ({
-  control,
-  name,
-  assetMap,
-}) => {
-  const [isOpen, setIsOpen] = useState(false)
-
-  return (
-    <Controller
-      control={control}
-      name={name}
-      render={({ field }) => {
-        const selectedAsset = assetMap[field.value]
-        return (
-          <div className="relative">
-            <div
-              className="bg-gray-700 p-3 rounded-md flex justify-between items-center cursor-pointer"
-              onClick={() => setIsOpen(!isOpen)}
-            >
-              {field.value && selectedAsset ? (
-                <div className="flex items-center">
-                  {/* <img 
-                    src={assetIcons[selectedAsset.ticker] || '/icons/default.svg'} 
-                    alt={selectedAsset.ticker}
-                    className="w-6 h-6 mr-2"
-                  /> */}
-                  <span>{`${selectedAsset.name} (${selectedAsset.ticker})`}</span>
-                </div>
-              ) : (
-                <span>Select an asset</span>
-              )}
-              <ChevronDownIcon size={20} />
-            </div>
-            {isOpen && (
-              <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto">
-                {Object.entries(assetMap).map(([assetId, assetInfo]) => (
-                  <AssetOption
-                    assetId={assetId}
-                    assetInfo={assetInfo}
-                    key={assetId}
-                    onSelect={(value) => {
-                      field.onChange(value)
-                      setIsOpen(false)
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-            {field.value && selectedAsset && (
-              <div className="mt-2 text-sm text-gray-400 break-all">
-                Asset ID: {field.value}
-              </div>
-            )}
-          </div>
-        )
-      }}
-    />
-  )
-}
-
-export const Step1: React.FC<Props> = ({ onBack, onNext }) => {
+export const Step1: React.FC<Props> = ({ onNext }) => {
   const dispatch = useAppDispatch()
-  const [maxCapacity, setMaxCapacity] = useState<number>(MAX_CHANNEL_CAPACITY)
   const [assetMap, setAssetMap] = useState<Record<string, AssetInfo>>({})
   const [addAsset, setAddAsset] = useState(true)
-  const [getInfoRequest, getInfoResponse] =
-    makerApi.endpoints.get_info.useLazyQuery()
+  const orderChannelForm = useAppSelector((state) =>
+    orderChannelSliceSelectors.form(state, 'request')
+  )
 
-  const form = useForm<FormFields>({
-    defaultValues: initialState.forms.request,
-    // resolver: zodResolver(
-    //   OrderChannelFormSchema.pick({
-    //     capacitySat: true,
-    //     clientBalanceSat: true,
-    //     assetId: true,
-    //     assetAmount: true,
-    //     channelExpireBlocks: true,
-    //   })
-    // ),
-  })
-  const { control, handleSubmit, register, setValue, watch, formState } = form
+  const { register, handleSubmit, setValue, control, watch, formState } =
+    useForm<FormFields>({
+      criteriaMode: 'all',
+      defaultValues: {
+        ...initialState.forms.request,
+      },
+      resolver: zodResolver(OrderChannelFormSchema),
+      values: orderChannelForm,
+    })
+
+  const [getInfoRequest] = makerApi.endpoints.get_info.useLazyQuery()
 
   const assetAmount = watch('assetAmount')
   const capacitySat = watch('capacitySat')
@@ -183,22 +69,20 @@ export const Step1: React.FC<Props> = ({ onBack, onNext }) => {
   const assetId = watch('assetId')
 
   useEffect(() => {
-    getInfoRequest()
+    getInfoRequest().then((response) => {
+      if (response.data?.assets) {
+        const tmpMap: Record<string, AssetInfo> = {}
+        response.data.assets.forEach((asset) => {
+          tmpMap[asset.asset_id] = asset
+        })
+        setAssetMap(tmpMap)
+      } else if (response.error) {
+        toast.error(
+          'There was an error fetching the assets. Please try again later.'
+        )
+      }
+    })
   }, [getInfoRequest])
-
-  useEffect(() => {
-    if (getInfoResponse.isSuccess && getInfoResponse.data?.assets) {
-      const tmpMap: Record<string, AssetInfo> = {}
-      getInfoResponse.data.assets.forEach((asset) => {
-        tmpMap[asset.asset_id] = asset
-      })
-      setAssetMap(tmpMap)
-    } else if (getInfoResponse.isError) {
-      toast.error(
-        'There was an error fetching the assets. Please try again later.'
-      )
-    }
-  }, [getInfoResponse])
 
   const handleAmountChange =
     (setter: (value: number) => void) => (value: string) => {
@@ -208,26 +92,17 @@ export const Step1: React.FC<Props> = ({ onBack, onNext }) => {
       }
     }
 
-  useEffect(() => {
-    const subscription = watch((value) => {
-      dispatch(orderChannelSliceActions.setChannelRequestForm(value))
-    })
-    return () => subscription.unsubscribe()
-  }, [watch, dispatch])
-
-  const onSubmit: SubmitHandler<FormFields> = useCallback(
-    (data) => {
-      console.log(data)
-      dispatch(orderChannelSliceActions.setChannelRequestForm(data))
-      // console.log(channelRequestForm);
-      onNext()
+  const onSubmit = useCallback(
+    (data: TChannelRequestForm) => {
+      console.log('Form submitted with data:', data)
+      onNext(data)
     },
     [dispatch, onNext]
   )
 
   const maxAssetAmount = assetId
-    ? assetMap[assetId]?.max_channel_amount || maxCapacity
-    : maxCapacity
+    ? assetMap[assetId]?.max_channel_amount || MAX_CHANNEL_CAPACITY
+    : MAX_CHANNEL_CAPACITY
 
   return (
     <form
@@ -250,7 +125,7 @@ export const Step1: React.FC<Props> = ({ onBack, onNext }) => {
             <input
               {...register('capacitySat', { valueAsNumber: true })}
               className="bg-gray-700 text-white px-4 py-2 rounded-md w-full"
-              max={maxCapacity}
+              max={MAX_CHANNEL_CAPACITY}
               min={MIN_CHANNEL_CAPACITY}
               onChange={(e) =>
                 handleAmountChange(setValue.bind(null, 'capacitySat'))(
@@ -266,7 +141,7 @@ export const Step1: React.FC<Props> = ({ onBack, onNext }) => {
           </div>
           <input
             className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer mt-4"
-            max={maxCapacity}
+            max={MAX_CHANNEL_CAPACITY}
             min={MIN_CHANNEL_CAPACITY}
             onChange={(e) =>
               handleAmountChange(setValue.bind(null, 'capacitySat'))(
@@ -335,12 +210,12 @@ export const Step1: React.FC<Props> = ({ onBack, onNext }) => {
             name="channelExpireBlocks"
             render={({ field }) => (
               <Select
-                active={field.value}
+                active={field.value.toString()}
                 onSelect={(value) => field.onChange(parseInt(value))}
                 options={[
-                  { label: '1 week', value: 6 * 24 * 7 },
-                  { label: '1 month', value: 6 * 24 * 30 },
-                  { label: '6 months', value: 6 * 24 * 30 * 6 },
+                  { label: '1 week', value: (6 * 24 * 7).toString() },
+                  { label: '1 month', value: (6 * 24 * 30).toString() },
+                  { label: '6 months', value: (6 * 24 * 30 * 6).toString() },
                 ]}
                 theme="dark"
               />
@@ -421,13 +296,6 @@ export const Step1: React.FC<Props> = ({ onBack, onNext }) => {
       </div>
 
       <div className="flex justify-end space-x-4 mt-10">
-        <button
-          className="px-6 py-3 rounded-lg text-lg font-medium text-gray-300 hover:text-white transition-colors"
-          onClick={onBack}
-          type="button"
-        >
-          Go Back
-        </button>
         <button
           className="px-6 py-3 rounded-lg text-lg font-bold bg-purple-600 hover:bg-purple-700 transition-colors"
           type="submit"

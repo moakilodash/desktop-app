@@ -12,7 +12,7 @@ import { WebSocketService } from '../../app/hubs/websocketService'
 import { RootState } from '../../app/store'
 
 // Initialize the WebSocket service
-const wsService = WebSocketService.getInstance()
+// const wsService = WebSocketService.getInstance()
 
 const jsonFromString = z.string().transform((s) => JSON.parse(s))
 
@@ -85,57 +85,57 @@ const initialState: PairsState = {
   values: [],
 }
 
-const subscribePair = createAsyncThunk(
-  'pairs/subscribe',
-  async (payload: { pair: string; size: number }, thunkAPI) => {
-    const state = thunkAPI.getState() as RootState
-    const pair = getFeedSelector(state, payload.pair)
-    const clientId = uuidv4()
+// const subscribePair = createAsyncThunk(
+//   'pairs/subscribe',
+//   async (payload: { pair: string; size: number }, thunkAPI) => {
+//     const state = thunkAPI.getState() as RootState
+//     const pair = getFeedSelector(state, payload.pair)
+//     const clientId = uuidv4()
 
-    if (pair && pair.size !== payload.size) {
-      await thunkAPI.dispatch(
-        unsubscribePair({ pair: payload.pair, size: pair.size })
-      )
-    }
+//     if (pair && pair.size !== payload.size) {
+//       await thunkAPI.dispatch(
+//         unsubscribePair({ pair: payload.pair, size: pair.size })
+//       )
+//     }
 
-    if (!pair || pair.size !== payload.size) {
-      wsService.sendMessage('SubscribePairPriceChannel', {
-        action: 'subscribe',
-        clientId: clientId,
-        pair: payload.pair,
-        size: payload.size,
-      })
-    }
-  }
-)
+//     if (!pair || pair.size !== payload.size) {
+//       wsService.sendMessage('SubscribePairPriceChannel', {
+//         action: 'subscribe',
+//         clientId: clientId,
+//         pair: payload.pair,
+//         size: payload.size,
+//       })
+//     }
+//   }
+// )
 
-const unsubscribePair = createAsyncThunk(
-  'pairs/unsubscribe',
-  async (payload: { pair: string; size: number }) => {
-    const clientId = uuidv4()
-    wsService.sendMessage('UnsubscribePairPriceChannel', {
-      action: 'unsubscribe',
-      clientId: clientId,
-      pair: payload.pair,
-      size: payload.size,
-    })
-  }
-)
+// const unsubscribePair = createAsyncThunk(
+//   'pairs/unsubscribe',
+//   async (payload: { pair: string; size: number }) => {
+//     const clientId = uuidv4()
+//     wsService.sendMessage('UnsubscribePairPriceChannel', {
+//       action: 'unsubscribe',
+//       clientId: clientId,
+//       pair: payload.pair,
+//       size: payload.size,
+//     })
+//   }
+// )
 
-const resubscribeAll = createAsyncThunk(
-  'pairs/resubscribeAll',
-  async (_, thunkAPI) => {
-    const state = thunkAPI.getState() as RootState
-    const activeFeedKeys = activeFeedsSelector(state)
+// const resubscribeAll = createAsyncThunk(
+//   'pairs/resubscribeAll',
+//   async (_, thunkAPI) => {
+//     const state = thunkAPI.getState() as RootState
+//     const activeFeedKeys = activeFeedsSelector(state)
 
-    activeFeedKeys.forEach((k) => {
-      const pair = getFeedSelector(state, k)
-      if (pair) {
-        thunkAPI.dispatch(subscribePair({ pair: k, size: pair.size }))
-      }
-    })
-  }
-)
+//     activeFeedKeys.forEach((k) => {
+//       const pair = getFeedSelector(state, k)
+//       if (pair) {
+//         thunkAPI.dispatch(subscribePair({ pair: k, size: pair.size }))
+//       }
+//     })
+//   }
+// )
 
 const executionPairs = createAction<TExecutionPairs['data']>(
   EXECUTION_PAIRS_SUBJECT.value
@@ -190,9 +190,9 @@ export const pairsSliceActions = {
   ...pairsSlice.actions,
   executionFeedsPriceUpdate,
   executionPairs,
-  resubscribeAll,
-  subscribePair,
-  unsubscribePair,
+  // resubscribeAll,
+  // subscribePair,
+  // unsubscribePair,
 }
 
 // Selectors

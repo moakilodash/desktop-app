@@ -1,0 +1,131 @@
+import { ChevronDownIcon, CopyIcon, CheckIcon } from 'lucide-react'
+import React, { useState } from 'react'
+import { Controller } from 'react-hook-form'
+
+import 'react-toastify/dist/ReactToastify.css'
+
+interface AssetInfo {
+  name: string
+  ticker: string
+  asset_id: string
+  precision: number
+  min_initial_client_amount: number
+  max_initial_client_amount: number
+  min_initial_lsp_amount: number
+  max_initial_lsp_amount: number
+  min_channel_amount: number
+  max_channel_amount: number
+}
+
+interface AssetOptionProps {
+  assetInfo: AssetInfo
+  assetId: string
+  onSelect: (value: string) => void
+}
+
+const AssetOption: React.FC<AssetOptionProps> = ({
+  assetInfo,
+  assetId,
+  onSelect,
+}) => {
+  const [copied, setCopied] = useState(false)
+
+  const copyToClipboard = (e) => {
+    e.stopPropagation()
+    navigator.clipboard.writeText(assetId).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <div
+      className="flex justify-between items-center p-3 hover:bg-gray-700 cursor-pointer"
+      onClick={() => onSelect(assetId)}
+    >
+      <div className="flex items-center">
+        {/* <img 
+            src={assetIcons[assetInfo.ticker] || '/icons/default.svg'} 
+            alt={assetInfo.ticker}
+            className="w-6 h-6 mr-2"
+          /> */}
+        <div>
+          <div className="font-medium">{`${assetInfo.name} (${assetInfo.ticker})`}</div>
+          <div className="text-sm text-gray-400 break-all">{assetId}</div>
+        </div>
+      </div>
+      <button
+        className="p-1 hover:bg-gray-600 rounded"
+        onClick={copyToClipboard}
+      >
+        {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
+      </button>
+    </div>
+  )
+}
+
+interface AssetSelectorProps {
+  control: any
+  name: string
+  assetMap: Record<string, AssetInfo>
+}
+
+export const AssetSelector: React.FC<AssetSelectorProps> = ({
+  control,
+  name,
+  assetMap,
+}) => {
+  const [isOpen, setIsOpen] = useState(false)
+
+  return (
+    <Controller
+      control={control}
+      name={name}
+      render={({ field }) => {
+        const selectedAsset = assetMap[field.value]
+        return (
+          <div className="relative">
+            <div
+              className="bg-gray-700 p-3 rounded-md flex justify-between items-center cursor-pointer"
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              {field.value && selectedAsset ? (
+                <div className="flex items-center">
+                  {/* <img 
+                      src={assetIcons[selectedAsset.ticker] || '/icons/default.svg'} 
+                      alt={selectedAsset.ticker}
+                      className="w-6 h-6 mr-2"
+                    /> */}
+                  <span>{`${selectedAsset.name} (${selectedAsset.ticker})`}</span>
+                </div>
+              ) : (
+                <span>Select an asset</span>
+              )}
+              <ChevronDownIcon size={20} />
+            </div>
+            {isOpen && (
+              <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto">
+                {Object.entries(assetMap).map(([assetId, assetInfo]) => (
+                  <AssetOption
+                    assetId={assetId}
+                    assetInfo={assetInfo}
+                    key={assetId}
+                    onSelect={(value) => {
+                      field.onChange(value)
+                      setIsOpen(false)
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+            {field.value && selectedAsset && (
+              <div className="mt-2 text-sm text-gray-400 break-all">
+                Asset ID: {field.value}
+              </div>
+            )}
+          </div>
+        )
+      }}
+    />
+  )
+}

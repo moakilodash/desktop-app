@@ -2,6 +2,7 @@ import { combineReducers, configureStore } from '@reduxjs/toolkit'
 
 import { WebSocketService } from '../../app/hubs/websocketService'
 import { channelSlice } from '../../slices/channel/channel.slice'
+import { orderChannelSlice } from '../../slices/channel/orderChannel.slice'
 import { makerApi } from '../../slices/makerApi/makerApi.slice.ts'
 import { pairsSlice } from '../../slices/makerApi/pairs.slice.ts'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
@@ -12,6 +13,7 @@ const rootReducer = combineReducers({
   [nodeApi.reducerPath]: nodeApi.reducer,
   [makerApi.reducerPath]: makerApi.reducer,
   channel: channelSlice.reducer,
+  orderChannel: orderChannelSlice.reducer,
   pairs: pairsSlice.reducer,
   settings: settingsSlice.reducer,
   ui: uiSlice.reducer,
