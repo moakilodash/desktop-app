@@ -30,6 +30,12 @@ fn load_config(config_path: &Path) -> Config {
         let config_content = fs::read_to_string(config_path).expect("Failed to read config file");
         serde_yaml::from_str(&config_content).expect("Failed to parse config file")
     } else {
+        // Crea la directory se non esiste
+        if let Some(parent) = config_path.parent() {
+            if !parent.exists() {
+                create_all(parent, true).expect("Failed to create config directory");
+            }
+        }
         let default_config = Config::default();
         let config_yaml = serde_yaml::to_string(&default_config).expect("Failed to serialize default config");
         fs::write(config_path, config_yaml).expect("Failed to write default config file");
@@ -37,17 +43,24 @@ fn load_config(config_path: &Path) -> Config {
     }
 }
 
-fn run_rgb_lightning_node(network: &str, datapath: &str, rpc_connection_url: &str) -> Child {
+fn run_rgb_lightning_node(network: &str, datapath: &str, rpc_connection_url: &str) -> Option<Child> {
     let mut executable_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     executable_path.push("../bin/rgb-lightning-node");
 
-    Command::new(executable_path)
-        .args(&[rpc_connection_url, datapath])
-        .args(&["--daemon-listening-port", "3001"])
-        .args(&["--ldk-peer-listening-port", "9736"])
-        .args(&["--network", network])
-        .spawn()
-        .expect("Failed to start rgb-lightning-node process")
+    if executable_path.exists() {
+        Some(
+            Command::new(executable_path)
+                .args(&[rpc_connection_url, datapath])
+                .args(&["--daemon-listening-port", "3001"])
+                .args(&["--ldk-peer-listening-port", "9736"])
+                .args(&["--network", network])
+                .spawn()
+                .expect("Failed to start rgb-lightning-node process")
+        )
+    } else {
+        println!("rgb-lightning-node executable not found.");
+        None
+    }
 }
 
 fn main() {
@@ -69,21 +82,22 @@ fn main() {
 
     println!("Network: {}", network);
     println!("Data Path: {}", datapath);
-    println!("Electrum Connection URL: {}", rpc_connection_url);
+    println!("RPC Connection URL: {}", rpc_connection_url);
 
     // Use Arc and Mutex to share the child process reference safely
-    let child_process = Arc::new(Mutex::new(Some(run_rgb_lightning_node(
+    let child_process = Arc::new(Mutex::new(run_rgb_lightning_node(
         &network,
         &datapath,
         &rpc_connection_url,
-    ))));
+    )));
 
     let child_process_clone = Arc::clone(&child_process);
 
     tauri::Builder::default()
         .on_window_event(move |event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event.event() {
-                if let Some(mut child) = child_process_clone.lock().unwrap().take() {
+                let mut child_lock = child_process_clone.lock().unwrap();
+                if let Some(ref mut child) = *child_lock {
                     child.kill().expect("Failed to kill child process");
                 }
             }
@@ -92,7 +106,8 @@ fn main() {
             let handle = app.handle();
             let child_process_clone = Arc::clone(&child_process);
             app.listen_global("tauri://exit", move |_| {
-                if let Some(mut child) = child_process_clone.lock().unwrap().take() {
+                let mut child_lock = child_process_clone.lock().unwrap();
+                if let Some(ref mut child) = *child_lock {
                     child.kill().expect("Failed to kill child process");
                 }
                 handle.exit(0);

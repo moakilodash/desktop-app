@@ -26,3 +26,4 @@ dist-ssr
 # Other stuff
 shell.nix
 bin
+.env
