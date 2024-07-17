@@ -57,6 +57,14 @@ export const Component = () => {
           </div>
         ) : (
           <>
+            <div>
+              <button
+                className="px-3 py-1 rounded border text-sm border-gray-500"
+                onClick={() => navigate(WALLET_SETUP_PATH)}
+              >
+                Go Back
+              </button>
+            </div>
             <div className="text-center mb-10">
               <h3 className="text-2xl font-semibold mb-4">
                 Unlock your Wallet
@@ -99,13 +107,7 @@ export const Component = () => {
                     </div>
                   </div>
                 </div>
-                <div className="flex self-end justify-between mt-8 w-full">
-                  <button
-                    className="px-6 py-3 rounded border text-lg font-bold border-cyan"
-                    onClick={() => navigate(WALLET_SETUP_PATH)}
-                  >
-                    Go Back
-                  </button>
+                <div className="flex self-end justify-end mt-8">
                   <button
                     className="px-6 py-3 rounded border text-lg font-bold border-cyan"
                     type="submit"
