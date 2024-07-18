@@ -1,92 +1,183 @@
-import { ArrowUpRight, ArrowDownRight } from 'lucide-react'
-import React, { useCallback, useState } from 'react'
+import { ArrowUpRight, ArrowDownRight, X } from 'lucide-react'
+import React, { useState } from 'react'
 
-import { Spinner } from '../../components/Spinner/index.tsx'
-import { ASSET_ID_TO_TICKER } from '../../constants.ts'
-import { numberFormatter } from '../../helpers/number'
-import { Channel, nodeApi } from '../../slices/nodeApi/nodeApi.slice'
-
-type Props = {
-  channel: Channel
-  onClose: VoidFunction
+interface ModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onConfirm: () => void
+  children: React.ReactNode
 }
 
-export const ChannelCard = ({ channel, onClose }: Props) => {
-  const [closeChannel] = nodeApi.endpoints.closeChannel.useLazyQuery()
-  const [isClosingChannel, setIsClosingChannel] = useState(false)
+const Modal: React.FC<ModalProps> = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  children,
+}) => {
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-gray-800 rounded-lg p-6 max-w-sm w-full">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Confirm Action</h3>
+          <button className="text-gray-400 hover:text-white" onClick={onClose}>
+            <X size={24} />
+          </button>
+        </div>
+        {children}
+        <div className="flex justify-end space-x-4 mt-6">
+          <button
+            className="px-4 py-2 rounded bg-gray-700 text-white hover:bg-gray-600"
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+          <button
+            className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+            onClick={onConfirm}
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+interface ChannelCardProps {
+  channel: any
+  onClose: (channelId: string, peerPubkey: string) => void
+  assets: any
+}
+
+export const ChannelCard: React.FC<ChannelCardProps> = ({
+  channel,
+  onClose,
+  assets,
+}) => {
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const [isCopied, setIsCopied] = useState(false)
+  const [isClosing, setIsClosing] = useState(false)
 
-  const onCloseChannel = useCallback(async () => {
-    setIsClosingChannel(true)
-    await closeChannel({
-      channel_id: channel.channel_id,
-      peer_pubkey: channel.peer_pubkey,
-    })
-    onClose()
-    setIsClosingChannel(false)
-  }, [closeChannel, channel, onClose])
-
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = (text) => {
     navigator.clipboard
       .writeText(text)
       .then(() => {
         setIsCopied(true)
         setTimeout(() => setIsCopied(false), 2000)
       })
-      .catch((err) => {
-        console.error('Failed to copy: ', err)
-      })
+      .catch((err) => console.error('Failed to copy: ', err))
+  }
+
+  const handleCloseChannel = async () => {
+    setIsClosing(true)
+    await onClose(channel.channel_id, channel.peer_pubkey)
+    setIsClosing(false)
+    setIsModalOpen(false)
+  }
+
+  const assetTicker = assets[channel.asset_id]?.ticker || 'BTC'
+  const assetPrecision = assets[channel.asset_id]?.precision || 8
+  const peerName = channel.peer_alias || channel.peer_pubkey.slice(0, 8)
+
+  const formatAssetAmount = (amount) => {
+    const factor = Math.pow(10, assetPrecision)
+    return (amount / factor).toLocaleString(undefined, {
+      maximumFractionDigits: assetPrecision,
+      minimumFractionDigits: assetPrecision,
+    })
   }
 
   return (
-    <div className="bg-blue-dark rounded-lg shadow p-4">
-      <div className="flex justify-between items-center mb-2">
-        <div
-          className="text-sm font-medium text-white cursor-pointer"
-          onClick={() => copyToClipboard(channel.channel_id)}
-          title={channel.channel_id}
+    <div className="relative bg-gray-800 text-white rounded-lg shadow p-4">
+      <div className="absolute inset-0 bg-black bg-opacity-30 rounded-lg"></div>
+      <div className="relative z-10">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center space-x-2">
+            <span className="font-bold">{peerName}</span>
+            <button
+              className="text-gray-400 hover:text-white transition-colors"
+              onClick={() => copyToClipboard(channel.channel_id)}
+              title={isCopied ? 'Copied!' : 'Copy Channel ID'}
+            >
+              {isCopied ? '✓' : '📋'}
+            </button>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span
+              className={`text-xs px-2 py-1 rounded ${channel.ready ? 'bg-green-500' : 'bg-yellow-500'}`}
+            >
+              {channel.ready ? 'Open' : 'Pending'}
+            </span>
+            {channel.public ? '🔓' : '🔒'}
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <p className="text-sm text-gray-400">Total Capacity</p>
+          <div className="text-2xl font-bold mb-1">
+            {channel.capacity_sat.toLocaleString()} sats
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+          <div className="flex items-center">
+            <ArrowUpRight className="mr-2 h-4 w-4 text-gray-400" />
+            <div>
+              <div className="text-gray-400">Outbound</div>
+              <div>
+                {Math.floor(
+                  channel.outbound_balance_msat / 1000
+                ).toLocaleString()}{' '}
+                sats
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center">
+            <ArrowDownRight className="mr-2 h-4 w-4 text-gray-400" />
+            <div>
+              <div className="text-gray-400">Inbound</div>
+              <div>
+                {Math.floor(
+                  channel.inbound_balance_msat / 1000
+                ).toLocaleString()}{' '}
+                sats
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-between text-sm text-gray-400 mb-4">
+          <div>
+            Local: {formatAssetAmount(channel.asset_local_amount)} {assetTicker}
+          </div>
+          <div>
+            Remote: {formatAssetAmount(channel.asset_remote_amount)}{' '}
+            {assetTicker}
+          </div>
+        </div>
+
+        <button
+          className={`w-full py-2 px-4 rounded font-bold text-white ${
+            isClosing
+              ? 'bg-orange-700 cursor-not-allowed'
+              : 'bg-orange-600 hover:bg-orange-700 transition-colors'
+          }`}
+          disabled={isClosing}
+          onClick={() => setIsModalOpen(true)}
         >
-          Channel {channel.channel_id.slice(0, 8)}...
-          {isCopied && <span className="ml-2 text-xs text-cyan">Copied</span>}
-        </div>
-        <span
-          className={`text-xs px-2 py-1 rounded ${channel.ready ? 'bg-green-500 text-white' : 'bg-yellow-500 text-white'}`}
+          {isClosing ? 'Closing...' : 'Close Channel'}
+        </button>
+
+        <Modal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onConfirm={handleCloseChannel}
         >
-          {channel.ready ? 'Open' : 'Pending'}
-        </span>
+          <p>Are you sure you want to close this channel with {peerName}?</p>
+        </Modal>
       </div>
-      <div className="text-2xl font-bold text-white mb-1">
-        {numberFormatter.format(channel.capacity_sat)} sats
-      </div>
-      <p className="text-xs text-grey-light mb-4">Total Capacity</p>
-      <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-        <div className="flex items-center text-white">
-          <ArrowUpRight className="mr-2 h-4 w-4 text-grey-light" />
-          Outbound:{' '}
-          {numberFormatter.format(channel.outbound_balance_msat / 1000)}
-        </div>
-        <div className="flex items-center text-white">
-          <ArrowDownRight className="mr-2 h-4 w-4 text-grey-light" />
-          Inbound: {numberFormatter.format(channel.inbound_balance_msat / 1000)}
-        </div>
-      </div>
-      <div className="flex justify-between text-sm text-grey-light mb-4">
-        <div>
-          Local: {numberFormatter.format(channel.asset_local_amount)} sats
-        </div>
-        <div>
-          Remote: {numberFormatter.format(channel.asset_remote_amount)} sats
-        </div>
-      </div>
-      <div className="text-sm text-grey-light mb-4">
-        Asset: {ASSET_ID_TO_TICKER[channel.asset_id] ?? 'BTC'}
-      </div>
-      <button
-        className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded"
-        onClick={onCloseChannel}
-      >
-        {isClosingChannel ? <Spinner size={8} /> : 'Close Channel'}
-      </button>
     </div>
   )
 }

@@ -117,18 +117,17 @@ const AssetRow: React.FC<AssetRowProps> = ({
 
 export const Component = () => {
   const dispatch = useAppDispatch()
-  const [address, addressResponse] = nodeApi.endpoints.address.useLazyQuery()
   const [assets, assetsResponse] = nodeApi.endpoints.listAssets.useLazyQuery()
   const [btcBalance, btcBalanceResponse] =
     nodeApi.endpoints.btcBalance.useLazyQuery()
   const [listChannels, listChannelsResponse] =
     nodeApi.endpoints.listChannels.useLazyQuery()
   const [assetBalance] = nodeApi.endpoints.assetBalance.useLazyQuery()
+  const [closeChannel] = nodeApi.endpoints.closeChannel.useLazyQuery()
 
   const [assetBalances, setAssetBalances] = useState({})
 
   const refreshData = useCallback(() => {
-    // address()
     assets()
     btcBalance()
     listChannels()
@@ -192,6 +191,14 @@ export const Component = () => {
     (sum, channel) => sum + channel.outbound_balance_msat / 1000,
     0
   )
+
+  const handleCloseChannel = async (channelId, peerPubkey) => {
+    await closeChannel({
+      channel_id: channelId,
+      peer_pubkey: peerPubkey,
+    })
+    refreshData()
+  }
 
   return (
     <div className="w-full bg-blue-dark py-8 px-6 rounded space-y-4">
@@ -317,9 +324,10 @@ export const Component = () => {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {channels.map((channel) => (
               <ChannelCard
+                assets={assets}
                 channel={channel}
                 key={channel.channel_id}
-                onClose={refreshData}
+                onClose={handleCloseChannel}
               />
             ))}
           </div>
