@@ -26,13 +26,16 @@ interface GetAssetsResponse {
 }
 
 interface InitSwapRequest {
-  asset_id: string
-  asset_amount: string
-  side: 'Buy' | 'Sell'
+  from_asset: string
+  to_asset: string
+  from_amount: number
+  to_amount: number
+  request_for_quotation_id: string
 }
 
 interface InitSwapResponse {
   swapstring: string
+  payment_hash: string
 }
 
 interface ExecSwapRequest {

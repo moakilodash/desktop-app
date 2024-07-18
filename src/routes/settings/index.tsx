@@ -11,7 +11,7 @@ import {
 interface FormFields {
   bitcoinUnit: string
   nodeConnectionString: string
-  lspUrl: string
+  defaultLspUrl: string
 }
 
 export const Component = () => {
@@ -25,7 +25,7 @@ export const Component = () => {
   const form = useForm<FormFields>({
     defaultValues: {
       bitcoinUnit,
-      lspUrl: defaultLspUrl || 'http://localhost:8000',
+      defaultLspUrl: defaultLspUrl || 'http://localhost:8000',
       nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
     },
   })
@@ -33,7 +33,7 @@ export const Component = () => {
   useEffect(() => {
     form.reset({
       bitcoinUnit,
-      lspUrl: defaultLspUrl || 'http://localhost:8000',
+      defaultLspUrl: defaultLspUrl || 'http://localhost:8000',
       nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
     })
   }, [bitcoinUnit, nodeConnectionString, defaultLspUrl, form])
@@ -41,7 +41,7 @@ export const Component = () => {
   const handleSave = (data: FormFields) => {
     dispatch(setBitcoinUnit(data.bitcoinUnit))
     dispatch(setNodeConnectionString(data.nodeConnectionString))
-    dispatch(setDefaultLspUrl(data.lspUrl))
+    dispatch(setDefaultLspUrl(data.defaultLspUrl))
     setShowModal(true)
     setTimeout(() => {
       setShowModal(false)
@@ -51,7 +51,7 @@ export const Component = () => {
   const handleUndo = () => {
     form.reset({
       bitcoinUnit,
-      lspUrl: defaultLspUrl,
+      defaultLspUrl: defaultLspUrl,
       nodeConnectionString,
     })
   }
@@ -105,7 +105,7 @@ export const Component = () => {
             />
             <Controller
               control={form.control}
-              name="lspUrl"
+              name="defaultLspUrl"
               render={({ field }) => (
                 <div>
                   <label className="block mb-2 text-lg text-gray-300">
@@ -118,7 +118,7 @@ export const Component = () => {
                     {...field}
                   />
                   <p className="text-sm text-red-500 mt-2">
-                    {form.formState.errors.lspUrl?.message}
+                    {form.formState.errors.defaultLspUrl?.message}
                   </p>
                 </div>
               )}

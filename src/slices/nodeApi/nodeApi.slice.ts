@@ -45,7 +45,7 @@ interface Balance {
   spendable: number
 }
 
-interface NiaAsset {
+export interface NiaAsset {
   asset_id: string
   asset_iface: string
   ticker: string
@@ -72,16 +72,18 @@ export interface Channel {
   channel_id: string
   funding_txid: string
   peer_pubkey: string
+  peer_alias: string
   ready: boolean
+  short_channel_id: number
   capacity_sat: number
   local_balance_msat: number
+  outbound_balance_msat: number
+  inbound_balance_msat: number
   is_usable: boolean
   public: boolean
   asset_id: string
   asset_local_amount: number
   asset_remote_amount: number
-  outbound_balance_msat: number
-  inbound_balance_msat: number
 }
 interface ListChannelsResponse {
   channels: Channel[]
