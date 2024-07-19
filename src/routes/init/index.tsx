@@ -14,6 +14,10 @@ interface Fields {
   confirmPassword: string
 }
 
+interface FieldsVerify {
+  mnemonic: string
+}
+
 export const Component = () => {
   const [init, initResponse] = nodeApi.endpoints.init.useLazyQuery()
   const [unlock, unlockResponse] = nodeApi.endpoints.unlock.useLazyQuery()
@@ -27,13 +31,22 @@ export const Component = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const [additionalErrors, setAdditionalErrors] = useState<Array<string>>([])
 
+  const [isShowingMnemonic, setIsShowingMnemonic] = useState(false)
   const [mnemonic, setMnemonic] = useState<Array<string>>([])
-  const [password, setPassword] = useState<string>('')
+  const [password, setPassword] = useState('')
+
+  const [isVerifyingMnemonic, setIsVerifyingMnemonic] = useState(false)
 
   const form = useForm<Fields>({
     defaultValues: {
       confirmPassword: '',
       password: '',
+    },
+  })
+
+  const formVerify = useForm<FieldsVerify>({
+    defaultValues: {
+      mnemonic: '',
     },
   })
 
@@ -57,10 +70,21 @@ export const Component = () => {
     } else {
       setMnemonic(initResponse.data.mnemonic.split(' '))
       setPassword(data.password)
+      setIsShowingMnemonic(true)
     }
   }
 
   const onMnemonicSaved = async () => {
+    setIsVerifyingMnemonic(true)
+    setIsShowingMnemonic(false)
+  }
+
+  const onMnemonicVerify: SubmitHandler<FieldsVerify> = async (data) => {
+    if (mnemonic.join(' ') !== data.mnemonic.trim()) {
+      setAdditionalErrors((s) => [...s, 'Mnemonic does not match...'])
+      return
+    }
+
     const unlockResponse = await unlock({ password })
     if (unlockResponse.isSuccess) {
       const nodeInfoRes = await nodeInfo()
@@ -86,7 +110,7 @@ export const Component = () => {
 
             <div className="text-center">Initializing the node...</div>
           </div>
-        ) : mnemonic.length ? (
+        ) : isShowingMnemonic ? (
           <>
             <div className="py-20 flex flex-col items-center space-y-4">
               <h3 className="text-2xl font-semibold mb-4">
@@ -111,6 +135,66 @@ export const Component = () => {
                   I have saved my mnemonic!
                 </button>
               </div>
+            </div>
+          </>
+        ) : isVerifyingMnemonic ? (
+          <>
+            <div>
+              <button
+                className="px-3 py-1 rounded border text-sm border-gray-500"
+                onClick={() => {
+                  setIsVerifyingMnemonic(false)
+                  setIsShowingMnemonic(true)
+                }}
+              >
+                Show mnemonic
+              </button>
+            </div>
+
+            <div className="text-center mb-10">
+              <h3 className="text-2xl font-semibold mb-4">
+                Verify your mnemonic
+              </h3>
+            </div>
+
+            <div>
+              <form
+                className="flex items-center justify-center flex-col"
+                onSubmit={formVerify.handleSubmit(onMnemonicVerify)}
+              >
+                <div className="w-80 space-y-4">
+                  <div>
+                    <div className="text-xs mb-3">Mnemonic</div>
+
+                    <div className="relative">
+                      <input
+                        className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
+                        type="text"
+                        {...formVerify.register('mnemonic', {
+                          required: 'Required',
+                        })}
+                      />
+                    </div>
+
+                    <div className="text-sm text-red mt-2">
+                      {formVerify.formState.errors.mnemonic?.message}
+                      <ul>
+                        {additionalErrors.map((e, i) => (
+                          <li key={i}>{e}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex self-end justify-end mt-8">
+                  <button
+                    className="px-6 py-3 rounded border text-lg font-bold border-cyan"
+                    type="submit"
+                  >
+                    Proceed
+                  </button>
+                </div>
+              </form>
             </div>
           </>
         ) : (
