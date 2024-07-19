@@ -8,7 +8,13 @@ const makePath = (paths: string[]) => {
 
 export const ROOT_PATH = makePath([])
 
+export const WALLET_SETUP_PATH = makePath(['wallet-setup'])
+
 export const INIT_PATH = makePath(['init'])
+
+export const WALLET_RESTORE_PATH = makePath(['wallet-restore'])
+
+export const WALLET_UNLOCK_PATH = makePath(['wallet-unlock'])
 
 export const TRADE_PATH = makePath(['trade'])
 
@@ -35,4 +41,3 @@ export const CHANNELS_PATH = makePath(['channels'])
 
 export const CREATE_NEW_CHANNEL_PATH = makePath(['create-new-channel'])
 export const ORDER_CHANNEL_PATH = makePath(['order-new-channel'])
-

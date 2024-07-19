@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 
-import { INIT_PATH, TRADE_PATH } from '../../app/router/paths'
+import { TRADE_PATH, WALLET_SETUP_PATH } from '../../app/router/paths'
 import { Layout } from '../../components/Layout'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 
@@ -14,7 +14,7 @@ export const RootRoute = () => {
       const nodeInfoResponse = await nodeInfo()
 
       if (nodeInfoResponse.isError) {
-        navigate(INIT_PATH)
+        navigate(WALLET_SETUP_PATH)
       } else {
         navigate(TRADE_PATH)
       }
