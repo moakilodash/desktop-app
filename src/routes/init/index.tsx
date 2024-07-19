@@ -27,6 +27,9 @@ export const Component = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const [additionalErrors, setAdditionalErrors] = useState<Array<string>>([])
 
+  const [mnemonic, setMnemonic] = useState<Array<string>>([])
+  const [password, setPassword] = useState<string>('')
+
   const form = useForm<Fields>({
     defaultValues: {
       confirmPassword: '',
@@ -40,7 +43,7 @@ export const Component = () => {
       password: data.password,
     })*/
 
-    let nodeInfoRes = await nodeInfo()
+    const nodeInfoRes = await nodeInfo()
     // console.log(nodeInfoRes)
     if (nodeInfoRes.isSuccess) {
       navigate(TRADE_PATH)
@@ -51,11 +54,16 @@ export const Component = () => {
     const initResponse = await init({ password: data.password })
     if (!initResponse.isSuccess) {
       console.log('Node has already been initialized...')
+    } else {
+      setMnemonic(initResponse.data.mnemonic.split(' '))
+      setPassword(data.password)
     }
+  }
 
-    const unlockResponse = await unlock({ password: data.password })
+  const onMnemonicSaved = async () => {
+    const unlockResponse = await unlock({ password })
     if (unlockResponse.isSuccess) {
-      nodeInfoRes = await nodeInfo()
+      const nodeInfoRes = await nodeInfo()
       if (nodeInfoRes.isSuccess) {
         /*await appWindow.onCloseRequested(async (_) => {
           await lock({ password: 'stefano90' })
@@ -68,6 +76,7 @@ export const Component = () => {
       setAdditionalErrors((s) => [...s, 'Failed to unlock the node...'])
     }
   }
+
   return (
     <Layout>
       <div className="max-w-2xl w-full bg-blue-dark py-8 px-6 rounded">
@@ -77,6 +86,33 @@ export const Component = () => {
 
             <div className="text-center">Initializing the node...</div>
           </div>
+        ) : mnemonic.length ? (
+          <>
+            <div className="py-20 flex flex-col items-center space-y-4">
+              <h3 className="text-2xl font-semibold mb-4">
+                Backup your mnemonic in a secure place
+              </h3>
+
+              <div className="grid grid-cols-4 gap-4">
+                {mnemonic.map((word, i) => (
+                  <div
+                    className="border p-4 text-center bg-gray-600 rounded"
+                    key={i}
+                  >
+                    {i}. {word}
+                  </div>
+                ))}
+              </div>
+              <div className="flex self-center justify-center mt-8">
+                <button
+                  className="px-6 py-3 mt-7 rounded border font-bold border-cyan"
+                  onClick={onMnemonicSaved}
+                >
+                  I have saved my mnemonic!
+                </button>
+              </div>
+            </div>
+          </>
         ) : (
           <>
             <div>
