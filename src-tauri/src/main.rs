@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use fs_extra::dir::create_all;
 use std::process::{Child, Command};
 use tauri::Manager;
+use dotenv::dotenv;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Config {
@@ -64,6 +65,10 @@ fn run_rgb_lightning_node(network: &str, datapath: &str, rpc_connection_url: &st
 }
 
 fn main() {
+    dotenv().ok();
+    let use_local_bin = env::var("BUILD_AND_RUN_RGB_LIGHTNING_NODE")
+        .unwrap_or_else(|_| "true".to_string()) == "true";
+
     let mut config_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     config_path.push("../bin/config.yaml");
 
@@ -80,16 +85,19 @@ fn main() {
     let datapath = data_path.to_str().unwrap().to_string();
     let rpc_connection_url = config.rpc_connection_url;
 
-    println!("Network: {}", network);
-    println!("Data Path: {}", datapath);
-    println!("RPC Connection URL: {}", rpc_connection_url);
+    let child_process = if use_local_bin {
+        println!("Network: {}", network);
+        println!("Data Path: {}", datapath);
+        println!("RPC Connection URL: {}", rpc_connection_url);
 
-    // Use Arc and Mutex to share the child process reference safely
-    let child_process = Arc::new(Mutex::new(run_rgb_lightning_node(
-        &network,
-        &datapath,
-        &rpc_connection_url,
-    )));
+        Arc::new(Mutex::new(run_rgb_lightning_node(
+            &network,
+            &datapath,
+            &rpc_connection_url,
+        )))
+    } else {
+        Arc::new(Mutex::new(None))
+    };
 
     let child_process_clone = Arc::clone(&child_process);
 

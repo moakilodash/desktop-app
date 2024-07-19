@@ -8,7 +8,7 @@ use serde_json::Value;
 fn main() {
     dotenv().ok();
 
-    let build_rgb_lightning_node = env::var("BUILD_RGB_LIGHTNING_NODE")
+    let build_rgb_lightning_node = env::var("BUILD_AND_RUN_RGB_LIGHTNING_NODE")
         .unwrap_or_else(|_| "true".to_string()) == "true";
 
     let config_path = PathBuf::from("./tauri.conf.json");
