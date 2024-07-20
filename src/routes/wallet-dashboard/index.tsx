@@ -9,7 +9,10 @@ import {
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { WALLET_HISTORY_PATH } from '../../app/router/paths'
+import {
+  CREATE_NEW_CHANNEL_PATH,
+  WALLET_HISTORY_PATH,
+} from '../../app/router/paths'
 import { useAppDispatch } from '../../app/store/hooks'
 import { ChannelCard } from '../../components/ChannelCard'
 import { BTC_ASSET_ID } from '../../constants'
@@ -124,7 +127,7 @@ export const Component = () => {
     nodeApi.endpoints.listChannels.useLazyQuery()
   const [assetBalance] = nodeApi.endpoints.assetBalance.useLazyQuery()
   const [closeChannel] = nodeApi.endpoints.closeChannel.useLazyQuery()
-
+  const navigate = useNavigate()
   const [assetBalances, setAssetBalances] = useState({})
 
   const refreshData = useCallback(() => {
@@ -237,13 +240,7 @@ export const Component = () => {
 
             <button
               className="px-6 py-3 rounded border text-lg font-bold border-cyan text-white"
-              onClick={() =>
-                dispatch(
-                  uiSliceActions.setModal({
-                    type: 'openChannel',
-                  })
-                )
-              }
+              onClick={() => navigate(CREATE_NEW_CHANNEL_PATH)}
             >
               Open New Channel
             </button>
