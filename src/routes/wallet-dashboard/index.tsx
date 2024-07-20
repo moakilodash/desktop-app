@@ -180,12 +180,12 @@ export const Component = () => {
     listChannelsResponse.data,
     assetBalance,
   ])
+  const onChainBalance = btcBalanceResponse.data?.vanilla.settled || 0
 
   const channels = listChannelsResponse?.data?.channels || []
-  const totalBalance = channels.reduce(
-    (sum, channel) => sum + channel.asset_local_amount,
-    0
-  )
+  const totalBalance =
+    channels.reduce((sum, channel) => sum + channel.asset_local_amount, 0) +
+    onChainBalance
   const totalInboundLiquidity = channels.reduce(
     (sum, channel) => sum + channel.inbound_balance_msat / 1000,
     0
@@ -256,7 +256,7 @@ export const Component = () => {
               <Zap className="h-4 w-4 text-grey-light" />
             </div>
             <div className="text-2xl font-bold text-white">
-              {numberFormatter.format(totalBalance)} sats
+              {numberFormatter.format(totalBalance, 0)} sats
             </div>
           </Card>
           <Card>
@@ -267,7 +267,7 @@ export const Component = () => {
               <ArrowDownRight className="h-4 w-4 text-grey-light" />
             </div>
             <div className="text-2xl font-bold text-white">
-              {numberFormatter.format(totalInboundLiquidity)} sats
+              {numberFormatter.format(totalInboundLiquidity, 0)} sats
             </div>
           </Card>
           <Card>
@@ -278,7 +278,7 @@ export const Component = () => {
               <ArrowUpRight className="h-4 w-4 text-grey-light" />
             </div>
             <div className="text-2xl font-bold text-white">
-              {numberFormatter.format(totalOutboundLiquidity)} sats
+              {numberFormatter.format(totalOutboundLiquidity, 0)} sats
             </div>
           </Card>
         </div>
