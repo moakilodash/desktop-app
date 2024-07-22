@@ -11,8 +11,7 @@ export const RootRoute = () => {
   const [nodeInfo, nodeInfoResponse] = nodeApi.endpoints.nodeInfo.useLazyQuery()
 
   useEffect(() => {
-    const onPageLoad = async () => {
-      await new Promise((resolve) => setTimeout(resolve, 5000))
+    const onPageLoad = () => {
       invoke('close_splashscreen')
     }
 
