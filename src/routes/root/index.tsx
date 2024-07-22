@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api'
 import { useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 
@@ -8,6 +9,20 @@ import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 export const RootRoute = () => {
   const navigate = useNavigate()
   const [nodeInfo, nodeInfoResponse] = nodeApi.endpoints.nodeInfo.useLazyQuery()
+
+  useEffect(() => {
+    const onPageLoad = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 5000))
+      invoke('close_splashscreen')
+    }
+
+    if (document.readyState === 'complete') {
+      onPageLoad()
+    } else {
+      window.addEventListener('load', onPageLoad)
+      return () => window.removeEventListener('load', onPageLoad)
+    }
+  }, [])
 
   useEffect(() => {
     async function run() {
