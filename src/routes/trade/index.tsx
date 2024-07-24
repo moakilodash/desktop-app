@@ -25,6 +25,9 @@ interface Fields {
   rfqId: string
 }
 
+const SATOSHIS_PER_BTC = 100000000
+const MSATS_PER_SAT = 1000
+
 export const Component = () => {
   const dispatch = useAppDispatch()
   const [channels, setChannels] = useState<Channel[]>([])
@@ -33,10 +36,12 @@ export const Component = () => {
   const [selectedPair, setSelectedPair] = useState<TradingPair | null>(null)
   const [pubKey, setPubKey] = useState('')
   const [selectedSize, setSelectedSize] = useState(100)
+  const [isInverted, setIsInverted] = useState(false)
   const makerConnectionUrl = useAppSelector(
     (state) => state.settings.defaultLspUrl
   )
   const wsConnected = useAppSelector((state) => state.pairs.wsConnected)
+  const bitcoinUnit = useAppSelector((state) => state.settings.bitcoinUnit)
 
   const selectedPairFeed = useAppSelector(
     (state) =>
@@ -65,7 +70,107 @@ export const Component = () => {
     },
   })
 
+  const formatBitcoinAmount = useCallback(
+    (amount: number, precision: number = 8) => {
+      if (bitcoinUnit === 'SAT') {
+        return new Intl.NumberFormat('en-US', {
+          maximumFractionDigits: 0,
+          useGrouping: true,
+        }).format(Math.round(amount))
+      } else {
+        return new Intl.NumberFormat('en-US', {
+          maximumFractionDigits: precision,
+          minimumFractionDigits: precision,
+          useGrouping: true,
+        }).format(amount / SATOSHIS_PER_BTC)
+      }
+    },
+    [bitcoinUnit]
+  )
+
+  const formatAmount = useCallback(
+    (amount: number, asset_ticker: string) => {
+      const asset = assets.find((a) => a.ticker === asset_ticker) || {
+        precision: 8,
+      }
+      if (asset_ticker === 'BTC') {
+        return formatBitcoinAmount(amount, asset.precision)
+      } else {
+        return new Intl.NumberFormat('en-US', {
+          maximumFractionDigits: asset.precision,
+          minimumFractionDigits: asset.precision,
+          useGrouping: true,
+        }).format(amount)
+      }
+    },
+    [assets, formatBitcoinAmount]
+  )
+
+  const parseBitcoinAmount = useCallback(
+    (amount: string): number => {
+      const cleanAmount = amount.replace(/[^\d.-]/g, '')
+      if (bitcoinUnit === 'SAT') {
+        return parseInt(cleanAmount, 10)
+      } else {
+        return Math.round(parseFloat(cleanAmount) * SATOSHIS_PER_BTC)
+      }
+    },
+    [bitcoinUnit]
+  )
+
+  const parseAssetAmount = useCallback(
+    (amount: string, asset_ticker: string): number => {
+      if (asset_ticker === 'BTC') {
+        return parseBitcoinAmount(amount)
+      } else {
+        const asset = assets.find((a) => a.ticker === asset_ticker) || {
+          precision: 8,
+        }
+        const cleanAmount = amount.replace(/[^\d.-]/g, '')
+        return parseFloat(parseFloat(cleanAmount).toFixed(asset.precision))
+      }
+    },
+    [assets, parseBitcoinAmount]
+  )
+
+  const calculateMaxTradableAmount = useCallback(
+    (asset: string, isFrom: boolean): number => {
+      const pair = tradablePairs.find(
+        (p) =>
+          (isFrom && p.base_asset === asset) ||
+          (!isFrom && p.quote_asset === asset)
+      )
+
+      if (!pair) return 0
+
+      if (asset === 'BTC') {
+        const maxChannelBalance =
+          Math.max(
+            ...channels.map((c) =>
+              isFrom ? c.outbound_balance_msat : c.inbound_balance_msat
+            )
+          ) / MSATS_PER_SAT
+        return Math.min(
+          maxChannelBalance,
+          pair.max_order_size * SATOSHIS_PER_BTC
+        )
+      } else {
+        const assetChannels = channels.filter((c) => c.asset_id === asset)
+        if (assetChannels.length === 0) return 0
+
+        const maxAssetAmount = Math.max(
+          ...assetChannels.map((c) =>
+            isFrom ? c.asset_local_amount : c.asset_remote_amount
+          )
+        )
+        return Math.min(maxAssetAmount, pair.max_order_size)
+      }
+    },
+    [channels, tradablePairs]
+  )
+
   useEffect(() => {
+    // Initialize WebSocket connection
     if (makerConnectionUrl) {
       const clientId = uuidv4()
       const baseUrl = makerConnectionUrl.endsWith('/')
@@ -78,6 +183,7 @@ export const Component = () => {
   }, [dispatch, makerConnectionUrl])
 
   useEffect(() => {
+    // Fetch initial data
     const setup = async () => {
       try {
         const [
@@ -132,44 +238,7 @@ export const Component = () => {
   }, [nodeInfo, listChannels, listAssets, getPairs, dispatch, form, channels])
 
   useEffect(() => {
-    if (selectedPair) {
-      const pair = `${selectedPair.base_asset}/${selectedPair.quote_asset}`
-      dispatch(subscribeToPair(pair))
-
-      return () => {
-        dispatch(unsubscribeFromPair(pair))
-      }
-    }
-  }, [selectedPair, dispatch])
-
-  useEffect(() => {
-    if (selectedPairFeed) {
-      const fromAmount = form.getValues().from
-      const conversionResult = (
-        parseFloat(fromAmount) * selectedPairFeed.buyPrice
-      ).toFixed(8)
-      form.setValue('to', conversionResult)
-      form.setValue('rfqId', selectedPairFeed.id)
-    }
-  }, [form, selectedPairFeed])
-
-  const getMaxAmount = (asset: string, isFrom: boolean): number => {
-    if (asset === 'BTC') {
-      const btcChannel = channels.find((c) => c.asset_id === null)
-      if (!btcChannel) return 0
-      return isFrom
-        ? btcChannel.outbound_balance_msat / 1000
-        : btcChannel.inbound_balance_msat / 1000
-    } else {
-      const assetChannel = channels.find((c) => c.asset_id === asset)
-      if (!assetChannel) return 0
-      return isFrom
-        ? assetChannel.asset_local_amount
-        : assetChannel.asset_remote_amount
-    }
-  }
-
-  useEffect(() => {
+    // Subscribe to selected pair feed
     if (selectedPair) {
       const pair = `${selectedPair.base_asset}/${selectedPair.quote_asset}`
       dispatch(subscribeToPair(pair))
@@ -182,35 +251,73 @@ export const Component = () => {
     }
   }, [selectedPair, dispatch])
 
-  const onPairSelect = (pair: TradingPair) => {
-    setSelectedPair(pair)
-    form.setValue('fromAsset', pair.base_asset)
-    form.setValue('toAsset', pair.quote_asset)
-    form.setValue('from', '0')
-    form.setValue('to', '0')
-  }
+  useEffect(() => {
+    // Update page with the latest feed data
+    if (selectedPairFeed) {
+      const fromAmount = form.getValues().from
+      const fromAsset = form.getValues().fromAsset
+      const toAsset = form.getValues().toAsset
+
+      let conversionRate = isInverted
+        ? 1 / selectedPairFeed.buyPrice
+        : selectedPairFeed.buyPrice
+      if (!conversionRate) {
+        throw new Error('Invalid conversion rate')
+      }
+
+      if (fromAsset === toAsset) {
+        throw new Error('Cannot swap the same asset')
+      }
+
+      let fromAmountValue = parseAssetAmount(fromAmount, fromAsset)
+      if (fromAsset === 'BTC' && bitcoinUnit === 'SAT') {
+        fromAmountValue = fromAmountValue / SATOSHIS_PER_BTC
+      }
+
+      let conversionResult
+      if (fromAsset === 'BTC') {
+        conversionResult = fromAmountValue * conversionRate
+      } else if (toAsset === 'BTC') {
+        conversionResult = fromAmountValue / conversionRate
+        if (bitcoinUnit === 'SAT') {
+          conversionResult = conversionResult * SATOSHIS_PER_BTC
+        }
+      } else {
+        conversionResult = fromAmountValue * conversionRate
+      }
+
+      const formattedResult = formatAmount(conversionResult, toAsset)
+
+      form.setValue('to', formattedResult)
+      form.setValue('rfqId', selectedPairFeed.id)
+    }
+  }, [form, selectedPairFeed, isInverted, formatAmount, parseAssetAmount])
 
   const onSwapAssets = () => {
     if (selectedPair) {
-      const newPair = tradablePairs.find(
-        (p) =>
-          p.base_asset === selectedPair.quote_asset &&
-          p.quote_asset === selectedPair.base_asset
-      )
-      if (newPair) {
-        onPairSelect(newPair)
-      }
+      setIsInverted(!isInverted)
+      const fromAsset = form.getValues().fromAsset
+      const toAsset = form.getValues().toAsset
+      const fromAmount = form.getValues().from
+      const toAmount = form.getValues().to
+
+      form.setValue('fromAsset', toAsset)
+      form.setValue('toAsset', fromAsset)
+      form.setValue('from', toAmount)
+      form.setValue('to', fromAmount)
     }
   }
 
   const onSizeClick = useCallback(
     (size: number) => {
       setSelectedSize(size)
-      const maxAmount = getMaxAmount(form.getValues().fromAsset, true)
-      const newAmount = ((maxAmount * size) / 100).toFixed(8)
-      form.setValue('from', newAmount)
+      const fromAsset = form.getValues().fromAsset
+      const maxAmount = calculateMaxTradableAmount(fromAsset, !isInverted)
+      const newAmount = (maxAmount * size) / 100
+      const formattedAmount = formatAmount(newAmount, fromAsset)
+      form.setValue('from', formattedAmount)
     },
-    [form, getMaxAmount]
+    [form, calculateMaxTradableAmount, isInverted, formatAmount]
   )
 
   const onSubmit: SubmitHandler<Fields> = async (data) => {
@@ -219,13 +326,62 @@ export const Component = () => {
     try {
       toastId = toast.loading('Swap in progress...')
 
-      const payload = {
-        from_amount: parseFloat(data.from),
-        from_asset: data.fromAsset,
-        request_for_quotation_id: data.rfqId,
-        to_amount: parseFloat(data.to),
-        to_asset: data.toAsset,
+      const pair = tradablePairs.find(
+        (p) =>
+          (p.base_asset === data.fromAsset && p.quote_asset === data.toAsset) ||
+          (p.base_asset === data.toAsset && p.quote_asset === data.fromAsset)
+      )
+
+      if (!pair) throw new Error('Invalid trading pair')
+
+      let minOrderSize = pair.min_order_size
+      let maxOrderSize = pair.max_order_size
+
+      if (data.fromAsset === 'BTC') {
+        minOrderSize *= SATOSHIS_PER_BTC
+        maxOrderSize *= SATOSHIS_PER_BTC
       }
+
+      const fromAssetId =
+        assets.find((asset) => asset.ticker === data.fromAsset)?.asset_id ||
+        'BTC'
+      const toAssetId =
+        assets.find((asset) => asset.ticker === data.toAsset)?.asset_id || 'BTC'
+      if (!fromAssetId || !toAssetId) {
+        throw new Error('Invalid asset ID')
+      }
+      if (fromAssetId === toAssetId) {
+        throw new Error('Cannot swap the same asset')
+      }
+
+      const toAmount = parseAssetAmount(data.to, data.toAsset)
+      const fromAmount = parseAssetAmount(data.from, data.fromAsset)
+
+      const getAssetPrecision = (ticker: string) => {
+        const asset = assets.find((a) => a.ticker === ticker)
+        return asset ? Math.pow(10, asset.precision) : 1
+      }
+
+      const fromAmountInt = Math.round(
+        fromAmount * getAssetPrecision(data.fromAsset)
+      )
+      const toAmountInt = Math.round(toAmount * getAssetPrecision(data.toAsset))
+
+      if (fromAmountInt < minOrderSize || fromAmountInt > maxOrderSize) {
+        throw new Error(
+          `Order size must be between ${formatAmount(minOrderSize, data.fromAsset)} and ${formatAmount(maxOrderSize, data.fromAsset)}`
+        )
+      }
+
+      const payload = {
+        from_amount: fromAmountInt,
+        from_asset: fromAssetId,
+        request_for_quotation_id: data.rfqId,
+        to_amount: toAmountInt,
+        to_asset: toAssetId,
+      }
+      console.log('data', data)
+      console.log('Swap payload:', payload)
 
       const initSwapResponse = await initSwap(payload)
       if ('error' in initSwapResponse) {
@@ -279,7 +435,14 @@ export const Component = () => {
         <div className="flex justify-between items-center font-light">
           <div className="text-xs">From</div>
           <div className="text-xs">
-            Max: {getMaxAmount(form.getValues().fromAsset, true)}
+            Max:{' '}
+            {formatAmount(
+              calculateMaxTradableAmount(
+                form.getValues().fromAsset,
+                !isInverted
+              ),
+              form.getValues().fromAsset
+            )}
           </div>
         </div>
 
@@ -298,8 +461,8 @@ export const Component = () => {
                 active={field.value}
                 onSelect={(value) => field.onChange(value)}
                 options={tradablePairs.map((pair) => ({
-                  label: pair.base_asset,
-                  value: pair.base_asset,
+                  label: isInverted ? pair.quote_asset : pair.base_asset,
+                  value: isInverted ? pair.quote_asset : pair.base_asset,
                 }))}
               />
             )}
@@ -322,7 +485,7 @@ export const Component = () => {
 
       <div className="flex items-center justify-center py-2">
         <div
-          className="bg-section-lighter rounded-full h-8 w-8 flex items-center justify-center"
+          className="bg-section-lighter rounded-full h-8 w-8 flex items-center justify-center cursor-pointer"
           onClick={onSwapAssets}
         >
           <SwapIcon />
@@ -333,7 +496,8 @@ export const Component = () => {
         <div className="flex justify-between items-center font-light">
           <div className="text-xs">To</div>
           <div className="text-xs">
-            Max: {getMaxAmount(form.getValues().toAsset, false)}
+            Max:{' '}
+            {calculateMaxTradableAmount(form.getValues().toAsset, isInverted)}
           </div>
         </div>
 
@@ -353,8 +517,8 @@ export const Component = () => {
                 active={field.value}
                 onSelect={(value) => field.onChange(value)}
                 options={tradablePairs.map((pair) => ({
-                  label: pair.quote_asset,
-                  value: pair.quote_asset,
+                  label: isInverted ? pair.base_asset : pair.quote_asset,
+                  value: isInverted ? pair.base_asset : pair.quote_asset,
                 }))}
               />
             )}
@@ -372,7 +536,16 @@ export const Component = () => {
                 className="flex-1 rounded bg-blue-dark px-4 py-3"
                 readOnly={true}
                 type="text"
-                value={selectedPairFeed?.buyPrice || ''}
+                value={
+                  selectedPairFeed
+                    ? formatAmount(
+                        isInverted
+                          ? 1 / selectedPairFeed.buyPrice
+                          : selectedPairFeed.buyPrice,
+                        selectedPair.quote_asset
+                      )
+                    : ''
+                }
               />
 
               <div className="w-8 flex justify-center">
