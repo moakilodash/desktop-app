@@ -1,13 +1,16 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use serde::{Deserialize, Serialize};
-use std::{env, fs, sync::{Arc, Mutex}};
-use std::path::{Path, PathBuf};
-use fs_extra::dir::create_all;
-use std::process::{Child, Command};
-use tauri::Manager;
 use dotenv::dotenv;
+use fs_extra::dir::create_all;
+use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
+use std::process::{Child, Command};
+use std::{
+    env, fs,
+    sync::{Arc, Mutex},
+};
+use tauri::Manager;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Config {
@@ -38,13 +41,18 @@ fn load_config(config_path: &Path) -> Config {
             }
         }
         let default_config = Config::default();
-        let config_yaml = serde_yaml::to_string(&default_config).expect("Failed to serialize default config");
+        let config_yaml =
+            serde_yaml::to_string(&default_config).expect("Failed to serialize default config");
         fs::write(config_path, config_yaml).expect("Failed to write default config file");
         default_config
     }
 }
 
-fn run_rgb_lightning_node(network: &str, datapath: &str, rpc_connection_url: &str) -> Option<Child> {
+fn run_rgb_lightning_node(
+    network: &str,
+    datapath: &str,
+    rpc_connection_url: &str,
+) -> Option<Child> {
     let mut executable_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     executable_path.push("../bin/rgb-lightning-node");
 
@@ -56,7 +64,7 @@ fn run_rgb_lightning_node(network: &str, datapath: &str, rpc_connection_url: &st
                 .args(&["--ldk-peer-listening-port", "9736"])
                 .args(&["--network", network])
                 .spawn()
-                .expect("Failed to start rgb-lightning-node process")
+                .expect("Failed to start rgb-lightning-node process"),
         )
     } else {
         println!("rgb-lightning-node executable not found.");
@@ -64,10 +72,25 @@ fn run_rgb_lightning_node(network: &str, datapath: &str, rpc_connection_url: &st
     }
 }
 
+#[tauri::command]
+fn is_wallet_init() -> bool {
+    let mut data_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    data_path.push("../bin/dataldk");
+
+    if !data_path.exists() {
+        return false;
+    }
+
+    let wallet_path = data_path.join("mnemonic");
+
+    wallet_path.exists()
+}
+
 fn main() {
     dotenv().ok();
     let use_local_bin = env::var("BUILD_AND_RUN_RGB_LIGHTNING_NODE")
-        .unwrap_or_else(|_| "true".to_string()) == "true";
+        .unwrap_or_else(|_| "true".to_string())
+        == "true";
 
     let mut config_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     config_path.push("../bin/config.yaml");
@@ -122,6 +145,8 @@ fn main() {
             });
             Ok(())
         })
+        .invoke_handler(tauri::generate_handler![is_wallet_init])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+

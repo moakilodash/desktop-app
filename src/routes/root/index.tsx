@@ -1,7 +1,12 @@
+import { invoke } from '@tauri-apps/api'
 import { useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 
-import { TRADE_PATH, WALLET_SETUP_PATH } from '../../app/router/paths'
+import {
+  TRADE_PATH,
+  WALLET_SETUP_PATH,
+  WALLET_UNLOCK_PATH,
+} from '../../app/router/paths'
 import { Layout } from '../../components/Layout'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 
@@ -12,9 +17,16 @@ export const RootRoute = () => {
   useEffect(() => {
     async function run() {
       const nodeInfoResponse = await nodeInfo()
+      console.log(nodeInfoResponse)
 
       if (nodeInfoResponse.isError) {
-        navigate(WALLET_SETUP_PATH)
+        const isWalletInit = await invoke('is_wallet_init')
+        console.log(isWalletInit)
+        if (!isWalletInit) {
+          navigate(WALLET_SETUP_PATH)
+        } else {
+          navigate(WALLET_UNLOCK_PATH)
+        }
       } else {
         navigate(TRADE_PATH)
       }
