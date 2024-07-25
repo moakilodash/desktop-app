@@ -270,7 +270,7 @@ export const Component = () => {
       }
 
       let fromAmountValue = parseAssetAmount(fromAmount, fromAsset)
-      if (fromAsset === 'BTC' && bitcoinUnit === 'SAT') {
+      if (fromAsset === 'BTC') {
         fromAmountValue = fromAmountValue / SATOSHIS_PER_BTC
       }
 
@@ -287,7 +287,7 @@ export const Component = () => {
       }
 
       const formattedResult = formatAmount(conversionResult, toAsset)
-
+      // console.log(`from ${fromAmount} ${fromAsset} to ${formattedResult} (${conversionResult}) ${toAsset} at rate ${conversionRate}`)
       form.setValue('to', formattedResult)
       form.setValue('rfqId', selectedPairFeed.id)
     }
@@ -337,10 +337,10 @@ export const Component = () => {
       let minOrderSize = pair.min_order_size
       let maxOrderSize = pair.max_order_size
 
-      if (data.fromAsset === 'BTC') {
-        minOrderSize *= SATOSHIS_PER_BTC
-        maxOrderSize *= SATOSHIS_PER_BTC
-      }
+      // if (data.fromAsset === 'BTC') {
+      //   minOrderSize *= SATOSHIS_PER_BTC
+      //   maxOrderSize *= SATOSHIS_PER_BTC
+      // }
 
       const fromAssetId =
         assets.find((asset) => asset.ticker === data.fromAsset)?.asset_id ||
