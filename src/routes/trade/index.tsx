@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState, useMemo } from 'react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
 import { toast } from 'react-toastify'
 import { v4 as uuidv4 } from 'uuid'
@@ -16,6 +16,7 @@ import {
 } from '../../slices/makerApi/pairs.slice'
 import './index.css'
 import { nodeApi, Channel, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
+import { logger } from '../../utils/logger'
 
 interface Fields {
   from: string
@@ -37,12 +38,20 @@ export const Component = () => {
   const [pubKey, setPubKey] = useState('')
   const [selectedSize, setSelectedSize] = useState(100)
   const [isInverted, setIsInverted] = useState(false)
+
+  const [minFromAmount, setMinFromAmount] = useState(0)
+  const [maxFromAmount, setMaxFromAmount] = useState(0)
+  const [maxToAmount, setMaxToAmount] = useState(0)
+
+  const [isToAmountLoading, setIsToAmountLoading] = useState(true)
+  const [isPriceLoading, setIsPriceLoading] = useState(true)
+
+  // Selectors
   const makerConnectionUrl = useAppSelector(
     (state) => state.settings.defaultLspUrl
   )
   const wsConnected = useAppSelector((state) => state.pairs.wsConnected)
   const bitcoinUnit = useAppSelector((state) => state.settings.bitcoinUnit)
-
   const selectedPairFeed = useAppSelector(
     (state) =>
       state.pairs.feed[
@@ -52,6 +61,7 @@ export const Component = () => {
       ]
   )
 
+  // API hooks
   const [listChannels] = nodeApi.endpoints.listChannels.useLazyQuery()
   const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
   const [taker] = nodeApi.endpoints.taker.useLazyQuery()
@@ -70,8 +80,9 @@ export const Component = () => {
     },
   })
 
-  const formatBitcoinAmount = useCallback(
-    (amount: number, precision: number = 8) => {
+  // Memoized formatting functions
+  const formatBitcoinAmount = useMemo(() => {
+    return (amount: number, precision: number = 8) => {
       if (bitcoinUnit === 'SAT') {
         return new Intl.NumberFormat('en-US', {
           maximumFractionDigits: 0,
@@ -84,9 +95,8 @@ export const Component = () => {
           useGrouping: true,
         }).format(amount / SATOSHIS_PER_BTC)
       }
-    },
-    [bitcoinUnit]
-  )
+    }
+  }, [bitcoinUnit])
 
   const formatAmount = useCallback(
     (amount: number, asset_ticker: string) => {
@@ -100,7 +110,7 @@ export const Component = () => {
           maximumFractionDigits: asset.precision,
           minimumFractionDigits: asset.precision,
           useGrouping: true,
-        }).format(amount)
+        }).format(amount / Math.pow(10, asset.precision))
       }
     },
     [assets, formatBitcoinAmount]
@@ -127,63 +137,163 @@ export const Component = () => {
           precision: 8,
         }
         const cleanAmount = amount.replace(/[^\d.-]/g, '')
-        return parseFloat(parseFloat(cleanAmount).toFixed(asset.precision))
+        return Math.round(
+          parseFloat(cleanAmount) * Math.pow(10, asset.precision)
+        )
       }
     },
     [assets, parseBitcoinAmount]
   )
 
+  // Calculate max tradable amount
   const calculateMaxTradableAmount = useCallback(
-    (asset: string, isFrom: boolean): number => {
+    async (asset: string, isFrom: boolean): Promise<number> => {
+      logger.info(
+        `Calculating max tradable amount for ${asset} (${isFrom ? 'from' : 'to'})`
+      )
+
+      const assetsResponse = await listAssets()
+      if ('error' in assetsResponse) {
+        logger.error('Failed to fetch assets list')
+        return 0
+      }
+      const assetsList = assetsResponse.data.nia
+
       const pair = tradablePairs.find(
         (p) =>
           (isFrom && p.base_asset === asset) ||
           (!isFrom && p.quote_asset === asset)
       )
 
-      if (!pair) return 0
+      if (!pair) {
+        logger.warn(`No trading pair found for asset: ${asset}`)
+        return 0
+      }
+
+      logger.debug(
+        `Pair: ${pair.base_asset}/${pair.quote_asset}, Max order size: ${pair.max_order_size}`
+      )
 
       if (asset === 'BTC') {
-        const maxChannelBalance =
-          Math.max(
-            ...channels.map((c) =>
-              isFrom ? c.outbound_balance_msat : c.inbound_balance_msat
-            )
-          ) / MSATS_PER_SAT
-        return Math.min(
-          maxChannelBalance,
-          pair.max_order_size * SATOSHIS_PER_BTC
-        )
-      } else {
-        const assetChannels = channels.filter((c) => c.asset_id === asset)
-        if (assetChannels.length === 0) return 0
-
-        const maxAssetAmount = Math.max(
-          ...assetChannels.map((c) =>
-            isFrom ? c.asset_local_amount : c.asset_remote_amount
+        if (isFrom) {
+          const maxChannelBalance = Math.max(
+            ...channels.map((c) => c.outbound_balance_msat / MSATS_PER_SAT)
           )
+          logger.debug(
+            `BTC (from) - Max channel balance: ${maxChannelBalance}, Max order size: ${pair.max_order_size}`
+          )
+          const result = Math.min(maxChannelBalance, pair.max_order_size)
+          logger.info(`BTC (from) - Max tradable amount: ${result}`)
+          return result
+        } else {
+          const maxChannelBalance = Math.max(
+            ...channels.map((c) => c.inbound_balance_msat / MSATS_PER_SAT)
+          )
+          logger.debug(
+            `BTC (to) - Max channel balance: ${maxChannelBalance}, Max order size: ${pair.max_order_size}`
+          )
+          const result = Math.min(maxChannelBalance, pair.max_order_size)
+          logger.info(`BTC (to) - Max tradable amount: ${result}`)
+          return result
+        }
+      } else {
+        const assetInfo = assetsList.find((a) => a.ticker === asset)
+        if (!assetInfo) {
+          logger.warn(`No asset info found for ticker: ${asset}`)
+          return 0
+        }
+
+        const assetChannels = channels.filter(
+          (c) => c.asset_id === assetInfo.asset_id
         )
-        return Math.min(maxAssetAmount, pair.max_order_size)
+        if (assetChannels.length === 0) {
+          logger.warn(
+            `No channels found for asset: ${asset} (asset_id: ${assetInfo.asset_id})`
+          )
+          return 0
+        }
+
+        const assetPrice = selectedPairFeed
+          ? asset === pair.base_asset
+            ? selectedPairFeed.buyPrice
+            : 1 / selectedPairFeed.buyPrice
+          : 1
+        logger.debug(`Asset price for ${asset}: ${assetPrice}`)
+
+        if (isFrom) {
+          const maxAssetAmount = Math.max(
+            ...assetChannels.map((c) => c.asset_local_amount)
+          )
+          // const maxOrderSizeInAsset = pair.max_order_size / assetPrice
+          // logger.debug(`${asset} (from) - Max asset amount: ${maxAssetAmount}, Max order size in asset: ${maxOrderSizeInAsset}`)
+          // const result = Math.min(maxAssetAmount, maxOrderSizeInAsset)
+          // logger.info(`${asset} (from) - Max tradable amount: ${result}`)
+          // return result
+          return maxAssetAmount
+        } else {
+          const maxAssetAmount = Math.max(
+            ...assetChannels.map((c) => c.asset_remote_amount)
+          )
+          return maxAssetAmount
+          // const maxOrderSizeInAsset = pair.max_order_size * assetPrice
+          // logger.debug(`${asset} (to) - Max asset amount: ${maxAssetAmount}, Max order size in asset: ${maxOrderSizeInAsset}`)
+          // const result = Math.min(maxAssetAmount, maxOrderSizeInAsset)
+          // logger.info(`${asset} (to) - Max tradable amount: ${result}`)
+          // return result
+        }
       }
     },
-    [channels, tradablePairs]
+    [channels, tradablePairs, selectedPairFeed, listAssets]
   )
 
+  const calculateAndFormatRate = useCallback(
+    (fromAsset, toAsset, price, isInverted) => {
+      if (!price) return ''
+
+      const rate = isInverted ? 1 / price : price
+      let formattedRate
+
+      if (fromAsset === 'BTC') {
+        formattedRate =
+          bitcoinUnit === 'SAT'
+            ? formatAmount(rate * SATOSHIS_PER_BTC, toAsset)
+            : formatAmount(rate, toAsset)
+      } else if (toAsset === 'BTC') {
+        formattedRate =
+          bitcoinUnit === 'SAT'
+            ? formatAmount(rate / SATOSHIS_PER_BTC, toAsset)
+            : formatAmount(rate, toAsset)
+      } else {
+        formattedRate = formatAmount(rate, toAsset)
+      }
+
+      return `1 ${fromAsset} = ${formattedRate} ${toAsset}`
+    },
+    [bitcoinUnit, formatAmount]
+  )
+
+  // Initialize WebSocket connection
   useEffect(() => {
-    // Initialize WebSocket connection
     if (makerConnectionUrl) {
       const clientId = uuidv4()
       const baseUrl = makerConnectionUrl.endsWith('/')
         ? makerConnectionUrl
         : `${makerConnectionUrl}/`
       webSocketService.init(baseUrl, clientId, dispatch)
+      logger.info('WebSocket connection initialized')
     } else {
-      console.error('No maker connection URL provided')
+      logger.error('No maker connection URL provided')
+      toast.error('No maker connection URL provided')
+    }
+
+    return () => {
+      webSocketService.close()
+      logger.info('WebSocket connection closed')
     }
   }, [dispatch, makerConnectionUrl])
 
+  // Fetch initial data
   useEffect(() => {
-    // Fetch initial data
     const setup = async () => {
       try {
         const [
@@ -227,72 +337,170 @@ export const Component = () => {
             setSelectedPair(filteredPairs[0])
             form.setValue('fromAsset', filteredPairs[0].base_asset)
             form.setValue('toAsset', filteredPairs[0].quote_asset)
+            // Set default minimum value for from amount
+            const defaultMinAmount = filteredPairs[0].min_order_size
+            form.setValue(
+              'from',
+              formatAmount(defaultMinAmount, filteredPairs[0].base_asset)
+            )
           }
         }
+
+        logger.info('Initial data fetched successfully')
       } catch (error) {
-        console.error('Error during setup:', error)
+        logger.error('Error during setup:', error)
       }
     }
 
     setup()
-  }, [nodeInfo, listChannels, listAssets, getPairs, dispatch, form, channels])
+  }, [
+    nodeInfo,
+    listChannels,
+    listAssets,
+    getPairs,
+    dispatch,
+    form,
+    channels,
+    formatAmount,
+  ])
 
+  // Subscribe to selected pair feed
   useEffect(() => {
-    // Subscribe to selected pair feed
     if (selectedPair) {
       const pair = `${selectedPair.base_asset}/${selectedPair.quote_asset}`
       dispatch(subscribeToPair(pair))
       webSocketService.subscribeToPair(pair)
+      logger.info(`Subscribed to pair: ${pair}`)
 
       return () => {
         dispatch(unsubscribeFromPair(pair))
         webSocketService.unsubscribeFromPair(pair)
+        logger.info(`Unsubscribed from pair: ${pair}`)
       }
     }
   }, [selectedPair, dispatch])
 
+  // Update min and max amounts when selected pair changes
   useEffect(() => {
-    // Update page with the latest feed data
-    if (selectedPairFeed) {
-      const fromAmount = form.getValues().from
-      const fromAsset = form.getValues().fromAsset
-      const toAsset = form.getValues().toAsset
+    const updateMinMaxAmounts = async () => {
+      if (selectedPair) {
+        const fromAsset = form.getValues().fromAsset
+        const toAsset = form.getValues().toAsset
 
-      let conversionRate = isInverted
-        ? 1 / selectedPairFeed.buyPrice
-        : selectedPairFeed.buyPrice
-      if (!conversionRate) {
-        throw new Error('Invalid conversion rate')
-      }
+        logger.info(
+          `Updating min and max amounts for pair: ${fromAsset}/${toAsset}`
+        )
 
-      if (fromAsset === toAsset) {
-        throw new Error('Cannot swap the same asset')
-      }
+        setMinFromAmount(selectedPair.min_order_size)
+        logger.info(`Min from amount set to: ${selectedPair.min_order_size}`)
 
-      let fromAmountValue = parseAssetAmount(fromAmount, fromAsset)
-      if (fromAsset === 'BTC') {
-        fromAmountValue = fromAmountValue / SATOSHIS_PER_BTC
-      }
+        const newMaxFromAmount = await calculateMaxTradableAmount(
+          fromAsset,
+          true
+        )
+        setMaxFromAmount(newMaxFromAmount)
+        logger.info(`Max from amount set to: ${newMaxFromAmount}`)
 
-      let conversionResult
-      if (fromAsset === 'BTC') {
-        conversionResult = fromAmountValue * conversionRate
-      } else if (toAsset === 'BTC') {
-        conversionResult = fromAmountValue / conversionRate
-        if (bitcoinUnit === 'SAT') {
-          conversionResult = conversionResult * SATOSHIS_PER_BTC
-        }
+        const newMaxToAmount = await calculateMaxTradableAmount(toAsset, false)
+        setMaxToAmount(newMaxToAmount)
+        logger.info(`Max to amount set to: ${newMaxToAmount}`)
+
+        logger.debug(
+          `Current exchange rate: ${selectedPairFeed ? selectedPairFeed.buyPrice : 'N/A'}`
+        )
       } else {
-        conversionResult = fromAmountValue * conversionRate
+        logger.warn('No selected pair, skipping min/max amount update')
       }
-
-      const formattedResult = formatAmount(conversionResult, toAsset)
-      // console.log(`from ${fromAmount} ${fromAsset} to ${formattedResult} (${conversionResult}) ${toAsset} at rate ${conversionRate}`)
-      form.setValue('to', formattedResult)
-      form.setValue('rfqId', selectedPairFeed.id)
     }
-  }, [form, selectedPairFeed, isInverted, formatAmount, parseAssetAmount])
 
+    updateMinMaxAmounts()
+  }, [selectedPair, form, calculateMaxTradableAmount, selectedPairFeed])
+
+  // Handle "from" amount change
+  const handleFromAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9.]/g, '')
+    const fromAsset = form.getValues().fromAsset
+    const numValue = parseAssetAmount(value, fromAsset)
+    if (isNaN(numValue)) {
+      form.setValue('from', '')
+      form.setValue('to', '')
+    } else if (numValue < minFromAmount) {
+      form.setValue('from', formatAmount(minFromAmount, fromAsset))
+      updateToAmount(formatAmount(minFromAmount, fromAsset))
+    } else if (numValue > maxFromAmount) {
+      form.setValue('from', formatAmount(maxFromAmount, fromAsset))
+      updateToAmount(formatAmount(maxFromAmount, fromAsset))
+    } else {
+      form.setValue('from', formatAmount(numValue, fromAsset))
+      updateToAmount(formatAmount(numValue, fromAsset))
+    }
+    logger.debug('From amount changed:', value)
+  }
+
+  // Handle "to" amount change
+  const handleToAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9.]/g, '')
+    const toAsset = form.getValues().toAsset
+    const numValue = parseAssetAmount(value, toAsset)
+    if (isNaN(numValue)) {
+      form.setValue('to', '')
+    } else if (numValue > maxToAmount) {
+      form.setValue('to', formatAmount(maxToAmount, toAsset))
+    } else {
+      form.setValue('to', formatAmount(numValue, toAsset))
+    }
+    logger.debug('To amount changed:', value)
+  }
+
+  // Update "to" amount based on "from" amount and exchange rate
+  const updateToAmount = useCallback(
+    (fromAmount: string) => {
+      if (selectedPairFeed) {
+        const fromAsset = form.getValues().fromAsset
+        const toAsset = form.getValues().toAsset
+        const fromAmountValue = parseAssetAmount(fromAmount, fromAsset)
+        const conversionRate = isInverted
+          ? 1 / selectedPairFeed.buyPrice
+          : selectedPairFeed.buyPrice
+
+        let toAmountValue
+        if (fromAsset === 'BTC' && toAsset !== 'BTC') {
+          // Converting from BTC to another asset
+          toAmountValue = (fromAmountValue / SATOSHIS_PER_BTC) * conversionRate
+        } else if (fromAsset !== 'BTC' && toAsset === 'BTC') {
+          // Converting from another asset to BTC
+          toAmountValue = fromAmountValue * conversionRate * SATOSHIS_PER_BTC
+        } else {
+          // Converting between non-BTC assets
+          toAmountValue = fromAmountValue * conversionRate
+        }
+
+        const formattedToAmount = formatAmount(
+          Math.round(toAmountValue),
+          toAsset
+        )
+        form.setValue('to', formattedToAmount)
+        logger.debug('Updated "to" amount:', formattedToAmount)
+      }
+    },
+    [selectedPairFeed, form, isInverted, parseAssetAmount, formatAmount]
+  )
+  // Update amounts when selected pair feed changes
+  useEffect(() => {
+    if (selectedPairFeed) {
+      setIsToAmountLoading(true)
+      setIsPriceLoading(false)
+      const fromAmount = form.getValues().from
+      updateToAmount(fromAmount)
+      form.setValue('rfqId', selectedPairFeed.id)
+      setIsToAmountLoading(false)
+      logger.info('Updated amounts based on new pair feed')
+    } else {
+      setIsPriceLoading(true)
+    }
+  }, [form, selectedPairFeed, updateToAmount])
+
+  // Swap assets
   const onSwapAssets = () => {
     if (selectedPair) {
       setIsInverted(!isInverted)
@@ -305,26 +513,35 @@ export const Component = () => {
       form.setValue('toAsset', fromAsset)
       form.setValue('from', toAmount)
       form.setValue('to', fromAmount)
+
+      // Recalculate amounts after swapping
+      updateToAmount(toAmount)
+      logger.info('Swapped assets')
     }
   }
 
+  // Handle size button click
   const onSizeClick = useCallback(
-    (size: number) => {
+    async (size: number) => {
       setSelectedSize(size)
       const fromAsset = form.getValues().fromAsset
-      const maxAmount = calculateMaxTradableAmount(fromAsset, !isInverted)
+      const maxAmount = await calculateMaxTradableAmount(fromAsset, true)
       const newAmount = (maxAmount * size) / 100
       const formattedAmount = formatAmount(newAmount, fromAsset)
       form.setValue('from', formattedAmount)
+      updateToAmount(formattedAmount)
+      logger.info(`Size clicked: ${size}%`)
     },
-    [form, calculateMaxTradableAmount, isInverted, formatAmount]
+    [form, calculateMaxTradableAmount, formatAmount, updateToAmount]
   )
 
+  // Submit handler
   const onSubmit: SubmitHandler<Fields> = async (data) => {
     let toastId = null
 
     try {
       toastId = toast.loading('Swap in progress...')
+      logger.info('Initiating swap', data)
 
       const pair = tradablePairs.find(
         (p) =>
@@ -332,21 +549,16 @@ export const Component = () => {
           (p.base_asset === data.toAsset && p.quote_asset === data.fromAsset)
       )
 
-      if (!pair) throw new Error('Invalid trading pair')
-
-      let minOrderSize = pair.min_order_size
-      let maxOrderSize = pair.max_order_size
-
-      // if (data.fromAsset === 'BTC') {
-      //   minOrderSize *= SATOSHIS_PER_BTC
-      //   maxOrderSize *= SATOSHIS_PER_BTC
-      // }
+      if (!pair) {
+        throw new Error('Invalid trading pair')
+      }
 
       const fromAssetId =
         assets.find((asset) => asset.ticker === data.fromAsset)?.asset_id ||
         'BTC'
       const toAssetId =
         assets.find((asset) => asset.ticker === data.toAsset)?.asset_id || 'BTC'
+
       if (!fromAssetId || !toAssetId) {
         throw new Error('Invalid asset ID')
       }
@@ -357,31 +569,23 @@ export const Component = () => {
       const toAmount = parseAssetAmount(data.to, data.toAsset)
       const fromAmount = parseAssetAmount(data.from, data.fromAsset)
 
-      const getAssetPrecision = (ticker: string) => {
-        const asset = assets.find((a) => a.ticker === ticker)
-        return asset ? Math.pow(10, asset.precision) : 1
-      }
-
-      const fromAmountInt = Math.round(
-        fromAmount * getAssetPrecision(data.fromAsset)
-      )
-      const toAmountInt = Math.round(toAmount * getAssetPrecision(data.toAsset))
-
-      if (fromAmountInt < minOrderSize || fromAmountInt > maxOrderSize) {
+      if (
+        fromAmount < pair.min_order_size ||
+        fromAmount > pair.max_order_size
+      ) {
         throw new Error(
-          `Order size must be between ${formatAmount(minOrderSize, data.fromAsset)} and ${formatAmount(maxOrderSize, data.fromAsset)}`
+          `Order size must be between ${formatAmount(pair.min_order_size, data.fromAsset)} and ${formatAmount(pair.max_order_size, data.fromAsset)}`
         )
       }
 
       const payload = {
-        from_amount: fromAmountInt,
+        from_amount: fromAmount,
         from_asset: fromAssetId,
         request_for_quotation_id: data.rfqId,
-        to_amount: toAmountInt,
+        to_amount: toAmount,
         to_asset: toAssetId,
       }
-      console.log('data', data)
-      console.log('Swap payload:', payload)
+      logger.debug('Swap payload:', payload)
 
       const initSwapResponse = await initSwap(payload)
       if ('error' in initSwapResponse) {
@@ -405,6 +609,7 @@ export const Component = () => {
         throw new Error('Failed to confirm swap')
       }
 
+      logger.info('Swap executed successfully')
       toast.update(toastId, {
         autoClose: 5000,
         closeOnClick: true,
@@ -413,7 +618,7 @@ export const Component = () => {
         type: 'success',
       })
     } catch (error) {
-      console.error('Error executing swap', error)
+      logger.error('Error executing swap', error)
       if (toastId) {
         toast.update(toastId, {
           autoClose: 5000,
@@ -431,18 +636,13 @@ export const Component = () => {
       className="max-w-xl w-full bg-blue-dark py-8 px-6 rounded space-y-2"
       onSubmit={form.handleSubmit(onSubmit)}
     >
+      {/* From amount section */}
       <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
         <div className="flex justify-between items-center font-light">
-          <div className="text-xs">From</div>
+          <div className="text-xs">You Send</div>
           <div className="text-xs">
-            Max:{' '}
-            {formatAmount(
-              calculateMaxTradableAmount(
-                form.getValues().fromAsset,
-                !isInverted
-              ),
-              form.getValues().fromAsset
-            )}
+            Available to send:{' '}
+            {formatAmount(maxFromAmount, form.getValues().fromAsset)}
           </div>
         </div>
 
@@ -451,6 +651,7 @@ export const Component = () => {
             className="flex-1 rounded bg-blue-dark px-4 py-2 text-lg"
             type="text"
             {...form.register('from')}
+            onChange={handleFromAmountChange}
           />
 
           <Controller
@@ -468,6 +669,9 @@ export const Component = () => {
             )}
           />
         </div>
+        <div className="text-xs text-gray-400">
+          Min: {formatAmount(minFromAmount, form.getValues().fromAsset)}
+        </div>
         <div className="flex space-x-2">
           {[25, 50, 75, 100].map((size) => (
             <div
@@ -483,6 +687,7 @@ export const Component = () => {
         </div>
       </div>
 
+      {/* Swap button */}
       <div className="flex items-center justify-center py-2">
         <div
           className="bg-section-lighter rounded-full h-8 w-8 flex items-center justify-center cursor-pointer"
@@ -492,22 +697,29 @@ export const Component = () => {
         </div>
       </div>
 
+      {/* To amount section */}
       <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
         <div className="flex justify-between items-center font-light">
-          <div className="text-xs">To</div>
+          <div className="text-xs">You Receive (Estimated)</div>
           <div className="text-xs">
-            Max:{' '}
-            {calculateMaxTradableAmount(form.getValues().toAsset, isInverted)}
+            Can receive up to:{' '}
+            {formatAmount(maxToAmount, form.getValues().toAsset)}
           </div>
         </div>
 
         <div className="flex space-x-2">
-          <input
-            className="flex-1 rounded bg-blue-dark px-4 py-2 text-lg"
-            readOnly={true}
-            type="text"
-            {...form.register('to')}
-          />
+          {isToAmountLoading ? (
+            <div className="flex-1 rounded bg-blue-dark px-4 py-2 text-lg">
+              Estimating...
+            </div>
+          ) : (
+            <input
+              className="flex-1 rounded bg-blue-dark px-4 py-2 text-lg"
+              type="text"
+              {...form.register('to')}
+              onChange={handleToAmountChange}
+            />
+          )}
 
           <Controller
             control={form.control}
@@ -526,27 +738,34 @@ export const Component = () => {
         </div>
       </div>
 
+      {/* Exchange rate section */}
       {selectedPair && (
         <>
           <div className="text-center py-2 text-xs">1 Route Found</div>
 
           <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
             <div className="flex space-x-2 items-center">
-              <input
-                className="flex-1 rounded bg-blue-dark px-4 py-3"
-                readOnly={true}
-                type="text"
-                value={
-                  selectedPairFeed
-                    ? formatAmount(
-                        isInverted
-                          ? 1 / selectedPairFeed.buyPrice
-                          : selectedPairFeed.buyPrice,
-                        selectedPair.quote_asset
-                      )
-                    : ''
-                }
-              />
+              {isPriceLoading ? (
+                <div className="flex-1 rounded bg-blue-dark px-4 py-3">
+                  Loading exchange rate...
+                </div>
+              ) : (
+                <input
+                  className="flex-1 rounded bg-blue-dark px-4 py-3"
+                  readOnly={true}
+                  type="text"
+                  value={
+                    selectedPairFeed
+                      ? calculateAndFormatRate(
+                          form.getValues().fromAsset,
+                          form.getValues().toAsset,
+                          selectedPairFeed.buyPrice,
+                          isInverted
+                        )
+                      : ''
+                  }
+                />
+              )}
 
               <div className="w-8 flex justify-center">
                 <SparkIcon color={'#8FD5EA'} />
@@ -556,13 +775,18 @@ export const Component = () => {
         </>
       )}
 
+      {/* Submit button */}
       <div className="py-2">
         <button
           className="block w-full px-6 py-3 border border-cyan rounded text-lg font-bold hover:bg-cyan hover:text-blue-dark transition"
-          disabled={!wsConnected}
+          disabled={!wsConnected || isToAmountLoading || isPriceLoading}
           type="submit"
         >
-          {wsConnected ? 'Swap' : 'Connecting...'}
+          {!wsConnected
+            ? 'Connecting...'
+            : isToAmountLoading || isPriceLoading
+              ? 'Preparing Swap...'
+              : 'Swap Now'}
         </button>
       </div>
     </form>
