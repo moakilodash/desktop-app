@@ -15,6 +15,19 @@ export const RootRoute = () => {
   const [nodeInfo, nodeInfoResponse] = nodeApi.endpoints.nodeInfo.useLazyQuery()
 
   useEffect(() => {
+    const onPageLoad = () => {
+      invoke('close_splashscreen')
+    }
+
+    if (document.readyState === 'complete') {
+      onPageLoad()
+    } else {
+      window.addEventListener('load', onPageLoad)
+      return () => window.removeEventListener('load', onPageLoad)
+    }
+  }, [])
+
+  useEffect(() => {
     async function run() {
       const nodeInfoResponse = await nodeInfo()
       console.log(nodeInfoResponse)

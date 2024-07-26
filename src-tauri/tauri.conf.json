@@ -12,6 +12,12 @@
   "tauri": {
     "allowlist": {
       "all": false,
+      "dialog": {
+        "open": true
+      },
+      "fs": {
+        "all": true
+      },
       "shell": {
         "all": false,
         "open": true
@@ -43,9 +49,18 @@
         "decorations": true,
         "fullscreen": false,
         "height": 800,
+        "label": "main",
         "resizable": true,
         "title": "kaleidoswap",
+        "visible": false,
         "width": 1200
+      },
+      {
+        "decorations": false,
+        "height": 600,
+        "label": "splashscreen",
+        "url": "splashscreen.html",
+        "width": 500
       }
     ]
   }

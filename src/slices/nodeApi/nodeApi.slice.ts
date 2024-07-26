@@ -1,7 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 
-import { satoshiToBTC } from '../../helpers/number'
-
 interface InitRequest {
   password: string
 }
@@ -11,10 +9,6 @@ interface InitResponse {
 }
 
 interface UnlockRequest {
-  password: string
-}
-
-interface LockRequest {
   password: string
 }
 
@@ -363,11 +357,8 @@ export const nodeApi = createApi({
         url: '/lninvoice',
       }),
     }),
-    lock: builder.query<void, LockRequest>({
-      query: (body) => ({
-        body: {
-          password: body.password,
-        },
+    lock: builder.query<void, void>({
+      query: () => ({
         method: 'POST',
         url: '/lock',
       }),

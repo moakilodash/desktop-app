@@ -10,7 +10,8 @@ use std::{
     env, fs,
     sync::{Arc, Mutex},
 };
-use tauri::Manager;
+
+use tauri::{Manager, Window};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Config {
@@ -86,6 +87,20 @@ fn is_wallet_init() -> bool {
     wallet_path.exists()
 }
 
+#[tauri::command]
+async fn close_splashscreen(window: Window) {
+    window
+        .get_window("splashscreen")
+        .expect("no window labeled 'splashscreen' found")
+        .close()
+        .unwrap();
+    window
+        .get_window("main")
+        .expect("no window labeled 'main' found")
+        .show()
+        .unwrap();
+}
+
 fn main() {
     dotenv().ok();
     let use_local_bin = env::var("BUILD_AND_RUN_RGB_LIGHTNING_NODE")
@@ -145,7 +160,7 @@ fn main() {
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![is_wallet_init])
+        .invoke_handler(tauri::generate_handler![is_wallet_init, close_splashscreen])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

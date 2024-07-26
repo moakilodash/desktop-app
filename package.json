@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.1",
-    "@reduxjs/toolkit": "^1.9.5",
+    "@reduxjs/toolkit": "^2.2.6",
     "@tauri-apps/api": "^1.4.0",
     "axios": "^1.6.8",
     "decimal.js": "^10.4.3",
@@ -24,7 +24,7 @@
     "react-copy-to-clipboard": "^5.1.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.46.0",
-    "react-redux": "^8.1.2",
+    "react-redux": "^8.1.3",
     "react-router-dom": "^6.15.0",
     "react-spinners": "^0.13.8",
     "react-toastify": "^9.1.3",
