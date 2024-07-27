@@ -86,6 +86,24 @@ async fn close_splashscreen(window: Window) {
         .unwrap();
 }
 
+#[tauri::command]
+fn get_config() -> Result<Config, String> {
+    let mut config_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    config_path.push("../bin/config.yaml");
+    if config_path.exists() {
+        let config_content = match fs::read_to_string(config_path) {
+            Ok(content) => content,
+            Err(_) => return Err("Failed to read config file".to_string()),
+        };
+        match serde_yaml::from_str(&config_content) {
+            Ok(config) => Ok(config),
+            Err(_) => Err("Failed to parse config file".to_string()),
+        }
+    } else {
+        Err("Config file not found".to_string())
+    }
+}
+
 fn main() {
     dotenv().ok();
     let use_local_bin = env::var("BUILD_AND_RUN_RGB_LIGHTNING_NODE")
@@ -145,8 +163,7 @@ fn main() {
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![close_splashscreen])
+        .invoke_handler(tauri::generate_handler![close_splashscreen, get_config])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-
