@@ -124,14 +124,19 @@ export const Component = () => {
       <div className="bg-gray-800 rounded-lg py-8 px-6">
         {channels.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {channels.map((channel) => (
-              <ChannelCard
-                assets={assets}
-                channel={channel}
-                key={channel.channel_id}
-                onClose={handleCloseChannel}
-              />
-            ))}
+            {channels.map((channel) => {
+              const asset = assetsResponse.data?.nia.find(
+                (a) => a.asset_id === channel.asset_id
+              )
+              return (
+                <ChannelCard
+                  asset={asset}
+                  channel={channel}
+                  key={channel.channel_id}
+                  onClose={handleCloseChannel}
+                />
+              )
+            })}
           </div>
         ) : (
           <div className="text-lg text-gray-400 text-center">

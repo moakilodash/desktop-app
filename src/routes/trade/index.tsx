@@ -16,7 +16,9 @@ import {
 } from '../../slices/makerApi/pairs.slice'
 import './index.css'
 import { nodeApi, Channel, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
+import { useAssetIcon } from '../../utils/assetIcons'
 import { logger } from '../../utils/logger'
+import PropTypes from 'prop-types'
 
 interface Fields {
   from: string
@@ -28,6 +30,67 @@ interface Fields {
 
 const SATOSHIS_PER_BTC = 100000000
 const MSATS_PER_SAT = 1000
+
+interface AssetOptionProps {
+  value: string
+  label: string
+}
+
+const AssetOption: React.FC<AssetOptionProps> = React.memo(
+  ({ value, label }) => {
+    const iconUrl = useAssetIcon(value)
+    const [imgSrc, setImgSrc] = useState(iconUrl)
+
+    useEffect(() => {
+      setImgSrc(iconUrl)
+    }, [iconUrl])
+
+    const handleError = () => {
+      console.warn(`Failed to load image for ${value}, using default.`)
+      setImgSrc(defaultIcon)
+    }
+
+    return (
+      <div className="flex items-center">
+        <img
+          alt={label}
+          className="w-5 h-5 mr-2"
+          onError={handleError}
+          src={imgSrc}
+        />
+        {label}
+      </div>
+    )
+  }
+)
+
+AssetOption.displayName = 'AssetOption'
+
+AssetOption.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.string.isRequired,
+}
+
+interface AssetSelectProps {
+  options: Array<{ value: string; label: string }>
+  value: string
+  onChange: (value: string) => void
+}
+
+const AssetSelect: React.FC<AssetSelectProps> = ({
+  options,
+  value,
+  onChange,
+}) => (
+  <Select
+    active={value}
+    onSelect={onChange}
+    options={options}
+    renderOption={(option) => (
+      <AssetOption label={option.label} value={option.value} />
+    )}
+  />
+)
 
 export const Component = () => {
   const dispatch = useAppDispatch()
@@ -144,6 +207,39 @@ export const Component = () => {
     },
     [assets, parseBitcoinAmount]
   )
+  // Update "to" amount based on "from" amount and exchange rate
+  const updateToAmount = useCallback(
+    (fromAmount: string) => {
+      if (selectedPairFeed) {
+        const fromAsset = form.getValues().fromAsset
+        const toAsset = form.getValues().toAsset
+        const fromAmountValue = parseAssetAmount(fromAmount, fromAsset)
+        const conversionRate = isInverted
+          ? 1 / selectedPairFeed.buyPrice
+          : selectedPairFeed.buyPrice
+
+        let toAmountValue
+        if (fromAsset === 'BTC' && toAsset !== 'BTC') {
+          // Converting from BTC to another asset
+          toAmountValue = (fromAmountValue / SATOSHIS_PER_BTC) * conversionRate
+        } else if (fromAsset !== 'BTC' && toAsset === 'BTC') {
+          // Converting from another asset to BTC
+          toAmountValue = fromAmountValue * conversionRate * SATOSHIS_PER_BTC
+        } else {
+          // Converting between non-BTC assets
+          toAmountValue = fromAmountValue * conversionRate
+        }
+
+        const formattedToAmount = formatAmount(
+          Math.round(toAmountValue),
+          toAsset
+        )
+        form.setValue('to', formattedToAmount)
+        logger.debug('Updated "to" amount:', formattedToAmount)
+      }
+    },
+    [selectedPairFeed, form, isInverted, parseAssetAmount, formatAmount]
+  )
 
   // Calculate max tradable amount
   const calculateMaxTradableAmount = useCallback(
@@ -159,10 +255,11 @@ export const Component = () => {
       }
       const assetsList = assetsResponse.data.nia
 
+      // Find the pair that includes the asset, considering the inverted state
       const pair = tradablePairs.find(
         (p) =>
-          (isFrom && p.base_asset === asset) ||
-          (!isFrom && p.quote_asset === asset)
+          (isInverted ? p.quote_asset : p.base_asset) === asset ||
+          (!isInverted ? p.quote_asset : p.base_asset) === asset
       )
 
       if (!pair) {
@@ -175,7 +272,7 @@ export const Component = () => {
       )
 
       if (asset === 'BTC') {
-        if (isFrom) {
+        if ((isFrom && !isInverted) || (!isFrom && isInverted)) {
           const maxChannelBalance = Math.max(
             ...channels.map((c) => c.outbound_balance_msat / MSATS_PER_SAT)
           )
@@ -214,55 +311,54 @@ export const Component = () => {
         }
 
         const assetPrice = selectedPairFeed
-          ? asset === pair.base_asset
-            ? selectedPairFeed.buyPrice
-            : 1 / selectedPairFeed.buyPrice
+          ? isInverted
+            ? 1 / selectedPairFeed.buyPrice
+            : selectedPairFeed.buyPrice
           : 1
         logger.debug(`Asset price for ${asset}: ${assetPrice}`)
 
-        if (isFrom) {
+        if ((isFrom && !isInverted) || (!isFrom && isInverted)) {
           const maxAssetAmount = Math.max(
             ...assetChannels.map((c) => c.asset_local_amount)
           )
-          // const maxOrderSizeInAsset = pair.max_order_size / assetPrice
-          // logger.debug(`${asset} (from) - Max asset amount: ${maxAssetAmount}, Max order size in asset: ${maxOrderSizeInAsset}`)
-          // const result = Math.min(maxAssetAmount, maxOrderSizeInAsset)
-          // logger.info(`${asset} (from) - Max tradable amount: ${result}`)
-          // return result
-          return maxAssetAmount
+          const maxOrderSizeInAsset = pair.max_order_size / assetPrice
+          const result = Math.min(maxAssetAmount, maxOrderSizeInAsset)
+          logger.info(`${asset} (from) - Max tradable amount: ${result}`)
+          return result
         } else {
           const maxAssetAmount = Math.max(
             ...assetChannels.map((c) => c.asset_remote_amount)
           )
-          return maxAssetAmount
-          // const maxOrderSizeInAsset = pair.max_order_size * assetPrice
-          // logger.debug(`${asset} (to) - Max asset amount: ${maxAssetAmount}, Max order size in asset: ${maxOrderSizeInAsset}`)
-          // const result = Math.min(maxAssetAmount, maxOrderSizeInAsset)
-          // logger.info(`${asset} (to) - Max tradable amount: ${result}`)
-          // return result
+          const maxOrderSizeInAsset = pair.max_order_size * assetPrice
+          const result = Math.min(maxAssetAmount, maxOrderSizeInAsset)
+          logger.info(`${asset} (to) - Max tradable amount: ${result}`)
+          return result
         }
       }
     },
-    [channels, tradablePairs, selectedPairFeed, listAssets]
+    [channels, tradablePairs, selectedPairFeed, listAssets, isInverted]
   )
 
   const calculateAndFormatRate = useCallback(
     (fromAsset, toAsset, price, isInverted) => {
       if (!price) return ''
 
-      const rate = isInverted ? 1 / price : price
+      let rate = isInverted ? 1 / price : price
+
+      // Adjust rate if we're dealing with satoshis
+      // if (fromAsset === 'BTC' && bitcoinUnit === 'SAT') {
+      //   rate = rate
+      // } else
+      if (toAsset === 'BTC' && bitcoinUnit === 'SAT') {
+        rate = rate * SATOSHIS_PER_BTC
+      }
+
       let formattedRate
 
       if (fromAsset === 'BTC') {
-        formattedRate =
-          bitcoinUnit === 'SAT'
-            ? formatAmount(rate * SATOSHIS_PER_BTC, toAsset)
-            : formatAmount(rate, toAsset)
+        formattedRate = formatAmount(rate, toAsset)
       } else if (toAsset === 'BTC') {
-        formattedRate =
-          bitcoinUnit === 'SAT'
-            ? formatAmount(rate / SATOSHIS_PER_BTC, toAsset)
-            : formatAmount(rate, toAsset)
+        formattedRate = formatAmount(1 / rate, fromAsset)
       } else {
         formattedRate = formatAmount(rate, toAsset)
       }
@@ -381,40 +477,72 @@ export const Component = () => {
   }, [selectedPair, dispatch])
 
   // Update min and max amounts when selected pair changes
-  useEffect(() => {
-    const updateMinMaxAmounts = async () => {
-      if (selectedPair) {
-        const fromAsset = form.getValues().fromAsset
-        const toAsset = form.getValues().toAsset
+  const updateMinMaxAmounts = useCallback(async () => {
+    if (selectedPair) {
+      const fromAsset = form.getValues().fromAsset
+      const toAsset = form.getValues().toAsset
 
-        logger.info(
-          `Updating min and max amounts for pair: ${fromAsset}/${toAsset}`
-        )
+      logger.info(
+        `Updating min and max amounts for pair: ${fromAsset}/${toAsset}`
+      )
 
-        setMinFromAmount(selectedPair.min_order_size)
-        logger.info(`Min from amount set to: ${selectedPair.min_order_size}`)
+      // Always use the base asset for min order size, regardless of inversion
+      const baseAsset = isInverted ? toAsset : fromAsset
+      setMinFromAmount(selectedPair.min_order_size)
+      logger.info(
+        `Min from amount set to: ${selectedPair.min_order_size} ${baseAsset}`
+      )
 
-        const newMaxFromAmount = await calculateMaxTradableAmount(
-          fromAsset,
-          true
-        )
-        setMaxFromAmount(newMaxFromAmount)
-        logger.info(`Max from amount set to: ${newMaxFromAmount}`)
+      // Calculate max amounts
+      let newMaxFromAmount, newMaxToAmount
 
-        const newMaxToAmount = await calculateMaxTradableAmount(toAsset, false)
-        setMaxToAmount(newMaxToAmount)
-        logger.info(`Max to amount set to: ${newMaxToAmount}`)
-
-        logger.debug(
-          `Current exchange rate: ${selectedPairFeed ? selectedPairFeed.buyPrice : 'N/A'}`
-        )
+      if (!isInverted) {
+        newMaxFromAmount = await calculateMaxTradableAmount(fromAsset, true)
+        newMaxToAmount = await calculateMaxTradableAmount(toAsset, false)
       } else {
-        logger.warn('No selected pair, skipping min/max amount update')
+        // For inverted pairs, we need to calculate the opposite
+        newMaxFromAmount = await calculateMaxTradableAmount(fromAsset, false)
+        newMaxToAmount = await calculateMaxTradableAmount(toAsset, true)
       }
-    }
 
+      setMaxFromAmount(newMaxFromAmount)
+      logger.info(`Max from amount set to: ${newMaxFromAmount} ${fromAsset}`)
+
+      setMaxToAmount(newMaxToAmount)
+      logger.info(`Max to amount set to: ${newMaxToAmount} ${toAsset}`)
+
+      // If we're inverted, we need to adjust the displayed "from" amount
+      // to respect the min order size of the base asset
+      if (isInverted && selectedPairFeed) {
+        const minToAmount =
+          selectedPair.min_order_size * selectedPairFeed.buyPrice
+        const formattedMinToAmount = formatAmount(
+          Math.ceil(minToAmount),
+          toAsset
+        )
+        form.setValue('from', formattedMinToAmount)
+        updateToAmount(formattedMinToAmount)
+      }
+
+      logger.debug(
+        `Current exchange rate: ${selectedPairFeed ? selectedPairFeed.buyPrice : 'N/A'}`
+      )
+    } else {
+      logger.warn('No selected pair, skipping min/max amount update')
+    }
+  }, [
+    selectedPair,
+    form,
+    calculateMaxTradableAmount,
+    selectedPairFeed,
+    isInverted,
+    formatAmount,
+    updateToAmount,
+  ])
+
+  useEffect(() => {
     updateMinMaxAmounts()
-  }, [selectedPair, form, calculateMaxTradableAmount, selectedPairFeed])
+  }, [selectedPair, updateMinMaxAmounts])
 
   // Handle "from" amount change
   const handleFromAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -452,39 +580,6 @@ export const Component = () => {
     logger.debug('To amount changed:', value)
   }
 
-  // Update "to" amount based on "from" amount and exchange rate
-  const updateToAmount = useCallback(
-    (fromAmount: string) => {
-      if (selectedPairFeed) {
-        const fromAsset = form.getValues().fromAsset
-        const toAsset = form.getValues().toAsset
-        const fromAmountValue = parseAssetAmount(fromAmount, fromAsset)
-        const conversionRate = isInverted
-          ? 1 / selectedPairFeed.buyPrice
-          : selectedPairFeed.buyPrice
-
-        let toAmountValue
-        if (fromAsset === 'BTC' && toAsset !== 'BTC') {
-          // Converting from BTC to another asset
-          toAmountValue = (fromAmountValue / SATOSHIS_PER_BTC) * conversionRate
-        } else if (fromAsset !== 'BTC' && toAsset === 'BTC') {
-          // Converting from another asset to BTC
-          toAmountValue = fromAmountValue * conversionRate * SATOSHIS_PER_BTC
-        } else {
-          // Converting between non-BTC assets
-          toAmountValue = fromAmountValue * conversionRate
-        }
-
-        const formattedToAmount = formatAmount(
-          Math.round(toAmountValue),
-          toAsset
-        )
-        form.setValue('to', formattedToAmount)
-        logger.debug('Updated "to" amount:', formattedToAmount)
-      }
-    },
-    [selectedPairFeed, form, isInverted, parseAssetAmount, formatAmount]
-  )
   // Update amounts when selected pair feed changes
   useEffect(() => {
     if (selectedPairFeed) {
@@ -501,7 +596,7 @@ export const Component = () => {
   }, [form, selectedPairFeed, updateToAmount])
 
   // Swap assets
-  const onSwapAssets = () => {
+  const onSwapAssets = useCallback(async () => {
     if (selectedPair) {
       setIsInverted(!isInverted)
       const fromAsset = form.getValues().fromAsset
@@ -511,28 +606,78 @@ export const Component = () => {
 
       form.setValue('fromAsset', toAsset)
       form.setValue('toAsset', fromAsset)
-      form.setValue('from', toAmount)
-      form.setValue('to', fromAmount)
 
-      // Recalculate amounts after swapping
-      updateToAmount(toAmount)
+      // Recalculate max amounts
+      const newMaxFromAmount = await calculateMaxTradableAmount(toAsset, true)
+      setMaxFromAmount(newMaxFromAmount)
+      const newMaxToAmount = await calculateMaxTradableAmount(fromAsset, false)
+      setMaxToAmount(newMaxToAmount)
+
+      // Update the amounts based on the new direction
+      if (!isInverted) {
+        // We're inverting from base/quote to quote/base
+        form.setValue('from', toAmount)
+        updateToAmount(toAmount)
+      } else {
+        // We're inverting back to base/quote
+        form.setValue('from', fromAmount)
+        updateToAmount(fromAmount)
+      }
+
       logger.info('Swapped assets')
     }
-  }
+  }, [
+    selectedPair,
+    form,
+    isInverted,
+    calculateMaxTradableAmount,
+    updateToAmount,
+  ])
 
   // Handle size button click
   const onSizeClick = useCallback(
     async (size: number) => {
       setSelectedSize(size)
       const fromAsset = form.getValues().fromAsset
-      const maxAmount = await calculateMaxTradableAmount(fromAsset, true)
+      const toAsset = form.getValues().toAsset
+
+      let maxAmount
+      if (!isInverted) {
+        maxAmount = await calculateMaxTradableAmount(fromAsset, true)
+      } else {
+        // When inverted, we need to calculate the max amount for the "to" asset
+        // and then convert it to the equivalent amount in the "from" asset
+        const maxToAmount = await calculateMaxTradableAmount(toAsset, true)
+        if (selectedPairFeed) {
+          maxAmount = maxToAmount / selectedPairFeed.buyPrice
+          if (fromAsset === 'BTC' && toAsset !== 'BTC') {
+            maxAmount = maxAmount * SATOSHIS_PER_BTC
+          } else if (fromAsset !== 'BTC' && toAsset === 'BTC') {
+            maxAmount = maxAmount / SATOSHIS_PER_BTC
+          }
+        } else {
+          // If we don't have a price feed, we can't calculate accurately
+          logger.warn('No price feed available for size calculation')
+          return
+        }
+      }
+
       const newAmount = (maxAmount * size) / 100
       const formattedAmount = formatAmount(newAmount, fromAsset)
       form.setValue('from', formattedAmount)
       updateToAmount(formattedAmount)
-      logger.info(`Size clicked: ${size}%`)
+      logger.info(
+        `Size clicked: ${size}% - Amount: ${formattedAmount} ${fromAsset}`
+      )
     },
-    [form, calculateMaxTradableAmount, formatAmount, updateToAmount]
+    [
+      form,
+      calculateMaxTradableAmount,
+      formatAmount,
+      updateToAmount,
+      isInverted,
+      selectedPairFeed,
+    ]
   )
 
   // Submit handler
@@ -658,13 +803,13 @@ export const Component = () => {
             control={form.control}
             name="fromAsset"
             render={({ field }) => (
-              <Select
-                active={field.value}
-                onSelect={(value) => field.onChange(value)}
+              <AssetSelect
+                onChange={field.onChange}
                 options={tradablePairs.map((pair) => ({
                   label: isInverted ? pair.quote_asset : pair.base_asset,
                   value: isInverted ? pair.quote_asset : pair.base_asset,
                 }))}
+                value={field.value}
               />
             )}
           />
@@ -725,13 +870,13 @@ export const Component = () => {
             control={form.control}
             name="toAsset"
             render={({ field }) => (
-              <Select
-                active={field.value}
-                onSelect={(value) => field.onChange(value)}
+              <AssetSelect
+                onChange={field.onChange}
                 options={tradablePairs.map((pair) => ({
                   label: isInverted ? pair.base_asset : pair.quote_asset,
                   value: isInverted ? pair.base_asset : pair.quote_asset,
                 }))}
+                value={field.value}
               />
             )}
           />
