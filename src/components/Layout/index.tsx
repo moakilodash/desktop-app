@@ -14,7 +14,7 @@ import { LayoutModal } from './Modal'
 import { WalletMenu } from './WalletMenu'
 
 import 'react-toastify/dist/ReactToastify.min.css'
-import { Gear } from '../../icons/Gear'
+import { Cog } from 'lucide-react'
 
 interface Props {
   children: React.ReactNode
@@ -40,11 +40,11 @@ export const Layout = (props: Props) => {
   return (
     <>
       <div className="min-h-screen flex">
-        <aside className="fixed h-full w-16 bg-gray-900 items-center shadow-lg flex flex-col justify-between py-4">
-          <div></div>
+        <aside className="fixed h-full w-16 bg-gradient-to-b from-gray-800 to-gray-900 items-center shadow-lg flex flex-col justify-between py-4 px-2 border-r border-gray-700">
+          <div className="flex flex-col items-center space-y-4"></div>
           <div>
             <NavLink to="/node-settings">
-              <Gear fill="gray" height={40} width={40} />
+              <Cog color="grey" size={36} />
             </NavLink>
           </div>
         </aside>
