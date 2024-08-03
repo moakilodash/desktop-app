@@ -18,6 +18,7 @@ import {
   WALLET_HISTORY_PATH,
   WALLET_HISTORY_TRADES_PATH,
   WALLET_HISTORY_WITHDRAWALS_PATH,
+  NODE_SETTINGS_PATH,
 } from './paths'
 
 export const router = createBrowserRouter([
@@ -46,6 +47,10 @@ export const router = createBrowserRouter([
       {
         lazy: () => import('../../routes/settings'),
         path: SETTINGS_PATH,
+      },
+      {
+        lazy: () => import('../../routes/node-settings'),
+        path: NODE_SETTINGS_PATH,
       },
       {
         lazy: () => import('../../routes/wallet-dashboard'),

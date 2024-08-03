@@ -24,6 +24,11 @@
       },
       "window": {
         "close": true
+      },
+      "process": {
+        "all": false,
+        "relaunch": true,
+        "exit": true
       }
     },
     "bundle": {
@@ -36,9 +41,7 @@
         "icons/icon.ico"
       ],
       "identifier": "com.kaleidoswap.dev",
-      "resources": [
-        "../bin/rgb-lightning-node"
-      ],
+      "resources": ["../bin/rgb-lightning-node"],
       "targets": "all"
     },
     "security": {

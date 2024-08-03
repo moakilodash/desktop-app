@@ -74,16 +74,12 @@ fn run_rgb_lightning_node(
 
 #[tauri::command]
 async fn close_splashscreen(window: Window) {
-    window
-        .get_window("splashscreen")
-        .expect("no window labeled 'splashscreen' found")
-        .close()
-        .unwrap();
-    window
-        .get_window("main")
-        .expect("no window labeled 'main' found")
-        .show()
-        .unwrap();
+    if let Some(splashscreen) = window.get_window("splashscreen") {
+        splashscreen.close().unwrap();
+    };
+    if let Some(main_window) = window.get_window("main") {
+        main_window.show().unwrap();
+    };
 }
 
 #[tauri::command]
@@ -101,6 +97,18 @@ fn get_config() -> Result<Config, String> {
         }
     } else {
         Err("Config file not found".to_string())
+    }
+}
+
+#[tauri::command]
+fn write_config(config: Config) -> Result<(), String> {
+    let mut config_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    config_path.push("../bin/config.yaml");
+
+    let config_yaml = serde_yaml::to_string(&config).expect("Failed to serialize default config");
+    match fs::write(config_path, config_yaml) {
+        Ok(_) => Ok(()),
+        Err(_) => Err("Failed to write config file".to_string()),
     }
 }
 
@@ -161,9 +169,20 @@ fn main() {
                 }
                 handle.exit(0);
             });
+            let child_process_clone2 = Arc::clone(&child_process);
+            app.listen_global("app-will-relaunch", move |_| {
+                let mut child_lock = child_process_clone2.lock().unwrap();
+                if let Some(ref mut child) = *child_lock {
+                    child.kill().expect("Failed to kill child process");
+                }
+            });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![close_splashscreen, get_config])
+        .invoke_handler(tauri::generate_handler![
+            close_splashscreen,
+            get_config,
+            write_config
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
