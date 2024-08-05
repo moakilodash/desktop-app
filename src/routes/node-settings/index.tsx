@@ -1,3 +1,4 @@
+import { emit } from '@tauri-apps/api/event'
 import { exit /* relaunch */ } from '@tauri-apps/api/process'
 import { useState, useEffect } from 'react'
 import { useForm, Controller, SubmitHandler } from 'react-hook-form'
@@ -11,7 +12,6 @@ import {
   readSettings,
   writeSettings,
 } from '../../slices/nodeSettings/nodeSettings.slice'
-// import { emit } from '@tauri-apps/api/event'
 
 interface FormFields {
   network?: 'regtest' | 'testnet' | 'signet' | 'mainnet'
@@ -170,12 +170,12 @@ export const Component = () => {
                 <button
                   className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-lg font-bold rounded shadow-md transition duration-200"
                   onClick={async () => {
-                    // await emit('app-will-relaunch')
-                    //
-                    // setTimeout(() => {
-                    //   relaunch().catch((err) => toast.error(err))
-                    // }, 1000)
-                    await exit()
+                    await emit('app-will-relaunch')
+
+                    setTimeout(() => {
+                      // relaunch().catch((err) => toast.error(err))
+                      exit().catch((err) => toast.error(err))
+                    }, 1000)
                   }}
                   type="button"
                 >
