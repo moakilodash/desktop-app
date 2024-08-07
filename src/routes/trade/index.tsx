@@ -601,8 +601,8 @@ export const Component = () => {
       setIsInverted(!isInverted)
       const fromAsset = form.getValues().fromAsset
       const toAsset = form.getValues().toAsset
-      const fromAmount = form.getValues().from
-      const toAmount = form.getValues().to
+      const fromAmount = parseAssetAmount(form.getValues().from, fromAsset)
+      const toAmount = parseAssetAmount(form.getValues().to, toAsset)
 
       form.setValue('fromAsset', toAsset)
       form.setValue('toAsset', fromAsset)
@@ -614,14 +614,15 @@ export const Component = () => {
       setMaxToAmount(newMaxToAmount)
 
       // Update the amounts based on the new direction
-      if (!isInverted) {
-        // We're inverting from base/quote to quote/base
-        form.setValue('from', toAmount)
-        updateToAmount(toAmount)
-      } else {
-        // We're inverting back to base/quote
-        form.setValue('from', fromAmount)
-        updateToAmount(fromAmount)
+      if (selectedPairFeed) {
+        const rate = isInverted
+          ? selectedPairFeed.buyPrice
+          : 1 / selectedPairFeed.buyPrice
+        const newFromAmount = toAmount
+        const newToAmount = fromAmount * rate
+
+        form.setValue('from', formatAmount(newFromAmount, toAsset))
+        form.setValue('to', formatAmount(newToAmount, fromAsset))
       }
 
       logger.info('Swapped assets')
@@ -631,7 +632,9 @@ export const Component = () => {
     form,
     isInverted,
     calculateMaxTradableAmount,
-    updateToAmount,
+    parseAssetAmount,
+    formatAmount,
+    selectedPairFeed,
   ])
 
   // Handle size button click
@@ -685,7 +688,7 @@ export const Component = () => {
     let toastId = null
 
     try {
-      toastId = toast.loading('Swap in progress...')
+      toastId = toast.loading('Initializing swap...')
       logger.info('Initiating swap', data)
 
       const pair = tradablePairs.find(
@@ -738,6 +741,9 @@ export const Component = () => {
       }
 
       const { swapstring, payment_hash } = initSwapResponse.data
+      toast.update(toastId, {
+        render: 'Processing taker whitelisting...',
+      })
 
       const takerResponse = await taker({ swapstring })
       if ('error' in takerResponse) {
@@ -749,12 +755,16 @@ export const Component = () => {
         swapstring,
         taker_pubkey: pubKey,
       }
+      toast.update(toastId, {
+        render: 'Waiting maker to execute swap...',
+      })
+
       const confirmSwapResponse = await execSwap(confirmSwapPayload)
       if ('error' in confirmSwapResponse) {
         throw new Error('Failed to confirm swap')
       }
 
-      logger.info('Swap executed successfully')
+      logger.info('Swap executed successfully!')
       toast.update(toastId, {
         autoClose: 5000,
         closeOnClick: true,
@@ -787,7 +797,7 @@ export const Component = () => {
           <div className="text-xs">You Send</div>
           <div className="text-xs">
             Available to send:{' '}
-            {formatAmount(maxFromAmount, form.getValues().fromAsset)}
+            {`${formatAmount(maxFromAmount, form.getValues().fromAsset)} ${form.getValues().fromAsset}`}
           </div>
         </div>
 
@@ -848,7 +858,7 @@ export const Component = () => {
           <div className="text-xs">You Receive (Estimated)</div>
           <div className="text-xs">
             Can receive up to:{' '}
-            {formatAmount(maxToAmount, form.getValues().toAsset)}
+            {`${formatAmount(maxToAmount, form.getValues().toAsset)} ${form.getValues().toAsset}`}
           </div>
         </div>
 
