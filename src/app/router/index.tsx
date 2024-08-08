@@ -39,6 +39,10 @@ export const router = createBrowserRouter([
     path: WALLET_UNLOCK_PATH,
   },
   {
+    lazy: () => import('../../routes/node-settings'),
+    path: NODE_SETTINGS_PATH,
+  },
+  {
     children: [
       {
         lazy: () => import('../../routes/trade'),
@@ -47,10 +51,6 @@ export const router = createBrowserRouter([
       {
         lazy: () => import('../../routes/settings'),
         path: SETTINGS_PATH,
-      },
-      {
-        lazy: () => import('../../routes/node-settings'),
-        path: NODE_SETTINGS_PATH,
       },
       {
         lazy: () => import('../../routes/wallet-dashboard'),

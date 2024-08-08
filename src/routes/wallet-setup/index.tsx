@@ -9,6 +9,8 @@ import {
 } from '../../app/router/paths'
 import { Layout } from '../../components/Layout'
 
+import { Toolbar } from './Toolbar'
+
 interface WalletOptionProps {
   title: string
   description: string
@@ -41,32 +43,35 @@ export const Component = () => {
   const navigate = useNavigate()
 
   return (
-    <Layout>
-      <div className="max-w-4xl w-full p-6 bg-blue-darker rounded-lg shadow-md">
-        <h1 className="text-3xl font-bold mb-6 text-center text-white">
-          Wallet Options
-        </h1>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <WalletOption
-            description="Set up a new wallet for your cryptocurrency"
-            icon={Wallet}
-            onClick={() => navigate(INIT_PATH)}
-            title="Create Wallet"
-          />
-          <WalletOption
-            description="Recover your wallet from a backup"
-            icon={ArrowLeftRight}
-            onClick={() => navigate(WALLET_RESTORE_PATH)}
-            title="Restore Wallet"
-          />
-          <WalletOption
-            description="Access your existing wallet"
-            icon={Lock}
-            onClick={() => navigate(WALLET_UNLOCK_PATH)}
-            title="Unlock Wallet"
-          />
+    <>
+      <Toolbar />
+      <Layout>
+        <div className="max-w-4xl w-full p-6 bg-blue-darker rounded-lg shadow-md">
+          <h1 className="text-3xl font-bold mb-6 text-center text-white">
+            Wallet Options
+          </h1>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <WalletOption
+              description="Set up a new wallet for your cryptocurrency"
+              icon={Wallet}
+              onClick={() => navigate(INIT_PATH)}
+              title="Create Wallet"
+            />
+            <WalletOption
+              description="Recover your wallet from a backup"
+              icon={ArrowLeftRight}
+              onClick={() => navigate(WALLET_RESTORE_PATH)}
+              title="Restore Wallet"
+            />
+            <WalletOption
+              description="Access your existing wallet"
+              icon={Lock}
+              onClick={() => navigate(WALLET_UNLOCK_PATH)}
+              title="Unlock Wallet"
+            />
+          </div>
         </div>
-      </div>
-    </Layout>
+      </Layout>
+    </>
   )
 }
