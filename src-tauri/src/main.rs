@@ -10,6 +10,7 @@ use std::{
     env, fs,
     sync::{Arc, Mutex},
 };
+
 use tauri::{Manager, Window};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -70,6 +71,20 @@ fn run_rgb_lightning_node(
         println!("rgb-lightning-node executable not found.");
         None
     }
+}
+
+#[tauri::command]
+fn is_wallet_init() -> bool {
+    let mut data_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    data_path.push("../bin/dataldk");
+
+    if !data_path.exists() {
+        return false;
+    }
+
+    let wallet_path = data_path.join("mnemonic");
+
+    wallet_path.exists()
 }
 
 #[tauri::command]
@@ -179,6 +194,7 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            is_wallet_init,
             close_splashscreen,
             get_config,
             write_config
