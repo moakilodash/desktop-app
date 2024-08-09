@@ -5,6 +5,7 @@ import { orderChannelSlice } from '../../slices/channel/orderChannel.slice'
 import { makerApi } from '../../slices/makerApi/makerApi.slice.ts'
 import { pairsSlice } from '../../slices/makerApi/pairs.slice.ts'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
+import { nodeSettingsSlice } from '../../slices/nodeSettings/nodeSettings.slice.ts'
 import { settingsSlice } from '../../slices/settings/settings.slice'
 import { uiSlice } from '../../slices/ui/ui.slice'
 
@@ -12,6 +13,7 @@ const rootReducer = combineReducers({
   [nodeApi.reducerPath]: nodeApi.reducer,
   [makerApi.reducerPath]: makerApi.reducer,
   channel: channelSlice.reducer,
+  nodeSettings: nodeSettingsSlice.reducer,
   orderChannel: orderChannelSlice.reducer,
   pairs: pairsSlice.reducer,
   settings: settingsSlice.reducer,

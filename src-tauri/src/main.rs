@@ -89,16 +89,42 @@ fn is_wallet_init() -> bool {
 
 #[tauri::command]
 async fn close_splashscreen(window: Window) {
-    window
-        .get_window("splashscreen")
-        .expect("no window labeled 'splashscreen' found")
-        .close()
-        .unwrap();
-    window
-        .get_window("main")
-        .expect("no window labeled 'main' found")
-        .show()
-        .unwrap();
+    if let Some(splashscreen) = window.get_window("splashscreen") {
+        splashscreen.close().unwrap();
+    };
+    if let Some(main_window) = window.get_window("main") {
+        main_window.show().unwrap();
+    };
+}
+
+#[tauri::command]
+fn get_config() -> Result<Config, String> {
+    let mut config_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    config_path.push("../bin/config.yaml");
+    if config_path.exists() {
+        let config_content = match fs::read_to_string(config_path) {
+            Ok(content) => content,
+            Err(_) => return Err("Failed to read config file".to_string()),
+        };
+        match serde_yaml::from_str(&config_content) {
+            Ok(config) => Ok(config),
+            Err(_) => Err("Failed to parse config file".to_string()),
+        }
+    } else {
+        Err("Config file not found".to_string())
+    }
+}
+
+#[tauri::command]
+fn write_config(config: Config) -> Result<(), String> {
+    let mut config_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    config_path.push("../bin/config.yaml");
+
+    let config_yaml = serde_yaml::to_string(&config).expect("Failed to serialize default config");
+    match fs::write(config_path, config_yaml) {
+        Ok(_) => Ok(()),
+        Err(_) => Err("Failed to write config file".to_string()),
+    }
 }
 
 fn main() {
@@ -158,10 +184,21 @@ fn main() {
                 }
                 handle.exit(0);
             });
+            let child_process_clone2 = Arc::clone(&child_process);
+            app.listen_global("app-will-relaunch", move |_| {
+                let mut child_lock = child_process_clone2.lock().unwrap();
+                if let Some(ref mut child) = *child_lock {
+                    child.kill().expect("Failed to kill child process");
+                }
+            });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![is_wallet_init, close_splashscreen])
+        .invoke_handler(tauri::generate_handler![
+            is_wallet_init,
+            close_splashscreen,
+            get_config,
+            write_config
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-
