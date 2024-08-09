@@ -3,6 +3,7 @@ import { exists, writeTextFile } from '@tauri-apps/api/fs'
 import { useState, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
@@ -31,6 +32,7 @@ interface Response {
 }
 
 export const Component = () => {
+  const navigate = useNavigate()
   const dispatch = useDispatch()
   const { bitcoinUnit, nodeConnectionString, defaultLspUrl } = useSelector(
     (state) => state.settings
@@ -53,6 +55,7 @@ export const Component = () => {
     nodeApi.endpoints.backup.useLazyQuery()
   const [lock] = nodeApi.endpoints.lock.useLazyQuery()
   const [unlock] = nodeApi.endpoints.unlock.useLazyQuery()
+  const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
 
   const [isBackupInProgress, setIsBackupInProgress] = useState(false)
 
@@ -306,6 +309,24 @@ export const Component = () => {
               type="button"
             >
               Backup
+            </button>
+          </div>
+          <div className="flex justify-between mt-4 space-x-4">
+            <button
+              className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-lg font-bold rounded shadow-md transition duration-200"
+              onClick={async () => {
+                const lockResponse = await attemptLock()
+                if (lockResponse.status === 200) {
+                  navigate('/wallet-setup')
+                  toast.success('Logout successful')
+                  nodeInfo()
+                } else {
+                  toast.error('Node lock unsuccessful')
+                }
+              }}
+              type="button"
+            >
+              Logout
             </button>
           </div>
           <div className="flex justify-between mt-8 space-x-4">

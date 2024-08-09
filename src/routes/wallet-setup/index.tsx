@@ -45,7 +45,7 @@ export const Component = () => {
   return (
     <>
       <Toolbar />
-      <Layout>
+      <Layout className="ms-12">
         <div className="max-w-4xl w-full p-6 bg-blue-darker rounded-lg shadow-md">
           <h1 className="text-3xl font-bold mb-6 text-center text-white">
             Wallet Options

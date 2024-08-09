@@ -14,9 +14,9 @@ import { LayoutModal } from './Modal'
 import { WalletMenu } from './WalletMenu'
 
 import 'react-toastify/dist/ReactToastify.min.css'
-import { Cog } from 'lucide-react'
 
 interface Props {
+  className?: string
   children: React.ReactNode
 }
 
@@ -38,7 +38,7 @@ export const Layout = (props: Props) => {
   const nodeInfo = nodeApi.endpoints.nodeInfo.useQueryState()
 
   return (
-    <>
+    <div className={props.className}>
       <div className="min-h-screen flex">
         <div className="px-16 py-14 min-h-screen min-w-full flex flex-col">
           <header className="flex items-center mb-20">
@@ -83,6 +83,6 @@ export const Layout = (props: Props) => {
       </div>
       <LayoutModal />
       <ToastContainer />
-    </>
+    </div>
   )
 }
