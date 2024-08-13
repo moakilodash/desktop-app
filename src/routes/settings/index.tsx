@@ -1,5 +1,5 @@
 import { open } from '@tauri-apps/api/dialog'
-import { exists, writeTextFile } from '@tauri-apps/api/fs'
+import { exists } from '@tauri-apps/api/fs'
 import { useState, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
