@@ -48,13 +48,13 @@ const Modal: React.FC<ModalProps> = ({
 interface ChannelCardProps {
   channel: any
   onClose: (channelId: string, peerPubkey: string) => void
-  assets: any
+  asset: any // Changed from assets to asset
 }
 
 export const ChannelCard: React.FC<ChannelCardProps> = ({
   channel,
   onClose,
-  assets,
+  asset,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isCopied, setIsCopied] = useState(false)
@@ -77,8 +77,8 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
     setIsModalOpen(false)
   }
 
-  const assetTicker = assets[channel.asset_id]?.ticker || 'BTC'
-  const assetPrecision = assets[channel.asset_id]?.precision || 8
+  const assetTicker = asset?.ticker || 'BTC'
+  const assetPrecision = asset?.precision || 8
   const peerName = channel.peer_alias || channel.peer_pubkey.slice(0, 8)
 
   const formatAssetAmount = (amount) => {

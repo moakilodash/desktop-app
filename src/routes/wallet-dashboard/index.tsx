@@ -15,7 +15,6 @@ import {
 } from '../../app/router/paths'
 import { useAppDispatch } from '../../app/store/hooks'
 import { ChannelCard } from '../../components/ChannelCard'
-import { BTC_ASSET_ID } from '../../constants'
 import { numberFormatter } from '../../helpers/number'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 import { uiSliceActions } from '../../slices/ui/ui.slice'
@@ -129,12 +128,24 @@ export const Component = () => {
   const [closeChannel] = nodeApi.endpoints.closeChannel.useLazyQuery()
   const navigate = useNavigate()
   const [assetBalances, setAssetBalances] = useState({})
+  const [isLoading, setIsLoading] = useState(true)
+  const [assetsMap, setAssetsMap] = useState({})
 
   const refreshData = useCallback(() => {
     assets()
     btcBalance()
     listChannels()
   }, [assets, btcBalance, listChannels])
+
+  useEffect(() => {
+    if (assetsResponse.data?.nia) {
+      const newAssetsMap = assetsResponse.data.nia.reduce((acc, asset) => {
+        acc[asset.asset_id] = asset
+        return acc
+      }, {})
+      setAssetsMap(newAssetsMap)
+    }
+  }, [assetsResponse.data])
 
   useEffect(() => {
     refreshData()
@@ -145,27 +156,11 @@ export const Component = () => {
   useEffect(() => {
     const fetchAssetBalances = async () => {
       const newBalances = {}
-      for (const asset of assetsResponse.data?.assets || []) {
-        if (asset.asset_id === BTC_ASSET_ID) {
-          const btcData = btcBalanceResponse.data
-          const channels = listChannelsResponse.data?.channels || []
-          const offChainBalance = new Decimal(
-            channels
-              .filter((c) => c.asset_id === BTC_ASSET_ID)
-              .reduce((acc, c) => acc + c.outbound_balance_msat, 0)
-          )
-            .mul(0.00000001)
-            .toNumber()
-          newBalances[BTC_ASSET_ID] = {
-            offChain: offChainBalance,
-            onChain: btcData?.vanilla.settled || 0,
-          }
-        } else {
-          const balance = await assetBalance({ asset_id: asset.asset_id })
-          newBalances[asset.asset_id] = {
-            offChain: balance.data?.offchain_outbound || 0,
-            onChain: balance.data?.spendable || 0,
-          }
+      for (const asset of assetsResponse.data?.nia || []) {
+        const balance = await assetBalance({ asset_id: asset.asset_id })
+        newBalances[asset.asset_id] = {
+          offChain: balance.data?.offchain_outbound || 0,
+          onChain: balance.data?.spendable || 0,
         }
       }
       setAssetBalances(newBalances)
@@ -180,8 +175,8 @@ export const Component = () => {
     listChannelsResponse.data,
     assetBalance,
   ])
-  const onChainBalance = btcBalanceResponse.data?.vanilla.settled || 0
 
+  const onChainBalance = btcBalanceResponse.data?.vanilla.settled || 0
   const channels = listChannelsResponse?.data?.channels || []
   const totalBalance =
     channels.reduce((sum, channel) => sum + channel.asset_local_amount, 0) +
@@ -203,6 +198,17 @@ export const Component = () => {
     refreshData()
   }
 
+  // if (isLoading) {
+  //   return (
+  //     <div className="fixed inset-0 bg-blue-dark bg-opacity-50 flex items-center justify-center z-50">
+  //       <div className="bg-section-lighter p-4 rounded-lg">
+  //         <RefreshCw className="animate-spin h-8 w-8 text-cyan" />
+  //         <p className="mt-2 text-white">Loading...</p>
+  //       </div>
+  //     </div>
+  //   )
+  // }
+
   return (
     <div className="w-full bg-blue-dark py-8 px-6 rounded space-y-4">
       <div className="bg-section-lighter rounded p-8">
@@ -215,7 +221,7 @@ export const Component = () => {
               onClick={() =>
                 dispatch(
                   uiSliceActions.setModal({
-                    assetId: BTC_ASSET_ID,
+                    assetId: assetsResponse.data?.nia[0]?.asset_id,
                     type: 'deposit',
                   })
                 )
@@ -229,7 +235,7 @@ export const Component = () => {
               onClick={() =>
                 dispatch(
                   uiSliceActions.setModal({
-                    assetId: BTC_ASSET_ID,
+                    assetId: assetsResponse.data?.nia[0]?.asset_id,
                     type: 'withdraw',
                   })
                 )
@@ -319,14 +325,17 @@ export const Component = () => {
         <div className="text-2xl mb-4 text-white">Lightning Channels</div>
         {channels.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {channels.map((channel) => (
-              <ChannelCard
-                assets={assets}
-                channel={channel}
-                key={channel.channel_id}
-                onClose={handleCloseChannel}
-              />
-            ))}
+            {channels.map((channel) => {
+              const asset = assetsMap[channel.asset_id]
+              return (
+                <ChannelCard
+                  asset={asset}
+                  channel={channel}
+                  key={channel.channel_id}
+                  onClose={handleCloseChannel}
+                />
+              )
+            })}
           </div>
         ) : (
           <div className="text-lg text-grey-light text-center">

@@ -4,6 +4,7 @@ import { twJoin } from 'tailwind-merge'
 import {
   WALLET_HISTORY_DEPOSITS_PATH,
   WALLET_HISTORY_WITHDRAWALS_PATH,
+  WALLET_HISTORY_TRADES_PATH,
 } from '../../app/router/paths'
 
 const TABS = [
@@ -14,6 +15,10 @@ const TABS = [
   {
     label: 'Withdrawals',
     path: WALLET_HISTORY_WITHDRAWALS_PATH,
+  },
+  {
+    label: 'Trades',
+    path: WALLET_HISTORY_TRADES_PATH,
   },
 ]
 export const Component = () => {
@@ -39,15 +44,6 @@ export const Component = () => {
             </li>
           ))}
         </ul>
-
-        {/* <HistoryFilters */}
-        {/*   asset="rUSDT" */}
-        {/*   from="2021-01-01" */}
-        {/*   onAssetChange={() => { }} */}
-        {/*   onFromChange={() => { }} */}
-        {/*   onToChange={() => { }} */}
-        {/*   to="2021-01-01" */}
-        {/* /> */}
       </div>
 
       <div className="bg-section-lighter rounded-b py-8 px-6">

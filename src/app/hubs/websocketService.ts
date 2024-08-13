@@ -14,6 +14,10 @@ class WebSocketService {
   private url: string = ''
   private clientId: string = ''
   private dispatch: Dispatch | null = null
+  private reconnectAttempts: number = 0
+  private maxReconnectAttempts: number = 5
+  private reconnectInterval: number = 5000
+  private subscribedPairs: Set<string> = new Set()
 
   private constructor() {}
 
@@ -37,6 +41,8 @@ class WebSocketService {
     this.socket.onopen = () => {
       console.log('WebSocket connected')
       this.dispatch && this.dispatch(setWsConnected(true))
+      toast.success('Connected to maker websocket')
+      this.reconnectAttempts = 0
       this.resubscribeAll()
     }
 
@@ -47,10 +53,15 @@ class WebSocketService {
       }
     }
 
-    this.socket.onclose = () => {
+    this.socket.onclose = (event) => {
       console.log('WebSocket disconnected')
       this.dispatch && this.dispatch(setWsConnected(false))
-      setTimeout(() => this.connect(), 5000)
+      if (!event.wasClean) {
+        this.handleReconnect()
+      }
+      // else {
+      //   toast.warning('Disconnected from market data')
+      // }
     }
 
     this.socket.onerror = (error) => {
@@ -59,17 +70,33 @@ class WebSocketService {
     }
   }
 
+  private handleReconnect() {
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      this.reconnectAttempts++
+      toast.info(
+        `Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`
+      )
+      setTimeout(() => this.connect(), this.reconnectInterval)
+    } else {
+      toast.error(
+        'Failed to reconnect after multiple attempts. Please refresh the page.'
+      )
+    }
+  }
+
   public subscribeToPair(pair: string) {
+    this.subscribedPairs.add(pair)
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify({ action: 'subscribe', pair }))
       this.dispatch && this.dispatch(subscribeToPair(pair))
       console.log('Subscribed to', pair)
     } else {
-      console.log('Socket not ready')
+      console.log('Socket not ready, pair will be subscribed upon reconnection')
     }
   }
 
   public unsubscribeFromPair(pair: string) {
+    this.subscribedPairs.delete(pair)
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify({ action: 'unsubscribe', pair }))
       this.dispatch && this.dispatch(unsubscribeFromPair(pair))
@@ -78,10 +105,11 @@ class WebSocketService {
   }
 
   private resubscribeAll() {
-    // You'll need to implement a way to get the current state here
-    // This is just a placeholder
-    const subscribedPairs: string[] = []
-    subscribedPairs.forEach((pair) => this.subscribeToPair(pair))
+    this.subscribedPairs.forEach((pair) => {
+      this.socket?.send(JSON.stringify({ action: 'subscribe', pair }))
+      this.dispatch && this.dispatch(subscribeToPair(pair))
+    })
+    console.log('Resubscribed to all pairs')
   }
 
   public close() {

@@ -255,7 +255,6 @@ export const Component = () => {
                     {...field}
                   >
                     <option value="SAT">Satoshi (SAT)</option>
-                    <option value="mBTC">Milli-Bitcoin (mBTC)</option>
                     <option value="BTC">Bitcoin (BTC)</option>
                   </select>
                 </div>
