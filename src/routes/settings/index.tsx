@@ -5,6 +5,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import { toast } from 'react-toastify'
 
+import { RootState } from '../../app/store'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 import {
   setBitcoinUnit,
@@ -33,7 +34,7 @@ interface Response {
 export const Component = () => {
   const dispatch = useDispatch()
   const { bitcoinUnit, nodeConnectionString, defaultLspUrl } = useSelector(
-    (state) => state.settings
+    (state: RootState) => state.settings
   )
 
   const [showModal, setShowModal] = useState(false)
@@ -134,7 +135,7 @@ export const Component = () => {
     }
 
     return {
-      data: lockResponse,
+      data: {},
       status: 200,
     }
   }
@@ -149,7 +150,7 @@ export const Component = () => {
     }
 
     return {
-      data: unlockResponse,
+      data: {},
       status: 200,
     }
   }
@@ -170,7 +171,7 @@ export const Component = () => {
     }
 
     return {
-      data: backupResponse,
+      data: {},
       status: 200,
     }
   }
