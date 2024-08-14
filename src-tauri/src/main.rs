@@ -14,10 +14,17 @@ use std::{
 use tauri::{Manager, Window};
 
 #[derive(Serialize, Deserialize, Debug)]
+struct Account {
+    name: String,
+    datapath: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 struct Config {
     network: String,
     datapath: String,
     rpc_connection_url: String,
+    accounts: Vec<Account>,
 }
 
 impl Default for Config {
@@ -26,6 +33,7 @@ impl Default for Config {
             network: "regtest".to_string(),
             datapath: "../bin/dataldk".to_string(),
             rpc_connection_url: "user:password@localhost:18443".to_string(),
+            accounts: vec![],
         }
     }
 }
@@ -75,8 +83,10 @@ fn run_rgb_lightning_node(
 
 #[tauri::command]
 fn is_wallet_init() -> bool {
-    let mut data_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    data_path.push("../bin/dataldk");
+    let data_path = match get_config() {
+        Ok(config) => PathBuf::from(config.datapath),
+        Err(_) => return false,
+    };
 
     if !data_path.exists() {
         return false;

@@ -2,3 +2,4 @@
 network: regtest
 datapath: "../bin/dataldk"
 rpc_connection_url: "user:password@localhost:18443"
+accounts: []
