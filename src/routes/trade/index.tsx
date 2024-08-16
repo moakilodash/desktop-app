@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { webSocketService } from '../../app/hubs/websocketService'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { Select } from '../../components/Select'
+import { SwapDetails, SwapRecap } from '../../components/SwapRecap'
 import { SparkIcon } from '../../icons/Spark'
 import { SwapIcon } from '../../icons/Swap'
 import { makerApi, TradingPair } from '../../slices/makerApi/makerApi.slice'
@@ -108,6 +109,11 @@ export const Component = () => {
 
   const [isToAmountLoading, setIsToAmountLoading] = useState(true)
   const [isPriceLoading, setIsPriceLoading] = useState(true)
+
+  const [showRecap, setShowRecap] = useState<boolean>(false)
+  const [swapRecapDetails, setSwapRecapDetails] = useState<SwapDetails | null>(
+    null
+  )
 
   // Selectors
   const makerConnectionUrl = useAppSelector(
@@ -742,6 +748,23 @@ export const Component = () => {
         render: 'Swap executed successfully!',
         type: 'success',
       })
+
+      // Prepare and show the swap recap
+      const recapDetails: SwapDetails = {
+        exchangeRate: calculateAndFormatRate(
+          data.fromAsset,
+          data.toAsset,
+          selectedPairFeed.buyPrice,
+          isInverted
+        ),
+        fromAmount: data.from,
+        fromAsset: data.fromAsset,
+        timestamp: new Date().toISOString(),
+        toAmount: data.to,
+        toAsset: data.toAsset,
+      }
+      setSwapRecapDetails(recapDetails)
+      setShowRecap(true)
     } catch (error) {
       logger.error('Error executing swap', error)
       if (toastId) {
@@ -757,163 +780,173 @@ export const Component = () => {
   }
 
   return (
-    <form
-      className="max-w-xl w-full bg-blue-dark py-8 px-6 rounded space-y-2"
-      onSubmit={form.handleSubmit(onSubmit)}
-    >
-      {/* From amount section */}
-      <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
-        <div className="flex justify-between items-center font-light">
-          <div className="text-xs">You Send</div>
-          <div className="text-xs">
-            Available to send:{' '}
-            {`${formatAmount(maxFromAmount, form.getValues().fromAsset)} ${form.getValues().fromAsset}`}
-          </div>
-        </div>
-
-        <div className="flex space-x-2">
-          <input
-            className="flex-1 rounded bg-blue-dark px-4 py-2 text-lg"
-            type="text"
-            {...form.register('from')}
-            onChange={handleFromAmountChange}
-          />
-
-          <Controller
-            control={form.control}
-            name="fromAsset"
-            render={({ field }) => (
-              <AssetSelect
-                onChange={field.onChange}
-                options={tradablePairs.map((pair) => ({
-                  label: isInverted ? pair.quote_asset : pair.base_asset,
-                  value: isInverted ? pair.quote_asset : pair.base_asset,
-                }))}
-                value={field.value}
-              />
-            )}
-          />
-        </div>
-        <div className="text-xs text-gray-400">
-          Min: {formatAmount(minFromAmount, form.getValues().fromAsset)}
-        </div>
-        <div className="flex space-x-2">
-          {[25, 50, 75, 100].map((size) => (
-            <div
-              className={`flex-1 px-6 py-3 text-center border border-cyan rounded cursor-pointer ${
-                selectedSize === size ? 'bg-cyan text-blue-dark' : ''
-              }`}
-              key={size}
-              onClick={() => onSizeClick(size)}
-            >
-              {size}%
+    <>
+      <form
+        className="max-w-xl w-full bg-blue-dark py-8 px-6 rounded space-y-2"
+        onSubmit={form.handleSubmit(onSubmit)}
+      >
+        {/* From amount section */}
+        <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
+          <div className="flex justify-between items-center font-light">
+            <div className="text-xs">You Send</div>
+            <div className="text-xs">
+              Available to send:{' '}
+              {`${formatAmount(maxFromAmount, form.getValues().fromAsset)} ${form.getValues().fromAsset}`}
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Swap button */}
-      <div className="flex items-center justify-center py-2">
-        <div
-          className="bg-section-lighter rounded-full h-8 w-8 flex items-center justify-center cursor-pointer"
-          onClick={onSwapAssets}
-        >
-          <SwapIcon />
-        </div>
-      </div>
-
-      {/* To amount section */}
-      <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
-        <div className="flex justify-between items-center font-light">
-          <div className="text-xs">You Receive (Estimated)</div>
-          <div className="text-xs">
-            Can receive up to:{' '}
-            {`${formatAmount(maxToAmount, form.getValues().toAsset)} ${form.getValues().toAsset}`}
           </div>
-        </div>
 
-        <div className="flex space-x-2">
-          {isToAmountLoading ? (
-            <div className="flex-1 rounded bg-blue-dark px-4 py-2 text-lg">
-              Estimating...
-            </div>
-          ) : (
+          <div className="flex space-x-2">
             <input
               className="flex-1 rounded bg-blue-dark px-4 py-2 text-lg"
               type="text"
-              {...form.register('to')}
-              onChange={handleToAmountChange}
+              {...form.register('from')}
+              onChange={handleFromAmountChange}
             />
-          )}
 
-          <Controller
-            control={form.control}
-            name="toAsset"
-            render={({ field }) => (
-              <AssetSelect
-                onChange={field.onChange}
-                options={tradablePairs.map((pair) => ({
-                  label: isInverted ? pair.base_asset : pair.quote_asset,
-                  value: isInverted ? pair.base_asset : pair.quote_asset,
-                }))}
-                value={field.value}
-              />
-            )}
-          />
-        </div>
-      </div>
-
-      {/* Exchange rate section */}
-      {selectedPair && (
-        <>
-          <div className="text-center py-2 text-xs">1 Route Found</div>
-
-          <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
-            <div className="flex space-x-2 items-center">
-              {isPriceLoading ? (
-                <div className="flex-1 rounded bg-blue-dark px-4 py-3">
-                  Loading exchange rate...
-                </div>
-              ) : (
-                <input
-                  className="flex-1 rounded bg-blue-dark px-4 py-3"
-                  readOnly={true}
-                  type="text"
-                  value={
-                    selectedPairFeed
-                      ? calculateAndFormatRate(
-                          form.getValues().fromAsset,
-                          form.getValues().toAsset,
-                          selectedPairFeed.buyPrice,
-                          isInverted
-                        )
-                      : ''
-                  }
+            <Controller
+              control={form.control}
+              name="fromAsset"
+              render={({ field }) => (
+                <AssetSelect
+                  onChange={field.onChange}
+                  options={tradablePairs.map((pair) => ({
+                    label: isInverted ? pair.quote_asset : pair.base_asset,
+                    value: isInverted ? pair.quote_asset : pair.base_asset,
+                  }))}
+                  value={field.value}
                 />
               )}
-
-              <div className="w-8 flex justify-center">
-                <SparkIcon color={'#8FD5EA'} />
+            />
+          </div>
+          <div className="text-xs text-gray-400">
+            Min: {formatAmount(minFromAmount, form.getValues().fromAsset)}
+          </div>
+          <div className="flex space-x-2">
+            {[25, 50, 75, 100].map((size) => (
+              <div
+                className={`flex-1 px-6 py-3 text-center border border-cyan rounded cursor-pointer ${
+                  selectedSize === size ? 'bg-cyan text-blue-dark' : ''
+                }`}
+                key={size}
+                onClick={() => onSizeClick(size)}
+              >
+                {size}%
               </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Swap button */}
+        <div className="flex items-center justify-center py-2">
+          <div
+            className="bg-section-lighter rounded-full h-8 w-8 flex items-center justify-center cursor-pointer"
+            onClick={onSwapAssets}
+          >
+            <SwapIcon />
+          </div>
+        </div>
+
+        {/* To amount section */}
+        <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
+          <div className="flex justify-between items-center font-light">
+            <div className="text-xs">You Receive (Estimated)</div>
+            <div className="text-xs">
+              Can receive up to:{' '}
+              {`${formatAmount(maxToAmount, form.getValues().toAsset)} ${form.getValues().toAsset}`}
             </div>
           </div>
-        </>
-      )}
 
-      {/* Submit button */}
-      <div className="py-2">
-        <button
-          className="block w-full px-6 py-3 border border-cyan rounded text-lg font-bold hover:bg-cyan hover:text-blue-dark transition"
-          disabled={!wsConnected || isToAmountLoading || isPriceLoading}
-          type="submit"
-        >
-          {!wsConnected
-            ? 'Connecting...'
-            : isToAmountLoading || isPriceLoading
-              ? 'Preparing Swap...'
-              : 'Swap Now'}
-        </button>
-      </div>
-    </form>
+          <div className="flex space-x-2">
+            {isToAmountLoading ? (
+              <div className="flex-1 rounded bg-blue-dark px-4 py-2 text-lg">
+                Estimating...
+              </div>
+            ) : (
+              <input
+                className="flex-1 rounded bg-blue-dark px-4 py-2 text-lg"
+                type="text"
+                {...form.register('to')}
+                onChange={handleToAmountChange}
+              />
+            )}
+
+            <Controller
+              control={form.control}
+              name="toAsset"
+              render={({ field }) => (
+                <AssetSelect
+                  onChange={field.onChange}
+                  options={tradablePairs.map((pair) => ({
+                    label: isInverted ? pair.base_asset : pair.quote_asset,
+                    value: isInverted ? pair.base_asset : pair.quote_asset,
+                  }))}
+                  value={field.value}
+                />
+              )}
+            />
+          </div>
+        </div>
+
+        {/* Exchange rate section */}
+        {selectedPair && (
+          <>
+            <div className="text-center py-2 text-xs">1 Route Found</div>
+
+            <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
+              <div className="flex space-x-2 items-center">
+                {isPriceLoading ? (
+                  <div className="flex-1 rounded bg-blue-dark px-4 py-3">
+                    Loading exchange rate...
+                  </div>
+                ) : (
+                  <input
+                    className="flex-1 rounded bg-blue-dark px-4 py-3"
+                    readOnly={true}
+                    type="text"
+                    value={
+                      selectedPairFeed
+                        ? calculateAndFormatRate(
+                            form.getValues().fromAsset,
+                            form.getValues().toAsset,
+                            selectedPairFeed.buyPrice,
+                            isInverted
+                          )
+                        : ''
+                    }
+                  />
+                )}
+
+                <div className="w-8 flex justify-center">
+                  <SparkIcon color={'#8FD5EA'} />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Submit button */}
+        <div className="py-2">
+          <button
+            className="block w-full px-6 py-3 border border-cyan rounded text-lg font-bold hover:bg-cyan hover:text-blue-dark transition"
+            disabled={!wsConnected || isToAmountLoading || isPriceLoading}
+            type="submit"
+          >
+            {!wsConnected
+              ? 'Connecting...'
+              : isToAmountLoading || isPriceLoading
+                ? 'Preparing Swap...'
+                : 'Swap Now'}
+          </button>
+        </div>
+      </form>
+
+      {swapRecapDetails && (
+        <SwapRecap
+          isOpen={showRecap}
+          onClose={() => setShowRecap(false)}
+          swapDetails={swapRecapDetails}
+        />
+      )}
+    </>
   )
 }
