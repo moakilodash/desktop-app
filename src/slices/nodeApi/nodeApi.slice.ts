@@ -251,6 +251,20 @@ interface ListUnspentsResponse {
   ]
 }
 
+interface SwapDetails {
+  qty_from: number
+  qty_to: number
+  from_asset: string | null
+  to_asset: string | null
+  payment_hash: string
+  status: string
+}
+
+interface ListSwapsResponse {
+  maker: SwapDetails[]
+  taker: SwapDetails[]
+}
+
 export const nodeApi = createApi({
   baseQuery: fetchBaseQuery({ baseUrl: 'http://localhost:3001' }),
   endpoints: (builder) => ({
@@ -338,6 +352,9 @@ export const nodeApi = createApi({
     }),
     listPeers: builder.query<ListPeersResponse, void>({
       query: () => '/listpeers',
+    }),
+    listSwaps: builder.query<ListSwapsResponse, void>({
+      query: () => '/listswaps',
     }),
     listTransactions: builder.query<ListTransactionsResponseTransformed, void>({
       query: () => '/listtransactions',
