@@ -15,10 +15,16 @@ export const writeSettings = createAsyncThunk(
   }
 )
 
+export type Account = {
+  name: string
+  datapath: string
+}
+
 export type NodeSettings = {
   network: 'regtest' | 'testnet' | 'signet' | 'mainnet'
   datapath: string
   rpc_connection_url: string
+  accounts: Account[]
 }
 
 export interface NodeSettingsState {
@@ -28,6 +34,7 @@ export interface NodeSettingsState {
 
 const initialState: NodeSettingsState = {
   data: {
+    accounts: [],
     datapath: '../bin/dataldk',
     network: 'regtest',
     rpc_connection_url: 'user:password@localhost:18443',

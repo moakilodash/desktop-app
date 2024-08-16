@@ -1,14 +1,20 @@
 //import { appWindow } from '@tauri-apps/api/window'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast, ToastContainer } from 'react-toastify'
 
 import { TRADE_PATH, WALLET_SETUP_PATH } from '../../app/router/paths'
+import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { Layout } from '../../components/Layout'
 import { Spinner } from '../../components/Spinner'
 import { EyeIcon } from '../../icons/Eye'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
+import {
+  NodeSettingsState,
+  readSettings,
+  writeSettings,
+} from '../../slices/nodeSettings/nodeSettings.slice'
 
 interface Fields {
   password: string
@@ -23,6 +29,10 @@ export const Component = () => {
   const [init, initResponse] = nodeApi.endpoints.init.useLazyQuery()
   const [unlock, unlockResponse] = nodeApi.endpoints.unlock.useLazyQuery()
   const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
+  const dispatch = useAppDispatch()
+  const nodeSettings: NodeSettingsState = useAppSelector(
+    (state) => state.nodeSettings
+  )
 
   const navigate = useNavigate()
 
@@ -60,6 +70,18 @@ export const Component = () => {
       console.log('Node has already been initialized...')
       toast.error('Node has already been initialized...')
     } else {
+      dispatch(
+        writeSettings({
+          ...nodeSettings.data,
+          accounts: [
+            ...nodeSettings.data.accounts,
+            {
+              datapath: nodeSettings.data.datapath,
+              name: `Account ${nodeSettings.data.accounts.length + 1}`,
+            },
+          ],
+        })
+      )
       setMnemonic(initResponse.data.mnemonic.split(' '))
       setPassword(data.password)
       setIsShowingMnemonic(true)
@@ -98,6 +120,10 @@ export const Component = () => {
       }
     )
   }
+
+  useEffect(() => {
+    dispatch(readSettings())
+  }, [])
 
   return (
     <Layout>

@@ -27,7 +27,11 @@ export const Component = () => {
 
   const navigate = useNavigate()
 
-  const defaultValues = nodeSettings.data as FormFields
+  const defaultValues: FormFields = {
+    datapath: nodeSettings.data.datapath,
+    network: nodeSettings.data.network,
+    rpc_connection_url: nodeSettings.data.rpc_connection_url,
+  }
 
   const [showModal, setShowModal] = useState(false)
   const { control, handleSubmit, formState, reset } = useForm<FormFields>({
@@ -42,7 +46,12 @@ export const Component = () => {
   }, [])
 
   const handleSave: SubmitHandler<FormFields> = async (data) => {
-    dispatch(writeSettings(data as NodeSettings))
+    dispatch(
+      writeSettings({
+        ...data,
+        accounts: nodeSettings.data.accounts,
+      } as NodeSettings)
+    )
       .unwrap()
       .then(() => {
         setShowModal(true)
