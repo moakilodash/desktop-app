@@ -17,7 +17,7 @@ const TABS = [
     path: WALLET_HISTORY_WITHDRAWALS_PATH,
   },
   {
-    label: 'Trades',
+    label: 'Swaps',
     path: WALLET_HISTORY_TRADES_PATH,
   },
 ]

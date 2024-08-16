@@ -67,7 +67,7 @@ export const router = createBrowserRouter([
             path: WALLET_HISTORY_WITHDRAWALS_PATH,
           },
           {
-            lazy: () => import('../../routes/wallet-history/trades'),
+            lazy: () => import('../../routes/wallet-history/swaps'),
             path: WALLET_HISTORY_TRADES_PATH,
           },
         ],
