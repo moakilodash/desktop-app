@@ -125,9 +125,7 @@ export const Component = () => {
         {channels.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {channels.map((channel) => {
-              const asset = assetsResponse.data?.nia.find(
-                (a) => a.asset_id === channel.asset_id
-              )
+              const asset = assets[channel.asset_id]
               return (
                 <ChannelCard
                   asset={asset}

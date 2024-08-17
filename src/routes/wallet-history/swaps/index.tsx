@@ -1,4 +1,4 @@
-import { ArrowDownUp, ArrowRight } from 'lucide-react'
+import { ArrowDownUp, ArrowRight, RefreshCw } from 'lucide-react'
 import React, { useState, useMemo } from 'react'
 import { useSelector } from 'react-redux'
 import { twJoin } from 'tailwind-merge'
@@ -23,7 +23,8 @@ interface AssetInfo {
 }
 
 const formatAmount = (amount: number, precision: number): string => {
-  return amount.toLocaleString('en-US', {
+  const adjustedAmount = amount / Math.pow(10, precision)
+  return adjustedAmount.toLocaleString('en-US', {
     maximumFractionDigits: precision,
     minimumFractionDigits: precision,
   })
@@ -52,8 +53,15 @@ const SwapRow: React.FC<{
       ? 8
       : 0
 
+  const statusColor =
+    {
+      completed: 'text-green-500',
+      failed: 'text-red-500',
+      pending: 'text-yellow-500',
+    }[swap.status.toLowerCase()] || 'text-gray-500'
+
   return (
-    <div className="grid grid-cols-7 even:bg-blue-dark rounded items-center text-lg font-medium">
+    <div className="grid grid-cols-9 even:bg-blue-dark rounded items-center text-lg font-medium">
       <div className={twJoin(COL_CLASS_NAME, 'col-span-2')}>{fromAsset}</div>
       <div className={twJoin(COL_CLASS_NAME, 'col-span-2')}>
         {formatAmount(swap.qty_from, fromPrecision)}
@@ -65,6 +73,9 @@ const SwapRow: React.FC<{
       <div className={COL_CLASS_NAME}>
         {formatAmount(swap.qty_to, toPrecision)}
       </div>
+      <div className={twJoin(COL_CLASS_NAME, 'col-span-2', statusColor)}>
+        {swap.status}
+      </div>
     </div>
   )
 }
@@ -75,11 +86,13 @@ export const Component: React.FC = () => {
     data: swapsData,
     isLoading: swapsLoading,
     isError: swapsError,
+    refetch: refetchSwaps,
   } = nodeApi.endpoints.listSwaps.useQuery()
   const {
     data: assetsData,
     isLoading: assetsLoading,
     isError: assetsError,
+    refetch: refetchAssets,
   } = nodeApi.endpoints.listAssets.useQuery()
   const bitcoinUnit = useSelector(
     (state: RootState) => state.settings.bitcoinUnit
@@ -98,6 +111,10 @@ export const Component: React.FC = () => {
       {} as Record<string, AssetInfo>
     )
   }, [assetsData])
+
+  const handleRefresh = async () => {
+    await Promise.all([refetchSwaps(), refetchAssets()])
+  }
 
   if (swapsLoading || assetsLoading) {
     return <div className="text-center py-8">Loading swap history...</div>
@@ -126,24 +143,42 @@ export const Component: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Swap History</h2>
-        <div className="flex space-x-2">
+        <div className="flex space-x-2 items-center">
           <button
-            className={`px-4 py-2 rounded ${filter === 'all' ? 'bg-cyan text-blue-dark' : 'bg-blue-dark text-white'}`}
+            className={`px-4 py-2 rounded ${
+              filter === 'all'
+                ? 'bg-cyan text-blue-dark'
+                : 'bg-blue-dark text-white'
+            }`}
             onClick={() => setFilter('all')}
           >
             All
           </button>
           <button
-            className={`px-4 py-2 rounded ${filter === 'maker' ? 'bg-cyan text-blue-dark' : 'bg-blue-dark text-white'}`}
+            className={`px-4 py-2 rounded ${
+              filter === 'maker'
+                ? 'bg-cyan text-blue-dark'
+                : 'bg-blue-dark text-white'
+            }`}
             onClick={() => setFilter('maker')}
           >
             Maker
           </button>
           <button
-            className={`px-4 py-2 rounded ${filter === 'taker' ? 'bg-cyan text-blue-dark' : 'bg-blue-dark text-white'}`}
+            className={`px-4 py-2 rounded ${
+              filter === 'taker'
+                ? 'bg-cyan text-blue-dark'
+                : 'bg-blue-dark text-white'
+            }`}
             onClick={() => setFilter('taker')}
           >
             Taker
+          </button>
+          <button
+            className="ml-4 p-2 rounded bg-blue-dark text-white hover:bg-cyan hover:text-blue-dark transition-colors"
+            onClick={handleRefresh}
+          >
+            <RefreshCw className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -152,7 +187,7 @@ export const Component: React.FC = () => {
         <div className="text-center py-8 text-grey-light">No swaps found.</div>
       ) : (
         <>
-          <div className="grid grid-cols-7 font-medium text-grey-light">
+          <div className="grid grid-cols-9 font-medium text-grey-light">
             <div className={twJoin(COL_CLASS_NAME, 'col-span-2')}>
               From Asset
             </div>
@@ -164,6 +199,7 @@ export const Component: React.FC = () => {
             </div>
             <div className={COL_CLASS_NAME}>To Asset</div>
             <div className={COL_CLASS_NAME}>To Amount</div>
+            <div className={twJoin(COL_CLASS_NAME, 'col-span-2')}>Status</div>
           </div>
 
           {filteredSwaps.map((swap, index) => (
