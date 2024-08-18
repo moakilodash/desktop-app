@@ -5,8 +5,12 @@ import { v4 as uuidv4 } from 'uuid'
 
 import { webSocketService } from '../../app/hubs/websocketService'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
-import { Select } from '../../components/Select'
 import { SwapDetails, SwapRecap } from '../../components/SwapRecap'
+import {
+  AssetOption,
+  AssetSelect,
+  ExchangeRateDisplay,
+} from '../../components/Trade'
 import { SparkIcon } from '../../icons/Spark'
 import { SwapIcon } from '../../icons/Swap'
 import { makerApi, TradingPair } from '../../slices/makerApi/makerApi.slice'
@@ -17,9 +21,7 @@ import {
 } from '../../slices/makerApi/pairs.slice'
 import './index.css'
 import { nodeApi, Channel, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
-import { useAssetIcon } from '../../utils/assetIcons'
 import { logger } from '../../utils/logger'
-import PropTypes from 'prop-types'
 
 interface Fields {
   from: string
@@ -31,67 +33,6 @@ interface Fields {
 
 const SATOSHIS_PER_BTC = 100000000
 const MSATS_PER_SAT = 1000
-
-interface AssetOptionProps {
-  value: string
-  label: string
-}
-
-const AssetOption: React.FC<AssetOptionProps> = React.memo(
-  ({ value, label }) => {
-    const iconUrl = useAssetIcon(value)
-    const [imgSrc, setImgSrc] = useState(iconUrl)
-
-    useEffect(() => {
-      setImgSrc(iconUrl)
-    }, [iconUrl])
-
-    const handleError = () => {
-      console.warn(`Failed to load image for ${value}, using default.`)
-      setImgSrc(defaultIcon)
-    }
-
-    return (
-      <div className="flex items-center">
-        <img
-          alt={label}
-          className="w-5 h-5 mr-2"
-          onError={handleError}
-          src={imgSrc}
-        />
-        {label}
-      </div>
-    )
-  }
-)
-
-AssetOption.displayName = 'AssetOption'
-
-AssetOption.propTypes = {
-  label: PropTypes.string.isRequired,
-  value: PropTypes.string.isRequired,
-}
-
-interface AssetSelectProps {
-  options: Array<{ value: string; label: string }>
-  value: string
-  onChange: (value: string) => void
-}
-
-const AssetSelect: React.FC<AssetSelectProps> = ({
-  options,
-  value,
-  onChange,
-}) => (
-  <Select
-    active={value}
-    onSelect={onChange}
-    options={options}
-    renderOption={(option) => (
-      <AssetOption label={option.label} value={option.value} />
-    )}
-  />
-)
 
 export const Component = () => {
   const dispatch = useAppDispatch()
@@ -899,20 +840,13 @@ export const Component = () => {
                     Loading exchange rate...
                   </div>
                 ) : (
-                  <input
-                    className="flex-1 rounded bg-blue-dark px-4 py-3"
-                    readOnly={true}
-                    type="text"
-                    value={
-                      selectedPairFeed
-                        ? calculateAndFormatRate(
-                            form.getValues().fromAsset,
-                            form.getValues().toAsset,
-                            selectedPairFeed.buyPrice,
-                            isInverted
-                          )
-                        : ''
-                    }
+                  <ExchangeRateDisplay
+                    bitcoinUnit={bitcoinUnit}
+                    formatAmount={formatAmount}
+                    fromAsset={form.getValues().fromAsset}
+                    isInverted={isInverted}
+                    price={selectedPairFeed ? selectedPairFeed.buyPrice : null}
+                    toAsset={form.getValues().toAsset}
                   />
                 )}
 
