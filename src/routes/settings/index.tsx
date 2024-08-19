@@ -126,10 +126,11 @@ export const Component = () => {
   }
 
   const attemptLock = async (): Promise<Response> => {
-    let lockResponse
+    //let lockResponse
 
     try {
-      lockResponse = await lock().unwrap()
+      //lockResponse = await lock().unwrap()
+      await lock().unwrap()
     } catch (err) {
       return err as Response
     }
@@ -141,10 +142,11 @@ export const Component = () => {
   }
 
   const attemptUnlock = async (password: string): Promise<Response> => {
-    let unlockResponse
+    //let unlockResponse
 
     try {
-      unlockResponse = await unlock({ password: password }).unwrap()
+      //unlockResponse = await unlock({ password: password }).unwrap()
+      await unlock({ password: password }).unwrap()
     } catch (err) {
       return err as Response
     }
@@ -159,10 +161,14 @@ export const Component = () => {
     backupPath: string,
     password: string
   ): Promise<Response> => {
-    let backupResponse
+    //let backupResponse
 
     try {
-      backupResponse = await backup({
+      // backupResponse = await backup({
+      //   backup_path: backupPath,
+      //   password,
+      // }).unwrap()
+      await backup({
         backup_path: backupPath,
         password,
       }).unwrap()

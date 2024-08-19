@@ -5,12 +5,11 @@ import {
   createDraftSafeSelector,
   createSlice,
 } from '@reduxjs/toolkit'
+import { v4 as uuidv4 } from 'uuid'
 import { z } from 'zod'
 
+import { WebSocketService } from '../../app/hubs/websocketService'
 import { RootState } from '../../app/store'
-import { WebSocketService } from '../../app/hubs/websocketService';
-import { v4 as uuidv4 } from 'uuid';
-
 
 const jsonFromString = z.string().transform((s) => JSON.parse(s))
 
@@ -99,21 +98,23 @@ const subscribePair = createAsyncThunk(
   async (payload: { pair: string; size: number }, thunkAPI) => {
     const state = thunkAPI.getState() as RootState
     const pair = getFeedSelector(state, payload.pair)
-    const clientId = uuidv4();
+    const clientId = uuidv4()
 
     if (pair && pair.size !== payload.size) {
-      await thunkAPI.dispatch(unsubscribePair({ pair: payload.pair, size: pair.size }));
+      await thunkAPI.dispatch(
+        unsubscribePair({ pair: payload.pair, size: pair.size })
+      )
     }
 
     if (!pair || pair.size !== payload.size) {
-      wsService.sendMessage('SubscribePairPriceChannel', 
-      {
+      const wsService = new WebSocketService()
+
+      wsService.sendMessage('SubscribePairPriceChannel', {
         action: 'subscribe',
+        clientId: clientId,
         pair: payload.pair,
         size: payload.size,
-        clientId: clientId,
-      });
-      
+      })
     }
   }
 )
@@ -121,15 +122,15 @@ const subscribePair = createAsyncThunk(
 const unsubscribePair = createAsyncThunk(
   'pairs/unsubscribe',
   async (payload: { pair: string; size: number }) => {
-    const clientId = uuidv4();
-    wsService.sendMessage('UnsubscribePairPriceChannel', 
-      {
-        action: 'unsubscribe',
-        pair: payload.pair,
-        size: payload.size,
-        clientId: clientId,
-      }
-    );
+    const clientId = uuidv4()
+    const wsService = new WebSocketService()
+
+    wsService.sendMessage('UnsubscribePairPriceChannel', {
+      action: 'unsubscribe',
+      clientId: clientId,
+      pair: payload.pair,
+      size: payload.size,
+    })
   }
 )
 
@@ -234,9 +235,9 @@ export const pairsSlice = createSlice({
       )
     },
     updatePrice: (state, action: PayloadAction<PairFeed>) => {
-      const { pair, ...priceData } = action.payload;
-      console.log('updatePrice', pair, priceData);
-      state.feed[pair] = { ...state.feed[pair], ...priceData };
+      const { pair, ...priceData } = action.payload
+      console.log('updatePrice', pair, priceData)
+      state.feed[pair] = { ...state.feed[pair], ...priceData }
     },
   },
 })

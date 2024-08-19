@@ -1,7 +1,13 @@
-export const LiquidityBar = ({ localAmount, remoteAmount }) => {
-  const totalAmount = localAmount + remoteAmount;
-  const localAmountPercentage = (localAmount / totalAmount) * 100;
-  const remoteAmountPercentage = (remoteAmount / totalAmount) * 100;
+export const LiquidityBar = ({
+  localAmount,
+  remoteAmount,
+}: {
+  localAmount: number
+  remoteAmount: number
+}) => {
+  const totalAmount = localAmount + remoteAmount
+  const localAmountPercentage = (localAmount / totalAmount) * 100
+  const remoteAmountPercentage = (remoteAmount / totalAmount) * 100
 
   return (
     <div className="w-full h-6 bg-gray-300 rounded-full overflow-hidden relative">
@@ -12,9 +18,13 @@ export const LiquidityBar = ({ localAmount, remoteAmount }) => {
       ></div>
       <div
         className="h-full bg-cyan transition-all duration-300 ease-in-out"
-        style={{ width: `${remoteAmountPercentage}%`, position: 'absolute', right: '0' }}
+        style={{
+          position: 'absolute',
+          right: '0',
+          width: `${remoteAmountPercentage}%`,
+        }}
         title={`Remote: ${remoteAmount.toFixed(2)} (${remoteAmountPercentage.toFixed(0)}%)`}
       ></div>
     </div>
-  );
-};
+  )
+}

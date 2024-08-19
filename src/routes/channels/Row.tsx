@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { twJoin } from 'tailwind-merge'
+
 import { Spinner } from '../../components/Spinner/index.tsx'
 import { ASSET_ID_TO_TICKER } from '../../constants.ts'
 import { numberFormatter } from '../../helpers/number'
@@ -26,13 +27,16 @@ export const Row = (props: Props) => {
     setIsClosingChannel(false)
   }, [closeChannel, props, setIsClosingChannel])
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setIsCopied(true)
-      setTimeout(() => setIsCopied(false), 2000) // Reset the copy status after 2 seconds
-    }).catch(err => {
-      console.error('Failed to copy: ', err)
-    })
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        setIsCopied(true)
+        setTimeout(() => setIsCopied(false), 2000) // Reset the copy status after 2 seconds
+      })
+      .catch((err) => {
+        console.error('Failed to copy: ', err)
+      })
   }
 
   return (
@@ -40,8 +44,11 @@ export const Row = (props: Props) => {
       className="grid grid-cols-12 even:bg-blue-dark rounded items-center text-lg font-medium hover:bg-blue-900 transition cursor-pointer"
       key={props.channel_id}
     >
-      <div 
-        className={twJoin(COL_CLASS_NAME, 'col-span-2 overflow-hidden text-ellipsis whitespace-nowrap')}
+      <div
+        className={twJoin(
+          COL_CLASS_NAME,
+          'col-span-2 overflow-hidden text-ellipsis whitespace-nowrap'
+        )}
         onClick={() => copyToClipboard(props.channel_id)}
         title={props.channel_id}
       >
@@ -49,8 +56,11 @@ export const Row = (props: Props) => {
         {isCopied && <span className="ml-2 text-xs text-cyan">Copied</span>}
       </div>
 
-      <div 
-        className={twJoin(COL_CLASS_NAME, 'col-span-2 overflow-hidden text-ellipsis whitespace-nowrap')}
+      <div
+        className={twJoin(
+          COL_CLASS_NAME,
+          'col-span-2 overflow-hidden text-ellipsis whitespace-nowrap'
+        )}
         onClick={() => copyToClipboard(props.peer_pubkey)}
         title={props.peer_pubkey}
       >

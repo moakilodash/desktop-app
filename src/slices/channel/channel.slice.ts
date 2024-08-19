@@ -9,19 +9,29 @@ import { RootState } from '../../app/store'
 import { MIN_CHANNEL_CAPACITY } from '../../constants'
 
 export const NewChannelFormSchema = z.object({
-  capacitySat: z.z.number().min(MIN_CHANNEL_CAPACITY, "Minimum amount is 50000 satoshis").max(100000000, "Maximum amount is 100000000 satoshis"),
   assetAmount: z.z.number().gte(0),
   assetId: z.string(),
   assetTicker: z.string(),
+  capacitySat: z.z
+    .number()
+    .min(MIN_CHANNEL_CAPACITY, 'Minimum amount is 50000 satoshis')
+    .max(100000000, 'Maximum amount is 100000000 satoshis'),
   pubKeyAndAddress: z.string().regex(/^([a-zA-Z0-9]{66})@.+/),
 })
 
 export const ChannelRequestFormSchema = z.object({
-  capacitySat: z.z.number().min(MIN_CHANNEL_CAPACITY, "Minimum amount is 50000 satoshis").max(100000000, "Maximum amount is 100000000 satoshis"),
-  clientBalanceSat: z.z.number().gte(0),
-  assetId: z.string(),
   assetAmount: z.z.number().gte(0),
+  assetId: z.string(),
+  capacitySat: z.z
+    .number()
+    .min(MIN_CHANNEL_CAPACITY, 'Minimum amount is 50000 satoshis')
+    .max(100000000, 'Maximum amount is 100000000 satoshis'),
   channelExpireBlocks: z.z.number().gte(0),
+  clientBalanceSat: z.z.number().gte(0),
+  pubKeyAndAddress: z
+    .string()
+    .regex(/^([a-zA-Z0-9]{66})@.+/)
+    .optional(),
 })
 
 export type TNewChannelForm = z.infer<typeof NewChannelFormSchema>
@@ -36,20 +46,20 @@ interface SliceState {
 
 const initialState: SliceState = {
   forms: {
-    new:
-     {
-      capacitySat: MIN_CHANNEL_CAPACITY,
+    new: {
       assetAmount: 0,
       assetId: '',
       assetTicker: '',
+      capacitySat: MIN_CHANNEL_CAPACITY,
       pubKeyAndAddress: '',
     },
     request: {
-      capacitySat: MIN_CHANNEL_CAPACITY,
-      clientBalanceSat: 0,
       assetAmount: 0,
       assetId: '',
-      channelExpireBlocks: 1008, // 1 week
+      capacitySat: MIN_CHANNEL_CAPACITY,
+      channelExpireBlocks: 1008,
+      clientBalanceSat: 0, // 1 week
+      pubKeyAndAddress: '', // To be investigated whether the logic is correct
     },
   },
 }
@@ -58,6 +68,15 @@ export const channelSlice = createSlice({
   initialState,
   name: 'channel',
   reducers: {
+    setChannelRequestForm: (
+      state,
+      action: PayloadAction<Partial<SliceState['forms']['request']>>
+    ) => {
+      state.forms.request = {
+        ...state.forms.request,
+        ...action.payload,
+      }
+    },
     setNewChannelForm: (
       state,
       action: PayloadAction<Partial<SliceState['forms']['new']>>
@@ -67,15 +86,6 @@ export const channelSlice = createSlice({
         ...action.payload,
       }
     },
-    setChannelRequestForm: (
-      state,
-      action: PayloadAction<Partial<SliceState['forms']['request']>>
-    ) => {
-      state.forms.request = {
-        ...state.forms.request,
-        ...action.payload,
-      }
-    }
   },
 })
 
