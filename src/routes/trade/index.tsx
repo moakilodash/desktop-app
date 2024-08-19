@@ -6,11 +6,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { webSocketService } from '../../app/hubs/websocketService'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { SwapDetails, SwapRecap } from '../../components/SwapRecap'
-import {
-  AssetOption,
-  AssetSelect,
-  ExchangeRateDisplay,
-} from '../../components/Trade'
+import { AssetSelect, ExchangeRateDisplay } from '../../components/Trade'
 import { SparkIcon } from '../../icons/Spark'
 import { SwapIcon } from '../../icons/Swap'
 import { makerApi, TradingPair } from '../../slices/makerApi/makerApi.slice'
@@ -196,7 +192,7 @@ export const Component = () => {
       )
 
       const assetsResponse = await listAssets()
-      if ('error' in assetsResponse) {
+      if ('error' in assetsResponse || !assetsResponse.data) {
         logger.error('Failed to fetch assets list')
         return 0
       }
@@ -287,7 +283,12 @@ export const Component = () => {
   )
 
   const calculateAndFormatRate = useCallback(
-    (fromAsset, toAsset, price, isInverted) => {
+    (
+      fromAsset: string,
+      toAsset: string,
+      price: number,
+      isInverted: boolean
+    ) => {
       if (!price) return ''
 
       let rate = isInverted ? 1 / price : price
@@ -354,19 +355,19 @@ export const Component = () => {
           getPairs(),
         ])
 
-        if ('data' in nodeInfoResponse) {
+        if ('data' in nodeInfoResponse && nodeInfoResponse.data) {
           setPubKey(nodeInfoResponse.data.pubkey)
         }
 
-        if ('data' in listChannelsResponse) {
+        if ('data' in listChannelsResponse && listChannelsResponse.data) {
           setChannels(listChannelsResponse.data.channels)
         }
 
-        if ('data' in listAssetsResponse) {
+        if ('data' in listAssetsResponse && listAssetsResponse.data) {
           setAssets(listAssetsResponse.data.nia)
         }
 
-        if ('data' in getPairsResponse) {
+        if ('data' in getPairsResponse && getPairsResponse.data) {
           dispatch(setTradingPairs(getPairsResponse.data.pairs))
           const tradableAssets = new Set([
             'BTC',
@@ -433,7 +434,7 @@ export const Component = () => {
       const toAsset = form.getValues().toAsset
 
       // Always use the base asset for min order size
-      const baseAsset = isInverted ? toAsset : fromAsset
+      // const baseAsset = isInverted ? toAsset : fromAsset
       const minOrderSize = selectedPair.min_order_size
       setMinFromAmount(minOrderSize)
 
@@ -580,7 +581,7 @@ export const Component = () => {
     async (size: number) => {
       setSelectedSize(size)
       const fromAsset = form.getValues().fromAsset
-      const toAsset = form.getValues().toAsset
+      // const toAsset = form.getValues().toAsset
 
       let maxAmount
       if (!isInverted) {
@@ -653,7 +654,7 @@ export const Component = () => {
       logger.debug('Swap payload:', payload)
 
       const initSwapResponse = await initSwap(payload)
-      if ('error' in initSwapResponse) {
+      if ('error' in initSwapResponse || !initSwapResponse.data) {
         throw new Error('Failed to initialize swap')
       }
 

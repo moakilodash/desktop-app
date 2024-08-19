@@ -10,8 +10,9 @@ import {
   NewChannelFormSchema,
   channelSliceActions,
   channelSliceSelectors,
+  TNewChannelForm,
 } from '../../slices/channel/channel.slice'
-import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
+import { nodeApi, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
 
 import { FormError } from './FormError'
 
@@ -29,8 +30,8 @@ interface FormFields {
 }
 
 export const Step2 = (props: Props) => {
-  const newChannelForm = useAppSelector((state) =>
-    channelSliceSelectors.form(state, 'new')
+  const newChannelForm = useAppSelector(
+    (state) => channelSliceSelectors.form(state, 'new') as TNewChannelForm
   )
 
   const dispatch = useAppDispatch()
@@ -64,19 +65,23 @@ export const Step2 = (props: Props) => {
     const fetchAssetBalances = async () => {
       if (
         takerAssetsResponse.isSuccess &&
-        takerAssetsResponse.data?.assets.length > 0
+        takerAssetsResponse.data?.nia.length > 0
       ) {
         setAddAsset(true)
         try {
-          const assetPromises = takerAssetsResponse.data.assets.map((asset) =>
-            assetBalance({ asset_id: asset.asset_id }).then((response) => ({
-              asset_id: asset.asset_id,
-              spendable: response.data?.spendable || 0,
-            }))
+          const assetPromises = takerAssetsResponse.data.nia.map(
+            (asset: NiaAsset) =>
+              assetBalance({ asset_id: asset.asset_id }).then((response) => ({
+                asset_id: asset.asset_id,
+                spendable: response.data?.spendable || 0,
+              }))
           )
           const assetsWithBalances = await Promise.all(assetPromises)
           const newMaxAssetAmountMap = assetsWithBalances.reduce(
-            (acc, current) => {
+            (
+              acc: Record<string, number>,
+              current: { asset_id: string; spendable: number }
+            ) => {
               const key = current.asset_id ?? ''
               acc[key] = current.spendable
               return acc
@@ -97,14 +102,13 @@ export const Step2 = (props: Props) => {
     takerAssets,
     assetBalance,
     takerAssetsResponse.isSuccess,
-    takerAssetsResponse.data?.assets,
+    takerAssetsResponse.data?.nia,
   ])
 
-  const [btcBalance, btcBalanceResponse] =
-    nodeApi.endpoints.btcBalance.useLazyQuery()
+  const [btcBalance] = nodeApi.endpoints.btcBalance.useLazyQuery()
 
   // Format numbers with commas
-  const formatNumber = (num) => {
+  const formatNumber = (num: number) => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
   }
 
@@ -141,20 +145,21 @@ export const Step2 = (props: Props) => {
     const numericValue = parseInt(value.replace(/,/g, ''), 10)
     if (!isNaN(numericValue)) {
       setValue('assetAmount', numericValue, { shouldValidate: true })
+      setAssetAmount(numericValue)
     }
   }
 
   const onSubmit: SubmitHandler<FormFields> = useCallback(
     (data) => {
-      const selectedAsset = takerAssetsResponse.data?.assets.find(
-        (asset) => asset.asset_id === data.assetId
+      const selectedAsset = takerAssetsResponse.data?.nia.find(
+        (asset: NiaAsset) => asset.asset_id === data.assetId
       )
       const assetTicker = selectedAsset?.ticker || ''
       dispatch(channelSliceActions.setNewChannelForm({ ...data, assetTicker }))
       console.log('New channel form:', { ...data })
       props.onNext()
     },
-    [dispatch, takerAssetsResponse.data?.assets, props]
+    [dispatch, takerAssetsResponse.data?.nia, props]
   )
 
   return (
@@ -217,101 +222,97 @@ export const Step2 = (props: Props) => {
               </div>
             </div>
           </div>
-          {addAsset &&
-            (takerAssetsResponse.data?.assets?.length ?? 0) > 0 && ( // Ensure there are assets before showing the option
-              <>
-                <div className="checkbox-container">
-                  <label>
-                    <input
-                      checked={addAsset}
-                      className="checkbox-input"
-                      onChange={(e) => setAddAsset(e.target.checked)}
-                      type="checkbox"
-                    />
-                    Add Asset
-                  </label>
+          {addAsset && (takerAssetsResponse.data?.nia?.length ?? 0) > 0 && (
+            <>
+              <div className="checkbox-container">
+                <label>
+                  <input
+                    checked={addAsset}
+                    className="checkbox-input"
+                    onChange={(e) => setAddAsset(e.target.checked)}
+                    type="checkbox"
+                  />
+                  Add Asset
+                </label>
+              </div>
+
+              <div className="py-6">
+                <div className="text-xs mb-3">Select asset</div>
+                <div>
+                  <Controller
+                    control={control}
+                    name="assetId"
+                    render={({ field }) => (
+                      <Select
+                        {...field}
+                        active={field.value}
+                        onSelect={field.onChange}
+                        options={
+                          takerAssetsResponse.data?.nia.map((a: NiaAsset) => ({
+                            label: a.ticker,
+                            value: a.asset_id,
+                          })) || []
+                        }
+                        theme="dark"
+                      />
+                    )}
+                  />
                 </div>
+                {watch('assetId') && (
+                  <>
+                    <div className="text-xs mb-3">Select asset amount </div>
 
-                <div className="py-6">
-                  <div className="text-xs mb-3">Select asset</div>
-                  <div>
-                    <Controller
-                      control={control}
-                      name="assetId"
-                      render={({ field }) => (
-                        <Select
-                          {...field}
-                          active={field.value}
-                          onSelect={field.onChange}
-                          options={
-                            takerAssetsResponse.data?.assets.map((a) => ({
-                              label: a.ticker,
-                              value: a.asset_id,
-                            })) || []
-                          }
-                          theme="dark"
-                        />
-                      )}
-                    />
-                  </div>
-                  {watch('assetId') && (
-                    <>
-                      <div className="text-xs mb-3">Select asset amount </div>
-
-                      <div className="flex-1">
-                        <input
-                          {...register('assetAmount', {
-                            max:
-                              (maxAssetAmountMap as Record<string, number>)[
-                                watch('assetId')
-                              ] || 0,
-                            min: 0,
-                            valueAsNumber: true,
-                          })}
-                          className="rounded bg-blue-dark px-4 py-3 w-full outline-none"
-                          onChange={(e) =>
-                            handleAssetAmountChange(e.target.value)
-                          }
-                          placeholder="Enter asset amount"
-                          type="text"
-                          value={formatNumber(assetAmount)}
-                        />
-
-                        <input
-                          {...register('assetAmount', {
-                            valueAsNumber: true,
-                          })}
-                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-                          max={
+                    <div className="flex-1">
+                      <input
+                        {...register('assetAmount', {
+                          max:
                             (maxAssetAmountMap as Record<string, number>)[
                               watch('assetId')
-                            ] || 0
-                          }
-                          min={0}
-                          onChange={(e) =>
-                            handleAssetAmountChange(e.target.value)
-                          }
-                          step="1"
-                          type="range"
-                          value={formatNumber(assetAmount)}
-                        />
+                            ] || 0,
+                          min: 0,
+                          valueAsNumber: true,
+                        })}
+                        className="rounded bg-blue-dark px-4 py-3 w-full outline-none"
+                        onChange={(e) =>
+                          handleAssetAmountChange(e.target.value)
+                        }
+                        placeholder="Enter asset amount"
+                        type="text"
+                        value={formatNumber(assetAmount)}
+                      />
 
-                        <div className="text-sm text-red mt-2">
-                          {formState.errors.capacitySat && (
-                            <p className="text-red-500 text-xs italic">
-                              {formState.errors.capacitySat.message}
-                            </p>
-                          )}
-                        </div>
+                      <input
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                        max={
+                          (maxAssetAmountMap as Record<string, number>)[
+                            watch('assetId')
+                          ] || 0
+                        }
+                        min={0}
+                        onChange={(e) =>
+                          handleAssetAmountChange(e.target.value)
+                        }
+                        step="1"
+                        type="range"
+                        value={assetAmount}
+                      />
+
+                      <div className="text-sm text-red mt-2">
+                        {formState.errors.assetAmount && (
+                          <p className="text-red-500 text-xs italic">
+                            {formState.errors.assetAmount.message}
+                          </p>
+                        )}
                       </div>
-                    </>
-                  )}
-                  <div className="text-sm text-red mt-2">
-                    {formState.errors.assetId?.message}
-                  </div>
+                    </div>
+                  </>
+                )}
+                <div className="text-sm text-red mt-2">
+                  {formState.errors.assetId?.message}
                 </div>
-              </>
-            )}
+              </div>
+            </>
+          )}
           <div className="py-6">
             <div className="text-xs mb-3">Transaction Fee</div>
             <div className="flex items-center space-x-6">

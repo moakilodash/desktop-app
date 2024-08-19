@@ -118,18 +118,18 @@ interface IssueAssetResponse {
   asset_id: string
 }
 
-interface BTCBalanceResponse {
-  vanilla: {
-    settled: number
-    future: number
-    spendable: number
-  }
-  colored: {
-    settled: number
-    future: number
-    spendable: number
-  }
-}
+// interface BTCBalanceResponse {
+//   vanilla: {
+//     settled: number
+//     future: number
+//     spendable: number
+//   }
+//   colored: {
+//     settled: number
+//     future: number
+//     spendable: number
+//   }
+// }
 
 interface BTCBalanceResponseTransformed {
   vanilla: {
@@ -200,19 +200,19 @@ interface SendPaymentResponse {
   status: string
 }
 
-interface ListTransactionsResponse {
-  transactions: {
-    transaction_type: string
-    txid: string
-    received: number
-    sent: number
-    fee: number
-    confirmation_time: {
-      height: number
-      timestamp: number
-    }
-  }[]
-}
+// interface ListTransactionsResponse {
+//   transactions: {
+//     transaction_type: string
+//     txid: string
+//     received: number
+//     sent: number
+//     fee: number
+//     confirmation_time: {
+//       height: number
+//       timestamp: number
+//     }
+//   }[]
+// }
 
 interface ListTransactionsResponseTransformed {
   transactions: {

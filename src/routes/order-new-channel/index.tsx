@@ -1,9 +1,8 @@
-import React, { useCallback, useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
+import { useCallback, useState, useEffect } from 'react'
 import { ClipLoader } from 'react-spinners'
 import { ToastContainer, toast, Slide } from 'react-toastify'
 
-import { useAppDispatch } from '../../app/store/hooks'
 import { makerApi } from '../../slices/makerApi/makerApi.slice'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 
@@ -116,8 +115,14 @@ export const Component = () => {
       setLoading(false)
       if (channelResponse.error) {
         // toast error the message
-        const message = `Error ${channelResponse.error?.status}: ${channelResponse.error?.data.detail}`
-        toast.error(message, { autoClose: 5000, transition: Slide })
+        let errorMessage = 'An error occurred'
+        if ('status' in channelResponse.error) {
+          const fetchError = channelResponse.error as FetchBaseQueryError
+          errorMessage = `Error ${fetchError.status}: ${JSON.stringify(fetchError.data)}`
+        } else {
+          errorMessage = channelResponse.error.message || errorMessage
+        }
+        toast.error(errorMessage, { autoClose: 5000, transition: Slide })
         console.error(channelResponse.error)
         return
       } else {
@@ -159,7 +164,7 @@ export const Component = () => {
       </div>
 
       <div className={step !== 3 ? 'hidden' : ''}>
-        <Step3 paymentStatus={paymentStatus} />
+        <Step3 paymentStatus={paymentStatus ?? ''} />
       </div>
 
       <ToastContainer />

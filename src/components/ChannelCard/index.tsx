@@ -60,7 +60,7 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
   const [isCopied, setIsCopied] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
 
-  const copyToClipboard = (text) => {
+  const copyToClipboard = (text: string) => {
     navigator.clipboard
       .writeText(text)
       .then(() => {
@@ -81,7 +81,7 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
   const assetPrecision = asset?.precision || 8
   const peerName = channel.peer_alias || channel.peer_pubkey.slice(0, 8)
 
-  const formatAssetAmount = (amount) => {
+  const formatAssetAmount = (amount: number) => {
     const factor = Math.pow(10, assetPrecision)
     return (amount / factor).toLocaleString(undefined, {
       maximumFractionDigits: assetPrecision,

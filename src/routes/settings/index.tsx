@@ -1,11 +1,12 @@
 import { open } from '@tauri-apps/api/dialog'
-import { exists, writeTextFile } from '@tauri-apps/api/fs'
+import { exists } from '@tauri-apps/api/fs'
 import { useState, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
+import { RootState } from '../../app/store'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 import {
   setBitcoinUnit,
@@ -35,7 +36,7 @@ export const Component = () => {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const { bitcoinUnit, nodeConnectionString, defaultLspUrl } = useSelector(
-    (state) => state.settings
+    (state: RootState) => state.settings
   )
 
   const [showModal, setShowModal] = useState(false)
@@ -124,31 +125,33 @@ export const Component = () => {
   }
 
   const attemptLock = async (): Promise<Response> => {
-    let lockResponse
+    //let lockResponse
 
     try {
-      lockResponse = await lock().unwrap()
+      //lockResponse = await lock().unwrap()
+      await lock().unwrap()
     } catch (err) {
       return err as Response
     }
 
     return {
-      data: lockResponse,
+      data: {},
       status: 200,
     }
   }
 
   const attemptUnlock = async (password: string): Promise<Response> => {
-    let unlockResponse
+    //let unlockResponse
 
     try {
-      unlockResponse = await unlock({ password: password }).unwrap()
+      //unlockResponse = await unlock({ password: password }).unwrap()
+      await unlock({ password: password }).unwrap()
     } catch (err) {
       return err as Response
     }
 
     return {
-      data: unlockResponse,
+      data: {},
       status: 200,
     }
   }
@@ -157,10 +160,14 @@ export const Component = () => {
     backupPath: string,
     password: string
   ): Promise<Response> => {
-    let backupResponse
+    //let backupResponse
 
     try {
-      backupResponse = await backup({
+      // backupResponse = await backup({
+      //   backup_path: backupPath,
+      //   password,
+      // }).unwrap()
+      await backup({
         backup_path: backupPath,
         password,
       }).unwrap()
@@ -169,7 +176,7 @@ export const Component = () => {
     }
 
     return {
-      data: backupResponse,
+      data: {},
       status: 200,
     }
   }
