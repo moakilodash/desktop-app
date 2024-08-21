@@ -36,7 +36,7 @@ class WebSocketService {
   }
 
   private connect() {
-    this.socket = new WebSocket(`${this.url}api/v1/market/ws/${this.clientId}`)
+    this.socket = new WebSocket(`${this.url}api/v1/swaps/ws/${this.clientId}`)
 
     this.socket.onopen = () => {
       console.log('WebSocket connected')

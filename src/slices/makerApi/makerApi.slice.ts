@@ -7,11 +7,11 @@ type LSPS0OnchainAddress = string
 type LSPS0OnchainFee = number
 
 interface InitSwapRequest {
+  rfq_id: string
   from_asset: string
   to_asset: string
   from_amount: number
   to_amount: number
-  request_for_quotation_id: string
 }
 
 interface InitSwapResponse {
@@ -60,7 +60,7 @@ interface Lsps1GetInfoResponse {
 
 // Request and response interfaces for lsps1.create_order
 interface Lsps1CreateOrderRequest {
-  client_connection_url: string
+  client_pubkey: string
   lsp_balance_sat: LSPS0Sat
   client_balance_sat: LSPS0Sat
   required_channel_confirmations: number
@@ -76,7 +76,7 @@ interface Lsps1CreateOrderRequest {
 
 interface Lsps1CreateOrderResponse {
   order_id: string
-  client_connection_url: string
+  client_pubkey: string
   lsp_balance_sat: LSPS0Sat
   client_balance_sat: LSPS0Sat
   required_channel_confirmations: number
@@ -166,10 +166,6 @@ export const makerApi = createApi({
         url: '/api/v1/swaps/execute',
       }),
     }),
-
-    // getassets: builder.query<GetAssetsResponse, void>({
-    //   query: () => '/list_assets',
-    // }),
     getPairs: builder.query<GetPairsResponse, void>({
       query: () => '/api/v1/market/pairs',
     }),

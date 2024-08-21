@@ -23,10 +23,15 @@ interface BackupRequest {
 }
 
 interface OpenChannelRequest {
+  peer_pubkey_and_opt_addr: string
+  capacity_sat: number
+  push_msat?: number
   asset_amount?: number
   asset_id?: string
-  capacity_sat: number
-  peer_pubkey_and_addr: string
+  with_anchors?: boolean
+  fee_base_msat?: number
+  fee_proportional_millionths?: number
+  temporary_channel_id?: string
 }
 
 interface OpenChannelResponse {
@@ -200,31 +205,28 @@ interface SendPaymentResponse {
   status: string
 }
 
-// interface ListTransactionsResponse {
-//   transactions: {
-//     transaction_type: string
-//     txid: string
-//     received: number
-//     sent: number
-//     fee: number
-//     confirmation_time: {
-//       height: number
-//       timestamp: number
-//     }
-//   }[]
-// }
-
-interface ListTransactionsResponseTransformed {
+interface ListTransactionsResponse {
   transactions: {
     transaction_type: string
     txid: string
-    received: string
-    sent: string
+    received: number
+    sent: number
     fee: number
     confirmation_time: {
       height: number
       timestamp: number
     }
+  }[]
+}
+
+interface ListPaymentsResponse {
+  payments: {
+    amt_msat: number
+    asset_amount: number
+    asset_id: string | null
+    payment_hash: string
+    inbound: boolean
+    status: string
   }[]
 }
 
@@ -350,13 +352,16 @@ export const nodeApi = createApi({
     listChannels: builder.query<ListChannelsResponse, void>({
       query: () => '/listchannels',
     }),
+    listPayments: builder.query<ListPaymentsResponse, void>({
+      query: () => '/listpayments',
+    }),
     listPeers: builder.query<ListPeersResponse, void>({
       query: () => '/listpeers',
     }),
     listSwaps: builder.query<ListSwapsResponse, void>({
       query: () => '/listswaps',
     }),
-    listTransactions: builder.query<ListTransactionsResponseTransformed, void>({
+    listTransactions: builder.query<ListTransactionsResponse, void>({
       query: () => '/listtransactions',
     }),
     listUnspents: builder.query<ListUnspentsResponse, void>({
@@ -387,7 +392,7 @@ export const nodeApi = createApi({
       query: (body) => {
         const requestBody: any = {
           capacity_sat: body.capacity_sat,
-          peer_pubkey_and_addr: body.peer_pubkey_and_addr,
+          peer_pubkey_and_opt_addr: body.peer_pubkey_and_opt_addr,
           public: true,
           push_msat: 3100000,
           with_anchors: true,

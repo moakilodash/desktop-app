@@ -22,12 +22,31 @@ interface AssetInfo {
   precision: number
 }
 
-const formatAmount = (amount: number, precision: number): string => {
-  const adjustedAmount = amount / Math.pow(10, precision)
-  return adjustedAmount.toLocaleString('en-US', {
-    maximumFractionDigits: precision,
-    minimumFractionDigits: precision,
-  })
+const formatAmount = (
+  amount: number,
+  precision: number,
+  isBtc: boolean,
+  bitcoinUnit: string
+): string => {
+  if (isBtc) {
+    // Convert millisats to sats or BTC
+    const sats = amount / 1000
+    if (bitcoinUnit === 'SAT') {
+      return sats.toLocaleString('en-US', { maximumFractionDigits: 0 })
+    } else {
+      const btc = sats / 100000000
+      return btc.toLocaleString('en-US', {
+        maximumFractionDigits: 8,
+        minimumFractionDigits: 8,
+      })
+    }
+  } else {
+    const adjustedAmount = amount / Math.pow(10, precision)
+    return adjustedAmount.toLocaleString('en-US', {
+      maximumFractionDigits: precision,
+      minimumFractionDigits: precision,
+    })
+  }
 }
 
 const SwapRow: React.FC<{
@@ -44,14 +63,13 @@ const SwapRow: React.FC<{
 
   const fromPrecision = swap.from_asset
     ? assetInfo[swap.from_asset]?.precision || 0
-    : bitcoinUnit === 'BTC'
-      ? 8
-      : 0
+    : 0
   const toPrecision = swap.to_asset
     ? assetInfo[swap.to_asset]?.precision || 0
-    : bitcoinUnit === 'BTC'
-      ? 8
-      : 0
+    : 0
+
+  const isFromBtc = !swap.from_asset
+  const isToBtc = !swap.to_asset
 
   const statusColor =
     {
@@ -62,16 +80,18 @@ const SwapRow: React.FC<{
 
   return (
     <div className="grid grid-cols-9 even:bg-blue-dark rounded items-center text-lg font-medium">
-      <div className={twJoin(COL_CLASS_NAME, 'col-span-2')}>{fromAsset}</div>
       <div className={twJoin(COL_CLASS_NAME, 'col-span-2')}>
-        {formatAmount(swap.qty_from, fromPrecision)}
+        {isFromBtc ? bitcoinUnit : fromAsset}
+      </div>
+      <div className={twJoin(COL_CLASS_NAME, 'col-span-2')}>
+        {formatAmount(swap.qty_from, fromPrecision, isFromBtc, bitcoinUnit)}
       </div>
       <div className={COL_CLASS_NAME}>
         <ArrowRight className="w-6 h-6" />
       </div>
-      <div className={COL_CLASS_NAME}>{toAsset}</div>
+      <div className={COL_CLASS_NAME}>{isToBtc ? bitcoinUnit : toAsset}</div>
       <div className={COL_CLASS_NAME}>
-        {formatAmount(swap.qty_to, toPrecision)}
+        {formatAmount(swap.qty_to, toPrecision, isToBtc, bitcoinUnit)}
       </div>
       <div className={twJoin(COL_CLASS_NAME, 'col-span-2', statusColor)}>
         {swap.status}

@@ -37,7 +37,9 @@
         "icons/icon.icns"
       ],
       "identifier": "com.kaleidoswap.dev",
-      "resources": [],
+      "resources": [
+        "../bin/rgb-lightning-node"
+      ],
       "targets": "all"
     },
     "security": {

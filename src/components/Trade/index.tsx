@@ -4,10 +4,9 @@ import { twJoin } from 'tailwind-merge'
 
 import { useOnClickOutside } from '../../hooks/useOnClickOutside'
 import { ArrowDownIcon } from '../../icons/ArrowDown'
+import { TradingPair } from '../../slices/makerApi/makerApi.slice'
 
 const SATOSHIS_PER_BTC = 100000000
-
-type BitcoinUnit = 'BTC' | 'SAT'
 
 interface AssetOptionProps {
   value: string
@@ -63,6 +62,7 @@ interface SelectProps {
   options: Array<{ value: string; label: string }>
   onSelect: (value: string) => void
   theme: 'light' | 'dark'
+  disabled?: boolean // Add the disabled prop
 }
 
 const Select: React.FC<SelectProps> = (props) => {
@@ -78,7 +78,8 @@ const Select: React.FC<SelectProps> = (props) => {
       <div
         className={twJoin(
           'flex items-center justify-between px-4 py-3 rounded cursor-pointer w-32',
-          props.theme === 'dark' ? 'bg-blue-dark' : 'bg-section-lighter'
+          props.theme === 'dark' ? 'bg-blue-dark' : 'bg-section-lighter',
+          props.disabled ? 'opacity-50 cursor-not-allowed' : ''
         )}
         onClick={() => setIsOpen((state) => !state)}
       >
@@ -120,22 +121,29 @@ interface AssetSelectProps {
   options: Array<{ value: string; label: string }>
   value: string
   onChange: (value: string) => void
+  disabled?: boolean // Add the disabled prop
 }
 
 const AssetSelect: React.FC<AssetSelectProps> = ({
   options,
   value,
   onChange,
+  disabled = false, // Add a default value
 }) => (
-  <Select active={value} onSelect={onChange} options={options} theme="dark" />
+  <Select
+    active={value}
+    disabled={disabled}
+    onSelect={onChange}
+    options={options}
+    theme="dark"
+  />
 )
-
 interface ExchangeRateDisplayProps {
   fromAsset: string
   toAsset: string
   price: number | null
-  isInverted: boolean
-  bitcoinUnit: BitcoinUnit
+  selectedPair: TradingPair | null
+  bitcoinUnit: 'BTC' | 'SAT'
   formatAmount: (amount: number, asset: string) => string
 }
 
@@ -143,7 +151,7 @@ const ExchangeRateDisplay: React.FC<ExchangeRateDisplayProps> = ({
   fromAsset,
   toAsset,
   price,
-  isInverted,
+  selectedPair,
   bitcoinUnit,
   formatAmount,
 }) => {
@@ -152,32 +160,37 @@ const ExchangeRateDisplay: React.FC<ExchangeRateDisplayProps> = ({
       fromAsset: string,
       toAsset: string,
       price: number | null,
-      isInverted: boolean
-    ): string => {
-      if (!price) return ''
+      selectedPair: { base_asset: string; quote_asset: string } | null
+    ) => {
+      if (!price || !selectedPair) return 'Price not available'
 
-      let rate = isInverted ? 1 / price : price
+      let rate = price
+      let displayFromAsset = fromAsset
+      let displayToAsset = toAsset
 
-      // Determine the display units
-      const fromUnit = fromAsset === 'BTC' ? bitcoinUnit : fromAsset
-      const toUnit = toAsset === 'BTC' ? bitcoinUnit : toAsset
+      // Determine if the current trading direction is inverted compared to the selected pair
+      const isInverted =
+        fromAsset === selectedPair.quote_asset &&
+        toAsset === selectedPair.base_asset
 
-      // Adjust rate based on Bitcoin unit
-      if (fromAsset === 'BTC' && bitcoinUnit === 'SAT') {
-        rate = rate * SATOSHIS_PER_BTC
-      } else if (toAsset === 'BTC' && bitcoinUnit === 'SAT') {
+      // Apply inversion if necessary
+      if (isInverted) {
+        rate = 1 / rate
+        ;[displayFromAsset, displayToAsset] = [displayToAsset, displayFromAsset]
+      }
+
+      let fromUnit = displayFromAsset === 'BTC' ? bitcoinUnit : displayFromAsset
+      let toUnit = displayToAsset === 'BTC' ? bitcoinUnit : displayToAsset
+
+      // Handle SAT conversion
+      if (fromUnit === 'SAT' && toUnit !== 'SAT') {
         rate = rate / SATOSHIS_PER_BTC
+      } else if (fromUnit !== 'SAT' && toUnit === 'SAT') {
+        rate = rate * SATOSHIS_PER_BTC
       }
 
       // Format the rate
-      let formattedRate: string
-      if (fromUnit === 'SAT') {
-        formattedRate = formatAmount(rate, toAsset)
-      } else if (toUnit === 'SAT') {
-        formattedRate = formatAmount(1 / rate, fromAsset)
-      } else {
-        formattedRate = formatAmount(rate, toAsset)
-      }
+      const formattedRate = formatAmount(rate, displayToAsset)
 
       return `1 ${fromUnit} = ${formattedRate} ${toUnit}`
     },
@@ -188,7 +201,7 @@ const ExchangeRateDisplay: React.FC<ExchangeRateDisplayProps> = ({
     fromAsset,
     toAsset,
     price,
-    isInverted
+    selectedPair
   )
 
   return (

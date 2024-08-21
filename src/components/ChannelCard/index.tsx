@@ -1,6 +1,9 @@
 import { ArrowUpRight, ArrowDownRight, X } from 'lucide-react'
 import React, { useState } from 'react'
 
+import { useAppSelector } from '../../app/store/hooks'
+import { formatBitcoinAmount } from '../../helpers/number'
+
 interface ModalProps {
   isOpen: boolean
   onClose: () => void
@@ -59,6 +62,7 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isCopied, setIsCopied] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
+  const bitcoinUnit = useAppSelector((state) => state.settings.bitcoinUnit)
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard
@@ -117,7 +121,8 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
         <div className="mb-4">
           <p className="text-sm text-gray-400">Total Capacity</p>
           <div className="text-2xl font-bold mb-1">
-            {channel.capacity_sat.toLocaleString()} sats
+            {formatBitcoinAmount(channel.capacity_sat, bitcoinUnit)}{' '}
+            {bitcoinUnit}
           </div>
         </div>
 
@@ -127,10 +132,11 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
             <div>
               <div className="text-gray-400">Outbound</div>
               <div>
-                {Math.floor(
-                  channel.outbound_balance_msat / 1000
-                ).toLocaleString()}{' '}
-                sats
+                {formatBitcoinAmount(
+                  channel.outbound_balance_msat / 1000,
+                  bitcoinUnit
+                )}{' '}
+                {bitcoinUnit}
               </div>
             </div>
           </div>
@@ -139,10 +145,11 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
             <div>
               <div className="text-gray-400">Inbound</div>
               <div>
-                {Math.floor(
-                  channel.inbound_balance_msat / 1000
-                ).toLocaleString()}{' '}
-                sats
+                {formatBitcoinAmount(
+                  channel.inbound_balance_msat / 1000,
+                  bitcoinUnit
+                )}{' '}
+                {bitcoinUnit}
               </div>
             </div>
           </div>

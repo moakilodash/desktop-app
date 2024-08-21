@@ -12,12 +12,11 @@ import {
   CREATE_NEW_CHANNEL_PATH,
   WALLET_HISTORY_PATH,
 } from '../../app/router/paths'
-import { useAppDispatch } from '../../app/store/hooks'
+import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { ChannelCard } from '../../components/ChannelCard'
-import { numberFormatter } from '../../helpers/number'
+import { formatBitcoinAmount } from '../../helpers/number'
 import { nodeApi, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
 import { uiSliceActions } from '../../slices/ui/ui.slice'
-import './index.css'
 
 interface CardProps {
   children: React.ReactNode
@@ -31,11 +30,7 @@ const Card: React.FC<CardProps> = ({ children, className = '' }) => (
 )
 
 interface AssetRowProps {
-  asset: {
-    ticker: string
-    name: string
-    asset_id: string
-  }
+  asset: NiaAsset
   onChainBalance: number
   offChainBalance: number
 }
@@ -54,6 +49,11 @@ const AssetRow: React.FC<AssetRowProps> = ({
     })
   }
 
+  const formatAmount = (asset: NiaAsset, amount: number) => {
+    const formattedAmount = amount / Math.pow(10, asset.precision)
+    return formattedAmount
+  }
+
   return (
     <div className="grid grid-cols-4 gap-2 even:bg-blue-dark rounded items-center">
       <div
@@ -65,15 +65,11 @@ const AssetRow: React.FC<AssetRowProps> = ({
       </div>
 
       <div className="text-sm py-3 px-4">
-        <div className="font-bold">
-          {numberFormatter.format(offChainBalance)}
-        </div>
+        <div className="font-bold">{formatAmount(asset, offChainBalance)}</div>
       </div>
 
       <div className="text-sm py-3 px-4">
-        <div className="font-bold">
-          {numberFormatter.format(onChainBalance)}
-        </div>
+        <div className="font-bold">{formatAmount(asset, onChainBalance)}</div>
       </div>
 
       <div className="text-sm py-3 pl-4 pr-6 flex justify-between">
@@ -130,6 +126,7 @@ export const Component = () => {
     Record<string, { offChain: number; onChain: number }>
   >({})
   const [assetsMap, setAssetsMap] = useState<Record<string, NiaAsset>>({})
+  const bitcoinUnit = useAppSelector((state) => state.settings.bitcoinUnit)
 
   const refreshData = useCallback(() => {
     assets()
@@ -199,17 +196,6 @@ export const Component = () => {
     refreshData()
   }
 
-  // if (isLoading) {
-  //   return (
-  //     <div className="fixed inset-0 bg-blue-dark bg-opacity-50 flex items-center justify-center z-50">
-  //       <div className="bg-section-lighter p-4 rounded-lg">
-  //         <RefreshCw className="animate-spin h-8 w-8 text-cyan" />
-  //         <p className="mt-2 text-white">Loading...</p>
-  //       </div>
-  //     </div>
-  //   )
-  // }
-
   return (
     <div className="w-full bg-blue-dark py-8 px-6 rounded space-y-4">
       <div className="bg-section-lighter rounded p-8">
@@ -263,7 +249,7 @@ export const Component = () => {
               <Zap className="h-4 w-4 text-grey-light" />
             </div>
             <div className="text-2xl font-bold text-white">
-              {numberFormatter.format(totalBalance, 0)} sats
+              {formatBitcoinAmount(totalBalance, bitcoinUnit)} {bitcoinUnit}
             </div>
           </Card>
           <Card>
@@ -274,7 +260,8 @@ export const Component = () => {
               <ArrowDownRight className="h-4 w-4 text-grey-light" />
             </div>
             <div className="text-2xl font-bold text-white">
-              {numberFormatter.format(totalInboundLiquidity, 0)} sats
+              {formatBitcoinAmount(totalInboundLiquidity, bitcoinUnit)}{' '}
+              {bitcoinUnit}
             </div>
           </Card>
           <Card>
@@ -285,7 +272,8 @@ export const Component = () => {
               <ArrowUpRight className="h-4 w-4 text-grey-light" />
             </div>
             <div className="text-2xl font-bold text-white">
-              {numberFormatter.format(totalOutboundLiquidity, 0)} sats
+              {formatBitcoinAmount(totalOutboundLiquidity, bitcoinUnit)}{' '}
+              {bitcoinUnit}
             </div>
           </Card>
         </div>

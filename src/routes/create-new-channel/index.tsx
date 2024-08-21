@@ -35,7 +35,7 @@ export const Component = () => {
         asset_amount: form.assetAmount,
         asset_id: form.assetId,
         capacity_sat: form.capacitySat,
-        peer_pubkey_and_addr: form.pubKeyAndAddress,
+        peer_pubkey_and_opt_addr: form.pubKeyAndAddress,
       })
 
       console.log('Opened channel successfully:', openChannelResponse.data)
