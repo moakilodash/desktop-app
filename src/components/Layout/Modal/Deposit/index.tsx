@@ -4,7 +4,7 @@ import { useAppDispatch } from '../../../../app/store/hooks'
 import { uiSliceActions } from '../../../../slices/ui/ui.slice'
 
 import { Step1 } from './Step1'
-import { Step2 } from './Step2'
+import { Step2 } from './Step2_new'
 
 export const DepositModalContent = () => {
   const dispatch = useAppDispatch()
