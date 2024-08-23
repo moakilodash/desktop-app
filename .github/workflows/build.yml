@@ -40,10 +40,20 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libgtk-3-dev libsoup2.4-dev libjavascriptcoregtk-4.0-dev libwebkit2gtk-4.0-dev
 
-    - name: Install make on Windows
+    - name: Install MSYS2 on Windows
+      if: matrix.os == 'windows-latest'
+      run: choco install msys2
+
+    - name: Update MSYS2 and install make
       if: matrix.os == 'windows-latest'
       run: |
-        choco install make
+        set MSYS=C:\tools\msys64
+        $MSYS\usr\bin\bash -lc "pacman -Syu --noconfirm"
+        $MSYS\usr\bin\bash -lc "pacman -S --noconfirm make gcc"
+
+    - name: Add MSYS2 to PATH
+      if: matrix.os == 'windows-latest'
+      run: echo "C:\tools\msys64\usr\bin" >> $GITHUB_PATH
 
     - name: Install dependencies
       run: pnpm install
@@ -53,6 +63,11 @@ jobs:
       with:
         toolchain: stable
         override: true
+
+    - name: Build the executable using Makefile on Windows
+      if: matrix.os == 'windows-latest'
+      run: |
+        $MSYS\usr\bin\bash -lc "make -f path/to/Makefile"
 
     - name: Install Tauri CLI
       run: pnpm install --save-dev @tauri-apps/cli
