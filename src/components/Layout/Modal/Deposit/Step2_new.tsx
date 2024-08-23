@@ -1,6 +1,7 @@
 import { QRCodeSVG } from 'qrcode.react'
 import { useEffect, useState } from 'react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
+import { toast } from 'react-toastify'
 import { twJoin } from 'tailwind-merge'
 
 import { BTC_ASSET_ID } from '../../../../constants'
@@ -23,13 +24,14 @@ export const Step2 = (props: Props) => {
 
   const [assets, assetsResponse] = nodeApi.endpoints.listAssets.useLazyQuery()
   const [addressQuery] = nodeApi.endpoints.address.useLazyQuery()
+  const [lnInvoice] = nodeApi.endpoints.lnInvoice.useLazyQuery()
   const [rgbInvoice] = nodeApi.endpoints.rgbInvoice.useLazyQuery()
   const [assetBalance] = nodeApi.endpoints.assetBalance.useLazyQuery()
 
   const form = useForm<Fields>({
     defaultValues: {
       amount: 0,
-      network: 'lightning',
+      network: 'on-chain',
     },
   })
   const amount = form.watch('amount')
@@ -49,10 +51,37 @@ export const Step2 = (props: Props) => {
       addressQuery().then((res) => {
         setAddress(res.data?.address)
       })
+    } else if (network === 'on-chain' && props.assetId !== BTC_ASSET_ID) {
+      rgbInvoice({ asset_id: props.assetId }).then((res) => {
+        if (res.error) {
+          toast.error(res.error.data?.error)
+        } else {
+          setAddress(res.data?.invoice)
+        }
+      })
+    } else if (network === 'lightning' && amount && amount > 0) {
+      lnInvoice({
+        asset_amount: Number(amount),
+        asset_id: props.assetId,
+      }).then((res) => {
+        if (res.error) {
+          toast.error(res.error.data?.error)
+        } else {
+          setAddress(res.data?.invoice)
+        }
+      })
     } else {
       setAddress('')
     }
-  }, [amount, form, network, props.assetId, addressQuery])
+  }, [
+    amount,
+    form,
+    network,
+    props.assetId,
+    addressQuery,
+    rgbInvoice,
+    lnInvoice,
+  ])
 
   return (
     <form
@@ -143,18 +172,24 @@ export const Step2 = (props: Props) => {
           )}
 
           {address && address.length > 0 && (
-            <div className="flex items-center space-x-6 min-w-max">
+            <div className="flex items-center space-x-6 max-w-fit">
               <QRCodeSVG fgColor="#3A3C4A" value={address ?? ''} />
 
               <div>
                 <div className="text-xs font-light">Wallet Address:</div>
 
                 <div className="flex items-center space-x-4">
-                  <div>{address}</div>{' '}
+                  <div className="break-words overflow-hidden whitespace-normal">
+                    {address.length > 67
+                      ? address.slice(0, 64) + '...'
+                      : address}
+                  </div>{' '}
                   <div
                     className="cursor-pointer"
                     onClick={() => {
-                      navigator.clipboard.writeText(address ?? '')
+                      navigator.clipboard.writeText(address ?? '').then(() => {
+                        toast.success('Invoice copyed to clipboard')
+                      })
                     }}
                   >
                     <CopyIcon />

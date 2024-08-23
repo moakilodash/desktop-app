@@ -156,6 +156,10 @@ interface AssetBalanceResponse {
   offchain_inbound: number
 }
 
+interface RGBInvoiceRequest {
+  asset_id: string
+}
+
 interface RGBInvoiceResponse {
   recipient_id: string
   invoice: string
@@ -367,7 +371,7 @@ export const nodeApi = createApi({
         body: {
           amt_msat: 3000000,
           asset_amount: body.asset_amount,
-          asset_id: body.asset_id,
+          asset_id: body.asset_id === 'btc' ? null : body.asset_id,
           expiry_sec: 420,
         },
         method: 'POST',
@@ -410,9 +414,10 @@ export const nodeApi = createApi({
         url: '/restore',
       }),
     }),
-    rgbInvoice: builder.query<RGBInvoiceResponse, void>({
-      query: () => ({
+    rgbInvoice: builder.query<RGBInvoiceResponse, RGBInvoiceRequest>({
+      query: (body) => ({
         body: {
+          asset_id: body.asset_id,
           min_confirmations: 0,
         },
         method: 'POST',
