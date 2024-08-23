@@ -22,13 +22,13 @@ export const DepositModalContent = () => {
         />
       )}
 
-      {step === 2 && assetId ? (
+      {step === 2 && (
         <Step2
           assetId={assetId}
           onBack={() => setStep((state) => state - 1)}
           onNext={() => dispatch(uiSliceActions.setModal({ type: 'none' }))}
         />
-      ) : null}
+      )}
     </>
   )
 }

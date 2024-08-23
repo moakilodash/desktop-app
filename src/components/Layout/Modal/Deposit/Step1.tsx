@@ -48,6 +48,7 @@ export const Step1 = (props: Props) => {
                 label: asset.ticker,
                 value: asset.asset_id,
               })) ?? []),
+              { label: 'new asset', value: '' },
             ]}
             theme="light"
           />
