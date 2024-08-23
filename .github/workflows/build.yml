@@ -64,11 +64,6 @@ jobs:
         toolchain: stable
         override: true
 
-    - name: Build the executable using Makefile on Windows
-      if: matrix.os == 'windows-latest'
-      run: |
-        $MSYS\usr\bin\bash -lc "make -f path/to/Makefile"
-
     - name: Install Tauri CLI
       run: pnpm install --save-dev @tauri-apps/cli
 
