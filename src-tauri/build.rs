@@ -47,17 +47,20 @@ fn main() {
         if !executable_path.exists() {
             println!("Executable not found. Starting the build process...");
 
-            let output = Command::new("make")
-                .current_dir("../")
-                .output()
-                .expect("Failed to run make");
-
-            if !output.status.success() {
-                let stderr = String::from_utf8_lossy(&output.stderr);
-                fs::write("../build_error.log", stderr.as_bytes())
-                    .expect("Failed to write build error log");
-                panic!("Make command failed. Check build_error.log for details.");
-            }
+            let output = if cfg!(target_os = "windows") {
+                // On Windows, run make via bash of MSYS2
+                Command::new("C:\\tools\\msys64\\usr\\bin\\bash")
+                    .args(&["-c", "make"])
+                    .current_dir("../")
+                    .output()
+                    .expect("Failed to run make via bash")
+            } else {
+                // On other operating systems, run make normally
+                Command::new("make")
+                    .current_dir("../")
+                    .output()
+                    .expect("Failed to run make")
+            };
         }
 
         if executable_path.exists() {
