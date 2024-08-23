@@ -2,6 +2,9 @@ name: Build Kaleidoswap App
 
 on:
   push:
+    branches:
+      - dev
+      - ci_cd
     tags:
       - 'v*.*.*'
 
