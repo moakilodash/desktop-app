@@ -1,0 +1,43 @@
+name: Build Kaleidoswap App
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20.16.0'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+
+    - name: Install Tauri CLI
+      run: npm install --save-dev @tauri-apps/cli
+
+    - name: Build Tauri app
+      run: npm run tauri build
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: tauri-artifacts-${{ matrix.os }}
+        path: ./src-tauri/target/release/bundle/**
