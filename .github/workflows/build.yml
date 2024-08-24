@@ -51,10 +51,9 @@ jobs:
           exit 1
         fi
 
-    - name: Install MSVC Build Tools and OpenSSL on Windows
+    - name: Install OpenSSL on Windows
       if: matrix.os == 'windows-latest'
       run: |
-        choco install visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --includeOptional"
         choco install openssl
 
     - name: Set OpenSSL environment variables on Windows
@@ -69,6 +68,27 @@ jobs:
             Write-Error "Error: OpenSSL directory not found."
             exit 1
           }
+
+    - name: Install MSVC Build Tools on Windows
+      if: matrix.os == 'windows-latest'
+      run: |
+        choco install visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK.18362"
+        refreshenv
+
+    - name: Configure MSVC Environment
+      if: matrix.os == 'windows-latest'
+      run: |
+        "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+
+    - name: Check for MSVC installation
+      if: matrix.os == 'windows-latest'
+      run: |
+        where cl
+        where vcvars64.bat
+
+    - name: Debug PATH on Windows
+      if: matrix.os == 'windows-latest'
+      run: echo $env:PATH
 
     - name: Install dependencies
       run: pnpm install
