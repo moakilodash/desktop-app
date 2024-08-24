@@ -27,28 +27,16 @@ jobs:
     - name: Install pnpm
       run: npm install -g pnpm
 
-    - name: Remove manually installed Rust tools
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        rm -f /home/runner/.cargo/bin/rust-analyzer
-        rm -f /home/runner/.cargo/bin/rustfmt
-        rm -f /home/runner/.cargo/bin/cargo-fmt
-
     - name: Install system dependencies on Linux
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
         sudo apt-get install -y libgtk-3-dev libsoup2.4-dev libjavascriptcoregtk-4.0-dev libwebkit2gtk-4.0-dev
 
-    - name: Install MSYS2 on Windows
-      if: matrix.os == 'windows-latest'
-      run: choco install msys2
-
-    - name: Update MSYS2 and install make
-      if: matrix.os == 'windows-latest'
+    - name: Install system dependencies on macOS
+      if: matrix.os == 'macos-latest'
       run: |
-        & 'C:\tools\msys64\usr\bin\bash' -lc 'pacman -Syu --noconfirm'
-        & 'C:\tools\msys64\usr\bin\bash' -lc 'pacman -S --noconfirm make gcc'
+        brew install gtk+3 webkit2gtk
 
     - name: Install dependencies
       run: pnpm install
@@ -70,3 +58,4 @@ jobs:
       with:
         name: tauri-artifacts-${{ matrix.os }}
         path: ./src-tauri/target/release/bundle/**
+
