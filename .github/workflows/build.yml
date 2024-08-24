@@ -43,21 +43,6 @@ jobs:
       run: |
         choco install openssl
 
-    - name: "Debug: Show OpenSSL installation paths on Windows"
-      if: matrix.os == 'windows-latest'
-      run: |
-        echo "Checking for OpenSSL installation..."
-        if (Test-Path "C:\Program Files\OpenSSL\include") {
-          echo "OpenSSL is installed in 'C:\Program Files\OpenSSL'"
-          dir "C:\Program Files\OpenSSL\include"
-        } elseif (Test-Path "C:\OpenSSL-Win64\include") {
-          echo "OpenSSL is installed in 'C:\OpenSSL-Win64'"
-          dir "C:\OpenSSL-Win64\include"
-        } else {
-          echo "OpenSSL installation not found in default locations."
-          exit 1
-        }
-
     - name: Set OpenSSL environment variables on Windows
       if: matrix.os == 'windows-latest'
       run: |
@@ -102,4 +87,3 @@ jobs:
       with:
         name: tauri-artifacts-${{ matrix.os }}
         path: ./src-tauri/target/release/bundle/**
-
