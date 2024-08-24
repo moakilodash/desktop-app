@@ -38,6 +38,32 @@ jobs:
       run: |
         brew install openssl gtk+
 
+    - name: Install OpenSSL on Windows
+      if: matrix.os == 'windows-latest'
+      run: |
+        choco install openssl
+
+    - name: "Debug: Show OpenSSL installation paths on Windows"
+      if: matrix.os == 'windows-latest'
+      run: |
+        echo "OpenSSL is installed at: $(choco list --local-only openssl)"
+        echo "Listing OpenSSL include directory:"
+        dir C:\OpenSSL-Win64\include
+        echo "Listing OpenSSL library directory:"
+        dir C:\OpenSSL-Win64\lib
+
+    - name: Set OpenSSL environment variables on Windows
+      if: matrix.os == 'windows-latest'
+      run: |
+        if exist "C:\OpenSSL-Win64" (
+          echo "OPENSSL_DIR=C:\OpenSSL-Win64" >> $GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=C:\OpenSSL-Win64\include" >> $GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=C:\OpenSSL-Win64\lib" >> $GITHUB_ENV
+        ) else (
+          echo "Error: OpenSSL directory not found."
+          exit /b 1
+        )
+
     - name: Set OpenSSL environment variables on macOS
       if: matrix.os == 'macos-latest'
       run: |
@@ -66,3 +92,4 @@ jobs:
       with:
         name: tauri-artifacts-${{ matrix.os }}
         path: ./src-tauri/target/release/bundle/**
+
