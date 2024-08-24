@@ -45,6 +45,14 @@ jobs:
         echo "export OPENSSL_INCLUDE_DIR=$(brew --prefix openssl)/include" >> $GITHUB_ENV
         echo "export OPENSSL_LIB_DIR=$(brew --prefix openssl)/lib" >> $GITHUB_ENV
 
+    - name: Verify OpenSSL paths on macOS
+      if: matrix.os == 'macos-latest'
+      run: |
+        echo "OpenSSL include directory: $OPENSSL_INCLUDE_DIR"
+        echo "OpenSSL library directory: $OPENSSL_LIB_DIR"
+        ls -l $OPENSSL_INCLUDE_DIR
+        ls -l $OPENSSL_LIB_DIR
+
     - name: Install dependencies
       run: pnpm install
 
