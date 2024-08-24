@@ -36,7 +36,14 @@ jobs:
     - name: Install system dependencies on macOS
       if: matrix.os == 'macos-latest'
       run: |
-        brew install gtk+
+        brew install openssl gtk+
+
+    - name: Set OpenSSL environment variables on macOS
+      if: matrix.os == 'macos-latest'
+      run: |
+        echo "export OPENSSL_DIR=$(brew --prefix openssl)" >> $GITHUB_ENV
+        echo "export OPENSSL_INCLUDE_DIR=$(brew --prefix openssl)/include" >> $GITHUB_ENV
+        echo "export OPENSSL_LIB_DIR=$(brew --prefix openssl)/lib" >> $GITHUB_ENV
 
     - name: Install dependencies
       run: pnpm install
