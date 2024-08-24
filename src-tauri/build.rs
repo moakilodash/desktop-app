@@ -142,12 +142,39 @@ impl DependencyChecker {
     }
 
     fn check_openssl(&self) {
-        let openssl_include_dir = env::var("OPENSSL_INCLUDE_DIR")
-            .unwrap_or_else(|_| "/usr/include/openssl".to_string());
-        let include_dir = PathBuf::from(&openssl_include_dir);
+        let (openssl_include_dir, openssl_lib_dir) = if cfg!(target_os = "macos") {
+            // Default path on macOS when OpenSSL is installed via Homebrew
+            (
+                "/usr/local/opt/openssl/include".to_string(),
+                "/usr/local/opt/openssl/lib".to_string()
+            )
+        } else if cfg!(target_os = "linux") {
+            // Default path on Linux
+            (
+                "/usr/include/openssl".to_string(),
+                "/usr/lib".to_string() // Standard path for libraries on Linux
+            )
+        } else if cfg!(target_os = "windows") {
+            // Path on Windows, usually determined by the environment variable
+            let include_dir = env::var("OPENSSL_INCLUDE_DIR")
+                .unwrap_or_else(|_| "C:\\OpenSSL-Win64\\include".to_string());
+            let lib_dir = env::var("OPENSSL_LIB_DIR")
+                .unwrap_or_else(|_| "C:\\OpenSSL-Win64\\lib".to_string());
+            (include_dir, lib_dir)
+        } else {
+            panic!("Unsupported operating system");
+        };
     
-        if !include_dir.exists() {
-            panic!("OpenSSL include directory does not exist: {:?}", include_dir);
+        // Check if the include path exists
+        let include_path = PathBuf::from(&openssl_include_dir);
+        if !include_path.exists() {
+            panic!("OpenSSL include directory does not exist: {:?}", include_path);
+        }
+    
+        // Check if lib path exists
+        let lib_path = PathBuf::from(&openssl_lib_dir);
+        if !lib_path.exists() {
+            panic!("OpenSSL lib directory does not exist: {:?}", lib_path);
         }
     
         if cfg!(target_os = "windows") {
@@ -172,7 +199,7 @@ impl DependencyChecker {
                         sudo apt-get install -y libssl-dev");
             }
         }
-    }    
+    }
 
     fn check_compiler(&self) {
         if cfg!(target_os = "macos") {
