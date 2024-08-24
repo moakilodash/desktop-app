@@ -38,12 +38,27 @@ jobs:
       run: |
         brew install openssl gtk+
 
+    - name: Debug: Show OpenSSL installation paths on macOS
+      if: matrix.os == 'macos-latest'
+      run: |
+        echo "OpenSSL is installed at: $(brew --prefix openssl)"
+        echo "Listing OpenSSL include directory:"
+        ls -l $(brew --prefix openssl)/include
+        echo "Listing OpenSSL library directory:"
+        ls -l $(brew --prefix openssl)/lib
+
     - name: Set OpenSSL environment variables on macOS
       if: matrix.os == 'macos-latest'
       run: |
-        echo "export OPENSSL_DIR=$(brew --prefix openssl)" >> $GITHUB_ENV
-        echo "export OPENSSL_INCLUDE_DIR=$(brew --prefix openssl)/include" >> $GITHUB_ENV
-        echo "export OPENSSL_LIB_DIR=$(brew --prefix openssl)/lib" >> $GITHUB_ENV
+        OPENSSL_PREFIX=$(brew --prefix openssl)
+        if [ -d "$OPENSSL_PREFIX" ]; then
+          echo "OPENSSL_DIR=$OPENSSL_PREFIX" >> $GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=$OPENSSL_PREFIX/include" >> $GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=$OPENSSL_PREFIX/lib" >> $GITHUB_ENV
+        else
+          echo "Error: OpenSSL prefix not found."
+          exit 1
+        fi
 
     - name: Verify OpenSSL paths on macOS
       if: matrix.os == 'macos-latest'
