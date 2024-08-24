@@ -155,11 +155,11 @@ impl DependencyChecker {
                 "/usr/lib".to_string() // Standard path for libraries on Linux
             )
         } else if cfg!(target_os = "windows") {
-            // Path on Windows, usually determined by the environment variable
+            // Path on Windows, based on the default installation by Chocolatey
             let include_dir = env::var("OPENSSL_INCLUDE_DIR")
-                .unwrap_or_else(|_| "C:\\OpenSSL-Win64\\include".to_string());
+                .unwrap_or_else(|_| "C:\\Program Files\\OpenSSL\\include".to_string());
             let lib_dir = env::var("OPENSSL_LIB_DIR")
-                .unwrap_or_else(|_| "C:\\OpenSSL-Win64\\lib".to_string());
+                .unwrap_or_else(|_| "C:\\Program Files\\OpenSSL\\lib".to_string());
             (include_dir, lib_dir)
         } else {
             panic!("Unsupported operating system");
@@ -177,6 +177,7 @@ impl DependencyChecker {
             panic!("OpenSSL lib directory does not exist: {:?}", lib_path);
         }
     
+        // Additional checks for Windows
         if cfg!(target_os = "windows") {
             if !self.command_exists("vcpkg") {
                 panic!("vcpkg is not installed. Please install vcpkg and OpenSSL via vcpkg:\n\
@@ -199,7 +200,7 @@ impl DependencyChecker {
                         sudo apt-get install -y libssl-dev");
             }
         }
-    }
+    }    
 
     fn check_compiler(&self) {
         if cfg!(target_os = "macos") {
