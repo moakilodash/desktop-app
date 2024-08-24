@@ -145,8 +145,8 @@ impl DependencyChecker {
         let (openssl_include_dir, openssl_lib_dir) = if cfg!(target_os = "macos") {
             // Default path on macOS when OpenSSL is installed via Homebrew
             (
-                "/usr/local/opt/openssl/include".to_string(),
-                "/usr/local/opt/openssl/lib".to_string()
+                "/opt/homebrew/opt/openssl@3/include".to_string(),
+                "/opt/homebrew/opt/openssl@3/lib".to_string()
             )
         } else if cfg!(target_os = "linux") {
             // Default path on Linux
