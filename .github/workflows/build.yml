@@ -36,7 +36,7 @@ jobs:
     - name: Install system dependencies on macOS
       if: matrix.os == 'macos-latest'
       run: |
-        brew install gtk+ webkitgtk
+        brew install gtk+
 
     - name: Install dependencies
       run: pnpm install
