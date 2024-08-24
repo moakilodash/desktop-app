@@ -38,7 +38,7 @@ jobs:
       run: |
         brew install openssl gtk+
 
-    - name: Debug: Show OpenSSL installation paths on macOS
+    - name: "Debug: Show OpenSSL installation paths on macOS"
       if: matrix.os == 'macos-latest'
       run: |
         echo "OpenSSL is installed at: $(brew --prefix openssl)"
