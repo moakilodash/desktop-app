@@ -60,15 +60,15 @@ jobs:
     - name: Set OpenSSL environment variables on Windows
       if: matrix.os == 'windows-latest'
       run: |
-        OPENSSL_PREFIX="C:\\Program Files\\OpenSSL"
-        if [ -d "$OPENSSL_PREFIX" ]; then
-          echo "OPENSSL_DIR=$OPENSSL_PREFIX" >> $GITHUB_ENV
-          echo "OPENSSL_INCLUDE_DIR=$OPENSSL_PREFIX\\include" >> $GITHUB_ENV
-          echo "OPENSSL_LIB_DIR=$OPENSSL_PREFIX\\lib" >> $GITHUB_ENV
-        else
-          echo "Error: OpenSSL prefix not found."
-          exit 1
-        fi
+        $OPENSSL_PREFIX="C:\Program Files\OpenSSL"
+          if (Test-Path $OPENSSL_PREFIX) {
+            echo "OPENSSL_DIR=$OPENSSL_PREFIX" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+            echo "OPENSSL_INCLUDE_DIR=$OPENSSL_PREFIX\include" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+            echo "OPENSSL_LIB_DIR=$OPENSSL_PREFIX\lib" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+          } else {
+            Write-Error "Error: OpenSSL directory not found."
+            exit 1
+          }
 
     - name: Install dependencies
       run: pnpm install
