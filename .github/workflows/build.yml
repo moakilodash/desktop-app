@@ -73,7 +73,6 @@ jobs:
       if: matrix.os == 'windows-latest'
       run: |
         choco install visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK.18362"
-        refreshenv
 
     - name: Configure MSVC Environment
       if: matrix.os == 'windows-latest'
