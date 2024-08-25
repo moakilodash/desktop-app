@@ -13,21 +13,13 @@ jobs:
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        runner: [linux-runner, macos-runner, windows-runner]
-      exclude:
-        - os: ubuntu-latest
-          runner: macos-runner
-        - os: ubuntu-latest
-          runner: windows-runner
-        - os: macos-latest
-          runner: linux-runner
-        - os: macos-latest
-          runner: windows-runner
-        - os: windows-latest
-          runner: linux-runner
-        - os: windows-latest
-          runner: macos-runner
+        include:
+          - os: ubuntu-latest
+            runner: linux-runner
+          - os: macos-latest
+            runner: macos-runner
+          - os: windows-latest
+            runner: windows-runner
 
     steps:
     - name: Check out code
@@ -102,4 +94,3 @@ jobs:
       with:
         name: tauri-artifacts-${{ matrix.os }}
         path: ./src-tauri/target/release/bundle/**
-
