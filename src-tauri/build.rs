@@ -21,7 +21,25 @@ fn main() {
     // Manage the build process for rgb-lightning-node
     if build_rgb_lightning_node {
         let build_manager = BuildManager::new();
-        build_manager.build_rgb_lightning_node();
+
+        // Determine the path of the binary
+        let project_root = build_manager.project_builder.find_project_root();
+        let bin_dir = project_root.join("bin");
+        let executable_path = bin_dir.join("rgb-lightning-node");
+
+        // Recursively add directives to monitor source files
+        let src_dir = project_root.join("src-tauri").join("rgb-lightning-node");
+        visit_dirs(&src_dir, &|path: &Path| {
+            if path.is_file() && path.extension().unwrap_or_default() != "toml" {
+                println!("cargo:rerun-if-changed={}", path.display());
+            }
+        });
+
+        // Rebuild only if the binary does not exist or if the sources have changed
+        if !executable_path.exists() {
+            build_manager.build_rgb_lightning_node();
+        }
+
         config.add_resource("../bin/rgb-lightning-node");
     } else {
         config.remove_resource("../bin/rgb-lightning-node");
@@ -32,6 +50,21 @@ fn main() {
 
     // Trigger the Tauri build
     tauri_build::build();
+}
+
+// Recursively visits directories and applies the given function to each file
+fn visit_dirs(dir: &Path, cb: &dyn Fn(&Path)) {
+    if dir.is_dir() {
+        for entry in fs::read_dir(dir).expect("read_dir failed") {
+            let entry = entry.expect("read_dir entry failed");
+            let path = entry.path();
+            if path.is_dir() {
+                visit_dirs(&path, cb);
+            } else {
+                cb(&path);
+            }
+        }
+    }
 }
 
 // Responsible for handling the Tauri configuration
@@ -61,10 +94,13 @@ impl TauriConfig {
     }
 
     fn save(&self, path: &Path) {
-        fs::write(
-            path,
-            serde_json::to_string_pretty(&self.config).expect("Failed to serialize tauri.conf.json"),
-        ).expect("Failed to write tauri.conf.json");
+        let current_config_str = fs::read_to_string(path).unwrap_or_default();
+        let new_config_str = serde_json::to_string_pretty(&self.config)
+            .expect("Failed to serialize tauri.conf.json");
+
+        if current_config_str != new_config_str {
+            fs::write(path, new_config_str).expect("Failed to write tauri.conf.json");
+        }
     }
 }
 
