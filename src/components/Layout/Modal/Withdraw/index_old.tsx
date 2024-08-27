@@ -1,6 +1,6 @@
+import Decimal from 'decimal.js'
 import { useEffect, useState } from 'react'
-import { useForm, SubmitHandler, Controller } from 'react-hook-form'
-import { toast } from 'react-toastify'
+import { Controller, SubmitHandler, useForm } from 'react-hook-form'
 import { twJoin } from 'tailwind-merge'
 
 import { useAppDispatch } from '../../../../app/store/hooks'
@@ -9,35 +9,31 @@ import { nodeApi } from '../../../../slices/nodeApi/nodeApi.slice'
 import { uiSliceActions } from '../../../../slices/ui/ui.slice'
 import { Select } from '../../../Select'
 
-
 interface Fields {
   address: string
   amount: number
-  asset_id: string
+  assetId: string
   network: 'on-chain' | 'lightning'
 }
 
 export const WithdrawModalContent = () => {
-  const [assetBalance, setAssetBalance] = useState(0)
-
   const dispatch = useAppDispatch()
+  const [assetBalance, setAssetBalance] = useState(0)
 
   const [sendBtc] = nodeApi.useLazySendBtcQuery()
   const [sendAsset] = nodeApi.useLazySendAssetQuery()
-  const [sendPayment] = nodeApi.useLazySendPaymentQuery()
-
-  const assets = nodeApi.endpoints.listAssets.useQuery()
 
   const form = useForm<Fields>({
     defaultValues: {
       address: '',
       amount: 0,
-      asset_id: BTC_ASSET_ID,
+      assetId: BTC_ASSET_ID,
       network: 'on-chain',
     },
   })
 
-  const assetId = form.watch('asset_id')
+  const assets = nodeApi.endpoints.listAssets.useQuery()
+  const assetId = form.watch('assetId')
   const network = form.watch('network')
 
   const availableAssets = [
@@ -46,47 +42,15 @@ export const WithdrawModalContent = () => {
       label: asset.ticker,
       value: asset.asset_id,
     })) ?? []),
-  ]
+  ].filter((asset) =>
+    network === 'lightning' ? asset.value !== BTC_ASSET_ID : true
+  )
 
-  const onSubmit: SubmitHandler<Fields> = async (data) => {
-    if (data.network === 'on-chain' && data.asset_id === BTC_ASSET_ID) {
-      sendBtc({
-        address: data.address,
-        amount: Number(data.amount),
-      }).then((res: any) => {
-        if (res.error) {
-          toast.error(res.error.data.error)
-        } else {
-          toast.success('Withdrawal successful')
-          dispatch(uiSliceActions.setModal({ type: 'none' }))
-        }
-      })
-    } else if (data.network === 'on-chain' && data.asset_id !== BTC_ASSET_ID) {
-      sendAsset({
-        amount: Number(data.amount),
-        asset_id: data.asset_id,
-        recipient_id: data.address,
-      }).then((res: any) => {
-        if (res.error) {
-          toast.error(res.error.data.error)
-        } else {
-          toast.success('Withdrawal successful')
-          dispatch(uiSliceActions.setModal({ type: 'none' }))
-        }
-      })
-    } else if (data.network === 'lightning') {
-      sendPayment({
-        invoice: data.address,
-      }).then((res: any) => {
-        if (res.error) {
-          toast.error(res.error.data.error)
-        } else {
-          toast.success('Withdrawal successful')
-          dispatch(uiSliceActions.setModal({ type: 'none' }))
-        }
-      })
+  useEffect(() => {
+    if (network === 'lightning') {
+      form.setValue('assetId', availableAssets[0].value)
     }
-  }
+  }, [availableAssets, form, network])
 
   useEffect(() => {
     if (assetId === BTC_ASSET_ID) {
@@ -103,6 +67,29 @@ export const WithdrawModalContent = () => {
         })
     }
   }, [assetId, dispatch])
+
+  const onSubmit: SubmitHandler<Fields> = async (data) => {
+    const res =
+      network === 'on-chain'
+        ? await sendBtc({
+            address: data.address,
+            amount: new Decimal(data.amount)
+              .mul(100_000_000)
+              .trunc()
+              .toNumber(),
+          })
+        : await sendAsset({
+            amount: Number(data.amount),
+            asset_id: data.assetId,
+            blinded_utxo: data.address,
+          })
+
+    if (res.isSuccess) {
+      dispatch(uiSliceActions.setModal({ type: 'none' }))
+    } else {
+      form.setError('root', { message: 'Test' })
+    }
+  }
 
   return (
     <form
@@ -125,42 +112,47 @@ export const WithdrawModalContent = () => {
                 <div className="text-xs mb-3">Withdrawal Method</div>
 
                 <div className="flex items-center space-x-6">
-                  <div
-                    className="flex items-center space-x-2 cursor-pointer"
-                    onClick={() => {
-                      form.setValue('asset_id', BTC_ASSET_ID)
-                      field.onChange('on-chain')
-                    }}
-                  >
+                  {assetId === BTC_ASSET_ID ? (
                     <div
-                      className={twJoin(
-                        'flex-auto w-4 h-4 rounded border-2 border-grey-lighter',
-                        field.value === 'on-chain' ? 'bg-grey-lighter' : null
-                      )}
-                    />
+                      className="flex items-center space-x-2 cursor-pointer"
+                      onClick={() => field.onChange('on-chain')}
+                    >
+                      <div
+                        className={twJoin(
+                          'flex-auto w-4 h-4 rounded border-2 border-grey-lighter',
+                          field.value === 'on-chain' ? 'bg-grey-lighter' : null
+                        )}
+                      />
 
-                    <div className="text-grey-lighter">On-chain</div>
-                  </div>
+                      <div className="text-grey-lighter">On-chain</div>
+                    </div>
+                  ) : (
+                    <></>
+                  )}
 
-                  <div
-                    className="flex items-center space-x-2 cursor-pointer"
-                    onClick={() => field.onChange('lightning')}
-                  >
+                  {assetId !== BTC_ASSET_ID ? (
                     <div
-                      className={twJoin(
-                        'flex-auto w-4 h-4 rounded border-2 border-grey-lighter',
-                        field.value === 'lightning' ? 'bg-grey-lighter' : null
-                      )}
-                    />
+                      className="flex items-center space-x-2 cursor-pointer"
+                      onClick={() => field.onChange('lightning')}
+                    >
+                      <div
+                        className={twJoin(
+                          'flex-auto w-4 h-4 rounded border-2 border-grey-lighter',
+                          field.value === 'lightning' ? 'bg-grey-lighter' : null
+                        )}
+                      />
 
-                    <div className="text-grey-lighter">Lightning Network</div>
-                  </div>
+                      <div className="text-grey-lighter">Lightning Network</div>
+                    </div>
+                  ) : (
+                    <></>
+                  )}
                 </div>
               </div>
             )}
           />
 
-          {network === 'on-chain' && assetId === BTC_ASSET_ID && (
+          {network === 'on-chain' ? (
             <div className="mb-6">
               <div className="flex justify-between items-center font-light mb-3 text-xs">
                 <div>Amount</div>
@@ -202,7 +194,7 @@ export const WithdrawModalContent = () => {
 
                 <Controller
                   control={form.control}
-                  name="asset_id"
+                  name="assetId"
                   render={({ field }) => (
                     <Select
                       active={field.value}
@@ -213,15 +205,11 @@ export const WithdrawModalContent = () => {
                 />
               </div>
             </div>
-          )}
+          ) : null}
 
           <div>
             <div className="flex justify-between items-center font-light mb-3 text-xs">
-              {network === 'on-chain' && assetId === BTC_ASSET_ID ? (
-                <div>Withdrawal Address</div>
-              ) : (
-                <div>Invoice</div>
-              )}
+              <div>Withdrawal Address</div>
             </div>
 
             <Controller
@@ -230,11 +218,7 @@ export const WithdrawModalContent = () => {
               render={({ field }) => (
                 <input
                   className="rounded bg-blue-dark px-4 py-3 w-full outline-none"
-                  placeholder={
-                    network === 'on-chain'
-                      ? 'Paste Withdrawal Address Here'
-                      : 'Paste Invoice Here'
-                  }
+                  placeholder="Paste Withdrawal Address Here"
                   type="text"
                   {...field}
                 />
@@ -253,7 +237,7 @@ export const WithdrawModalContent = () => {
         </button>
       </div>
 
-      {form.formState.isSubmitted && !form.formState.isSubmitSuccessful && (
+      {!form.formState.isSubmitSuccessful && form.formState.isSubmitted ? (
         <>
           <div className="flex justify-end text-red mt-4" key={0}>
             There was an error submitting the form.
@@ -267,7 +251,7 @@ export const WithdrawModalContent = () => {
               </div>
             ))}
         </>
-      )}
+      ) : null}
     </form>
   )
 }

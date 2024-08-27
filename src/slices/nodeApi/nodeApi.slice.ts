@@ -187,7 +187,7 @@ interface SendBTCResponse {
 interface SendAssetRequest {
   asset_id: string
   amount: number
-  blinded_utxo: string
+  recipient_id: string
 }
 
 interface SendAssetResponse {
@@ -429,9 +429,9 @@ export const nodeApi = createApi({
         body: {
           amount: body.amount,
           asset_id: body.asset_id,
-          blinded_utxo: body.blinded_utxo,
           donation: false,
           min_confirmations: 1,
+          recipient_id: body.recipient_id,
           transport_endpoints: ['rpc://localhost:3000/json-rpc'],
         },
         method: 'POST',

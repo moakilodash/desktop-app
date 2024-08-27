@@ -54,7 +54,7 @@ export const Step2 = (props: Props) => {
         setAddress(res.data?.address)
       })
     } else if (network === 'on-chain' && assetId && assetId !== BTC_ASSET_ID) {
-      rgbInvoice({ asset_id: assetId }).then((res) => {
+      rgbInvoice({ asset_id: assetId }).then((res: any) => {
         if (res.error) {
           toast.error(res.error.data?.error)
         } else {
@@ -65,7 +65,7 @@ export const Step2 = (props: Props) => {
       lnInvoice({
         asset_amount: Number(amount),
         asset_id: assetId,
-      }).then((res) => {
+      }).then((res: any) => {
         if (res.error) {
           toast.error(res.error.data?.error)
         } else {
