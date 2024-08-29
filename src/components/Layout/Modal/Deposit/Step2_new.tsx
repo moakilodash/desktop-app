@@ -9,7 +9,7 @@ import { CopyIcon } from '../../../../icons/Copy'
 import { nodeApi } from '../../../../slices/nodeApi/nodeApi.slice'
 
 interface Props {
-  assetId?: string
+  assetId: string
   onBack: VoidFunction
   onNext: VoidFunction
 }
@@ -17,7 +17,6 @@ interface Props {
 interface Fields {
   amount?: number
   network: 'on-chain' | 'lightning'
-  assetId?: string
 }
 
 export const Step2 = (props: Props) => {
@@ -31,13 +30,11 @@ export const Step2 = (props: Props) => {
   const form = useForm<Fields>({
     defaultValues: {
       amount: 0,
-      assetId: props.assetId,
       network: 'on-chain',
     },
   })
   const amount = form.watch('amount')
   const network = form.watch('network')
-  const assetId = form.watch('assetId')
 
   const onSubmit: SubmitHandler<Fields> = (data) => {
     console.log('data', data)
@@ -48,23 +45,36 @@ export const Step2 = (props: Props) => {
   }, [assets])
 
   useEffect(() => {
-    if (network === 'on-chain' && assetId && assetId === BTC_ASSET_ID) {
+    if (
+      network === 'on-chain' &&
+      props.assetId &&
+      props.assetId === BTC_ASSET_ID
+    ) {
       form.setValue('amount', 0)
       addressQuery().then((res) => {
         setAddress(res.data?.address)
       })
-    } else if (network === 'on-chain' && assetId && assetId !== BTC_ASSET_ID) {
-      rgbInvoice({ asset_id: assetId }).then((res: any) => {
+    } else if (
+      network === 'on-chain' &&
+      props.assetId &&
+      props.assetId !== BTC_ASSET_ID
+    ) {
+      rgbInvoice({ asset_id: props.assetId }).then((res: any) => {
         if (res.error) {
           toast.error(res.error.data?.error)
         } else {
           setAddress(res.data?.invoice)
         }
       })
-    } else if (network === 'lightning' && assetId && amount && amount > 0) {
+    } else if (
+      network === 'lightning' &&
+      props.assetId &&
+      amount &&
+      amount > 0
+    ) {
       lnInvoice({
         asset_amount: Number(amount),
-        asset_id: assetId,
+        asset_id: props.assetId,
       }).then((res: any) => {
         if (res.error) {
           toast.error(res.error.data?.error)
@@ -75,7 +85,15 @@ export const Step2 = (props: Props) => {
     } else {
       setAddress('')
     }
-  }, [amount, form, network, assetId, addressQuery, rgbInvoice, lnInvoice])
+  }, [
+    amount,
+    form,
+    network,
+    props.assetId,
+    addressQuery,
+    rgbInvoice,
+    lnInvoice,
+  ])
 
   return (
     <form
@@ -132,28 +150,6 @@ export const Step2 = (props: Props) => {
               </div>
             )}
           />
-
-          {!assetId && (
-            <div className="mb-12">
-              <div className="flex justify-between items-center font-light mb-3">
-                <div className="text-xs">Asset ID</div>
-              </div>
-
-              <div className="flex items-stretch">
-                <Controller
-                  control={form.control}
-                  name="assetId"
-                  render={({ field }) => (
-                    <input
-                      className="flex-1 rounded-l bg-blue-dark px-4 py-3 w-full outline-none"
-                      type="text"
-                      {...field}
-                    />
-                  )}
-                />
-              </div>
-            </div>
-          )}
 
           {network === 'lightning' ? (
             <div className="mb-12">

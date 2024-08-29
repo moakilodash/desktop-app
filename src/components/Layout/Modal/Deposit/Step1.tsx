@@ -16,9 +16,19 @@ interface Props {
 export const Step1 = (props: Props) => {
   const modal = useAppSelector(uiSliceSeletors.modal) as DepositModal
   const [assetId, setAssetId] = useState<string>(modal.assetId ?? BTC_ASSET_ID)
+  const [isNewAsset, setIsNewAsset] = useState<boolean>(false)
   const [error] = useState<string>()
 
   const assets = nodeApi.useListAssetsQuery()
+
+  const handleSelect = (assetId: string) => {
+    if (assetId === '') {
+      setIsNewAsset(true)
+    } else {
+      setIsNewAsset(false)
+      setAssetId(assetId)
+    }
+  }
 
   const handleSubmit = useCallback(() => {
     props.onNext(assetId)
@@ -38,10 +48,10 @@ export const Step1 = (props: Props) => {
           <p>Choose the asset.</p>
         </div>
 
-        <div className="flex justify-center">
+        <div className="flex flex-col justify-center items-center">
           <Select
             active={assetId}
-            onSelect={setAssetId}
+            onSelect={handleSelect}
             options={[
               { label: ASSET_ID_TO_TICKER[BTC_ASSET_ID], value: BTC_ASSET_ID },
               ...(assets.data?.nia.map((asset) => ({
@@ -52,6 +62,14 @@ export const Step1 = (props: Props) => {
             ]}
             theme="light"
           />
+          {isNewAsset && (
+            <input
+              className="flex-1 rounded-l bg-section-lighter px-4 py-3 mt-4 w-full outline-none"
+              onChange={(e) => setAssetId(e.target.value)}
+              placeholder="asset id"
+              type="text"
+            />
+          )}
         </div>
       </div>
 
