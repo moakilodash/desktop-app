@@ -19,6 +19,7 @@ interface Fields {
 
 export const WithdrawModalContent = () => {
   const [assetBalance, setAssetBalance] = useState(0)
+  const [customFee, setCustomFee] = useState(1.0)
 
   const dispatch = useAppDispatch()
 
@@ -40,6 +41,7 @@ export const WithdrawModalContent = () => {
 
   const assetId = form.watch('asset_id')
   const network = form.watch('network')
+  const feeRate = form.watch('fee_rate')
 
   const availableAssets = [
     { label: ASSET_ID_TO_TICKER[BTC_ASSET_ID], value: BTC_ASSET_ID },
@@ -53,6 +55,7 @@ export const WithdrawModalContent = () => {
     { label: 'Slow', value: '1.0' },
     { label: 'Normal', value: '2.0' },
     { label: 'Fast', value: '3.0' },
+    { label: 'Custom', value: 'custom' },
   ]
 
   const onSubmit: SubmitHandler<Fields> = async (data) => {
@@ -60,7 +63,8 @@ export const WithdrawModalContent = () => {
       sendBtc({
         address: data.address,
         amount: Number(data.amount),
-        fee_rate: parseFloat(data.fee_rate),
+        fee_rate:
+          data.fee_rate !== 'custom' ? parseFloat(data.fee_rate) : customFee,
       }).then((res: any) => {
         if (res.error) {
           toast.error(res.error.data.error)
@@ -241,6 +245,15 @@ export const WithdrawModalContent = () => {
                       />
                     )}
                   />
+                  {feeRate === 'custom' && (
+                    <input
+                      className="flex-1 rounded-l bg-blue-dark px-4 py-3 w-full outline-none"
+                      defaultValue={customFee}
+                      onChange={(e) => setCustomFee(parseFloat(e.target.value))}
+                      step={0.1}
+                      type="number"
+                    />
+                  )}
                 </div>
               </div>
             </>
