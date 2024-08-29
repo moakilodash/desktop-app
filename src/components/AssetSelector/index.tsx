@@ -30,7 +30,7 @@ const AssetOption: React.FC<AssetOptionProps> = ({
 }) => {
   const [copied, setCopied] = useState(false)
 
-  const copyToClipboard = (e) => {
+  const copyToClipboard = (e: any) => {
     e.stopPropagation()
     navigator.clipboard.writeText(assetId).then(() => {
       setCopied(true)
@@ -44,11 +44,6 @@ const AssetOption: React.FC<AssetOptionProps> = ({
       onClick={() => onSelect(assetId)}
     >
       <div className="flex items-center">
-        {/* <img 
-            src={assetIcons[assetInfo.ticker] || '/icons/default.svg'} 
-            alt={assetInfo.ticker}
-            className="w-6 h-6 mr-2"
-          /> */}
         <div>
           <div className="font-medium">{`${assetInfo.name} (${assetInfo.ticker})`}</div>
           <div className="text-sm text-gray-400 break-all">{assetId}</div>
@@ -91,11 +86,6 @@ export const AssetSelector: React.FC<AssetSelectorProps> = ({
             >
               {field.value && selectedAsset ? (
                 <div className="flex items-center">
-                  {/* <img 
-                      src={assetIcons[selectedAsset.ticker] || '/icons/default.svg'} 
-                      alt={selectedAsset.ticker}
-                      className="w-6 h-6 mr-2"
-                    /> */}
                   <span>{`${selectedAsset.name} (${selectedAsset.ticker})`}</span>
                 </div>
               ) : (

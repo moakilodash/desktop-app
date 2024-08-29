@@ -2,12 +2,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { TRADE_PATH } from '../../app/router/paths'
 
-interface Step3Props {
-  paymentStatus: string | null
-}
-
-// eslint-disable-next-line react/prop-types
-export const Step3: React.FC<Step3Props> = ({ paymentStatus }) => {
+export const Step3 = ({ paymentStatus }: { paymentStatus: string }) => {
   const navigate = useNavigate()
 
   return (

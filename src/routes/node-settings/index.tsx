@@ -15,8 +15,8 @@ import {
 
 interface FormFields {
   network?: 'regtest' | 'testnet' | 'signet' | 'mainnet'
-  datapath?: String
-  rpc_connection_url?: String
+  datapath?: string
+  rpc_connection_url?: string
 }
 
 export const Component = () => {
@@ -42,8 +42,8 @@ export const Component = () => {
     dispatch(readSettings())
       .unwrap()
       .then((settings: NodeSettings) => reset(settings))
-      .catch((err: String) => toast.error(err))
-  }, [])
+      .catch((err: string) => toast.error(err))
+  }, [dispatch, reset])
 
   const handleSave: SubmitHandler<FormFields> = async (data) => {
     dispatch(
@@ -57,7 +57,7 @@ export const Component = () => {
         setShowModal(true)
         toast.success('Settings saved')
       })
-      .catch((err: String) => toast.error(err))
+      .catch((err: string) => toast.error(err))
   }
 
   const handleUndo = () => {

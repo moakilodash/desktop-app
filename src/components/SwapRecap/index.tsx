@@ -1,6 +1,8 @@
 import { X } from 'lucide-react'
 import React from 'react'
 
+import { AssetOption } from '../../components/Trade'
+
 export interface SwapDetails {
   fromAmount: string
   fromAsset: string
@@ -38,15 +40,17 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
         <div className="space-y-4 mb-6">
           <div className="flex justify-between items-center">
             <span className="text-gray-400">You sent:</span>
-            <span className="font-bold">
-              {fromAmount} {fromAsset}
-            </span>
+            <div className="flex items-center font-bold">
+              <span className="mr-2">{fromAmount}</span>
+              <AssetOption label={fromAsset} value={fromAsset} />
+            </div>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-400">You received:</span>
-            <span className="font-bold">
-              {toAmount} {toAsset}
-            </span>
+            <div className="flex items-center font-bold">
+              <span className="mr-2">{toAmount}</span>
+              <AssetOption label={toAsset} value={toAsset} />
+            </div>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-400">Exchange rate:</span>

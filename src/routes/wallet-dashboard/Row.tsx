@@ -27,7 +27,7 @@ export const Row = (props: Props) => {
   const refreshBalance = useCallback(async () => {
     if (props.assetId === BTC_ASSET_ID) {
       const balance = await btcBalance()
-      setOnChainBalance(balance.data?.vanilla.settled ?? '0')
+      setOnChainBalance((balance.data?.vanilla.settled ?? '0').toString())
 
       const channels = await listChannels()
       setOffChainBalance(
@@ -57,9 +57,9 @@ export const Row = (props: Props) => {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).catch((err) => {
-      console.error('Failed to copy: ', err);
-    });
-  };
+      console.error('Failed to copy: ', err)
+    })
+  }
 
   useEffect(() => {
     refreshBalance()
@@ -67,14 +67,14 @@ export const Row = (props: Props) => {
 
   return (
     <div className="grid grid-cols-4 gap-2 even:bg-blue-dark rounded items-center">
-      <div 
-        className="py-3 px-4 text-sm truncate cursor-pointer" 
+      <div
+        className="py-3 px-4 text-sm truncate cursor-pointer"
         onClick={() => copyToClipboard(props.assetTicker)}
       >
         <div className="font-bold">{props.assetTicker}</div>
         <div>{props.assetName}</div>
       </div>
-      
+
       <div className="text-sm py-3 px-4">
         <div className="font-bold">{offChainBalance}</div>
       </div>

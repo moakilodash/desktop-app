@@ -1,13 +1,9 @@
-import React from 'react'
-
-interface LiquidityBarProps {
-  localAmount: number
-  remoteAmount: number
-}
-
-export const LiquidityBar: React.FC<LiquidityBarProps> = ({
+export const LiquidityBar = ({
   localAmount,
   remoteAmount,
+}: {
+  localAmount: number
+  remoteAmount: number
 }) => {
   const totalAmount = localAmount + remoteAmount
   const localAmountPercentage = (localAmount / totalAmount) * 100
@@ -21,8 +17,12 @@ export const LiquidityBar: React.FC<LiquidityBarProps> = ({
         title={`Local: ${localAmount.toFixed(2)} (${localAmountPercentage.toFixed(0)}%)`}
       />
       <div
-        className="h-full bg-cyan transition-all duration-300 ease-in-out absolute right-0"
-        style={{ width: `${remoteAmountPercentage}%` }}
+        className="h-full bg-cyan transition-all duration-300 ease-in-out"
+        style={{
+          position: 'absolute',
+          right: '0',
+          width: `${remoteAmountPercentage}%`,
+        }}
         title={`Remote: ${remoteAmount.toFixed(2)} (${remoteAmountPercentage.toFixed(0)}%)`}
       />
     </div>

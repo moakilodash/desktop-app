@@ -72,9 +72,11 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
     getInfoRequest().then((response) => {
       if (response.data?.assets) {
         const tmpMap: Record<string, AssetInfo> = {}
-        response.data.assets.forEach((asset) => {
-          tmpMap[asset.asset_id] = asset
-        })
+        if (Array.isArray(response.data.assets)) {
+          response.data.assets.forEach((asset: AssetInfo) => {
+            tmpMap[asset.asset_id] = asset
+          })
+        }
         setAssetMap(tmpMap)
       } else if (response.error) {
         toast.error(

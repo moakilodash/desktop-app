@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
-import { toast, ToastContainer } from 'react-toastify'
+import { toast } from 'react-toastify'
 
 import { TRADE_PATH, WALLET_SETUP_PATH } from '../../app/router/paths'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'

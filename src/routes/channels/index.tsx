@@ -21,14 +21,27 @@ const Card: React.FC<CardProps> = ({ children, className = '' }) => (
   </div>
 )
 
-export const Component = () => {
+interface Asset {
+  precision: number
+  ticker: string
+}
+
+interface Channel {
+  channel_id: string
+  peer_pubkey: string
+  asset_id: string
+  outbound_balance_msat: number
+  inbound_balance_msat: number
+}
+
+export const Component: React.FC = () => {
   const [listChannels, listChannelsResponse] =
     nodeApi.endpoints.listChannels.useLazyQuery()
   const [listAssets, listAssetsResponse] =
     nodeApi.endpoints.listAssets.useLazyQuery()
   const [closeChannel] = nodeApi.endpoints.closeChannel.useLazyQuery()
 
-  const [assets, setAssets] = useState({})
+  const [assets, setAssets] = useState<Record<string, Asset>>({})
 
   const refreshData = useCallback(() => {
     listChannels()
@@ -41,18 +54,21 @@ export const Component = () => {
 
   useEffect(() => {
     if (listAssetsResponse.data) {
-      const assetsMap = listAssetsResponse.data.nia.reduce((acc, asset) => {
-        acc[asset.asset_id] = {
-          precision: asset.precision,
-          ticker: asset.ticker,
-        }
-        return acc
-      }, {})
+      const assetsMap = listAssetsResponse.data.nia.reduce(
+        (acc: Record<string, Asset>, asset: any) => {
+          acc[asset.asset_id] = {
+            precision: asset.precision,
+            ticker: asset.ticker,
+          }
+          return acc
+        },
+        {}
+      )
       setAssets(assetsMap)
     }
   }, [listAssetsResponse.data])
 
-  const channels = listChannelsResponse?.data?.channels ?? []
+  const channels: Channel[] = listChannelsResponse?.data?.channels ?? []
   const totalBalance = channels.reduce(
     (sum, channel) => sum + Math.floor(channel.outbound_balance_msat / 1000),
     0
@@ -66,7 +82,7 @@ export const Component = () => {
     0
   )
 
-  const handleCloseChannel = async (channelId, peerPubkey) => {
+  const handleCloseChannel = async (channelId: string, peerPubkey: string) => {
     await closeChannel({
       channel_id: channelId,
       peer_pubkey: peerPubkey,
@@ -125,9 +141,7 @@ export const Component = () => {
         {channels.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {channels.map((channel) => {
-              const asset = assetsResponse.data?.nia.find(
-                (a) => a.asset_id === channel.asset_id
-              )
+              const asset = assets[channel.asset_id]
               return (
                 <ChannelCard
                   asset={asset}

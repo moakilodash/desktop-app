@@ -1,4 +1,3 @@
-import Decimal from 'decimal.js'
 import {
   RefreshCw,
   Zap,
@@ -16,7 +15,7 @@ import {
 import { useAppDispatch } from '../../app/store/hooks'
 import { ChannelCard } from '../../components/ChannelCard'
 import { numberFormatter } from '../../helpers/number'
-import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
+import { nodeApi, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
 import { uiSliceActions } from '../../slices/ui/ui.slice'
 import './index.css'
 
@@ -127,9 +126,10 @@ export const Component = () => {
   const [assetBalance] = nodeApi.endpoints.assetBalance.useLazyQuery()
   const [closeChannel] = nodeApi.endpoints.closeChannel.useLazyQuery()
   const navigate = useNavigate()
-  const [assetBalances, setAssetBalances] = useState({})
-  const [isLoading, setIsLoading] = useState(true)
-  const [assetsMap, setAssetsMap] = useState({})
+  const [assetBalances, setAssetBalances] = useState<
+    Record<string, { offChain: number; onChain: number }>
+  >({})
+  const [assetsMap, setAssetsMap] = useState<Record<string, NiaAsset>>({})
 
   const refreshData = useCallback(() => {
     assets()
@@ -139,10 +139,10 @@ export const Component = () => {
 
   useEffect(() => {
     if (assetsResponse.data?.nia) {
-      const newAssetsMap = assetsResponse.data.nia.reduce((acc, asset) => {
-        acc[asset.asset_id] = asset
-        return acc
-      }, {})
+      const newAssetsMap: Record<string, NiaAsset> = {}
+      assetsResponse.data.nia.forEach((asset) => {
+        newAssetsMap[asset.asset_id] = asset
+      })
       setAssetsMap(newAssetsMap)
     }
   }, [assetsResponse.data])
@@ -155,7 +155,8 @@ export const Component = () => {
 
   useEffect(() => {
     const fetchAssetBalances = async () => {
-      const newBalances = {}
+      const newBalances: Record<string, { offChain: number; onChain: number }> =
+        {}
       for (const asset of assetsResponse.data?.nia || []) {
         const balance = await assetBalance({ asset_id: asset.asset_id })
         newBalances[asset.asset_id] = {
@@ -190,7 +191,7 @@ export const Component = () => {
     0
   )
 
-  const handleCloseChannel = async (channelId, peerPubkey) => {
+  const handleCloseChannel = async (channelId: string, peerPubkey: string) => {
     await closeChannel({
       channel_id: channelId,
       peer_pubkey: peerPubkey,

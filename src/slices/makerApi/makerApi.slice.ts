@@ -1,29 +1,10 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
-import { useSelector } from 'react-redux'
 
 // Data types defined in LSPS0 Common Schemas
 type LSPS0Sat = number
 type LSPS0Datetime = string
 type LSPS0OnchainAddress = string
 type LSPS0OnchainFee = number
-
-// Errors
-interface LSPS0ErrorHandling {
-  code: number
-  message: string
-  data?: Record<string, any>
-}
-
-interface GetAssetsResponse {
-  assets: {
-    asset_id: string
-    ticker: string
-    name: string
-    precision: number
-    issued_supply: number
-    timestamp: number
-  }[]
-}
 
 interface InitSwapRequest {
   from_asset: string
@@ -40,7 +21,8 @@ interface InitSwapResponse {
 
 interface ExecSwapRequest {
   swapstring: string
-  pubkey: string
+  taker_pubkey: string
+  payment_hash: string
 }
 
 interface AssetInfo {
@@ -56,7 +38,7 @@ interface AssetInfo {
   max_channel_amount: number
 }
 
-interface Lsps1GetInfoRequest {}
+//interface Lsps1GetInfoRequest {}
 
 interface Lsps1GetInfoResponse {
   options: {
@@ -177,7 +159,6 @@ export const makerApi = createApi({
         url: '/api/v1/lsps1/create_order',
       }),
     }),
-
     execSwap: builder.query<void, ExecSwapRequest>({
       query: (body) => ({
         body,
