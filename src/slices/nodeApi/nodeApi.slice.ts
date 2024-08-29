@@ -178,6 +178,7 @@ interface LNINvoiceResponse {
 interface SendBTCRequest {
   amount: number
   address: string
+  fee_rate: number
 }
 
 interface SendBTCResponse {
@@ -443,7 +444,7 @@ export const nodeApi = createApi({
         body: {
           address: body.address,
           amount: body.amount,
-          fee_rate: 1.0,
+          fee_rate: body.fee_rate,
         },
         method: 'POST',
         url: '/sendbtc',

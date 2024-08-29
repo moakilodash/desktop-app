@@ -9,10 +9,10 @@ import { nodeApi } from '../../../../slices/nodeApi/nodeApi.slice'
 import { uiSliceActions } from '../../../../slices/ui/ui.slice'
 import { Select } from '../../../Select'
 
-
 interface Fields {
   address: string
   amount: number
+  fee_rate: string
   asset_id: string
   network: 'on-chain' | 'lightning'
 }
@@ -33,6 +33,7 @@ export const WithdrawModalContent = () => {
       address: '',
       amount: 0,
       asset_id: BTC_ASSET_ID,
+      fee_rate: '2.0',
       network: 'on-chain',
     },
   })
@@ -48,11 +49,18 @@ export const WithdrawModalContent = () => {
     })) ?? []),
   ]
 
+  const feeRates = [
+    { label: 'Slow', value: '1.0' },
+    { label: 'Normal', value: '2.0' },
+    { label: 'Fast', value: '3.0' },
+  ]
+
   const onSubmit: SubmitHandler<Fields> = async (data) => {
     if (data.network === 'on-chain' && data.asset_id === BTC_ASSET_ID) {
       sendBtc({
         address: data.address,
         amount: Number(data.amount),
+        fee_rate: parseFloat(data.fee_rate),
       }).then((res: any) => {
         if (res.error) {
           toast.error(res.error.data.error)
@@ -161,58 +169,81 @@ export const WithdrawModalContent = () => {
           />
 
           {network === 'on-chain' && assetId === BTC_ASSET_ID && (
-            <div className="mb-6">
-              <div className="flex justify-between items-center font-light mb-3 text-xs">
-                <div>Amount</div>
+            <>
+              <div className="mb-6">
+                <div className="flex justify-between items-center font-light mb-3 text-xs">
+                  <div>Amount</div>
 
-                <div>
-                  <span className="font-light">Available:</span> {assetBalance}
-                </div>
-              </div>
-
-              <div className="flex space-x-2">
-                <div className="flex-1 flex items-stretch">
-                  <Controller
-                    control={form.control}
-                    name="amount"
-                    render={({ field }) => (
-                      <input
-                        className="flex-1 rounded-l bg-blue-dark px-4 py-3 w-full outline-none"
-                        type="text"
-                        {...field}
-                      />
-                    )}
-                    rules={{
-                      max: assetBalance,
-                      min: assetId === BTC_ASSET_ID ? 0.00000001 : 1,
-                      pattern:
-                        assetId === BTC_ASSET_ID
-                          ? /([0-9]*[.])?[0-9]+/
-                          : /[0-9]+/,
-                    }}
-                  />
-
-                  <div
-                    className="bg-blue-dark rounded-r flex items-center pr-4 text-cyan cursor-pointer"
-                    onClick={() => form.setValue('amount', assetBalance)}
-                  >
-                    MAX
+                  <div>
+                    <span className="font-light">Available:</span>{' '}
+                    {assetBalance}
                   </div>
                 </div>
 
-                <Controller
-                  control={form.control}
-                  name="asset_id"
-                  render={({ field }) => (
-                    <Select
-                      active={field.value}
-                      onSelect={field.onChange}
-                      options={availableAssets}
+                <div className="flex space-x-2">
+                  <div className="flex-1 flex items-stretch">
+                    <Controller
+                      control={form.control}
+                      name="amount"
+                      render={({ field }) => (
+                        <input
+                          className="flex-1 rounded-l bg-blue-dark px-4 py-3 w-full outline-none"
+                          type="text"
+                          {...field}
+                        />
+                      )}
+                      rules={{
+                        max: assetBalance,
+                        min: assetId === BTC_ASSET_ID ? 0.00000001 : 1,
+                        pattern:
+                          assetId === BTC_ASSET_ID
+                            ? /([0-9]*[.])?[0-9]+/
+                            : /[0-9]+/,
+                      }}
                     />
-                  )}
-                />
+
+                    <div
+                      className="bg-blue-dark rounded-r flex items-center pr-4 text-cyan cursor-pointer"
+                      onClick={() => form.setValue('amount', assetBalance)}
+                    >
+                      MAX
+                    </div>
+                  </div>
+
+                  <Controller
+                    control={form.control}
+                    name="asset_id"
+                    render={({ field }) => (
+                      <Select
+                        active={field.value}
+                        onSelect={field.onChange}
+                        options={availableAssets}
+                      />
+                    )}
+                  />
+                </div>
               </div>
-            </div>
+
+              <div className="mb-6">
+                <div className="flex justify-between items-center font-light mb-3 text-xs">
+                  <div>Fee Rate</div>
+                </div>
+
+                <div className="flex space-x-2">
+                  <Controller
+                    control={form.control}
+                    name="fee_rate"
+                    render={({ field }) => (
+                      <Select
+                        active={field.value.toString()}
+                        onSelect={field.onChange}
+                        options={feeRates}
+                      />
+                    )}
+                  />
+                </div>
+              </div>
+            </>
           )}
 
           <div>
