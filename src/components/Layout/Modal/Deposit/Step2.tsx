@@ -19,7 +19,7 @@ interface Fields {
   network: 'on-chain' | 'lightning'
 }
 
-export const Step2 = (props: Props) => {
+export const Step2 = ({ assetId, onBack, onNext }: Props) => {
   const [address, setAddress] = useState<string>()
 
   const [assets, assetsResponse] = nodeApi.endpoints.listAssets.useLazyQuery()
@@ -45,36 +45,23 @@ export const Step2 = (props: Props) => {
   }, [assets])
 
   useEffect(() => {
-    if (
-      network === 'on-chain' &&
-      props.assetId &&
-      props.assetId === BTC_ASSET_ID
-    ) {
+    if (network === 'on-chain' && assetId === BTC_ASSET_ID) {
       form.setValue('amount', 0)
       addressQuery().then((res) => {
         setAddress(res.data?.address)
       })
-    } else if (
-      network === 'on-chain' &&
-      props.assetId &&
-      props.assetId !== BTC_ASSET_ID
-    ) {
-      rgbInvoice({ asset_id: props.assetId }).then((res: any) => {
+    } else if (network === 'on-chain' && assetId !== BTC_ASSET_ID) {
+      rgbInvoice({ asset_id: assetId }).then((res: any) => {
         if (res.error) {
           toast.error(res.error.data?.error)
         } else {
           setAddress(res.data?.invoice)
         }
       })
-    } else if (
-      network === 'lightning' &&
-      props.assetId &&
-      amount &&
-      amount > 0
-    ) {
+    } else if (network === 'lightning' && assetId && amount && amount > 0) {
       lnInvoice({
         asset_amount: Number(amount),
-        asset_id: props.assetId,
+        asset_id: assetId,
       }).then((res: any) => {
         if (res.error) {
           toast.error(res.error.data?.error)
@@ -85,15 +72,7 @@ export const Step2 = (props: Props) => {
     } else {
       setAddress('')
     }
-  }, [
-    amount,
-    form,
-    network,
-    props.assetId,
-    addressQuery,
-    rgbInvoice,
-    lnInvoice,
-  ])
+  }, [amount, form, network, assetId, addressQuery, rgbInvoice, lnInvoice])
 
   return (
     <form
@@ -200,7 +179,7 @@ export const Step2 = (props: Props) => {
                     className="cursor-pointer"
                     onClick={() => {
                       navigator.clipboard.writeText(address ?? '').then(() => {
-                        toast.success('Invoice copyed to clipboard')
+                        toast.success('Invoice copied to clipboard')
                       })
                     }}
                   >
@@ -216,7 +195,7 @@ export const Step2 = (props: Props) => {
       <div className="flex justify-end">
         <button
           className="px-6 py-3 rounded text-lg font-medium text-grey-light"
-          onClick={() => props.onBack()}
+          onClick={onBack}
           type="button"
         >
           Go Back
@@ -224,7 +203,7 @@ export const Step2 = (props: Props) => {
 
         <button
           className="px-6 py-3 rounded border text-lg font-bold border-cyan"
-          onClick={() => props.onNext()}
+          onClick={onNext}
           type="button"
         >
           Finish
