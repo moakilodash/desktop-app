@@ -50,14 +50,12 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
       fromAsset: string,
       toAsset: string,
       price: number,
-      selectedPair: {
-        base_asset: string
-        quote_asset: string
-      }
+      selectedPair: TradingPair | null
     ) => {
       if (!price) return ''
 
       let rate = price
+      if (!selectedPair) return rate
       const isInverted =
         fromAsset === selectedPair.quote_asset &&
         toAsset === selectedPair.base_asset
