@@ -36,9 +36,9 @@ export const Component = () => {
           className="grid grid-cols-8 even:bg-blue-dark rounded items-center text-lg font-medium"
           key={tx.txid}
         >
-          <div className={COL_CLASS_NAME}>Deposited</div>
+          <div className={COL_CLASS_NAME}>Withdrawn</div>
           <div className={COL_CLASS_NAME}>BTC</div>
-          <div className={COL_CLASS_NAME}>+{tx.received} BTC</div>
+          <div className={COL_CLASS_NAME}>{tx.sent} BTC</div>
           <div className={twJoin(COL_CLASS_NAME, 'col-span-5')}>{tx.txid}</div>
         </div>
       ))}

@@ -161,6 +161,10 @@ interface AssetBalanceResponse {
   offchain_inbound: number
 }
 
+interface RGBInvoiceRequest {
+  asset_id: string
+}
+
 interface RGBInvoiceResponse {
   recipient_id: string
   invoice: string
@@ -179,6 +183,7 @@ interface LNINvoiceResponse {
 interface SendBTCRequest {
   amount: number
   address: string
+  fee_rate: number
 }
 
 interface SendBTCResponse {
@@ -188,7 +193,7 @@ interface SendBTCResponse {
 interface SendAssetRequest {
   asset_id: string
   amount: number
-  blinded_utxo: string
+  recipient_id: string
 }
 
 interface SendAssetResponse {
@@ -372,7 +377,7 @@ export const nodeApi = createApi({
         body: {
           amt_msat: 3000000,
           asset_amount: body.asset_amount,
-          asset_id: body.asset_id,
+          asset_id: body.asset_id === 'btc' ? null : body.asset_id,
           expiry_sec: 420,
         },
         method: 'POST',
@@ -415,9 +420,10 @@ export const nodeApi = createApi({
         url: '/restore',
       }),
     }),
-    rgbInvoice: builder.query<RGBInvoiceResponse, void>({
-      query: () => ({
+    rgbInvoice: builder.query<RGBInvoiceResponse, RGBInvoiceRequest>({
+      query: (body) => ({
         body: {
+          asset_id: body.asset_id,
           min_confirmations: 0,
         },
         method: 'POST',
@@ -429,9 +435,9 @@ export const nodeApi = createApi({
         body: {
           amount: body.amount,
           asset_id: body.asset_id,
-          blinded_utxo: body.blinded_utxo,
           donation: false,
           min_confirmations: 1,
+          recipient_id: body.recipient_id,
           transport_endpoints: ['rpc://localhost:3000/json-rpc'],
         },
         method: 'POST',
@@ -443,7 +449,7 @@ export const nodeApi = createApi({
         body: {
           address: body.address,
           amount: body.amount,
-          fee_rate: 1.0,
+          fee_rate: body.fee_rate,
         },
         method: 'POST',
         url: '/sendbtc',

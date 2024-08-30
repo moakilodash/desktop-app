@@ -1,6 +1,7 @@
 import { QRCodeSVG } from 'qrcode.react'
 import { useEffect, useState } from 'react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
+import { toast } from 'react-toastify'
 import { twJoin } from 'tailwind-merge'
 
 import { BTC_ASSET_ID } from '../../../../constants'
@@ -20,39 +21,69 @@ interface Fields {
 
 export const Step2 = (props: Props) => {
   const [address, setAddress] = useState<string>()
-  const [balance, setBalance] = useState<number>(0)
 
   const [assets, assetsResponse] = nodeApi.endpoints.listAssets.useLazyQuery()
   const [addressQuery] = nodeApi.endpoints.address.useLazyQuery()
+  const [lnInvoice] = nodeApi.endpoints.lnInvoice.useLazyQuery()
   const [rgbInvoice] = nodeApi.endpoints.rgbInvoice.useLazyQuery()
-  const [assetBalance] = nodeApi.endpoints.assetBalance.useLazyQuery()
-
-  useEffect(() => {
-    assets()
-  }, [assets])
 
   const form = useForm<Fields>({
     defaultValues: {
       amount: 0,
-      network: props.assetId === BTC_ASSET_ID ? 'on-chain' : 'lightning',
+      network: 'on-chain',
     },
   })
   const amount = form.watch('amount')
   const network = form.watch('network')
 
+  const onSubmit: SubmitHandler<Fields> = (data) => {
+    console.log('data', data)
+  }
+
   useEffect(() => {
-    if (network === 'on-chain') {
+    assets()
+  }, [assets])
+
+  useEffect(() => {
+    if (
+      network === 'on-chain' &&
+      props.assetId &&
+      props.assetId === BTC_ASSET_ID
+    ) {
       form.setValue('amount', 0)
       addressQuery().then((res) => {
         setAddress(res.data?.address)
       })
-    } else if (network === 'lightning' && amount && amount > 0) {
-      rgbInvoice().then((res) => {
-        setAddress(res.data?.recipient_id)
+    } else if (
+      network === 'on-chain' &&
+      props.assetId &&
+      props.assetId !== BTC_ASSET_ID
+    ) {
+      rgbInvoice({ asset_id: props.assetId }).then((res: any) => {
+        if (res.error) {
+          toast.error(res.error.data?.error)
+        } else {
+          setAddress(res.data?.invoice)
+        }
       })
-      assetBalance({ asset_id: props.assetId }).then((res) => {
-        setBalance(res.data?.spendable ?? 0)
+    } else if (
+      network === 'lightning' &&
+      props.assetId &&
+      amount &&
+      amount > 0
+    ) {
+      lnInvoice({
+        asset_amount: Number(amount),
+        asset_id: props.assetId,
+      }).then((res: any) => {
+        if (res.error) {
+          toast.error(res.error.data?.error)
+        } else {
+          setAddress(res.data?.invoice)
+        }
       })
+    } else {
+      setAddress('')
     }
   }, [
     amount,
@@ -61,12 +92,8 @@ export const Step2 = (props: Props) => {
     props.assetId,
     addressQuery,
     rgbInvoice,
-    assetBalance,
+    lnInvoice,
   ])
-
-  const onSubmit: SubmitHandler<Fields> = (data) => {
-    console.log('data', data)
-  }
 
   return (
     <form
@@ -84,69 +111,50 @@ export const Step2 = (props: Props) => {
         </div>
 
         <div className="mx-auto bg-section-lighter rounded p-8">
-          {props.assetId !== BTC_ASSET_ID ? null : (
-            <Controller
-              control={form.control}
-              name="network"
-              render={({ field }) => (
-                <div className="mb-6">
-                  <div className="text-xs mb-3">Deposit Method</div>
+          <Controller
+            control={form.control}
+            name="network"
+            render={({ field }) => (
+              <div className="mb-6">
+                <div className="text-xs mb-3">Deposit Method</div>
 
-                  <div className="flex items-center space-x-6">
+                <div className="flex items-center space-x-6">
+                  <div
+                    className="flex items-center space-x-2 cursor-pointer"
+                    onClick={() => field.onChange('on-chain')}
+                  >
                     <div
-                      className="flex items-center space-x-2 cursor-pointer"
-                      onClick={() => field.onChange('on-chain')}
-                    >
-                      <div
-                        className={twJoin(
-                          'flex-auto w-4 h-4 rounded border-2 border-grey-lighter',
-                          field.value === 'on-chain' ? 'bg-grey-lighter' : null
-                        )}
-                      />
+                      className={twJoin(
+                        'flex-auto w-4 h-4 rounded border-2 border-grey-lighter',
+                        field.value === 'on-chain' ? 'bg-grey-lighter' : null
+                      )}
+                    />
 
-                      <div className="text-grey-lighter">On-chain</div>
-                    </div>
+                    <div className="text-grey-lighter">On-chain</div>
+                  </div>
 
-                    {props.assetId !== BTC_ASSET_ID ? (
-                      <div
-                        className="flex items-center space-x-2 cursor-pointer"
-                        onClick={() => field.onChange('lightning')}
-                      >
-                        <div
-                          className={twJoin(
-                            'flex-auto w-4 h-4 rounded border-2 border-grey-lighter',
-                            field.value === 'lightning'
-                              ? 'bg-grey-lighter'
-                              : null
-                          )}
-                        />
+                  <div
+                    className="flex items-center space-x-2 cursor-pointer"
+                    onClick={() => field.onChange('lightning')}
+                  >
+                    <div
+                      className={twJoin(
+                        'flex-auto w-4 h-4 rounded border-2 border-grey-lighter',
+                        field.value === 'lightning' ? 'bg-grey-lighter' : null
+                      )}
+                    />
 
-                        <div className="text-grey-lighter">
-                          Lightning Network
-                        </div>
-                      </div>
-                    ) : (
-                      <></>
-                    )}
+                    <div className="text-grey-lighter">Lightning Network</div>
                   </div>
                 </div>
-              )}
-            />
-          )}
+              </div>
+            )}
+          />
 
           {network === 'lightning' ? (
             <div className="mb-12">
               <div className="flex justify-between items-center font-light mb-3">
                 <div className="text-xs">Amount</div>
-
-                <div className="text-xs">
-                  <span className="font-light">Available:</span> {balance}{' '}
-                  {
-                    assetsResponse.data?.nia.find(
-                      (a) => a.asset_id === props.assetId
-                    )?.ticker
-                  }
-                </div>
               </div>
 
               <div className="flex items-stretch">
@@ -163,29 +171,37 @@ export const Step2 = (props: Props) => {
                 />
 
                 <div className="bg-blue-dark rounded-r flex items-center pr-4 text-cyan">
-                  {
-                    assetsResponse.data?.nia.find(
-                      (a) => a.asset_id === props.assetId
-                    )?.ticker
-                  }
+                  {assetId === BTC_ASSET_ID
+                    ? 'BTC'
+                    : assetsResponse.data?.nia.find(
+                        (a) => a.asset_id === assetId
+                      )?.ticker}
                 </div>
               </div>
             </div>
-          ) : null}
+          ) : (
+            <></>
+          )}
 
-          {address && address.length > 0 ? (
-            <div className="flex items-center space-x-6 min-w-max">
+          {address && address.length > 0 && (
+            <div className="flex items-center space-x-6 max-w-fit">
               <QRCodeSVG fgColor="#3A3C4A" value={address ?? ''} />
 
               <div>
                 <div className="text-xs font-light">Wallet Address:</div>
 
                 <div className="flex items-center space-x-4">
-                  <div>{address}</div>{' '}
+                  <div className="break-words overflow-hidden whitespace-normal">
+                    {address.length > 67
+                      ? address.slice(0, 64) + '...'
+                      : address}
+                  </div>{' '}
                   <div
                     className="cursor-pointer"
                     onClick={() => {
-                      navigator.clipboard.writeText(address ?? '')
+                      navigator.clipboard.writeText(address ?? '').then(() => {
+                        toast.success('Invoice copyed to clipboard')
+                      })
                     }}
                   >
                     <CopyIcon />
@@ -193,7 +209,7 @@ export const Step2 = (props: Props) => {
                 </div>
               </div>
             </div>
-          ) : null}
+          )}
         </div>
       </div>
 
