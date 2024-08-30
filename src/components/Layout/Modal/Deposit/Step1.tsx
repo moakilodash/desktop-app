@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { toast } from 'react-toastify'
 
 import { useAppSelector } from '../../../../app/store/hooks.ts'
 import { ASSET_ID_TO_TICKER, BTC_ASSET_ID } from '../../../../constants'
@@ -24,6 +25,7 @@ export const Step1 = (props: Props) => {
   const handleSelect = (assetId: string) => {
     if (assetId === '') {
       setIsNewAsset(true)
+      setAssetId(assetId)
     } else {
       setIsNewAsset(false)
       setAssetId(assetId)
@@ -31,7 +33,11 @@ export const Step1 = (props: Props) => {
   }
 
   const handleSubmit = useCallback(() => {
-    props.onNext(assetId)
+    if (assetId === '') {
+      toast.error('Please select an asset.')
+    } else {
+      props.onNext(assetId)
+    }
   }, [props, assetId])
 
   useEffect(() => {

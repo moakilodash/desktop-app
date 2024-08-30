@@ -4,7 +4,7 @@ import { useAppDispatch } from '../../../../app/store/hooks'
 import { uiSliceActions } from '../../../../slices/ui/ui.slice'
 
 import { Step1 } from './Step1'
-import { Step2 } from './Step2_new'
+import { Step2 } from './Step2'
 
 export const DepositModalContent = () => {
   const dispatch = useAppDispatch()
@@ -24,7 +24,7 @@ export const DepositModalContent = () => {
 
       {step === 2 && (
         <Step2
-          assetId={assetId}
+          assetId={assetId as string}
           onBack={() => setStep((state) => state - 1)}
           onNext={() => dispatch(uiSliceActions.setModal({ type: 'none' }))}
         />
