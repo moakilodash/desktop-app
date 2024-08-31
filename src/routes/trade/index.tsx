@@ -274,9 +274,14 @@ export const Component = () => {
 
   // Handle "from" amount change
   const handleFromAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/[^0-9.]/g, '')
+    const value = e.target.value
+    if (value === undefined || value === null) {
+      console.error('Invalid input value:', value)
+      return
+    }
+    const cleanedValue = value.replace(/[^0-9.]/g, '')
     const fromAsset = form.getValues().fromAsset
-    const numValue = parseAssetAmount(value, fromAsset)
+    const numValue = parseAssetAmount(cleanedValue, fromAsset)
     if (isNaN(numValue)) {
       form.setValue('from', '')
       form.setValue('to', '')
@@ -295,9 +300,14 @@ export const Component = () => {
 
   // Handle "to" amount change
   const handleToAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/[^0-9.]/g, '')
+    const value = e.target.value
+    if (value === undefined || value === null) {
+      console.error('Invalid input value:', value)
+      return
+    }
+    const cleanedValue = value.replace(/[^0-9.]/g, '')
     const toAsset = form.getValues().toAsset
-    const numValue = parseAssetAmount(value, toAsset)
+    const numValue = parseAssetAmount(cleanedValue, toAsset)
     if (isNaN(numValue)) {
       form.setValue('to', '')
       form.setValue('from', '')
@@ -318,7 +328,6 @@ export const Component = () => {
     }
     logger.debug('To amount changed:', value)
   }
-
   // Swap assets
   const onSwapAssets = useCallback(async () => {
     if (selectedPair) {
