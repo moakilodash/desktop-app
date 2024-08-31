@@ -105,18 +105,14 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
           <div className="flex justify-between items-center">
             <span className="text-gray-400">You sent:</span>
             <div className="flex items-center font-bold">
-              <span className="mr-2">
-                {formatAmount(parseFloat(fromAmount), fromAsset)}
-              </span>
+              <span className="mr-2">{fromAmount}</span>
               <AssetOption label={displayFromAsset} value={fromAsset} />
             </div>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-400">You received:</span>
             <div className="flex items-center font-bold">
-              <span className="mr-2">
-                {formatAmount(parseFloat(toAmount), toAsset)}
-              </span>
+              <span className="mr-2">{toAmount}</span>
               <AssetOption label={displayToAsset} value={toAsset} />
             </div>
           </div>
