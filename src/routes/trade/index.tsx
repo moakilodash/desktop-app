@@ -1,9 +1,14 @@
 import React, { useCallback, useEffect, useState, useMemo } from 'react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { v4 as uuidv4 } from 'uuid'
 
 import { webSocketService } from '../../app/hubs/websocketService'
+import {
+  CREATE_NEW_CHANNEL_PATH,
+  ORDER_CHANNEL_PATH,
+} from '../../app/router/paths'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { Loader } from '../../components/Loader'
 import { SwapDetails, SwapRecap } from '../../components/SwapRecap'
@@ -33,6 +38,7 @@ const MSATS_PER_SAT = 1000
 
 export const Component = () => {
   const dispatch = useAppDispatch()
+  const navigate = useNavigate()
   const [channels, setChannels] = useState<Channel[]>([])
   const [assets, setAssets] = useState<NiaAsset[]>([])
   const [tradablePairs, setTradablePairs] = useState<TradingPair[]>([])
@@ -843,10 +849,20 @@ export const Component = () => {
         You need to open a channel with an asset to start trading.
       </p>
       <div className="flex justify-center space-x-4">
-        <button className="px-4 py-2 bg-cyan text-blue-dark rounded hover:bg-cyan-dark transition">
+        <button
+          className="px-4 py-2 bg-cyan text-blue-dark rounded hover:bg-cyan-dark transition"
+          onClick={() => {
+            navigate(CREATE_NEW_CHANNEL_PATH)
+          }}
+        >
           Open Channel
         </button>
-        <button className="px-4 py-2 border border-cyan text-cyan rounded hover:bg-cyan hover:text-blue-dark transition">
+        <button
+          className="px-4 py-2 border border-cyan text-cyan rounded hover:bg-cyan hover:text-blue-dark transition"
+          onClick={() => {
+            navigate(ORDER_CHANNEL_PATH)
+          }}
+        >
           Order from LSP
         </button>
       </div>
