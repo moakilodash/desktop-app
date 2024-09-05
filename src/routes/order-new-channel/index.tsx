@@ -9,10 +9,11 @@ import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 import { Step1 } from './Step1'
 import { Step2 } from './Step2'
 import { Step3 } from './Step3'
+import { Step4 } from './Step4'
 import 'react-toastify/dist/ReactToastify.css'
 
 export const Component = () => {
-  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
   const [loading, setLoading] = useState(false)
   const [orderId, setOrderId] = useState<string | null>(null)
 
@@ -43,7 +44,7 @@ export const Component = () => {
           })
           clearInterval(intervalId)
           setPaymentStatus('success')
-          setStep(3)
+          setStep(4)
         } else if (orderResponse.data?.order_state === 'FAILED') {
           toast.update(id, {
             autoClose: 5000,
@@ -53,7 +54,7 @@ export const Component = () => {
           })
           clearInterval(intervalId)
           setPaymentStatus('error')
-          setStep(3)
+          setStep(4)
         }
       }, 5000)
 
@@ -64,7 +65,12 @@ export const Component = () => {
     }
   }, [orderId, getOrderRequest])
 
-  const onSubmitStep1 = useCallback(
+  const onSubmitStep1 = useCallback(async (data: { connectionUrl: string }) => {
+    console.log('Step 1 submitted:', data)
+    setStep(2)
+  }, [])
+
+  const onSubmitStep2 = useCallback(
     async (data: any) => {
       setLoading(true)
       const clientPubKey = (await nodeInfoRequest()).data?.pubkey
@@ -92,12 +98,12 @@ export const Component = () => {
         setLoading(false)
         return
       }
-      // TODO: Update url and port with the actual values (TOR address)
+
       const payload: any = {
         announce_channel: true,
         channel_expiry_blocks: channelExpireBlocks,
         client_balance_sat: clientBalanceSat,
-        client_connection_url: `${clientPubKey}@kaleidoswap-node:9735`,
+        client_pubkey: clientPubKey,
         funding_confirms_within_blocks: 1,
         lsp_balance_sat: capacitySat - clientBalanceSat,
         required_channel_confirmations: 3,
@@ -127,21 +133,23 @@ export const Component = () => {
         return
       } else {
         console.log('Request of channel created successfully!')
-        console.log(channelResponse.data)
+        console.log('Response:', channelResponse.data)
         const orderId: string = channelResponse.data?.order_id || ''
         if (!orderId) {
           console.error('Could not get order id')
           return
         }
         setOrderId(orderId)
-        setStep(2)
+        setStep(3)
       }
     },
     [createOrderRequest, nodeInfoRequest]
   )
 
-  const onStep2Back = useCallback(() => {
-    setStep(1)
+  const onStepBack = useCallback(() => {
+    setStep(
+      (prevStep) => (prevStep > 1 ? prevStep - 1 : prevStep) as 1 | 2 | 3 | 4
+    )
   }, [])
 
   return (
@@ -156,15 +164,19 @@ export const Component = () => {
       </div>
 
       <div className={step !== 2 ? 'hidden' : ''}>
-        <Step2
+        <Step2 onBack={onStepBack} onNext={onSubmitStep2} />
+      </div>
+
+      <div className={step !== 3 ? 'hidden' : ''}>
+        <Step3
           loading={getOrderResponse.isLoading}
-          onBack={onStep2Back}
+          onBack={onStepBack}
           order={createOrderResponse.data}
         />
       </div>
 
-      <div className={step !== 3 ? 'hidden' : ''}>
-        <Step3 paymentStatus={paymentStatus ?? ''} />
+      <div className={step !== 4 ? 'hidden' : ''}>
+        <Step4 paymentStatus={paymentStatus ?? ''} />
       </div>
 
       <ToastContainer />

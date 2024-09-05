@@ -9,6 +9,7 @@
   "plugins": ["sort-keys-fix"],
   "rules": {
     "sort-keys-fix/sort-keys-fix": "warn",
+    "react/prop-types": "off",
     "import/order": [
       "warn",
       {

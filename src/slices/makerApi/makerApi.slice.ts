@@ -41,6 +41,7 @@ interface AssetInfo {
 //interface Lsps1GetInfoRequest {}
 
 interface Lsps1GetInfoResponse {
+  lsp_connection_url: string
   options: {
     min_required_channel_confirmations: number
     min_funding_confirms_within_blocks: number
@@ -84,11 +85,10 @@ interface Lsps1CreateOrderResponse {
   channel_expiry_blocks: number
   token: string
   created_at: LSPS0Datetime
-  expires_at: LSPS0Datetime
   announce_channel: boolean
   order_state: OrderState
-  payment: PaymentInfo
-  channel?: string | null
+  payment: PaymentDetails
+  channel?: ChannelDetails | null
   asset_id?: string
   lsp_asset_amount?: LSPS0Sat
   client_asset_amount?: LSPS0Sat
@@ -96,23 +96,36 @@ interface Lsps1CreateOrderResponse {
 
 type OrderState = 'CREATED' | 'COMPLETED' | 'FAILED'
 
-interface PaymentInfo {
-  state: PaymentState
-  fee_total_sat: LSPS0Sat
-  order_total_sat: LSPS0Sat
-  bolt11_invoice: string
-  onchain_address: LSPS0OnchainAddress | null
-  min_onchain_payment_confirmations: number | null
-  min_fee_for_0conf: LSPS0OnchainFee
-  onchain_payment: OnchainPaymentInfo | null
+interface ChannelDetails {
+  funded_at?: string
+  funding_outpoint?: string
+  expires_at?: string
 }
 
 type PaymentState = 'EXPECT_PAYMENT' | 'HOLD' | 'PAID' | 'REFUNDED'
 
-interface OnchainPaymentInfo {
-  outpoint: string
-  sat: LSPS0Sat
-  confirmed: boolean
+interface PaymentDetails {
+  bolt11: PaymentBolt11
+  onchain: PaymentOnchain
+}
+
+interface PaymentBolt11 {
+  state: PaymentState
+  expires_at: string
+  fee_total_sat: number
+  order_total_sat: number
+  invoice: string
+}
+
+interface PaymentOnchain {
+  state: PaymentState
+  expires_at: string
+  fee_total_sat: number
+  order_total_sat: number
+  address: string
+  min_fee_for_0conf: LSPS0OnchainFee
+  min_onchain_payment_confirmations: number
+  refund_onchain_address?: string
 }
 
 // Request and response interfaces for lsps1.get_order
