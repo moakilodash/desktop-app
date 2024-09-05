@@ -1,6 +1,15 @@
 import { open } from '@tauri-apps/api/dialog'
 import { exists } from '@tauri-apps/api/fs'
-import { useState, useEffect } from 'react'
+import {
+  ChevronDown,
+  LogOut,
+  Undo,
+  Save,
+  Shield,
+  Folder,
+  AlertTriangle,
+} from 'lucide-react'
+import React, { useState, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
@@ -22,17 +31,12 @@ interface FormFields {
   nodePassword: string
 }
 
-interface Data {
-  error?: string
-  code?: number
-}
-
 interface Response {
   status: number
-  data: Data
+  data: { error?: string; code?: number }
 }
 
-export const Component = () => {
+export const Component: React.FC = () => {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const { bitcoinUnit, nodeConnectionString, defaultLspUrl } = useSelector(
@@ -51,6 +55,7 @@ export const Component = () => {
         nodePassword: '',
       },
     })
+  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false)
 
   const [backup, { isLoading: isBackupLoading }] =
     nodeApi.endpoints.backup.useLazyQuery()
@@ -123,50 +128,46 @@ export const Component = () => {
       toast.error('Backup error')
     }
   }
+  const handleLogout = async () => {
+    setShowLogoutConfirmation(true)
+  }
+
+  const confirmLogout = async () => {
+    const lockResponse = await attemptLock()
+    if (lockResponse.status === 200) {
+      navigate('/wallet-setup')
+      toast.success('Logout successful')
+      nodeInfo()
+    } else {
+      toast.error('Node lock unsuccessful')
+    }
+    setShowLogoutConfirmation(false)
+  }
 
   const attemptLock = async (): Promise<Response> => {
-    //let lockResponse
-
     try {
-      //lockResponse = await lock().unwrap()
       await lock().unwrap()
     } catch (err) {
+      console.log(err)
       return err as Response
     }
-
-    return {
-      data: {},
-      status: 200,
-    }
+    return { data: {}, status: 200 }
   }
 
   const attemptUnlock = async (password: string): Promise<Response> => {
-    //let unlockResponse
-
     try {
-      //unlockResponse = await unlock({ password: password }).unwrap()
       await unlock({ password: password }).unwrap()
     } catch (err) {
       return err as Response
     }
-
-    return {
-      data: {},
-      status: 200,
-    }
+    return { data: {}, status: 200 }
   }
 
   const attemptBackup = async (
     backupPath: string,
     password: string
   ): Promise<Response> => {
-    //let backupResponse
-
     try {
-      // backupResponse = await backup({
-      //   backup_path: backupPath,
-      //   password,
-      // }).unwrap()
       await backup({
         backup_path: backupPath,
         password,
@@ -174,11 +175,7 @@ export const Component = () => {
     } catch (err) {
       return err as Response
     }
-
-    return {
-      data: {},
-      status: 200,
-    }
+    return { data: {}, status: 200 }
   }
 
   const handleBackup = async (data: FormFields) => {
@@ -242,111 +239,109 @@ export const Component = () => {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-800 to-black">
-      <div className="max-w-md w-full bg-blue-dark p-8 rounded-lg shadow-lg">
-        <h1 className="text-3xl font-semibold mb-8 text-center text-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-gray-800 p-8 rounded-xl shadow-2xl">
+        <h1 className="text-3xl font-bold text-white mb-8 text-center">
           Settings
         </h1>
-        <form onSubmit={handleSubmit(handleSave)}>
-          <div className="space-y-6">
-            <Controller
-              control={control}
-              name="bitcoinUnit"
-              render={({ field }) => (
-                <div>
-                  <label className="block mb-2 text-lg text-gray-300">
-                    Select Bitcoin Unit:
-                  </label>
+        <form className="space-y-6" onSubmit={handleSubmit(handleSave)}>
+          <Controller
+            control={control}
+            name="bitcoinUnit"
+            render={({ field }) => (
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Select Bitcoin Unit
+                </label>
+                <div className="relative">
                   <select
-                    className="w-full p-3 bg-gray-700 text-white rounded border border-gray-600 focus:border-cyan-500 focus:ring-cyan-500 focus:outline-none"
                     {...field}
+                    className="block w-full pl-3 pr-10 py-2 text-white bg-gray-700 border border-gray-600 rounded-md appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="SAT">Satoshi (SAT)</option>
                     <option value="BTC">Bitcoin (BTC)</option>
                   </select>
+                  <ChevronDown className="absolute right-2 top-2.5 h-5 w-5 text-gray-400 pointer-events-none" />
                 </div>
-              )}
-            />
-            <Controller
-              control={control}
-              name="nodeConnectionString"
-              render={({ field }) => (
-                <div>
-                  <label className="block mb-2 text-lg text-gray-300">
-                    Node Connection String:
-                  </label>
-                  <input
-                    className="w-full p-3 bg-gray-700 text-white rounded border border-gray-600 focus:border-cyan-500 focus:ring-cyan-500 focus:outline-none"
-                    placeholder="Enter node connection string"
-                    type="text"
-                    {...field}
-                  />
-                  <p className="text-sm text-red-500 mt-2">
-                    {formState.errors.nodeConnectionString?.message}
+              </div>
+            )}
+          />
+          <Controller
+            control={control}
+            name="nodeConnectionString"
+            render={({ field }) => (
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Node Connection String
+                </label>
+                <input
+                  {...field}
+                  className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter node connection string"
+                  type="text"
+                />
+                {formState.errors.nodeConnectionString && (
+                  <p className="mt-1 text-sm text-red-500">
+                    {formState.errors.nodeConnectionString.message}
                   </p>
-                </div>
-              )}
-            />
-            <Controller
-              control={control}
-              name="lspUrl"
-              render={({ field }) => (
-                <div>
-                  <label className="block mb-2 text-lg text-gray-300">
-                    Default LSP URL:
-                  </label>
-                  <input
-                    className="w-full p-3 bg-gray-700 text-white rounded border border-gray-600 focus:border-cyan-500 focus:ring-cyan-500 focus:outline-none"
-                    placeholder="Enter default LSP URL"
-                    type="text"
-                    {...field}
-                  />
-                  <p className="text-sm text-red-500 mt-2">
-                    {formState.errors.lspUrl?.message}
+                )}
+              </div>
+            )}
+          />
+          <Controller
+            control={control}
+            name="lspUrl"
+            render={({ field }) => (
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Default LSP URL
+                </label>
+                <input
+                  {...field}
+                  className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter default LSP URL"
+                  type="text"
+                />
+                {formState.errors.lspUrl && (
+                  <p className="mt-1 text-sm text-red-500">
+                    {formState.errors.lspUrl.message}
                   </p>
-                </div>
-              )}
-            />
-          </div>
-          <div className="flex justify-between mt-4 space-x-4">
+                )}
+              </div>
+            )}
+          />
+          <div className="pt-4 space-y-4">
             <button
-              className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-lg font-bold rounded shadow-md transition duration-200"
+              className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
               onClick={() => setBackupModal(true)}
               type="button"
             >
+              <Shield className="w-5 h-5 mr-2" />
               Backup
             </button>
-          </div>
-          <div className="flex justify-between mt-4 space-x-4">
             <button
-              className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-lg font-bold rounded shadow-md transition duration-200"
-              onClick={async () => {
-                const lockResponse = await attemptLock()
-                if (lockResponse.status === 200) {
-                  navigate('/wallet-setup')
-                  toast.success('Logout successful')
-                  nodeInfo()
-                } else {
-                  toast.error('Node lock unsuccessful')
-                }
-              }}
+              className="w-full flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+              onClick={handleLogout}
               type="button"
             >
+              <LogOut className="w-5 h-5 mr-2" />
               Logout
             </button>
           </div>
-          <div className="flex justify-between mt-8 space-x-4">
+          <div className="flex justify-between space-x-4 pt-6">
             <button
-              className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-white text-lg font-bold rounded shadow-md transition duration-200"
+              className="flex-1 flex items-center justify-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800"
               onClick={handleUndo}
               type="button"
             >
+              <Undo className="w-5 h-5 mr-2" />
               Undo
             </button>
             <button
-              className="w-full px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white text-lg font-bold rounded shadow-md transition duration-200"
+              className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-800"
               type="submit"
             >
+              <Save className="w-5 h-5 mr-2" />
               Save
             </button>
           </div>
@@ -354,42 +349,48 @@ export const Component = () => {
 
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="bg-white text-black p-6 rounded-lg shadow-lg text-center">
-              <h2 className="text-2xl font-semibold mb-4">Settings Saved</h2>
-              <p>Your settings have been successfully saved.</p>
+            <div className="bg-white p-6 rounded-lg shadow-xl">
+              <h2 className="text-2xl font-semibold mb-4 text-gray-800">
+                Settings Saved
+              </h2>
+              <p className="text-gray-600">
+                Your settings have been successfully saved.
+              </p>
             </div>
           </div>
         )}
 
         {backupModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="max-w-md w-full bg-blue-dark p-8 rounded-lg shadow-lg">
-              <h2 className="text-2xl font-semibold mb-4 text-center text-white">
+            <div className="bg-gray-800 p-8 rounded-xl shadow-2xl w-full max-w-md">
+              <h2 className="text-2xl font-bold mb-6 text-center text-white">
                 Create Backup
               </h2>
-              <form onSubmit={handleSubmit(handleBackup)}>
+              <form className="space-y-4" onSubmit={handleSubmit(handleBackup)}>
                 <div>
-                  <label className="block mb-2 text-lg text-gray-300">
-                    Backup File Path:
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                    Backup File Path
                   </label>
-                  <input
-                    className="w-full p-3 bg-gray-700 text-white rounded border border-gray-600 focus:border-cyan-500 focus:ring-cyan-500 focus:outline-none"
-                    type="text"
-                    {...control.register('backupPath', {
-                      validate: isValidPath,
-                    })}
-                    onChange={(e) => setValue('backupPath', e.target.value)}
-                    value={backupPath}
-                  />
-                  <button
-                    className="mt-2 px-4 py-2 bg-blue-600 text-white rounded"
-                    onClick={selectBackupFolder}
-                    type="button"
-                  >
-                    Select Folder
-                  </button>
+                  <div className="flex">
+                    <input
+                      {...control.register('backupPath', {
+                        validate: isValidPath,
+                      })}
+                      className="flex-grow px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => setValue('backupPath', e.target.value)}
+                      type="text"
+                      value={backupPath}
+                    />
+                    <button
+                      className="px-3 py-2 bg-blue-600 text-white rounded-r-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                      onClick={selectBackupFolder}
+                      type="button"
+                    >
+                      <Folder className="w-5 h-5" />
+                    </button>
+                  </div>
                   {formState.errors.backupPath && (
-                    <p className="text-sm text-red-500 mt-2">
+                    <p className="mt-1 text-sm text-red-500">
                       Invalid backup path
                     </p>
                   )}
@@ -399,29 +400,31 @@ export const Component = () => {
                   name="nodePassword"
                   render={({ field }) => (
                     <div>
-                      <label className="block mb-2 text-lg text-gray-300">
-                        Node Password:
+                      <label className="block text-sm font-medium text-gray-300 mb-1">
+                        Node Password
                       </label>
                       <input
-                        className="w-full p-3 bg-gray-700 text-white rounded border border-gray-600 focus:border-cyan-500 focus:ring-cyan-500 focus:outline-none"
+                        {...field}
+                        className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Enter node password"
                         type="password"
-                        {...field}
                       />
                     </div>
                   )}
                 />
                 {isBackupInProgress && (
-                  <div className="mt-4 flex justify-center">
-                    <p className="text-white text-lg">
-                      Please wait, the backup is in progress... <br /> The node
-                      will be locked until the backup process is finished.
+                  <div className="mt-4">
+                    <p className="text-white text-center">
+                      Please wait, the backup is in progress...
+                      <br />
+                      The node will be locked until the backup process is
+                      finished.
                     </p>
                   </div>
                 )}
-                <div className="flex justify-between mt-4 space-x-4">
+                <div className="flex justify-between space-x-4 pt-6">
                   <button
-                    className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-white text-lg font-bold rounded shadow-md transition duration-200"
+                    className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={isBackupInProgress}
                     onClick={() => setBackupModal(false)}
                     type="button"
@@ -429,7 +432,7 @@ export const Component = () => {
                     Cancel
                   </button>
                   <button
-                    className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold rounded shadow-md transition duration-200"
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={isBackupInProgress}
                     type="submit"
                   >
@@ -437,6 +440,37 @@ export const Component = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+        {showLogoutConfirmation && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div className="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-sm">
+              <div className="flex items-center justify-center text-yellow-500 mb-4">
+                <AlertTriangle size={48} />
+              </div>
+              <h2 className="text-2xl font-bold mb-4 text-center text-white">
+                Confirm Logout
+              </h2>
+              <p className="text-gray-300 text-center mb-6">
+                Are you sure you want to logout? This will lock your node.
+              </p>
+              <div className="flex justify-between space-x-4">
+                <button
+                  className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                  onClick={() => setShowLogoutConfirmation(false)}
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <button
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                  onClick={confirmLogout}
+                  type="button"
+                >
+                  Confirm Logout
+                </button>
+              </div>
             </div>
           </div>
         )}
