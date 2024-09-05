@@ -2,3 +2,18 @@
 . "$(dirname -- "$0")/_/husky.sh"
 
 pnpm lint-staged
+
+
+echo "Running Tauri build before commit..."
+
+# Run Tauri build
+pnpm run tauri build
+
+# Check if the build was successful
+if [ $? -eq 0 ]; then
+    echo "Tauri build successful. Proceeding with commit."
+    exit 0
+else
+    echo "Tauri build failed. Commit aborted."
+    exit 1
+fi

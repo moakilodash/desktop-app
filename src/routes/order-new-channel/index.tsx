@@ -3,7 +3,7 @@ import { useCallback, useState, useEffect } from 'react'
 import { ClipLoader } from 'react-spinners'
 import { ToastContainer, toast, Slide } from 'react-toastify'
 
-import { makerApi } from '../../slices/makerApi/makerApi.slice'
+import { makerApi , Lsps1CreateOrderResponse } from '../../slices/makerApi/makerApi.slice'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 
 import { Step1 } from './Step1'
@@ -171,7 +171,7 @@ export const Component = () => {
         <Step3
           loading={getOrderResponse.isLoading}
           onBack={onStepBack}
-          order={createOrderResponse.data}
+          order={(createOrderResponse.data as Lsps1CreateOrderResponse) || null}
         />
       </div>
 

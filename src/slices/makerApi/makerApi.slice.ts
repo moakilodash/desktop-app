@@ -75,7 +75,7 @@ interface Lsps1CreateOrderRequest {
   client_asset_amount?: LSPS0Sat
 }
 
-interface Lsps1CreateOrderResponse {
+export interface Lsps1CreateOrderResponse {
   order_id: string
   client_pubkey: string
   lsp_balance_sat: LSPS0Sat
