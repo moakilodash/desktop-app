@@ -21,6 +21,8 @@ interface Fields {
 
 export const Step2 = ({ assetId, onBack, onNext }: Props) => {
   const [address, setAddress] = useState<string>()
+  const [loading, setLoading] = useState<boolean>(false)
+  const [rgbLoading, setRgbLoading] = useState<boolean>(false)
 
   const [assets, assetsResponse] = nodeApi.endpoints.listAssets.useLazyQuery()
   const [addressQuery] = nodeApi.endpoints.address.useLazyQuery()
@@ -33,11 +35,53 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
       network: 'on-chain',
     },
   })
+
   const amount = form.watch('amount')
   const network = form.watch('network')
 
-  const onSubmit: SubmitHandler<Fields> = (data) => {
-    console.log('data', data)
+  const generateLightningInvoice = async () => {
+    if (network === 'lightning' && assetId && amount && amount > 0) {
+      setLoading(true)
+      try {
+        const res = await lnInvoice({
+          asset_amount: Number(amount),
+          asset_id: assetId,
+        })
+        if (res.error) {
+          toast.error(
+            res.error.data?.error || 'Failed to generate Lightning invoice'
+          )
+        } else {
+          setAddress(res.data?.invoice)
+        }
+      } catch (error) {
+        toast.error('An error occurred while generating the Lightning invoice')
+      } finally {
+        setLoading(false)
+      }
+    } else {
+      toast.error(
+        'Please enter a valid amount before generating the Lightning invoice'
+      )
+    }
+  }
+
+  const generateRgbInvoice = async () => {
+    if (network === 'on-chain' && assetId !== BTC_ASSET_ID) {
+      setRgbLoading(true)
+      try {
+        const res = await rgbInvoice({ asset_id: assetId })
+        if (res.error) {
+          toast.error(res.error.data?.error || 'Failed to generate RGB invoice')
+        } else {
+          setAddress(res.data?.invoice)
+        }
+      } catch (error) {
+        toast.error('An error occurred while generating the RGB invoice')
+      } finally {
+        setRgbLoading(false)
+      }
+    }
   }
 
   useEffect(() => {
@@ -50,42 +94,24 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
       addressQuery().then((res) => {
         setAddress(res.data?.address)
       })
-    } else if (network === 'on-chain' && assetId !== BTC_ASSET_ID) {
-      rgbInvoice({ asset_id: assetId }).then((res: any) => {
-        if (res.error) {
-          toast.error(res.error.data?.error)
-        } else {
-          setAddress(res.data?.invoice)
-        }
-      })
-    } else if (network === 'lightning' && assetId && amount && amount > 0) {
-      lnInvoice({
-        asset_amount: Number(amount),
-        asset_id: assetId,
-      }).then((res: any) => {
-        if (res.error) {
-          toast.error(res.error.data?.error)
-        } else {
-          setAddress(res.data?.invoice)
-        }
-      })
     } else {
       setAddress('')
     }
-  }, [amount, form, network, assetId, addressQuery, rgbInvoice, lnInvoice])
+  }, [network, assetId, addressQuery, rgbInvoice])
 
   return (
     <form
       className="min-h-full flex justify-between flex-col space-y-4"
-      onSubmit={form.handleSubmit(onSubmit)}
+      onSubmit={form.handleSubmit((data) =>
+        console.log('form submitted', data)
+      )}
     >
       <div>
         <div className="text-center mb-10">
           <h3 className="text-2xl font-semibold mb-4">Fund your wallet</h3>
-
           <p>
-            Fill in the fields below, then scan the QR code or copy the address
-            to fund your wallet.
+            Choose your deposit method, fill in the fields, and then generate
+            the invoice to proceed.
           </p>
         </div>
 
@@ -96,7 +122,6 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
             render={({ field }) => (
               <div className="mb-6">
                 <div className="text-xs mb-3">Deposit Method</div>
-
                 <div className="flex items-center space-x-6">
                   <div
                     className="flex items-center space-x-2 cursor-pointer"
@@ -104,25 +129,22 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
                   >
                     <div
                       className={twJoin(
-                        'flex-auto w-4 h-4 rounded border-2 border-grey-lighter',
+                        'w-4 h-4 rounded border-2 border-grey-lighter',
                         field.value === 'on-chain' ? 'bg-grey-lighter' : null
                       )}
                     />
-
                     <div className="text-grey-lighter">On-chain</div>
                   </div>
-
                   <div
                     className="flex items-center space-x-2 cursor-pointer"
                     onClick={() => field.onChange('lightning')}
                   >
                     <div
                       className={twJoin(
-                        'flex-auto w-4 h-4 rounded border-2 border-grey-lighter',
+                        'w-4 h-4 rounded border-2 border-grey-lighter',
                         field.value === 'lightning' ? 'bg-grey-lighter' : null
                       )}
                     />
-
                     <div className="text-grey-lighter">Lightning Network</div>
                   </div>
                 </div>
@@ -130,12 +152,22 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
             )}
           />
 
-          {network === 'lightning' ? (
-            <div className="mb-12">
-              <div className="flex justify-between items-center font-light mb-3">
-                <div className="text-xs">Amount</div>
-              </div>
+          {network === 'on-chain' && assetId !== BTC_ASSET_ID && (
+            <div className="mb-6">
+              <button
+                className="mt-4 px-6 py-2 bg-cyan rounded text-white"
+                disabled={rgbLoading}
+                onClick={generateRgbInvoice}
+                type="button"
+              >
+                {rgbLoading ? 'Generating...' : 'Generate RGB On-chain Invoice'}
+              </button>
+            </div>
+          )}
 
+          {network === 'lightning' && (
+            <div className="mb-12">
+              <div className="text-xs mb-3">Amount</div>
               <div className="flex items-stretch">
                 <Controller
                   control={form.control}
@@ -143,12 +175,12 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
                   render={({ field }) => (
                     <input
                       className="flex-1 rounded-l bg-blue-dark px-4 py-3 w-full outline-none"
-                      type="text"
+                      type="number"
                       {...field}
+                      placeholder="Enter amount"
                     />
                   )}
                 />
-
                 <div className="bg-blue-dark rounded-r flex items-center pr-4 text-cyan">
                   {assetId === BTC_ASSET_ID
                     ? 'BTC'
@@ -157,18 +189,22 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
                       )?.ticker}
                 </div>
               </div>
+              <button
+                className="mt-4 px-6 py-2 bg-cyan rounded text-white"
+                disabled={loading}
+                onClick={generateLightningInvoice}
+                type="button"
+              >
+                {loading ? 'Generating...' : 'Generate Lightning Invoice'}
+              </button>
             </div>
-          ) : (
-            <></>
           )}
 
           {address && address.length > 0 && (
-            <div className="flex items-center space-x-6 max-w-fit">
+            <div className="flex items-center space-x-6 max-w-fit mt-6">
               <QRCodeSVG fgColor="#3A3C4A" value={address ?? ''} />
-
               <div>
                 <div className="text-xs font-light">Wallet Address:</div>
-
                 <div className="flex items-center space-x-4">
                   <div className="break-words overflow-hidden whitespace-normal">
                     {address.length > 67
