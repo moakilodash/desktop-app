@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom'
 
 import {
   CREATE_NEW_CHANNEL_PATH,
+  CREATEUTXOS_PATH,
   WALLET_HISTORY_PATH,
 } from '../../app/router/paths'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
@@ -175,6 +176,7 @@ export const Component = () => {
   ])
 
   const onChainBalance = btcBalanceResponse.data?.vanilla.settled || 0
+  const onChainColoredBalance = btcBalanceResponse.data?.colored.settled || 0
   const channels = listChannelsResponse?.data?.channels || []
   const totalBalance =
     channels.reduce((sum, channel) => sum + channel.asset_local_amount, 0) +
@@ -276,6 +278,27 @@ export const Component = () => {
               {bitcoinUnit}
             </div>
           </Card>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4 mb-8">
+          <Card>
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-sm font-medium text-grey-light">
+                Colored Balance
+              </h2>
+              <Zap className="h-4 w-4 text-grey-light" />
+            </div>
+            <div className="text-2xl font-bold text-white">
+              {formatBitcoinAmount(onChainColoredBalance, bitcoinUnit)}{' '}
+              {bitcoinUnit}
+            </div>
+          </Card>
+          <button
+            className="px-6 py-3 mx-6 my-3 rounded border text-lg font-bold border-cyan text-white"
+            onClick={() => navigate(CREATEUTXOS_PATH)}
+          >
+            Create UTXOs
+          </button>
         </div>
 
         <div className="bg-blue-dark rounded p-6">

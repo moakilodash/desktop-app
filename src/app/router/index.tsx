@@ -19,6 +19,7 @@ import {
   WALLET_HISTORY_TRADES_PATH,
   WALLET_HISTORY_WITHDRAWALS_PATH,
   NODE_SETTINGS_PATH,
+  CREATEUTXOS_PATH,
 } from './paths'
 
 export const router = createBrowserRouter([
@@ -77,6 +78,10 @@ export const router = createBrowserRouter([
       {
         lazy: () => import('../../routes/create-new-channel'),
         path: CREATE_NEW_CHANNEL_PATH,
+      },
+      {
+        lazy: () => import('../../routes/createutxos'),
+        path: CREATEUTXOS_PATH,
       },
       {
         lazy: () => import('../../routes/channels'),
