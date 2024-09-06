@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Controller, useForm } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
-import { Select } from '../../components/Select'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 
 interface FormFields {
@@ -18,25 +17,17 @@ export const Component = () => {
 
   const navigate = useNavigate()
 
-  const { handleSubmit, register, watch, setValue, control } =
-    useForm<FormFields>({
-      defaultValues: {
-        fee_rate: '2.0',
-        num: 4,
-        size: 32500,
-      },
-    })
+  const { handleSubmit, register, watch, setValue } = useForm<FormFields>({
+    defaultValues: {
+      fee_rate: '2.0',
+      num: 4,
+      size: 32500,
+    },
+  })
 
   const num = watch('num')
   const size = watch('size')
   const feeRate = watch('fee_rate')
-
-  const feeRates = [
-    { label: 'Slow', value: '1.0' },
-    { label: 'Normal', value: '2.0' },
-    { label: 'Fast', value: '3.0' },
-    { label: 'Custom', value: 'custom' },
-  ]
 
   const [btcBalance, btcBalanceResponse] =
     nodeApi.endpoints.btcBalance.useLazyQuery()
@@ -146,20 +137,6 @@ export const Component = () => {
               <option value="3.0">Fast</option>
               <option value="custom">Custom</option>
             </select>
-            {/*
-              <Controller
-                control={control}
-                name="fee_rate"
-                render={({ field }) => (
-                  <Select
-                    active={field.value.toString()}
-                    onSelect={field.onChange}
-                    options={feeRates}
-                    theme="light"
-                  />
-                )}
-              />
-              */}
             {feeRate === 'custom' && (
               <input
                 className="bg-gray-700 text-white px-4 py-2 mt-4 rounded-md w-full"
