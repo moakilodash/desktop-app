@@ -56,6 +56,8 @@ export const Component = () => {
 
   const [isSwapInProgress, setIsSwapInProgress] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [hasValidChannelsForTrading, setHasValidChannelsForTrading] =
+    useState(false)
 
   const [showRecap, setShowRecap] = useState<boolean>(false)
   const [swapRecapDetails, setSwapRecapDetails] = useState<SwapDetails | null>(
@@ -586,7 +588,7 @@ export const Component = () => {
         if ('data' in getPairsResponse && getPairsResponse.data) {
           dispatch(setTradingPairs(getPairsResponse.data.pairs))
           const tradableAssets = new Set([
-            'BTC',
+            // 'BTC',
             ...channels.map((c) => c.asset_id).filter((id) => id !== null),
           ])
           const filteredPairs = getPairsResponse.data.pairs.filter(
@@ -595,6 +597,7 @@ export const Component = () => {
               tradableAssets.has(pair.quote_asset_id)
           )
           setTradablePairs(filteredPairs)
+          setHasValidChannelsForTrading(filteredPairs.length > 0)
 
           if (filteredPairs.length > 0) {
             setSelectedPair(filteredPairs[0])
@@ -1099,7 +1102,7 @@ export const Component = () => {
         <div className="flex justify-center items-center h-64">
           <Loader />
         </div>
-      ) : !hasChannels ? (
+      ) : !hasValidChannelsForTrading ? (
         renderNoChannelsMessage()
       ) : (
         renderSwapForm()
