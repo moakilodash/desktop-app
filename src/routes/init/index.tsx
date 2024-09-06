@@ -106,6 +106,8 @@ export const Component = () => {
         navigate(TRADE_PATH)
       }
     } else {
+      console.log('Failed to unlock the node...')
+      console.log(unlockResponse.error)
       setAdditionalErrors((s) => [...s, 'Failed to unlock the node...'])
     }
   }
