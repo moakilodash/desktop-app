@@ -13,12 +13,12 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-22.04  # Usa Ubuntu 22.04
-            runner-label: [self-hosted, linux-runner]
-          - os: macos-ventura  # Usa macOS Ventura
-            runner-label: [self-hosted, macos-runner]
-          - os: windows-server-2022  # Usa Windows Server 2022
-            runner-label: [self-hosted, windows-runner]
+          - os: ubuntu-22.04
+            runner-label: [self-hosted, Linux, X64]
+          - os: macos-ventura
+            runner-label: [self-hosted, macOS, X64]
+          - os: windows-server-2022
+            runner-label: [self-hosted, Windows, X64]
 
     runs-on: ${{ matrix.runner-label }}
 
