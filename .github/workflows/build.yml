@@ -49,6 +49,13 @@ jobs:
         export PATH="/usr/local/bin:$PATH"
         brew install openssl gtk+
 
+    - name: Install Chocolatey on Windows
+      if: matrix.os == 'windows-server-2022'
+      run: |
+        Set-ExecutionPolicy Bypass -Scope Process -Force; `
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; `
+        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+
     - name: Install MSVC Build Tools and OpenSSL on Windows
       if: matrix.os == 'windows-server-2022'
       run: |
