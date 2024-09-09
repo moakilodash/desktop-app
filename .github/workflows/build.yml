@@ -55,19 +55,20 @@ jobs:
       run: |
         Set-ExecutionPolicy Bypass -Scope Process -Force; `
         [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; `
-        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-        $env:Path += ";$env:ALLUSERSPROFILE\chocolatey\bin"
+        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1')); `
+        RefreshEnv
 
     - name: Verify Chocolatey installation
       if: matrix.os == 'windows-server-2022'
       shell: powershell
       run: |
-        choco -v
+        & "C:\ProgramData\chocolatey\bin\choco.exe" -v
 
     - name: Install MSVC Build Tools and OpenSSL on Windows
       if: matrix.os == 'windows-server-2022'
+      shell: powershell
       run: |
-        choco install openssl visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK.18362"
+        & "C:\ProgramData\chocolatey\bin\choco.exe" install openssl visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK.18362"
 
     - name: Configure MSVC and Set OpenSSL Environment on Windows
       if: matrix.os == 'windows-server-2022'
