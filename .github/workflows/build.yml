@@ -13,14 +13,14 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            runner: linux-runner
-          - os: macos-latest
-            runner: macos-runner
-          - os: windows-latest
-            runner: windows-runner
+          - os: ubuntu-22.04  # Usa Ubuntu 22.04
+            runner-label: [self-hosted, linux-runner]
+          - os: macos-ventura  # Usa macOS Ventura
+            runner-label: [self-hosted, macos-runner]
+          - os: windows-server-2022  # Usa Windows Server 2022
+            runner-label: [self-hosted, windows-runner]
 
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner-label }}
 
     steps:
     - name: Check out code
@@ -35,18 +35,18 @@ jobs:
       run: npm install -g pnpm
 
     - name: Install system dependencies on Linux
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-22.04'
       run: |
         sudo apt-get update
         sudo apt-get install -y libgtk-3-dev libsoup2.4-dev libjavascriptcoregtk-4.0-dev libwebkit2gtk-4.0-dev
 
     - name: Install system dependencies on macOS
-      if: matrix.os == 'macos-latest'
+      if: matrix.os == 'macos-ventura'
       run: |
         brew install openssl gtk+
 
     - name: Set OpenSSL environment variables on macOS
-      if: matrix.os == 'macos-latest'
+      if: matrix.os == 'macos-ventura'
       run: |
         OPENSSL_PREFIX=$(brew --prefix openssl)
         echo "OPENSSL_DIR=$OPENSSL_PREFIX" >> $GITHUB_ENV
@@ -54,12 +54,12 @@ jobs:
         echo "OPENSSL_LIB_DIR=$OPENSSL_PREFIX/lib" >> $GITHUB_ENV
 
     - name: Install MSVC Build Tools and OpenSSL on Windows
-      if: matrix.os == 'windows-latest'
+      if: matrix.os == 'windows-server-2022'
       run: |
         choco install openssl visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK.18362"
 
     - name: Configure MSVC and Set OpenSSL Environment on Windows
-      if: matrix.os == 'windows-latest'
+      if: matrix.os == 'windows-server-2022'
       shell: cmd
       run: |
         "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && ^
@@ -84,7 +84,7 @@ jobs:
 
     - name: Build Tauri app
       run: |
-        if [ ${{ matrix.os }} == 'windows-latest' ]; then
+        if [ ${{ matrix.os }} == 'windows-server-2022' ]; then
           "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && pnpm run tauri build
         else
           pnpm run tauri build
@@ -95,3 +95,4 @@ jobs:
       with:
         name: tauri-artifacts-${{ matrix.os }}
         path: ./src-tauri/target/release/bundle/**
+
