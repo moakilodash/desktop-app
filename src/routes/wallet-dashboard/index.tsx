@@ -4,12 +4,14 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Info,
+  Plus,
 } from 'lucide-react'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import {
   CREATE_NEW_CHANNEL_PATH,
+  CREATEUTXOS_PATH,
   WALLET_HISTORY_PATH,
 } from '../../app/router/paths'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
@@ -17,6 +19,26 @@ import { ChannelCard } from '../../components/ChannelCard'
 import { formatBitcoinAmount } from '../../helpers/number'
 import { nodeApi, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
 import { uiSliceActions } from '../../slices/ui/ui.slice'
+
+const Tooltip = ({ content, children }) => {
+  const [isVisible, setIsVisible] = useState(false)
+
+  return (
+    <div className="relative inline-block">
+      <div
+        onMouseEnter={() => setIsVisible(true)}
+        onMouseLeave={() => setIsVisible(false)}
+      >
+        {children}
+      </div>
+      {isVisible && (
+        <div className="absolute z-10 p-4 bg-gray-800 text-white text-sm rounded shadow-lg -top-24 left-1/2 transform -translate-x-1/2 w-64">
+          {content}
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface CardProps {
   children: React.ReactNode
@@ -51,7 +73,9 @@ const AssetRow: React.FC<AssetRowProps> = ({
 
   const formatAmount = (asset: NiaAsset, amount: number) => {
     const formattedAmount = amount / Math.pow(10, asset.precision)
-    return formattedAmount
+    return formattedAmount.toLocaleString(undefined, {
+      maximumFractionDigits: asset.precision,
+    })
   }
 
   return (
@@ -114,6 +138,7 @@ const AssetRow: React.FC<AssetRowProps> = ({
 
 export const Component = () => {
   const dispatch = useAppDispatch()
+  const navigate = useNavigate()
   const [assets, assetsResponse] = nodeApi.endpoints.listAssets.useLazyQuery()
   const [btcBalance, btcBalanceResponse] =
     nodeApi.endpoints.btcBalance.useLazyQuery()
@@ -121,7 +146,6 @@ export const Component = () => {
     nodeApi.endpoints.listChannels.useLazyQuery()
   const [assetBalance] = nodeApi.endpoints.assetBalance.useLazyQuery()
   const [closeChannel] = nodeApi.endpoints.closeChannel.useLazyQuery()
-  const navigate = useNavigate()
   const [assetBalances, setAssetBalances] = useState<
     Record<string, { offChain: number; onChain: number }>
   >({})
@@ -175,10 +199,13 @@ export const Component = () => {
   ])
 
   const onChainBalance = btcBalanceResponse.data?.vanilla.settled || 0
+  const onChainColoredBalance = btcBalanceResponse.data?.colored.settled || 0
   const channels = listChannelsResponse?.data?.channels || []
-  const totalBalance =
-    channels.reduce((sum, channel) => sum + channel.asset_local_amount, 0) +
-    onChainBalance
+  const offChainBalance = channels.reduce(
+    (sum, channel) => sum + channel.local_balance_msat / 1000,
+    0
+  )
+  const totalBalance = offChainBalance + onChainBalance + onChainColoredBalance
   const totalInboundLiquidity = channels.reduce(
     (sum, channel) => sum + channel.inbound_balance_msat / 1000,
     0
@@ -241,41 +268,93 @@ export const Component = () => {
         </div>
 
         <div className="grid grid-cols-3 gap-4 mb-8">
-          <Card>
+          <Card className="col-span-2">
             <div className="flex justify-between items-center mb-2">
               <h2 className="text-sm font-medium text-grey-light">
                 Total Balance
               </h2>
               <Zap className="h-4 w-4 text-grey-light" />
             </div>
-            <div className="text-2xl font-bold text-white">
+            <div className="text-2xl font-bold text-white mb-2">
               {formatBitcoinAmount(totalBalance, bitcoinUnit)} {bitcoinUnit}
             </div>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <span className="text-grey-light">On-chain:</span>
+                <span className="ml-2 text-white">
+                  {formatBitcoinAmount(
+                    onChainBalance + onChainColoredBalance,
+                    bitcoinUnit
+                  )}{' '}
+                  {bitcoinUnit}
+                </span>
+              </div>
+              <div>
+                <span className="text-grey-light">Off-chain:</span>
+                <span className="ml-2 text-white">
+                  {formatBitcoinAmount(offChainBalance, bitcoinUnit)}{' '}
+                  {bitcoinUnit}
+                </span>
+              </div>
+            </div>
+            <div className="mt-2 pt-2 border-t border-gray-600">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-grey-light">
+                  On-chain Details:
+                </span>
+                <Tooltip content="Create colored UTXOs to use for RGB assets">
+                  <button
+                    className="p-1 rounded-full bg-cyan text-blue-dark hover:bg-cyan-dark transition-colors"
+                    onClick={() => navigate(CREATEUTXOS_PATH)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </Tooltip>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm mt-1">
+                <div>
+                  <span className="text-grey-light">Normal:</span>
+                  <span className="ml-2 text-white">
+                    {formatBitcoinAmount(onChainBalance, bitcoinUnit)}{' '}
+                    {bitcoinUnit}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-grey-light">Colored:</span>
+                  <span className="ml-2 text-white">
+                    {formatBitcoinAmount(onChainColoredBalance, bitcoinUnit)}{' '}
+                    {bitcoinUnit}
+                  </span>
+                </div>
+              </div>
+            </div>
           </Card>
-          <Card>
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-sm font-medium text-grey-light">
-                Total Inbound Liquidity
-              </h2>
-              <ArrowDownRight className="h-4 w-4 text-grey-light" />
-            </div>
-            <div className="text-2xl font-bold text-white">
-              {formatBitcoinAmount(totalInboundLiquidity, bitcoinUnit)}{' '}
-              {bitcoinUnit}
-            </div>
-          </Card>
-          <Card>
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-sm font-medium text-grey-light">
-                Total Outbound Liquidity
-              </h2>
-              <ArrowUpRight className="h-4 w-4 text-grey-light" />
-            </div>
-            <div className="text-2xl font-bold text-white">
-              {formatBitcoinAmount(totalOutboundLiquidity, bitcoinUnit)}{' '}
-              {bitcoinUnit}
-            </div>
-          </Card>
+          <div className="grid grid-rows-2 gap-4">
+            <Card>
+              <div className="flex justify-between items-center mb-2">
+                <h2 className="text-sm font-medium text-grey-light">
+                  Total Inbound Liquidity
+                </h2>
+                <ArrowDownRight className="h-4 w-4 text-grey-light" />
+              </div>
+              <div className="text-xl font-bold text-white">
+                {formatBitcoinAmount(totalInboundLiquidity, bitcoinUnit)}{' '}
+                {bitcoinUnit}
+              </div>
+            </Card>
+            <Card>
+              <div className="flex justify-between items-center mb-2">
+                <h2 className="text-sm font-medium text-grey-light">
+                  Total Outbound Liquidity
+                </h2>
+                <ArrowUpRight className="h-4 w-4 text-grey-light" />
+              </div>
+              <div className="text-xl font-bold text-white">
+                {formatBitcoinAmount(totalOutboundLiquidity, bitcoinUnit)}{' '}
+                {bitcoinUnit}
+              </div>
+            </Card>
+          </div>
         </div>
 
         <div className="bg-blue-dark rounded p-6">

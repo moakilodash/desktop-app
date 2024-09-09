@@ -108,6 +108,12 @@ interface ListPeersResponse {
   ]
 }
 
+interface CreateUTXOsRequest {
+  num: number
+  size: number
+  fee_rate: number
+}
+
 interface AddressResponse {
   address: string
 }
@@ -319,10 +325,12 @@ export const nodeApi = createApi({
         url: '/connectpeer',
       }),
     }),
-    createUTXOs: builder.query<AddressResponse, void>({
-      query: () => ({
+    createUTXOs: builder.query<AddressResponse, CreateUTXOsRequest>({
+      query: (body) => ({
         body: {
-          num: 4,
+          fee_rate: body.fee_rate,
+          num: body.num,
+          size: body.size,
           up_to: false,
         },
         method: 'POST',
