@@ -106,8 +106,8 @@ jobs:
       run: |
         Invoke-WebRequest -Uri https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe -OutFile rustup-init.exe
         Start-Process -FilePath ./rustup-init.exe -ArgumentList "-y" -Wait
-        $env:PATH += ";C:\Users\%USERNAME%\.cargo\bin"
-        rustup default stable
+        $env:Path += ";$env:USERPROFILE\.cargo\bin"
+        & rustup default stable
 
     - name: Install Tauri CLI
       run: pnpm install --save-dev @tauri-apps/cli
