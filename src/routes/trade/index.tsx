@@ -532,6 +532,7 @@ export const Component = () => {
   ])
 
   // Initialize WebSocket connection
+  // TODO: Connect only when trade is possible
   useEffect(() => {
     if (makerConnectionUrl) {
       const clientId = uuidv4()

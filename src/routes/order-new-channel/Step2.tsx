@@ -1,16 +1,20 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
-import { z } from 'zod'
+import * as z from 'zod'
 
-import { useAppSelector } from '../../app/store/hooks'
+import { CREATEUTXOS_PATH } from '../../app/router/paths'
+import { useAppSelector, useAppDispatch } from '../../app/store/hooks'
 import { AssetSelector } from '../../components/AssetSelector'
 import { Select } from '../../components/Select'
 import { MIN_CHANNEL_CAPACITY, MAX_CHANNEL_CAPACITY } from '../../constants'
 import {
   orderChannelSliceSelectors,
-  initialState,
+  orderChannelSliceActions,
+  OrderChannelFormSchema,
+  TChannelRequestForm,
 } from '../../slices/channel/orderChannel.slice'
 import { makerApi } from '../../slices/makerApi/makerApi.slice'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
@@ -36,7 +40,7 @@ interface AssetInfo {
   max_channel_amount: number
 }
 
-const OrderChannelFormSchema = z.object({
+const FormFieldsSchema = z.object({
   assetAmount: z.string(),
   assetId: z.string(),
   capacitySat: z.string(),
@@ -44,47 +48,30 @@ const OrderChannelFormSchema = z.object({
   clientBalanceSat: z.string(),
 })
 
-type FormFields = {
-  assetAmount: string
-  assetId: string
-  capacitySat: string
-  channelExpireBlocks: number
-  clientBalanceSat: string
-}
+type FormFields = z.infer<typeof FormFieldsSchema>
 
-export type TChannelRequestForm = {
-  assetAmount: number
-  assetId: string
-  capacitySat: number
-  channelExpireBlocks: number
-  clientBalanceSat: number
-}
-
-export const Step2: React.FC<Props> = ({ onNext }) => {
+export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
+  const navigate = useNavigate()
+  const dispatch = useAppDispatch()
   const [assetMap, setAssetMap] = useState<Record<string, AssetInfo>>({})
   const [addAsset, setAddAsset] = useState(false)
   const [coloredBtcBalance, setColoredBtcBalance] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
-  const orderChannelForm = useAppSelector((state) =>
-    orderChannelSliceSelectors.form(state, 'request')
-  ) as unknown as FormFields
 
   const { register, handleSubmit, setValue, control, watch, formState } =
     useForm<FormFields>({
-      criteriaMode: 'all',
       defaultValues: {
-        ...initialState.forms.request,
         assetAmount: '0',
+        assetId: '',
         capacitySat: MIN_CHANNEL_CAPACITY.toString(),
+        channelExpireBlocks: 1008,
         clientBalanceSat: '0',
       },
-      resolver: zodResolver(OrderChannelFormSchema),
-      values: orderChannelForm,
+      resolver: zodResolver(FormFieldsSchema),
     })
 
   const [getInfoRequest] = makerApi.endpoints.get_info.useLazyQuery()
   const [getBtcBalanceRequest] = nodeApi.endpoints.btcBalance.useLazyQuery()
-  // const [getCreateUTXOsRequest] = nodeApi.endpoints.createUTXOs.useLazyQuery()
 
   const assetAmount = watch('assetAmount')
   const capacitySat = watch('capacitySat')
@@ -130,6 +117,7 @@ export const Step2: React.FC<Props> = ({ onNext }) => {
     },
     [assetMap]
   )
+
   const handleAssetAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/[^0-9.]/g, '')
     let parsedValue = parseFloat(value)
@@ -141,7 +129,7 @@ export const Step2: React.FC<Props> = ({ onNext }) => {
     const maxAmount = getAssetMaxAmount()
     parsedValue = Math.max(0, Math.min(maxAmount, parsedValue))
 
-    setValue('assetAmount', parsedValue.toString())
+    setValue('assetAmount', parsedValue.toFixed(getAssetPrecision(assetId)))
   }
 
   const parseAssetAmount = useCallback(
@@ -159,7 +147,7 @@ export const Step2: React.FC<Props> = ({ onNext }) => {
 
   const handleAmountChange = (
     e: React.ChangeEvent<HTMLInputElement>,
-    field: 'capacitySat' | 'clientBalanceSat' | 'assetAmount'
+    field: 'capacitySat' | 'clientBalanceSat'
   ) => {
     const value = e.target.value.replace(/[^0-9]/g, '')
     let parsedValue = parseInt(value, 10)
@@ -172,9 +160,6 @@ export const Step2: React.FC<Props> = ({ onNext }) => {
     } else if (field === 'clientBalanceSat') {
       const maxClientBalance = parseInt(capacitySat.replace(/[^0-9]/g, ''), 10)
       parsedValue = Math.max(0, Math.min(maxClientBalance, parsedValue))
-    } else if (field === 'assetAmount' && assetId) {
-      const maxAssetAmount = assetMap[assetId]?.max_channel_amount || 0
-      parsedValue = Math.max(0, Math.min(maxAssetAmount, parsedValue))
     }
 
     const formattedValue = new Intl.NumberFormat('en-US').format(parsedValue)
@@ -192,37 +177,54 @@ export const Step2: React.FC<Props> = ({ onNext }) => {
 
   const onSubmit = useCallback(
     (data: FormFields) => {
-      if (
-        addAsset &&
-        parseInt(data.capacitySat.replace(/[^0-9]/g, ''), 10) >
-          coloredBtcBalance
-      ) {
-        return
-      }
+      const parsedCapacitySat = parseInt(
+        data.capacitySat.replace(/[^0-9]/g, ''),
+        10
+      )
+      const parsedClientBalanceSat = parseInt(
+        data.clientBalanceSat.replace(/[^0-9]/g, ''),
+        10
+      )
+      const parsedAssetAmount = addAsset
+        ? parseAssetAmount(data.assetAmount, data.assetId)
+        : 0
 
       const submissionData: TChannelRequestForm = {
-        ...data,
-        assetAmount: addAsset
-          ? parseAssetAmount(data.assetAmount, data.assetId)
-          : 0,
-        capacitySat: parseInt(data.capacitySat.replace(/[^0-9]/g, ''), 10),
+        assetAmount: parsedAssetAmount,
+        assetId: data.assetId,
+        capacitySat: parsedCapacitySat,
         channelExpireBlocks: data.channelExpireBlocks,
-        clientBalanceSat: parseInt(
-          data.clientBalanceSat.replace(/[^0-9]/g, ''),
-          10
-        ),
+        clientBalanceSat: parsedClientBalanceSat,
       }
-      console.log('Form submitted with data:', submissionData)
-      onNext(submissionData)
+
+      try {
+        // Validate the data using the schema
+        OrderChannelFormSchema.parse(submissionData)
+
+        // If validation passes, update Redux and proceed
+        dispatch(orderChannelSliceActions.setChannelRequestForm(submissionData))
+        console.log('Form submitted with data:', submissionData)
+        onNext(submissionData)
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          console.error('Validation error:', error.errors)
+          toast.error(
+            'There was an error with the form data. Please check your inputs.'
+          )
+        } else {
+          console.error('Unexpected error:', error)
+          toast.error('An unexpected error occurred. Please try again.')
+        }
+      }
     },
-    [addAsset, coloredBtcBalance, onNext, parseAssetAmount]
+    [addAsset, coloredBtcBalance, onNext, parseAssetAmount, dispatch]
   )
 
   const handleAssetAmountSliderChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const value = parseFloat(e.target.value)
-    setValue('assetAmount', value.toString())
+    setValue('assetAmount', value.toFixed(getAssetPrecision(assetId)))
   }
 
   const getAssetMaxAmount = useCallback(() => {
@@ -234,14 +236,7 @@ export const Step2: React.FC<Props> = ({ onNext }) => {
   const handleCreateUTXO = async () => {
     try {
       setIsLoading(true)
-      // const response = await getCreateUTXOsRequest()
-      // if (response.data) {
-      //   toast.success('New colored UTXOs created successfully.')
-      //   const balanceResponse = await getBtcBalanceRequest()
-      //   if (balanceResponse.data) {
-      //     setColoredBtcBalance(balanceResponse.data.colored.spendable)
-      //   }
-      // }
+      navigate(CREATEUTXOS_PATH)
     } catch (error) {
       toast.error('Failed to create new colored UTXOs. Please try again.')
     } finally {
@@ -252,7 +247,6 @@ export const Step2: React.FC<Props> = ({ onNext }) => {
   const isCapacityExceedingBalance =
     addAsset &&
     parseInt(capacitySat.replace(/[^0-9]/g, ''), 10) > coloredBtcBalance
-
   return (
     <form
       className="bg-gray-900 text-white p-8 rounded-lg shadow-lg"
@@ -428,7 +422,14 @@ export const Step2: React.FC<Props> = ({ onNext }) => {
         </div>
       )}
 
-      <div className="flex justify-end space-x-4 mt-10">
+      <div className="flex justify-between space-x-4 mt-10">
+        <button
+          className="px-6 py-3 rounded-lg text-lg font-bold bg-gray-600 hover:bg-gray-700 transition-colors"
+          onClick={onBack}
+          type="button"
+        >
+          Back
+        </button>
         <button
           className={`px-6 py-3 rounded-lg text-lg font-bold ${
             isCapacityExceedingBalance || isLoading
