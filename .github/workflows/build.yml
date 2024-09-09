@@ -118,12 +118,16 @@ jobs:
     - name: Install Tauri CLI
       run: pnpm install --save-dev @tauri-apps/cli
 
-    - name: Build Tauri app
+    - name: Build Tauri app on Linux/macOS
+      if: runner.os != 'Windows'
+      run: pnpm run tauri build
+      shell: bash
+
+    - name: Build Tauri app on Windows
+      if: runner.os == 'Windows'
+      shell: cmd
       run: |
-        if [[ ${{ matrix.os }} == 'windows-server-2022' ]]; then
-          "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && pnpm run tauri build
-        else
-          pnpm run tauri build
+        "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && pnpm run tauri build
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3
