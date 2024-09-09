@@ -49,8 +49,9 @@ jobs:
         export PATH="/usr/local/bin:$PATH"
         brew install openssl gtk+
 
-    - name: Install Chocolatey on Windows
+    - name: Install Chocolatey
       if: matrix.os == 'windows-server-2022'
+      shell: powershell
       run: |
         Set-ExecutionPolicy Bypass -Scope Process -Force; `
         [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; `
