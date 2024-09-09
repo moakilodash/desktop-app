@@ -29,11 +29,11 @@ jobs:
     - name: Create askpass.sh script
       if: matrix.os == 'ubuntu-22.04' || matrix.os == 'macos-ventura'
       run: |
-        echo "#!/bin/sh" > ${HOME}/askpass.sh
-        echo "echo '${{ secrets.SUDO_PASSWORD }}'" >> ${HOME}/askpass.sh
-        chmod +x ${HOME}/askpass.sh
+        echo "#!/bin/sh" > /tmp/askpass.sh
+        echo "echo '${{ secrets.SUDO_PASSWORD }}'" >> /tmp/askpass.sh
+        chmod +x /tmp/askpass.sh
       env:
-        SUDO_ASKPASS: ${HOME}/askpass.sh
+        SUDO_ASKPASS: /tmp/askpass.sh
 
     - name: Install system dependencies on Linux
       if: matrix.os == 'ubuntu-22.04'
@@ -41,14 +41,14 @@ jobs:
         sudo -A apt-get update
         sudo -A apt-get install -y libgtk-3-dev libsoup2.4-dev libjavascriptcoregtk-4.0-dev libwebkit2gtk-4.0-dev
       env:
-        SUDO_ASKPASS: ${HOME}/askpass.sh
+        SUDO_ASKPASS: /tmp/askpass.sh
 
     - name: Install system dependencies on macOS
       if: matrix.os == 'macos-ventura'
       run: |
         sudo -A brew install openssl gtk+
       env:
-        SUDO_ASKPASS: ${HOME}/askpass.sh
+        SUDO_ASKPASS: /tmp/askpass.sh
 
     - name: Install MSVC Build Tools and OpenSSL on Windows
       if: matrix.os == 'windows-server-2022'
