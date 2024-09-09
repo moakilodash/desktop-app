@@ -97,11 +97,23 @@ jobs:
     - name: Install dependencies
       run: pnpm install
 
+    - name: Clean Rust installation
+      if: matrix.os == 'ubuntu-22.04'
+      run: |
+        rm -rf $HOME/.rustup/toolchains/stable-x86_64-unknown-linux-gnu
+        rm -rf $HOME/.cargo/bin
+        rm -rf $HOME/.rustup/tmp/*
+
     - name: Set up Rust
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
         override: true
+
+    - name: Verify Rust installation
+      run: |
+        source $HOME/.cargo/env
+        rustup show
 
     - name: Install Tauri CLI
       run: pnpm install --save-dev @tauri-apps/cli
