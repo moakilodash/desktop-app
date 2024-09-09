@@ -91,11 +91,23 @@ jobs:
     - name: Install dependencies
       run: pnpm install
 
-    - name: Set up Rust
+    # Install Rust on Linux/macOS
+    - name: Set up Rust on Linux/macOS
+      if: runner.os != 'Windows'
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
         override: true
+
+    # Install Rust on Windows
+    - name: Install Rust on Windows
+      if: runner.os == 'Windows'
+      shell: powershell
+      run: |
+        Invoke-WebRequest -Uri https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe -OutFile rustup-init.exe
+        Start-Process -FilePath ./rustup-init.exe -ArgumentList "-y" -Wait
+        $env:PATH += ";C:\Users\%USERNAME%\.cargo\bin"
+        rustup default stable
 
     - name: Install Tauri CLI
       run: pnpm install --save-dev @tauri-apps/cli
