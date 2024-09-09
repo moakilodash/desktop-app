@@ -46,9 +46,8 @@ jobs:
     - name: Install system dependencies on macOS
       if: matrix.os == 'macos-ventura'
       run: |
-        sudo -A brew install openssl gtk+
-      env:
-        SUDO_ASKPASS: /tmp/askpass.sh
+        export PATH="/usr/local/bin:$PATH"
+        brew install openssl gtk+
 
     - name: Install MSVC Build Tools and OpenSSL on Windows
       if: matrix.os == 'windows-server-2022'
