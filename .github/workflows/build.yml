@@ -10,7 +10,6 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
         include:
@@ -20,6 +19,8 @@ jobs:
             runner: macos-runner
           - os: windows-latest
             runner: windows-runner
+
+    runs-on: [self-hosted, ${{ matrix.runner }}]
 
     steps:
     - name: Check out code
