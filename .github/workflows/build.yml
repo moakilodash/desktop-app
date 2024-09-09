@@ -49,16 +49,19 @@ jobs:
         export PATH="/usr/local/bin:$PATH"
         brew install openssl gtk+
 
-    - name: Install Chocolatey
+    - name: Verify Chocolatey installation
       if: matrix.os == 'windows-server-2022'
       shell: powershell
       run: |
-        Set-ExecutionPolicy Bypass -Scope Process -Force; `
-        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; `
-        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1')); `
-        RefreshEnv
+        if (-Not (Test-Path "C:\ProgramData\chocolatey\bin\choco.exe")) {
+          Set-ExecutionPolicy Bypass -Scope Process -Force; `
+          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; `
+          iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'));
+        } else {
+          Write-Host "Chocolatey is already installed";
+        }
 
-    - name: Verify Chocolatey installation
+    - name: Check Chocolatey version
       if: matrix.os == 'windows-server-2022'
       shell: powershell
       run: |
