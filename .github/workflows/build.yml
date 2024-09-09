@@ -26,31 +26,9 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v3
 
-    - name: Create askpass.sh script
-      if: matrix.os == 'ubuntu-22.04' || matrix.os == 'macos-ventura'
-      run: |
-        echo "#!/bin/sh" > /tmp/askpass.sh
-        echo "echo '${{ secrets.SUDO_PASSWORD }}'" >> /tmp/askpass.sh
-        chmod +x /tmp/askpass.sh
-      env:
-        SUDO_ASKPASS: /tmp/askpass.sh
-
-    - name: Install system dependencies on Linux
-      if: matrix.os == 'ubuntu-22.04'
-      run: |
-        sudo -A apt-get update
-        sudo -A apt-get install -y libgtk-3-dev libsoup2.4-dev libjavascriptcoregtk-4.0-dev libwebkit2gtk-4.0-dev
-      env:
-        SUDO_ASKPASS: /tmp/askpass.sh
-
-    - name: Install system dependencies on macOS
-      if: matrix.os == 'macos-ventura'
-      run: |
-        export PATH="/usr/local/bin:$PATH"
-        brew install openssl gtk+
-
-    - name: Verify Chocolatey installation
-      if: matrix.os == 'windows-server-2022'
+    # Install Chocolatey only if not already installed
+    - name: Install Chocolatey on Windows
+      if: runner.os == 'Windows'
       shell: powershell
       run: |
         if (-Not (Test-Path "C:\ProgramData\chocolatey\bin\choco.exe")) {
@@ -61,30 +39,29 @@ jobs:
           Write-Host "Chocolatey is already installed";
         }
 
-    - name: Check Chocolatey version
-      if: matrix.os == 'windows-server-2022'
-      shell: powershell
-      run: |
-        & "C:\ProgramData\chocolatey\bin\choco.exe" -v
-
+    # Install MSVC Build Tools and OpenSSL via Chocolatey
     - name: Install MSVC Build Tools and OpenSSL on Windows
-      if: matrix.os == 'windows-server-2022'
+      if: runner.os == 'Windows'
       shell: powershell
       run: |
-        & "C:\ProgramData\chocolatey\bin\choco.exe" install openssl visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK.18362" -y
+        & "C:\ProgramData\chocolatey\bin\choco.exe" install openssl visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64" -y
 
+    # Configure MSVC and Set OpenSSL Environment on Windows
     - name: Configure MSVC and Set OpenSSL Environment on Windows
-      if: matrix.os == 'windows-server-2022'
+      if: runner.os == 'Windows'
       shell: cmd
       run: |
-        "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && ^
-        set OPENSSL_DIR="C:\Program Files\OpenSSL" && ^
-        set OPENSSL_INCLUDE_DIR="C:\Program Files\OpenSSL\include" && ^
-        set OPENSSL_LIB_DIR="C:\Program Files\OpenSSL\lib" && ^
-        echo "OPENSSL_DIR=$OPENSSL_DIR" >> %GITHUB_ENV% && ^
-        echo "OPENSSL_INCLUDE_DIR=$OPENSSL_INCLUDE_DIR" >> %GITHUB_ENV% && ^
-        echo "OPENSSL_LIB_DIR=$OPENSSL_LIB_DIR" >> %GITHUB_ENV%
+        if exist "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" (
+          "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && ^
+          set OPENSSL_DIR="C:\Program Files\OpenSSL" && ^
+          set OPENSSL_INCLUDE_DIR="C:\Program Files\OpenSSL\include" && ^
+          set OPENSSL_LIB_DIR="C:\Program Files\OpenSSL\lib" && ^
+          echo "OPENSSL_DIR=$OPENSSL_DIR" >> %GITHUB_ENV% && ^
+          echo "OPENSSL_INCLUDE_DIR=$OPENSSL_INCLUDE_DIR" >> %GITHUB_ENV% && ^
+          echo "OPENSSL_LIB_DIR=$OPENSSL_LIB_DIR" >> %GITHUB_ENV%
+        )
 
+    # Steps for Linux/macOS or other shared tasks...
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
@@ -97,23 +74,11 @@ jobs:
     - name: Install dependencies
       run: pnpm install
 
-    - name: Clean Rust installation
-      if: matrix.os == 'ubuntu-22.04'
-      run: |
-        rm -rf $HOME/.rustup/toolchains/stable-x86_64-unknown-linux-gnu
-        rm -rf $HOME/.cargo/bin
-        rm -rf $HOME/.rustup/tmp/*
-
     - name: Set up Rust
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
         override: true
-
-    - name: Verify Rust installation
-      run: |
-        source $HOME/.cargo/env
-        rustup show
 
     - name: Install Tauri CLI
       run: pnpm install --save-dev @tauri-apps/cli
@@ -129,6 +94,7 @@ jobs:
       run: |
         "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && pnpm run tauri build
 
+    # Upload build artifacts
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3
       with:
