@@ -20,7 +20,7 @@ jobs:
           - os: windows-latest
             runner: windows-runner
 
-    runs-on: [self-hosted, ${{ matrix.runner }}]
+    runs-on: ${{ matrix.runner }}
 
     steps:
     - name: Check out code
