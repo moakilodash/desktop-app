@@ -56,6 +56,13 @@ jobs:
         Set-ExecutionPolicy Bypass -Scope Process -Force; `
         [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; `
         iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        $env:Path += ";$env:ALLUSERSPROFILE\chocolatey\bin"
+
+    - name: Verify Chocolatey installation
+      if: matrix.os == 'windows-server-2022'
+      shell: powershell
+      run: |
+        choco -v
 
     - name: Install MSVC Build Tools and OpenSSL on Windows
       if: matrix.os == 'windows-server-2022'
