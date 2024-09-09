@@ -66,6 +66,10 @@ jobs:
         echo "OPENSSL_INCLUDE_DIR=$OPENSSL_INCLUDE_DIR" >> %GITHUB_ENV% && ^
         echo "OPENSSL_LIB_DIR=$OPENSSL_LIB_DIR" >> %GITHUB_ENV%
 
+    - name: Install pnpm
+      run: |
+        npm install -g pnpm
+
     - name: Install dependencies
       run: pnpm install
 
