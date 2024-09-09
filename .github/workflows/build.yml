@@ -120,7 +120,7 @@ jobs:
 
     - name: Build Tauri app
       run: |
-        if [ ${{ matrix.os }} == 'windows-server-2022' ]; then
+        if [[ ${{ matrix.os }} == 'windows-server-2022' ]]; then
           "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && pnpm run tauri build
         else
           pnpm run tauri build
