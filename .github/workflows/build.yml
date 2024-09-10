@@ -122,7 +122,7 @@ jobs:
       if: runner.os == 'Windows'
       shell: powershell
       run: |
-        choco install vswhere -y
+        & "C:\ProgramData\chocolatey\bin\choco.exe" install vswhere -y
 
     # Find and run vcvars64.bat using vswhere
     - name: Build Tauri app on Windows
