@@ -119,9 +119,16 @@ jobs:
 
     - name: Build Tauri app on Windows
       if: runner.os == 'Windows'
-      shell: cmd
+      shell: powershell
       run: |
-        "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && pnpm run tauri build
+        $vcvarsPath = (Get-ChildItem -Path "C:\Program Files\Microsoft Visual Studio" -Recurse -Filter "vcvars64.bat" -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+        if ($vcvarsPath) {
+          & $vcvarsPath
+          pnpm run tauri build
+        } else {
+          Write-Host "vcvars64.bat not found"
+          exit 1
+        }
 
     # Upload build artifacts
     - name: Upload build artifacts
