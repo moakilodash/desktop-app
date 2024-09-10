@@ -44,14 +44,28 @@ jobs:
       if: runner.os == 'Windows'
       shell: powershell
       run: |
-        & "C:\ProgramData\chocolatey\bin\choco.exe" install openssl visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK.19041" -y
+        & "C:\ProgramData\chocolatey\bin\choco.exe" install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK.19041 --add Microsoft.VisualStudio.Component.VC.CMake.Project --includeRecommended --includeOptional" -y
 
-    # Set up Visual Studio Developer Command Prompt using ilammy/msvc-dev-cmd
-    - name: Set up MSVC environment
+    # Check Visual Studio installations
+    - name: Check Visual Studio installations
       if: runner.os == 'Windows'
-      uses: ilammy/msvc-dev-cmd@v1
-      with:
-        arch: x64
+      shell: powershell
+      run: |
+        & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -all
+
+    # Set up MSVC environment manually
+    - name: Set up MSVC environment manually
+      if: runner.os == 'Windows'
+      shell: powershell
+      run: |
+        $vsPath = &"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find "**\vcvarsall.bat"
+        if ($vsPath) {
+          Write-Host "Found vcvarsall.bat at $vsPath"
+          & $vsPath x64
+        } else {
+          Write-Host "vcvarsall.bat not found"
+          exit 1
+        }
 
     # Steps for Linux/macOS or other shared tasks...
     - name: Create askpass.sh script
@@ -111,7 +125,6 @@ jobs:
       run: pnpm run tauri build
       shell: bash
 
-    # Build Tauri app on Windows
     - name: Build Tauri app on Windows
       if: runner.os == 'Windows'
       shell: cmd
