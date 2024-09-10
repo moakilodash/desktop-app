@@ -46,20 +46,12 @@ jobs:
       run: |
         & "C:\ProgramData\chocolatey\bin\choco.exe" install openssl visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK.19041" -y
 
-    # Configure MSVC and Set OpenSSL Environment on Windows
-    - name: Configure MSVC and Set OpenSSL Environment on Windows
+    # Set up Visual Studio Developer Command Prompt using ilammy/msvc-dev-cmd
+    - name: Set up MSVC environment
       if: runner.os == 'Windows'
-      shell: cmd
-      run: |
-        if exist "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" (
-          "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && ^
-          set OPENSSL_DIR="C:\Program Files\OpenSSL" && ^
-          set OPENSSL_INCLUDE_DIR="C:\Program Files\OpenSSL\include" && ^
-          set OPENSSL_LIB_DIR="C:\Program Files\OpenSSL\lib" && ^
-          echo "OPENSSL_DIR=$OPENSSL_DIR" >> %GITHUB_ENV% && ^
-          echo "OPENSSL_INCLUDE_DIR=$OPENSSL_INCLUDE_DIR" >> %GITHUB_ENV% && ^
-          echo "OPENSSL_LIB_DIR=$OPENSSL_LIB_DIR" >> %GITHUB_ENV%
-        )
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
 
     # Steps for Linux/macOS or other shared tasks...
     - name: Create askpass.sh script
@@ -106,9 +98,9 @@ jobs:
       run: |
         Invoke-WebRequest -Uri https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe -OutFile rustup-init.exe
         Start-Process -FilePath ./rustup-init.exe -ArgumentList "-y" -Wait
-        $cargoPath = "$env:USERPROFILE\.cargo\bin"        
+        $cargoPath = "$env:USERPROFILE\.cargo\bin"
         echo $cargoPath | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        $env:Path += ";$cargoPath"        
+        $env:Path += ";$cargoPath"
         & rustup default stable
 
     - name: Install Tauri CLI
@@ -118,31 +110,6 @@ jobs:
       if: runner.os != 'Windows'
       run: pnpm run tauri build
       shell: bash
-
-    # Install vswhere to find Visual Studio installations
-    - name: Install vswhere
-      if: runner.os == 'Windows'
-      shell: powershell
-      run: |
-        & "C:\ProgramData\chocolatey\bin\choco.exe" install vswhere -y
-
-    # Find and add vcvars64.bat to the PATH using vswhere
-    - name: Find and configure MSVC environment using vswhere
-      if: runner.os == 'Windows'
-      shell: powershell
-      run: |
-        $vsPath = &"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find "**\vcvars64.bat"
-        if ($vsPath) {
-          Write-Host "Found vcvars64.bat at $vsPath"
-          # Aggiungi il percorso della directory di vcvars64.bat al PATH
-          $vcvarsDir = [System.IO.Path]::GetDirectoryName($vsPath)
-          echo $vcvarsDir | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          # Esegui vcvars64.bat
-          & $vsPath
-        } else {
-          Write-Host "vcvars64.bat not found"
-          exit 1
-        }
 
     # Build Tauri app on Windows
     - name: Build Tauri app on Windows
