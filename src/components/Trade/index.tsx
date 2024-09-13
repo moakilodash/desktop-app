@@ -145,6 +145,7 @@ interface ExchangeRateDisplayProps {
   selectedPair: TradingPair | null
   bitcoinUnit: 'BTC' | 'SAT'
   formatAmount: (amount: number, asset: string) => string
+  getAssetPrecision: (asset: string) => number
 }
 
 const ExchangeRateDisplay: React.FC<ExchangeRateDisplayProps> = ({
@@ -154,6 +155,7 @@ const ExchangeRateDisplay: React.FC<ExchangeRateDisplayProps> = ({
   selectedPair,
   bitcoinUnit,
   formatAmount,
+  getAssetPrecision,
 }) => {
   const calculateAndFormatRate = useCallback(
     (
@@ -173,24 +175,43 @@ const ExchangeRateDisplay: React.FC<ExchangeRateDisplayProps> = ({
         fromAsset === selectedPair.quote_asset &&
         toAsset === selectedPair.base_asset
 
-      // Apply inversion if necessary
-      if (isInverted) {
-        rate = 1 / rate
-        ;[displayFromAsset, displayToAsset] = [displayToAsset, displayFromAsset]
-      }
+      const precision = !isInverted
+        ? getAssetPrecision(displayToAsset)
+        : getAssetPrecision(displayFromAsset)
 
       let fromUnit = displayFromAsset === 'BTC' ? bitcoinUnit : displayFromAsset
       let toUnit = displayToAsset === 'BTC' ? bitcoinUnit : displayToAsset
 
-      // Handle SAT conversion
-      if (fromUnit === 'SAT' && toUnit !== 'SAT') {
+      if (
+        (fromUnit === 'SAT' && !isInverted) ||
+        (toUnit === 'SAT' && isInverted)
+      ) {
         rate = rate / SATOSHIS_PER_BTC
-      } else if (fromUnit !== 'SAT' && toUnit === 'SAT') {
-        rate = rate * SATOSHIS_PER_BTC
       }
 
-      // Format the rate
-      const formattedRate = formatAmount(rate, displayToAsset)
+      const formattedRate = !isInverted
+        ? new Intl.NumberFormat('en-US', {
+            maximumFractionDigits: precision > 4 ? precision : 4,
+            minimumFractionDigits: precision,
+            useGrouping: true,
+          }).format(
+            parseFloat(
+              (rate / Math.pow(10, precision)).toFixed(
+                precision > 4 ? precision : 4
+              )
+            )
+          )
+        : new Intl.NumberFormat('en-US', {
+            maximumFractionDigits: precision > 4 ? precision : 4,
+            minimumFractionDigits: precision,
+            useGrouping: true,
+          }).format(
+            parseFloat(
+              (Math.pow(10, precision) / rate).toFixed(
+                precision > 4 ? precision : 4
+              )
+            )
+          )
 
       return `1 ${fromUnit} = ${formattedRate} ${toUnit}`
     },

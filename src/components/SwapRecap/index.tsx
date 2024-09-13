@@ -22,6 +22,7 @@ interface SwapRecapProps {
   swapDetails: SwapDetails
   bitcoinUnit: string
   formatAmount: (amount: number, asset: string) => string
+  getAssetPrecision: (asset: string) => number
 }
 
 const getDisplayAsset = (asset: string, bitcoinUnit: string) => {
@@ -34,6 +35,7 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
   swapDetails,
   bitcoinUnit,
   formatAmount,
+  getAssetPrecision,
 }) => {
   const {
     price,
@@ -56,25 +58,49 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
 
       let rate = price
       if (!selectedPair) return rate
+
       const isInverted =
         fromAsset === selectedPair.quote_asset &&
         toAsset === selectedPair.base_asset
 
-      if (isInverted) {
-        rate = 1 / rate
-      }
+      const precision = !isInverted
+        ? getAssetPrecision(displayToAsset)
+        : getAssetPrecision(displayFromAsset)
 
       let fromUnit = fromAsset === 'BTC' ? bitcoinUnit : fromAsset
       let toUnit = toAsset === 'BTC' ? bitcoinUnit : toAsset
 
-      // Handle SAT conversion
-      if (fromUnit === 'SAT' && toUnit !== 'SAT') {
+      if (
+        (fromUnit === 'SAT' && !isInverted) ||
+        (toUnit === 'SAT' && isInverted)
+      ) {
         rate = rate / SATOSHIS_PER_BTC
-      } else if (fromUnit !== 'SAT' && toUnit === 'SAT') {
-        rate = rate * SATOSHIS_PER_BTC
       }
 
-      const formattedRate = formatAmount(rate, toAsset)
+      const formattedRate = !isInverted
+        ? new Intl.NumberFormat('en-US', {
+            maximumFractionDigits: precision > 4 ? precision : 4,
+            minimumFractionDigits: precision,
+            useGrouping: true,
+          }).format(
+            parseFloat(
+              (rate / Math.pow(10, precision)).toFixed(
+                precision > 4 ? precision : 4
+              )
+            )
+          )
+        : new Intl.NumberFormat('en-US', {
+            maximumFractionDigits: precision > 4 ? precision : 4,
+            minimumFractionDigits: precision,
+            useGrouping: true,
+          }).format(
+            parseFloat(
+              (Math.pow(10, precision) / rate).toFixed(
+                precision > 4 ? precision : 4
+              )
+            )
+          )
+
       return `1 ${fromUnit} = ${formattedRate} ${toUnit}`
     },
     [bitcoinUnit, formatAmount]

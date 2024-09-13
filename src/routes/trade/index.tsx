@@ -1040,6 +1040,7 @@ export const Component = () => {
                   bitcoinUnit={bitcoinUnit}
                   formatAmount={formatAmount}
                   fromAsset={form.getValues().fromAsset}
+                  getAssetPrecision={getAssetPrecision}
                   price={selectedPairFeed ? selectedPairFeed.buyPrice : null}
                   selectedPair={selectedPair}
                   toAsset={form.getValues().toAsset}
@@ -1113,6 +1114,7 @@ export const Component = () => {
         <SwapRecap
           bitcoinUnit={bitcoinUnit}
           formatAmount={formatAmount}
+          getAssetPrecision={getAssetPrecision}
           isOpen={showRecap}
           onClose={() => setShowRecap(false)}
           swapDetails={swapRecapDetails}
