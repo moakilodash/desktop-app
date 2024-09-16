@@ -677,11 +677,28 @@ export const Component = () => {
       return
     }
 
-    let toastId = null
+    let toastId: any = null
+    let timeoutId: any = null
+
+    const clearToastAndTimeout = () => {
+      if (toastId) {
+        toast.dismiss(toastId)
+      }
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+      setIsSwapInProgress(false)
+    }
 
     try {
       setIsSwapInProgress(true)
-      toastId = toast.loading('Initializing swap...')
+      toastId = toast.loading('(1/3) Initializing swap...')
+
+      // Set a timeout for the entire swap process (e.g., 60 seconds)
+      timeoutId = setTimeout(() => {
+        throw new Error('Swap operation timed out')
+      }, 60000)
+
       logger.info('Initiating swap', data)
 
       const pair = tradablePairs.find(
@@ -710,8 +727,6 @@ export const Component = () => {
       let toAmount = parseAssetAmount(data.to, data.toAsset)
       let fromAmount = parseAssetAmount(data.from, data.fromAsset)
 
-      // TODO: Check min and max amounts
-
       // Multiply by 1000 if the asset is BTC
       if (data.fromAsset.toLowerCase() === 'btc') {
         fromAmount *= 1000
@@ -739,7 +754,7 @@ export const Component = () => {
 
       const { swapstring, payment_hash } = initSwapResponse.data
       toast.update(toastId, {
-        render: 'Processing taker whitelisting...',
+        render: '(2/3) Processing taker whitelisting...',
       })
 
       // Check if the swapstring is valid
@@ -792,7 +807,7 @@ export const Component = () => {
         taker_pubkey: pubKey,
       }
       toast.update(toastId, {
-        render: 'Waiting for maker to execute swap...',
+        render: '(3/3) Waiting for maker to execute swap...',
       })
 
       const confirmSwapResponse = await execSwap(confirmSwapPayload)
@@ -833,7 +848,7 @@ export const Component = () => {
         })
       }
     } finally {
-      setIsSwapInProgress(false)
+      clearToastAndTimeout()
     }
   }
 
