@@ -27,7 +27,7 @@ import { logger } from '../../utils/logger'
 import { RefreshCw } from 'lucide-react'
 
 interface Fields {
-  rfqId: string
+  rfq_id: string
   from: string
   fromAsset: string
   to: string
@@ -92,7 +92,7 @@ export const Component = () => {
     defaultValues: {
       from: '',
       fromAsset: 'BTC',
-      rfqId: '',
+      rfq_id: '',
       to: '',
       toAsset: '',
     },
@@ -156,7 +156,7 @@ export const Component = () => {
 
   const calculateRate = useCallback(() => {
     if (selectedPairFeed && selectedPair) {
-      const price = selectedPairFeed.buyPrice / selectedPairFeed.size
+      const price = selectedPairFeed.price / selectedPairFeed.size
       const isCurrentPairInverted = isPairInverted(
         form.getValues().fromAsset,
         form.getValues().toAsset
@@ -661,7 +661,7 @@ export const Component = () => {
       setIsPriceLoading(false)
       const fromAmount = form.getValues().from
       updateToAmount(fromAmount)
-      form.setValue('rfqId', selectedPairFeed.rfqId)
+      form.setValue('rfq_id', selectedPairFeed.rfq_id)
       setIsToAmountLoading(false)
     } else {
       setIsPriceLoading(true)
@@ -734,7 +734,7 @@ export const Component = () => {
       if (data.toAsset.toLowerCase() === 'btc') {
         toAmount *= 1000
       }
-      const rfq_id = data.rfqId
+      const rfq_id = data.rfq_id
       if (!rfq_id) {
         throw new Error('Invalid RFQ ID')
       }
@@ -828,7 +828,7 @@ export const Component = () => {
       const recapDetails: SwapDetails = {
         fromAmount: data.from,
         fromAsset: data.fromAsset,
-        price: selectedPairFeed.buyPrice,
+        price: selectedPairFeed.price,
         selectedPair: selectedPair,
         timestamp: new Date().toISOString(),
         toAmount: data.to,
@@ -1056,7 +1056,7 @@ export const Component = () => {
                   formatAmount={formatAmount}
                   fromAsset={form.getValues().fromAsset}
                   getAssetPrecision={getAssetPrecision}
-                  price={selectedPairFeed ? selectedPairFeed.buyPrice : null}
+                  price={selectedPairFeed ? selectedPairFeed.price : null}
                   selectedPair={selectedPair}
                   toAsset={form.getValues().toAsset}
                 />

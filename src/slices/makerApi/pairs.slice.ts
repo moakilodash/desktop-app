@@ -3,14 +3,13 @@ import { PayloadAction, createSlice } from '@reduxjs/toolkit'
 import { TradingPair } from '../makerApi/makerApi.slice'
 
 export interface PairFeed {
-  rfqId: string
-  buyPrice: number
-  sellPrice: number
-  markPrice: number
-  pricePrecision: number
+  rfq_id: string
+  price: number
+  price_precision: number
   pair: string
   size: number
-  timestamp: string
+  timestamp: number
+  expires_at: number
 }
 
 export interface PairsState {
