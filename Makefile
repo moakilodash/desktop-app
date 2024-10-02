@@ -16,17 +16,22 @@ clone_repo:
 		git clone $(REPO_URL) --recurse-submodules --shallow-submodules; \
 	fi
 
-release: check_dependencies check_cargo_env clone_repo
+update_repo:
+	@if [ -d "$(PROJECT_NAME)" ]; then \
+		cd $(PROJECT_DIR) && git pull && git submodule update --init --recursive; \
+	else \
+		$(MAKE) clone_repo; \
+	fi
+
+release: check_dependencies check_cargo_env update_repo
 	cd $(PROJECT_DIR) && $(CARGO) build --release --manifest-path $(PROJECT_DIR)/Cargo.toml
 	@mkdir -p $(BIN_DIR)
 	@cp $(TARGET) $(BIN_DIR)/
-	@rm -rf $(PROJECT_DIR)
 
-debug: check_dependencies check_cargo_env clone_repo
+debug: check_dependencies check_cargo_env update_repo
 	cd $(PROJECT_DIR) && $(CARGO) build --manifest-path $(PROJECT_DIR)/Cargo.toml
 	@mkdir -p $(BIN_DIR)
 	@cp $(BUILD_DIR)/debug/$(PROJECT_NAME) $(BIN_DIR)/
-	@rm -rf $(PROJECT_DIR)
 
 build: debug
 
@@ -41,10 +46,9 @@ clean:
 	@rm -rf $(PROJECT_DIR)
 	@rm -rf $(BIN_DIR)
 
-test: check_dependencies check_cargo_env clone_repo
+test: check_dependencies check_cargo_env update_repo
 	cd $(PROJECT_DIR) && $(CARGO) test --manifest-path $(PROJECT_DIR)/Cargo.toml
 	@rm -rf $(BUILD_DIR)
-	@rm -rf $(PROJECT_DIR)
 
 check_cargo:
 	@command -v cargo >/dev/null 2>&1 || { \
@@ -100,14 +104,14 @@ check_dependencies: check_curl check_openssl
 help:
 	@echo "Makefile for the Rust project"
 	@echo "Available commands:"
-	@echo "  make all         - Clone, check dependencies, check cargo and build the project in debug mode (default)"
-	@echo "  make release     - Compile the project in release mode"
-	@echo "  make debug       - Compile the project in debug mode"
+	@echo "  make all         - Clone or update, check dependencies, check cargo and build the project in debug mode (default)"
+	@echo "  make release     - Update repo and compile the project in release mode"
+	@echo "  make debug       - Update repo and compile the project in debug mode"
 	@echo "  make build       - Alias for 'make debug'"
-	@echo "  make run         - Compile in release mode and run the program"
-	@echo "  make run-debug   - Compile in debug mode and run the program"
+	@echo "  make run         - Update repo, compile in release mode and run the program"
+	@echo "  make run-debug   - Update repo, compile in debug mode and run the program"
 	@echo "  make clean       - Clean the build files"
-	@echo "  make test        - Run the tests"
+	@echo "  make test        - Update repo and run the tests"
 	@echo "  make help        - Show this help message"
 
-.PHONY: all release debug run run-debug clean test help check_cargo check_cargo_env check_dependencies check_curl check_openssl clone_repo build
+.PHONY: all release debug run run-debug clean test help check_cargo check_cargo_env check_dependencies check_curl check_openssl clone_repo update_repo build
