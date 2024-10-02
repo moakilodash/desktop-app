@@ -1,4 +1,3 @@
-//import { appWindow } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api'
 import { ChevronDown } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -153,6 +152,14 @@ export const Component = () => {
           </div>
         ) : isShowingMnemonic ? (
           <>
+            <div>
+              <button
+                className="px-3 py-1 rounded border text-sm border-gray-500"
+                onClick={() => navigate(WALLET_SETUP_PATH)}
+              >
+                Go Back
+              </button>
+            </div>
             <div className="py-20 flex flex-col items-center space-y-4">
               <h3 className="text-2xl font-semibold mb-4">
                 Backup your mnemonic in a secure place
@@ -197,7 +204,7 @@ export const Component = () => {
                   setIsShowingMnemonic(true)
                 }}
               >
-                Show mnemonic
+                Go back to mnemonic
               </button>
             </div>
             <div className="text-center mb-10">
@@ -268,6 +275,7 @@ export const Component = () => {
                 onSubmit={form.handleSubmit(onSubmit)}
               >
                 <div className="w-80 space-y-4">
+                  {/* Account Name Field */}
                   <div>
                     <div className="text-xs mb-3">Account Name</div>
                     <div className="relative">
@@ -288,6 +296,7 @@ export const Component = () => {
                       </ul>
                     </div>
                   </div>
+                  {/* Datapath Field */}
                   <div>
                     <div className="text-xs mb-3">Datapath</div>
                     <div className="relative">
@@ -308,6 +317,7 @@ export const Component = () => {
                       </ul>
                     </div>
                   </div>
+                  {/* Network Selection */}
                   <div>
                     <div className="text-xs mb-3">Network</div>
                     <div className="relative">
@@ -317,6 +327,8 @@ export const Component = () => {
                       >
                         <option value="mainnet">Mainnet</option>
                         <option value="testnet">Testnet</option>
+                        <option value="signet">Signet</option>{' '}
+                        {/* Added Signet */}
                         <option value="regtest">Regtest</option>
                       </select>
                       <ChevronDown className="absolute right-2 top-2.5 h-5 w-5 text-gray-400 pointer-events-none" />
@@ -330,8 +342,11 @@ export const Component = () => {
                       </ul>
                     </div>
                   </div>
+                  {/* RPC Connection URL Field */}
                   <div>
-                    <div className="text-xs mb-3">RPC Connection URL</div>
+                    <div className="text-xs mb-3">
+                      Bitcoind RPC Connection URL
+                    </div>
                     <div className="relative">
                       <input
                         className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
@@ -350,6 +365,7 @@ export const Component = () => {
                       </ul>
                     </div>
                   </div>
+                  {/* Password Fields */}
                   <div>
                     <div className="text-xs mb-3">Your Password</div>
                     <div className="relative">
