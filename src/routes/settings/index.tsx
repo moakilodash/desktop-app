@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api'
 import { open } from '@tauri-apps/api/dialog'
 import { exists } from '@tauri-apps/api/fs'
 import {
@@ -15,6 +16,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
+import { WALLET_SETUP_PATH } from '../../app/router/paths'
 import { RootState } from '../../app/store'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 import {
@@ -61,7 +63,7 @@ export const Component: React.FC = () => {
     nodeApi.endpoints.backup.useLazyQuery()
   const [lock] = nodeApi.endpoints.lock.useLazyQuery()
   const [unlock] = nodeApi.endpoints.unlock.useLazyQuery()
-  const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
+  // const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
 
   const [isBackupInProgress, setIsBackupInProgress] = useState(false)
 
@@ -135,9 +137,10 @@ export const Component: React.FC = () => {
   const confirmLogout = async () => {
     const lockResponse = await attemptLock()
     if (lockResponse.status === 200) {
-      navigate('/wallet-setup')
+      await invoke('stop_node')
+      navigate(WALLET_SETUP_PATH)
       toast.success('Logout successful')
-      nodeInfo()
+      // nodeInfo()
     } else {
       toast.error('Node lock unsuccessful')
     }

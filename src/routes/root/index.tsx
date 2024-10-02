@@ -7,14 +7,11 @@ import {
   WALLET_SETUP_PATH,
   WALLET_UNLOCK_PATH,
 } from '../../app/router/paths'
-import { useAppDispatch } from '../../app/store/hooks'
 import { Layout } from '../../components/Layout'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
-import { readSettings } from '../../slices/nodeSettings/nodeSettings.slice'
 
 export const RootRoute = () => {
   const navigate = useNavigate()
-  const dispatch = useAppDispatch()
   const [nodeInfo, nodeInfoResponse] = nodeApi.endpoints.nodeInfo.useLazyQuery()
 
   useEffect(() => {
@@ -33,16 +30,14 @@ export const RootRoute = () => {
   useEffect(() => {
     async function run() {
       const nodeInfoResponse = await nodeInfo()
-      dispatch(readSettings())
+      const error: any = nodeInfoResponse.error
       console.log(nodeInfoResponse)
 
       if (nodeInfoResponse.isError) {
-        const isWalletInit = await invoke('is_wallet_init')
-        console.log(isWalletInit)
-        if (!isWalletInit) {
-          navigate(WALLET_SETUP_PATH)
-        } else {
+        if (error.status !== 'FETCH_ERROR') {
           navigate(WALLET_UNLOCK_PATH)
+        } else {
+          navigate(WALLET_SETUP_PATH)
         }
       } else {
         navigate(TRADE_PATH)

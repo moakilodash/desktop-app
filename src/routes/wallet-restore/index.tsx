@@ -1,6 +1,9 @@
+import { invoke } from '@tauri-apps/api'
+import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
 
 import { TRADE_PATH, WALLET_SETUP_PATH } from '../../app/router/paths'
 import { Layout } from '../../components/Layout'
@@ -9,11 +12,17 @@ import { EyeIcon } from '../../icons/Eye'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 
 interface Fields {
+  name: string
+  datapath: string
+  network: 'mainnet' | 'testnet' | 'regtest'
+  rpc_connection_url: string
   backup_path: string
   password: string
 }
 
 export const Component = () => {
+  const [isStartingNode, setIsStartingNode] = useState<boolean>(false)
+
   const [restore, restoreResponse] = nodeApi.endpoints.restore.useLazyQuery()
   const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
 
@@ -25,7 +34,11 @@ export const Component = () => {
   const form = useForm<Fields>({
     defaultValues: {
       backup_path: '/var/node_backups/user_node',
+      datapath: '',
+      name: '',
+      network: 'regtest',
       password: '',
+      rpc_connection_url: 'user:password@localhost:18443',
     },
   })
 
@@ -36,24 +49,72 @@ export const Component = () => {
       return
     }
 
+    try {
+      setIsStartingNode(true)
+      await invoke('start_node', {
+        datapath: data.datapath,
+        network: data.network,
+        rpcConnectionUrl: data.rpc_connection_url,
+      })
+      await new Promise((resolve) => setTimeout(resolve, 5000))
+    } catch (error) {
+      console.log(error)
+      toast.error('Failed to start the node...')
+    } finally {
+      setIsStartingNode(false)
+    }
+
     const restoreResponse = await restore({
       backup_path: data.backup_path,
       password: data.password,
     })
+
     if (restoreResponse.isSuccess) {
+      try {
+        await invoke('insert_account', {
+          datapath: data.datapath,
+          name: data.name,
+          network: data.network,
+          rpcConnectionUrl: data.rpc_connection_url,
+        })
+      } catch (error) {
+        console.log(error)
+        await invoke('stop_node')
+        toast.error('Failed to insert the account...')
+      }
       nodeInfoRes = await nodeInfo()
       if (nodeInfoRes.isSuccess) {
         navigate(TRADE_PATH)
       }
     } else {
       setAdditionalErrors((s) => [...s, 'Failed to restore wallet'])
+      await invoke('stop_node')
     }
+
+    // let nodeInfoRes = await nodeInfo()
+    // if (nodeInfoRes.isSuccess) {
+    //   navigate(TRADE_PATH)
+    //   return
+    // }
+    //
+    // const restoreResponse = await restore({
+    //   backup_path: data.backup_path,
+    //   password: data.password,
+    // })
+    // if (restoreResponse.isSuccess) {
+    //   nodeInfoRes = await nodeInfo()
+    //   if (nodeInfoRes.isSuccess) {
+    //     navigate(TRADE_PATH)
+    //   }
+    // } else {
+    //   setAdditionalErrors((s) => [...s, 'Failed to restore wallet'])
+    // }
   }
 
   return (
     <Layout>
       <div className="max-w-2xl w-full bg-blue-dark py-8 px-6 rounded">
-        {restoreResponse.isLoading ? (
+        {restoreResponse.isLoading || isStartingNode ? (
           <div className="py-20 flex flex-col items-center space-y-4">
             <Spinner size={10} />
 
@@ -82,6 +143,88 @@ export const Component = () => {
                 onSubmit={form.handleSubmit(onSubmit)}
               >
                 <div className="w-80 space-y-4">
+                  <div>
+                    <div className="text-xs mb-3">Account Name</div>
+                    <div className="relative">
+                      <input
+                        className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
+                        type="text"
+                        {...form.register('name', {
+                          required: 'Required',
+                        })}
+                      />
+                    </div>
+                    <div className="text-sm text-red mt-2">
+                      {form.formState.errors.name?.message}
+                      <ul>
+                        {additionalErrors.map((e, i) => (
+                          <li key={i}>{e}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs mb-3">Datapath</div>
+                    <div className="relative">
+                      <input
+                        className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
+                        type="text"
+                        {...form.register('datapath', {
+                          required: 'Required',
+                        })}
+                      />
+                    </div>
+                    <div className="text-sm text-red mt-2">
+                      {form.formState.errors.datapath?.message}
+                      <ul>
+                        {additionalErrors.map((e, i) => (
+                          <li key={i}>{e}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs mb-3">Network</div>
+                    <div className="relative">
+                      <select
+                        className="block w-full pl-3 pr-10 py-2 text-white bg-gray-700 border border-gray-600 rounded-md appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        {...form.register('network', { required: 'Required' })}
+                      >
+                        <option value="mainnet">Mainnet</option>
+                        <option value="testnet">Testnet</option>
+                        <option value="regtest">Regtest</option>
+                      </select>
+                      <ChevronDown className="absolute right-2 top-2.5 h-5 w-5 text-gray-400 pointer-events-none" />
+                    </div>
+                    <div className="text-sm text-red mt-2">
+                      {form.formState.errors.network?.message}
+                      <ul>
+                        {additionalErrors.map((e, i) => (
+                          <li key={i}>{e}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs mb-3">RPC Connection URL</div>
+                    <div className="relative">
+                      <input
+                        className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
+                        type="text"
+                        {...form.register('rpc_connection_url', {
+                          required: 'Required',
+                        })}
+                      />
+                    </div>
+                    <div className="text-sm text-red mt-2">
+                      {form.formState.errors.rpc_connection_url?.message}
+                      <ul>
+                        {additionalErrors.map((e, i) => (
+                          <li key={i}>{e}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
                   <div>
                     <div className="text-xs mb-3">Backup Path</div>
 
