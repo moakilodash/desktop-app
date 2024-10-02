@@ -1,5 +1,4 @@
-import { emit } from '@tauri-apps/api/event'
-import { exit } from '@tauri-apps/api/process'
+import { invoke } from '@tauri-apps/api/tauri'
 import { Cog } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
@@ -7,6 +6,7 @@ import { toast } from 'react-toastify'
 
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { MinidenticonImg } from '../../components/MinidenticonImg'
+import { Spinner } from '../../components/Spinner'
 import {
   Account,
   NodeSettings,
@@ -22,11 +22,27 @@ export const Toolbar = () => {
   const accounts: Account[] = data.accounts
 
   const [showModal, setShowModal] = useState(false)
-  const [newDatapath, setNewDatapath] = useState('')
+  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     dispatch(readSettings())
-  }, [])
+  }, [dispatch])
+
+  const handleAccountChange = async (account: Account) => {
+    setIsLoading(true)
+    try {
+      await invoke('stop_node')
+      await dispatch(writeSettings({ ...data, ...account })).unwrap()
+      await invoke('start_node')
+      toast.success('Account switched successfully')
+      setShowModal(false)
+    } catch (error) {
+      toast.error('Failed to switch account')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
     <>
@@ -46,7 +62,7 @@ export const Toolbar = () => {
               <button
                 className={`text-white ${data.datapath === account.datapath ? 'bg-gray-700' : 'hover:bg-gray-700 '} p-2 rounded`}
                 onClick={() => {
-                  setNewDatapath(account.datapath)
+                  setSelectedAccount(account)
                   setShowModal(true)
                 }}
                 onContextMenu={(e) => {
@@ -64,12 +80,6 @@ export const Toolbar = () => {
         <div>
           <NavLink to="/node-settings">
             <Cog color="grey" size={36} />
-
-            {/*
-            <button className="text-white hover:bg-gray-700 p-2 rounded">
-              Settings
-            </button>
-            */}
           </NavLink>
         </div>
       </aside>
@@ -78,34 +88,28 @@ export const Toolbar = () => {
           <div className="bg-white text-black p-6 rounded-lg shadow-lg text-center">
             <h2 className="text-2xl font-semibold mb-4">Changing Account</h2>
             <p>
-              In order to change the account you will need to restart the
-              application for changes to take effect.
+              Are you sure you want to switch to the account "
+              {selectedAccount?.name}"? This will restart the node with the new
+              account settings.
             </p>
-            <div className="flex">
+            <div className="flex mt-4">
               <button
-                className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-lg font-bold rounded shadow-md transition duration-200"
+                className="w-full px-6 py-3 bg-gray-300 hover:bg-gray-400 text-lg font-bold rounded shadow-md transition duration-200 mr-2"
+                disabled={isLoading}
                 onClick={() => setShowModal(false)}
                 type="button"
               >
-                Do it later
+                Cancel
               </button>
               <button
-                className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-lg font-bold rounded shadow-md transition duration-200"
-                onClick={async () => {
-                  dispatch(writeSettings({ ...data, datapath: newDatapath }))
-                    .unwrap()
-                    .then(async () => {
-                      await emit('app-will-relaunch')
-
-                      setTimeout(() => {
-                        // relaunch().catch((err) => toast.error(err))
-                        exit().catch((err) => toast.error(err))
-                      }, 1000)
-                    })
-                }}
+                className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold rounded shadow-md transition duration-200"
+                disabled={isLoading}
+                onClick={() =>
+                  selectedAccount && handleAccountChange(selectedAccount)
+                }
                 type="button"
               >
-                Restart now
+                {isLoading ? <Spinner size={6} /> : 'Switch Account'}
               </button>
             </div>
           </div>

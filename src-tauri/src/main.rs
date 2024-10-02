@@ -10,6 +10,8 @@ use std::{
     env, fs,
     sync::{Arc, Mutex},
 };
+use std::thread;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::{Manager, Window};
 
@@ -137,6 +139,52 @@ fn write_config(config: Config) -> Result<(), String> {
     }
 }
 
+
+struct NodeThread {
+    handle: Option<thread::JoinHandle<()>>,
+    running: Arc<AtomicBool>,
+}
+
+impl NodeThread {
+    fn new() -> Self {
+        NodeThread {
+            handle: None,
+            running: Arc::new(AtomicBool::new(false)),
+        }
+    }
+
+    fn start(&mut self, network: String, datapath: String, rpc_connection_url: String) {
+        if self.running.load(Ordering::SeqCst) {
+            println!("Node is already running");
+            return;
+        }
+
+        let running = self.running.clone();
+        running.store(true, Ordering::SeqCst);
+
+        self.handle = Some(thread::spawn(move || {
+            while running.load(Ordering::SeqCst) {
+                if let Some(mut child) = run_rgb_lightning_node(&network, &datapath, &rpc_connection_url) {
+                    let _ = child.wait();
+                }
+                thread::sleep(std::time::Duration::from_secs(5)); // Wait before restarting
+            }
+        }));
+    }
+
+    fn stop(&mut self) {
+        if !self.running.load(Ordering::SeqCst) {
+            println!("Node is not running");
+            return;
+        }
+
+        self.running.store(false, Ordering::SeqCst);
+        if let Some(handle) = self.handle.take() {
+            handle.join().unwrap();
+        }
+    }
+}
+
 fn main() {
     dotenv().ok();
     let use_local_bin = env::var("BUILD_AND_RUN_RGB_LIGHTNING_NODE")
@@ -155,60 +203,69 @@ fn main() {
         create_all(&data_path, true).expect("Failed to create dataldk directory");
     }
 
-    let network = config.network;
+    let network = config.network.clone();
     let datapath = data_path.to_str().unwrap().to_string();
-    let rpc_connection_url = config.rpc_connection_url;
+    let rpc_connection_url = config.rpc_connection_url.clone();
 
-    let child_process = if use_local_bin {
-        println!("Network: {}", network);
-        println!("Data Path: {}", datapath);
-        println!("RPC Connection URL: {}", rpc_connection_url);
+    let node_thread = Arc::new(Mutex::new(NodeThread::new()));
 
-        Arc::new(Mutex::new(run_rgb_lightning_node(
-            &network,
-            &datapath,
-            &rpc_connection_url,
-        )))
-    } else {
-        Arc::new(Mutex::new(None))
-    };
-
-    let child_process_clone = Arc::clone(&child_process);
+    if use_local_bin {
+        let node_thread_clone = Arc::clone(&node_thread);
+        node_thread_clone.lock().unwrap().start(network, datapath, rpc_connection_url);
+    }
 
     tauri::Builder::default()
-        .on_window_event(move |event| {
-            if let tauri::WindowEvent::CloseRequested { .. } = event.event() {
-                let mut child_lock = child_process_clone.lock().unwrap();
-                if let Some(ref mut child) = *child_lock {
-                    child.kill().expect("Failed to kill child process");
+        .manage(Arc::clone(&node_thread))
+        .on_window_event({
+            let node_thread = Arc::clone(&node_thread);
+            move |event| {
+                if let tauri::WindowEvent::CloseRequested { .. } = event.event() {
+                    let mut node_thread = node_thread.lock().unwrap();
+                    node_thread.stop();
                 }
             }
         })
-        .setup(move |app| {
-            let handle = app.handle();
-            let child_process_clone = Arc::clone(&child_process);
-            app.listen_global("tauri://exit", move |_| {
-                let mut child_lock = child_process_clone.lock().unwrap();
-                if let Some(ref mut child) = *child_lock {
-                    child.kill().expect("Failed to kill child process");
-                }
-                handle.exit(0);
-            });
-            let child_process_clone2 = Arc::clone(&child_process);
-            app.listen_global("app-will-relaunch", move |_| {
-                let mut child_lock = child_process_clone2.lock().unwrap();
-                if let Some(ref mut child) = *child_lock {
-                    child.kill().expect("Failed to kill child process");
-                }
-            });
-            Ok(())
+        .setup({
+            let node_thread = Arc::clone(&node_thread);
+            move |app| {
+                let handle = app.handle();
+                let node_thread_clone = Arc::clone(&node_thread);
+                app.listen_global("tauri://exit", move |_| {
+                    let mut node_thread = node_thread_clone.lock().unwrap();
+                    node_thread.stop();
+                    handle.exit(0);
+                });
+                let node_thread_clone2 = Arc::clone(&node_thread);
+                app.listen_global("app-will-relaunch", move |_| {
+                    let mut node_thread = node_thread_clone2.lock().unwrap();
+                    node_thread.stop();
+                });
+                Ok(())
+            }
         })
         .invoke_handler(tauri::generate_handler![
             is_wallet_init,
             close_splashscreen,
             get_config,
-            write_config
+            write_config,
+            start_node,
+            stop_node
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[tauri::command]
+fn start_node(node_thread: tauri::State<Arc<Mutex<NodeThread>>>) -> Result<(), String> {
+    let config = get_config()?;
+    let mut node_thread = node_thread.lock().unwrap();
+    node_thread.start(config.network, config.datapath, config.rpc_connection_url);
+    Ok(())
+}
+
+#[tauri::command]
+fn stop_node(node_thread: tauri::State<Arc<Mutex<NodeThread>>>) -> Result<(), String> {
+    let mut node_thread = node_thread.lock().unwrap();
+    node_thread.stop();
+    Ok(())
 }
