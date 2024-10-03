@@ -6,7 +6,7 @@ import {
   Info,
   Plus,
 } from 'lucide-react'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { ReactNode, useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import {
@@ -20,7 +20,12 @@ import { formatBitcoinAmount } from '../../helpers/number'
 import { nodeApi, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
 import { uiSliceActions } from '../../slices/ui/ui.slice'
 
-const Tooltip = ({ content, children }) => {
+interface TooltipProps {
+  content: ReactNode
+  children: ReactNode
+}
+
+const Tooltip: React.FC<TooltipProps> = ({ content, children }) => {
   const [isVisible, setIsVisible] = useState(false)
 
   return (

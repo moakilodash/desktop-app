@@ -24,8 +24,7 @@ export const Component = () => {
 
   const [openChannel, openChannelResponse] =
     nodeApi.endpoints.openChannel.useLazyQuery()
-  const [getBtcBalance, btcBalanceResponse] =
-    nodeApi.endpoints.btcBalance.useLazyQuery()
+  const [getBtcBalance] = nodeApi.endpoints.btcBalance.useLazyQuery()
 
   const [isLoading, setIsLoading] = useState(true)
   const [insufficientBalance, setInsufficientBalance] = useState(false)

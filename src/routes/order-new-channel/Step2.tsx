@@ -6,12 +6,11 @@ import { toast } from 'react-toastify'
 import * as z from 'zod'
 
 import { CREATEUTXOS_PATH } from '../../app/router/paths'
-import { useAppSelector, useAppDispatch } from '../../app/store/hooks'
+import { useAppDispatch } from '../../app/store/hooks'
 import { AssetSelector } from '../../components/AssetSelector'
 import { Select } from '../../components/Select'
 import { MIN_CHANNEL_CAPACITY, MAX_CHANNEL_CAPACITY } from '../../constants'
 import {
-  orderChannelSliceSelectors,
   orderChannelSliceActions,
   OrderChannelFormSchema,
   TChannelRequestForm,

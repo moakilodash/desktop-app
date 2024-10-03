@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 
-import { TRADE_PATH } from '../../app/router/paths'
+import { TRADE_PATH, WALLET_SETUP_PATH } from '../../app/router/paths'
 import { Layout } from '../../components/Layout'
 import { Spinner } from '../../components/Spinner'
 import { EyeIcon } from '../../icons/Eye'
@@ -58,14 +58,12 @@ export const Component = () => {
         ) : (
           <>
             <div>
-              {/*
               <button
                 className="px-3 py-1 rounded border text-sm border-gray-500"
                 onClick={() => navigate(WALLET_SETUP_PATH)}
               >
                 Go Back
               </button>
-              */}
             </div>
             <div className="text-center mb-10">
               <h3 className="text-2xl font-semibold mb-4">

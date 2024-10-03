@@ -1,6 +1,6 @@
 import { QRCodeSVG } from 'qrcode.react'
 import { useEffect, useState } from 'react'
-import { Controller, SubmitHandler, useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'react-toastify'
 import { twJoin } from 'tailwind-merge'
 
@@ -47,9 +47,14 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
           asset_amount: Number(amount),
           asset_id: assetId,
         })
-        if (res.error) {
+        if ('error' in res && res.error) {
           toast.error(
-            res.error.data?.error || 'Failed to generate Lightning invoice'
+            'data' in res.error &&
+              typeof res.error.data === 'object' &&
+              res.error.data &&
+              'error' in res.error.data
+              ? (res.error.data as { error: string }).error
+              : 'Failed to generate Lightning invoice'
           )
         } else {
           setAddress(res.data?.invoice)
@@ -71,8 +76,15 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
       setRgbLoading(true)
       try {
         const res = await rgbInvoice({ asset_id: assetId })
-        if (res.error) {
-          toast.error(res.error.data?.error || 'Failed to generate RGB invoice')
+        if ('error' in res && res.error) {
+          toast.error(
+            'data' in res.error &&
+              typeof res.error.data === 'object' &&
+              res.error.data &&
+              'error' in res.error.data
+              ? (res.error.data as { error: string }).error
+              : 'Failed to generate RGB invoice'
+          )
         } else {
           setAddress(res.data?.invoice)
         }
