@@ -1,4 +1,4 @@
-import { ArrowDownUp, ArrowRight, RefreshCw } from 'lucide-react'
+import { ArrowDownUp, ArrowRight, RefreshCw, Loader } from 'lucide-react'
 import React, { useState, useMemo } from 'react'
 import { useSelector } from 'react-redux'
 import { twJoin } from 'tailwind-merge'
@@ -102,6 +102,7 @@ const SwapRow: React.FC<{
 
 export const Component: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'maker' | 'taker'>('all')
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const {
     data: swapsData,
     isLoading: swapsLoading,
@@ -133,7 +134,9 @@ export const Component: React.FC = () => {
   }, [assetsData])
 
   const handleRefresh = async () => {
+    setIsRefreshing(true)
     await Promise.all([refetchSwaps(), refetchAssets()])
+    setIsRefreshing(false)
   }
 
   if (swapsLoading || assetsLoading) {
@@ -195,10 +198,15 @@ export const Component: React.FC = () => {
             Taker
           </button>
           <button
-            className="ml-4 p-2 rounded bg-blue-dark text-white hover:bg-cyan hover:text-blue-dark transition-colors"
+            className="ml-4 p-2 rounded bg-section-lighter text-white hover:bg-cyan hover:text-blue-dark transition-colors"
+            disabled={isRefreshing}
             onClick={handleRefresh}
           >
-            <RefreshCw className="w-5 h-5" />
+            {isRefreshing ? (
+              <Loader className="w-5 h-5 animate-spin" />
+            ) : (
+              <RefreshCw className="w-5 h-5" />
+            )}
           </button>
         </div>
       </div>

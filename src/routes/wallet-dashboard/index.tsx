@@ -5,6 +5,7 @@ import {
   ArrowDownRight,
   Info,
   Plus,
+  Loader,
 } from 'lucide-react'
 import React, { ReactNode, useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -156,12 +157,23 @@ export const Component = () => {
   >({})
   const [assetsMap, setAssetsMap] = useState<Record<string, NiaAsset>>({})
   const bitcoinUnit = useAppSelector((state) => state.settings.bitcoinUnit)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [refreshRgbTransfers] =
+    nodeApi.endpoints.refreshRgbTransfers.useLazyQuery()
 
-  const refreshData = useCallback(() => {
-    assets()
-    btcBalance()
-    listChannels()
-  }, [assets, btcBalance, listChannels])
+  const refreshData = useCallback(async () => {
+    setIsRefreshing(true)
+    try {
+      await Promise.all([
+        assets(),
+        btcBalance(),
+        listChannels(),
+        refreshRgbTransfers(),
+      ])
+    } finally {
+      setIsRefreshing(false)
+    }
+  }, [assets, btcBalance, listChannels, refreshRgbTransfers])
 
   useEffect(() => {
     if (assetsResponse.data?.nia) {
@@ -175,7 +187,7 @@ export const Component = () => {
 
   useEffect(() => {
     refreshData()
-    const intervalId = setInterval(refreshData, 3000)
+    const intervalId = setInterval(refreshData, 10000)
     return () => clearInterval(intervalId)
   }, [refreshData])
 
@@ -367,10 +379,15 @@ export const Component = () => {
             <div className="text-2xl flex-1 text-white">List of Assets</div>
             <button
               className="px-4 py-2 rounded border text-sm font-bold border-cyan text-white flex items-center"
+              disabled={isRefreshing}
               onClick={refreshData}
             >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Refresh
+              {isRefreshing ? (
+                <Loader className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
 

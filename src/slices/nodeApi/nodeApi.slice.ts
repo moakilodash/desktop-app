@@ -421,6 +421,12 @@ export const nodeApi = createApi({
         }
       },
     }),
+    refreshRgbTransfers: builder.query<void, void>({
+      query: () => ({
+        method: 'POST',
+        url: '/refreshtransfers',
+      }),
+    }),
     restore: builder.query<void, RestoreRequest>({
       query: (body) => ({
         body,

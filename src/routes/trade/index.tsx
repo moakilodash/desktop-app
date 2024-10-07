@@ -176,15 +176,14 @@ export const Component = () => {
         const rate = calculateRate()
 
         let toAmountValue = fromAmountValue * rate
-        console.log(
-          `fromAmountValue: ${fromAmountValue} rate: ${rate} toAmountValue: ${toAmountValue}, fromAsset: ${fromAsset}, toAsset: ${toAsset}`
-        )
+        // console.log(
+        //   `fromAmountValue: ${fromAmountValue} rate: ${rate} toAmountValue: ${toAmountValue}, fromAsset: ${fromAsset}, toAsset: ${toAsset}`
+        // )
         const formattedToAmount = formatAmount(
           Math.round(toAmountValue),
           toAsset
         )
         form.setValue('to', formattedToAmount)
-        logger.debug('Updated "to" amount:', formattedToAmount)
       }
     },
     [selectedPairFeed, form, parseAssetAmount, formatAmount, calculateRate]
@@ -258,7 +257,6 @@ export const Component = () => {
         const rate = calculateRate()
         minOrderSize = selectedPair.min_order_size / rate
       }
-      console.log(`minOrderSize: ${minOrderSize}`)
       setMinFromAmount(minOrderSize)
 
       // Calculate max amounts
