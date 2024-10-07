@@ -48,7 +48,8 @@ class WebSocketService {
 
     this.socket.onmessage = (event) => {
       const data = JSON.parse(event.data)
-      if (data.action === 'priceUpdate') {
+      if (data.action === 'price_update') {
+        console.log('Price update:', data.data)
         this.dispatch && this.dispatch(updatePrice(data.data))
       }
     }
