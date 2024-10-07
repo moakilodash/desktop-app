@@ -5,13 +5,18 @@ import {
   ExternalLink,
   ArrowRight,
   CheckCircle,
+  Settings,
+  Info,
 } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
+import { useSelector, useDispatch } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
 import { makerApi } from '../../slices/makerApi/makerApi.slice'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
+import { selectDefaultLspUrl } from '../../slices/settings/settings.slice'
 
 interface Props {
   onNext: (data: any) => void
@@ -24,32 +29,29 @@ const ConnectPopup: React.FC<{
   isAlreadyConnected: boolean
 }> = ({ onClose, onConfirm, connectionUrl, isAlreadyConnected }) => (
   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div className="bg-gray-800 p-6 rounded-lg max-w-md w-full">
-      <h3 className="text-xl font-semibold mb-4">Connect to LSP</h3>
+    <div className="bg-gray-800 p-8 rounded-lg max-w-md w-full">
+      <h3 className="text-2xl font-semibold mb-4">Connect to LSP</h3>
       {isAlreadyConnected ? (
         <>
-          <p className="mb-6 flex items-center">
-            <CheckCircle className="text-green-500 mr-2" size={20} />
-            You are already connected to this LSP.
-          </p>
-          <p className="mb-6 text-sm bg-gray-700 p-2 rounded break-all">
-            {connectionUrl}
-          </p>
+          <div className="mb-6 flex items-center bg-green-800 text-white p-4 rounded-lg">
+            <CheckCircle className="text-green-300 mr-3" size={24} />
+            <p className="font-medium">
+              You are already connected to this LSP.
+            </p>
+          </div>
         </>
       ) : (
-        <>
-          <p className="mb-6">
-            Do you want to connect to the LSP at this address?
-          </p>
-          <p className="mb-6 text-sm bg-gray-700 p-2 rounded break-all">
-            {connectionUrl}
-          </p>
-        </>
+        <p className="mb-6 text-gray-300">
+          Do you want to connect to the LSP at this address?
+        </p>
       )}
+      <p className="mb-6 text-sm bg-gray-700 p-4 rounded-lg break-all">
+        {connectionUrl}
+      </p>
       <div className="flex justify-end space-x-4">
         {isAlreadyConnected ? (
           <button
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
             onClick={onConfirm}
           >
             OK
@@ -57,13 +59,13 @@ const ConnectPopup: React.FC<{
         ) : (
           <>
             <button
-              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-500 transition-colors"
+              className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors font-medium"
               onClick={onClose}
             >
               Cancel
             </button>
             <button
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors"
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
               onClick={onConfirm}
             >
               Connect
@@ -74,21 +76,24 @@ const ConnectPopup: React.FC<{
     </div>
   </div>
 )
+
 export const Step1: React.FC<Props> = ({ onNext }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [showConnectPopup, setShowConnectPopup] = useState(false)
   const [isAlreadyConnected, setIsAlreadyConnected] = useState(false)
-  const [lspUrl, setLspUrl] = useState('http://localhost:8000/')
   const [connectionUrl, setConnectionUrl] = useState('')
   const [getInfo] = makerApi.endpoints.get_info.useLazyQuery()
   const [connectPeer] = nodeApi.endpoints.connectPeer.useLazyQuery()
   const [listPeers] = nodeApi.endpoints.listPeers.useLazyQuery()
 
+  const navigate = useNavigate()
+  const dispatch = useDispatch()
+  const lspUrl = useSelector(selectDefaultLspUrl)
+
   useEffect(() => {
     console.log('Fetching LSP Info...')
     if (lspUrl) {
       setIsLoading(true)
-      //TODO: Update this to use the url defined in the lspUrl state
       getInfo()
         .then((response) => {
           console.log('LSP Info response:', response)
@@ -129,7 +134,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
     if (connectionUrl) {
       setShowConnectPopup(true)
     } else {
-      toast.error('Please enter a valid LSP URL first')
+      toast.error('Please wait for LSP connection URL to be fetched')
     }
   }
 
@@ -154,14 +159,30 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
     }
   }
 
+  const navigateToSettings = () => {
+    navigate('/settings')
+  }
+
   return (
-    <div className="bg-gray-800 text-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
-      <h2 className="text-3xl font-bold mb-8 text-center">
-        Order New Channel - Step 1
+    <div className="bg-gray-900 text-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
+      <h2 className="text-3xl font-bold mb-6 text-center">
+        Connect to Lightning Service Provider (LSP)
       </h2>
-      <div className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium mb-2">LSP URL</label>
+      <div className="bg-blue-900 p-4 rounded-lg mb-8">
+        <div className="flex items-start">
+          <Info className="text-blue-300 mr-3 mt-1" size={24} />
+          <p className="text-blue-100">
+            Connecting to an LSP is the first step in opening a new channel. The
+            LSP will help facilitate the channel opening process and provide
+            liquidity.
+          </p>
+        </div>
+      </div>
+      <div className="space-y-8">
+        <div className="bg-gray-800 p-6 rounded-lg">
+          <label className="block text-lg font-medium mb-2">
+            Current LSP URL
+          </label>
           <div className="relative">
             <Globe
               className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
@@ -169,15 +190,24 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
             />
             <input
               className="w-full bg-gray-700 text-white pl-10 pr-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
-              onChange={(e) => setLspUrl(e.target.value)}
-              placeholder="Enter LSP URL"
+              readOnly
               value={lspUrl}
             />
           </div>
+          <p className="mt-2 text-sm text-gray-400">
+            This is the LSP URL defined in your settings.
+          </p>
+          <button
+            className="mt-4 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors inline-flex items-center"
+            onClick={navigateToSettings}
+          >
+            <Settings className="mr-2" size={16} />
+            Change LSP in Settings
+          </button>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-2">
+        <div className="bg-gray-800 p-6 rounded-lg">
+          <label className="block text-lg font-medium mb-2">
             LSP Connection URL
           </label>
           <div className="relative">
@@ -205,36 +235,19 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
               </button>
             </CopyToClipboard>
           </div>
-        </div>
-
-        <div className="my-8 relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-600"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-gray-800 text-gray-400">Or</span>
-          </div>
-        </div>
-
-        <div className="text-center">
-          <button
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors focus:ring-2 focus:ring-blue-500 focus:outline-none inline-flex items-center"
-            onClick={() => setLspUrl('http://localhost:8000/')}
-            type="button"
-          >
-            <ExternalLink className="mr-2" size={20} />
-            Select Kaleidoswap LSP
-          </button>
+          <p className="mt-2 text-sm text-gray-400">
+            This is the unique connection URL for your LSP.
+          </p>
         </div>
 
         <div className="flex justify-center mt-8">
           <button
             className={`
-              px-8 py-3 bg-gradient-to-r from-green-500 to-green-600 
+              px-8 py-4 bg-gradient-to-r from-green-500 to-green-600 
               text-white rounded-lg hover:from-green-600 hover:to-green-700 
               transition-all duration-300 ease-in-out transform hover:scale-105
               focus:ring-2 focus:ring-green-500 focus:outline-none 
-              flex items-center justify-center space-x-2
+              flex items-center justify-center space-x-2 text-lg font-semibold
               ${isLoading || !connectionUrl ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg'}
             `}
             disabled={isLoading || !connectionUrl}
@@ -243,11 +256,11 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
             {isLoading ? (
               <>
                 <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></span>
-                Loading...
+                Connecting...
               </>
             ) : (
               <>
-                <span>Next</span>
+                <span>Connect to LSP</span>
                 <ArrowRight size={20} />
               </>
             )}
