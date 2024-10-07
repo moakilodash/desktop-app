@@ -43,9 +43,13 @@ export const Component: React.FC = () => {
 
   const [assets, setAssets] = useState<Record<string, Asset>>({})
 
+  const [isLoading, setIsLoading] = useState(false)
+
   const refreshData = useCallback(() => {
-    listChannels()
-    listAssets()
+    setIsLoading(true)
+    Promise.all([listChannels(), listAssets()]).finally(() => {
+      setIsLoading(false)
+    })
   }, [listChannels, listAssets])
 
   useEffect(() => {
@@ -95,11 +99,16 @@ export const Component: React.FC = () => {
       <div className="flex justify-between items-center mb-8">
         <div className="text-2xl font-semibold">Lightning Wallet Dashboard</div>
         <button
-          className="px-6 py-3 rounded border text-lg font-bold border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white transition flex items-center"
+          className={`px-6 py-3 rounded border text-lg font-bold border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white transition flex items-center ${
+            isLoading ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
+          disabled={isLoading}
           onClick={refreshData}
         >
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Refresh
+          <RefreshCw
+            className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
+          />
+          {isLoading ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>
 
