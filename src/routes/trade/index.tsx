@@ -659,8 +659,6 @@ export const Component = () => {
   // Update amounts when selected pair feed changes
   useEffect(() => {
     if (selectedPairFeed) {
-      console.log('Selected pair feed:', selectedPairFeed)
-
       setIsToAmountLoading(true)
       setIsPriceLoading(false)
       const fromAmount = form.getValues().from
