@@ -532,9 +532,8 @@ export const Component = () => {
   ])
 
   // Initialize WebSocket connection
-  // TODO: Connect only when trade is possible
   useEffect(() => {
-    if (makerConnectionUrl) {
+    if (makerConnectionUrl && hasValidChannelsForTrading) {
       const clientId = uuidv4()
       const baseUrl = makerConnectionUrl.endsWith('/')
         ? makerConnectionUrl
@@ -546,16 +545,20 @@ export const Component = () => {
         logger.error('WebSocket initialization failed', error)
         toast.error('WebSocket initialization failed')
       }
+    } else if (!hasValidChannelsForTrading) {
+      logger.info('No valid channels for trading, not connecting to maker')
     } else {
       logger.error('No maker connection URL provided')
       toast.error('No maker connection URL provided')
     }
 
     return () => {
-      webSocketService.close()
-      logger.info('WebSocket connection closed')
+      if (hasValidChannelsForTrading) {
+        webSocketService.close()
+        logger.info('WebSocket connection closed')
+      }
     }
-  }, [dispatch, makerConnectionUrl])
+  }, [dispatch, makerConnectionUrl, hasValidChannelsForTrading])
 
   // Fetch initial data
   useEffect(() => {
@@ -589,7 +592,6 @@ export const Component = () => {
         if ('data' in getPairsResponse && getPairsResponse.data) {
           dispatch(setTradingPairs(getPairsResponse.data.pairs))
           const tradableAssets = new Set([
-            // 'BTC',
             ...channels.map((c) => c.asset_id).filter((id) => id !== null),
           ])
           const filteredPairs = getPairsResponse.data.pairs.filter(
@@ -657,6 +659,8 @@ export const Component = () => {
   // Update amounts when selected pair feed changes
   useEffect(() => {
     if (selectedPairFeed) {
+      console.log('Selected pair feed:', selectedPairFeed)
+
       setIsToAmountLoading(true)
       setIsPriceLoading(false)
       const fromAmount = form.getValues().from
@@ -664,6 +668,7 @@ export const Component = () => {
       form.setValue('rfq_id', selectedPairFeed.rfq_id)
       setIsToAmountLoading(false)
     } else {
+      console.error('No selected pair feed')
       setIsPriceLoading(true)
     }
   }, [form, selectedPairFeed, updateToAmount])
