@@ -1,14 +1,21 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
+import { useSelector } from 'react-redux'
+
 
 import { useAppDispatch } from '../../app/store/hooks'
 import { BitFinexBoxIcon } from '../../icons/BitFinexBox'
+import { KaleidoswapBoxIcon } from '../../icons/KaleidoswapBox'
 import {
   NewChannelFormSchema,
   channelSliceActions,
 } from '../../slices/channel/channel.slice'
+import { selectNodeInfo } from '../../slices/nodeApi/nodeApi.slice'
 
 import { FormError } from './FormError'
+
+const KALEIDOSWAP_SIGNET_CONNECTION_URL =
+  '036cc53caf12741ca006d63121301b580659dbb6e0101f8b981cfc4496e21097ff@kaleidoswap.com'
 
 interface Props {
   error: string
@@ -72,19 +79,25 @@ export const Step1 = (props: Props) => {
       </div>
 
       <div className="flex justify-center space-x-6">
-
         <button
+          className="flex items-center space-x-2 opacity-50 cursor-not-allowed"
+          disabled
+        >
+          <BitFinexBoxIcon />
+        </button>
+        <button
+          className="flex items-center space-x-2"
           onClick={() => {
             dispatch(
               channelSliceActions.setNewChannelForm({
-                pubKeyAndAddress:
-                  '036cc53caf12741ca006d63121301b580659dbb6e0101f8b981cfc4496e21097ff@bitfinex.com',
+                pubKeyAndAddress: KALEIDOSWAP_SIGNET_CONNECTION_URL,
               })
             )
             props.onNext()
           }}
+          type="button"
         >
-          <BitFinexBoxIcon />
+          <KaleidoswapBoxIcon />
         </button>
       </div>
 

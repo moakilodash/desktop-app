@@ -2,7 +2,6 @@ import {
   Globe,
   Link,
   Copy,
-  ExternalLink,
   ArrowRight,
   CheckCircle,
   Settings,
