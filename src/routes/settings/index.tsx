@@ -19,6 +19,7 @@ import { toast } from 'react-toastify'
 import { WALLET_SETUP_PATH } from '../../app/router/paths'
 import { RootState } from '../../app/store'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
+import { nodeSettingsActions } from '../../slices/nodeSettings/nodeSettings.slice'
 import {
   setBitcoinUnit,
   setNodeConnectionString,
@@ -138,6 +139,7 @@ export const Component: React.FC = () => {
     const lockResponse = await attemptLock()
     if (lockResponse.status === 200) {
       await invoke('stop_node')
+      dispatch(nodeSettingsActions.resetNodeSettings())
       navigate(WALLET_SETUP_PATH)
       toast.success('Logout successful')
       // nodeInfo()

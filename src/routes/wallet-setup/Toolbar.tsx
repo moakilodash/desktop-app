@@ -4,20 +4,20 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
 import { ROOT_PATH } from '../../app/router/paths'
+import { useAppDispatch } from '../../app/store/hooks'
 import { MinidenticonImg } from '../../components/MinidenticonImg'
 import { Spinner } from '../../components/Spinner'
-// import {
-//   Account,
-//   NodeSettings,
-//   readSettings,
-//   writeSettings,
-// } from '../../slices/nodeSettings/nodeSettings.slice'
+import {
+  nodeSettingsActions,
+  setSettingsAsync,
+} from '../../slices/nodeSettings/nodeSettings.slice'
+
 type Account = {
-  id: number
   name: string
   datapath: string
-  network: string
+  network: 'mainnet' | 'testnet' | 'regtest'
   rpc_connection_url: string
+  node_url: string
 }
 
 export const Toolbar = () => {
@@ -26,20 +26,34 @@ export const Toolbar = () => {
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
+  const dispatch = useAppDispatch()
+
   const navigate = useNavigate()
 
   const handleAccountChange = async (account: Account) => {
+    await dispatch(
+      setSettingsAsync({
+        datapath: account.datapath,
+        name: account.name,
+        network: account.network,
+        node_url: account.node_url,
+        rpc_connection_url: account.rpc_connection_url,
+      })
+    )
     try {
       setIsLoading(true)
-      await invoke('start_node', {
-        datapath: account.datapath,
-        network: account.network,
-        rpcConnectionUrl: account.rpc_connection_url,
-      })
+      if (account.node_url === 'http://localhost:3001') {
+        await invoke('start_node', {
+          datapath: account.datapath,
+          network: account.network,
+          rpcConnectionUrl: account.rpc_connection_url,
+        })
+      }
       await new Promise((resolve) => setTimeout(resolve, 5000))
       navigate(ROOT_PATH)
     } catch (error) {
       console.error(error)
+      dispatch(nodeSettingsActions.resetNodeSettings())
       toast.error('Failed to start node')
     } finally {
       setIsLoading(false)

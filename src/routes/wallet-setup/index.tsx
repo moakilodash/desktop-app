@@ -1,8 +1,12 @@
-import { Wallet, ArrowLeftRight } from 'lucide-react'
+import { Wallet, ArrowLeftRight, Bolt } from 'lucide-react'
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { INIT_PATH, WALLET_RESTORE_PATH } from '../../app/router/paths'
+import {
+  INIT_PATH,
+  WALLET_CONFIG_PATH,
+  WALLET_RESTORE_PATH,
+} from '../../app/router/paths'
 import { Layout } from '../../components/Layout'
 
 import { Toolbar } from './Toolbar'
@@ -46,7 +50,7 @@ export const Component = () => {
           <h1 className="text-3xl font-bold mb-6 text-center text-white">
             Wallet Options
           </h1>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <WalletOption
               description="Set up a new wallet for your cryptocurrency"
               icon={Wallet}
@@ -59,14 +63,12 @@ export const Component = () => {
               onClick={() => navigate(WALLET_RESTORE_PATH)}
               title="Restore Wallet"
             />
-            {/*
             <WalletOption
-              description="Access your existing wallet"
-              icon={Lock}
-              onClick={() => navigate(WALLET_UNLOCK_PATH)}
-              title="Unlock Wallet"
+              description="Configure your existing wallet"
+              icon={Bolt}
+              onClick={() => navigate(WALLET_CONFIG_PATH)}
+              title="Configure Wallet"
             />
-            */}
           </div>
         </div>
       </Layout>

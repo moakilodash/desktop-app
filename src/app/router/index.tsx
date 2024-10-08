@@ -10,6 +10,7 @@ import {
   ROOT_PATH,
   SETTINGS_PATH,
   TRADE_PATH,
+  WALLET_CONFIG_PATH,
   WALLET_SETUP_PATH,
   WALLET_RESTORE_PATH,
   WALLET_UNLOCK_PATH,
@@ -30,6 +31,10 @@ export const router = createBrowserRouter([
   {
     lazy: () => import('../../routes/init'),
     path: INIT_PATH,
+  },
+  {
+    lazy: () => import('../../routes/wallet-config'),
+    path: WALLET_CONFIG_PATH,
   },
   {
     lazy: () => import('../../routes/wallet-restore'),
