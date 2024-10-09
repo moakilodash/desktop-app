@@ -1,4 +1,12 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import {
+  BaseQueryFn,
+  createApi,
+  FetchArgs,
+  fetchBaseQuery,
+  FetchBaseQueryError,
+} from '@reduxjs/toolkit/query/react'
+
+import { RootState } from '../../app/store'
 
 interface InitRequest {
   password: string
@@ -278,8 +286,34 @@ interface ListSwapsResponse {
   taker: SwapDetails[]
 }
 
+const dynamicBaseQuery: BaseQueryFn<
+  string | FetchArgs,
+  unknown,
+  FetchBaseQueryError
+> = async (args, api, extraOptions) => {
+  const state = api.getState() as RootState
+  const node_url = state.nodeSettings.data.node_url
+
+  if (!node_url) {
+    return {
+      error: {
+        data: 'Node URL not set',
+        status: 400,
+        statusText: 'Bad Request',
+      },
+    }
+  }
+
+  const urlEnd = typeof args === 'string' ? args : args.url
+  const adjustedUrl = `${node_url}${urlEnd}`
+  const adjustedArgs =
+    typeof args === 'string' ? adjustedUrl : { ...args, url: adjustedUrl }
+
+  return fetchBaseQuery({ baseUrl: '' })(adjustedArgs, api, extraOptions)
+}
+
 export const nodeApi = createApi({
-  baseQuery: fetchBaseQuery({ baseUrl: 'http://localhost:3001' }),
+  baseQuery: dynamicBaseQuery,
   endpoints: (builder) => ({
     address: builder.query<AddressResponse, void>({
       query: () => ({

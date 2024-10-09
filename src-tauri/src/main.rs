@@ -242,8 +242,9 @@ fn insert_account(
     network: String,
     datapath: String,
     rpc_connection_url: String,
+    node_url: String,
 ) -> Result<usize, String> {
-    match db::insert_account(name, network, datapath, rpc_connection_url) {
+    match db::insert_account(name, network, datapath, rpc_connection_url, node_url) {
         Ok(num_rows) => Ok(num_rows),
         Err(e) => Err(e.to_string()),
     }

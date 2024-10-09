@@ -34,7 +34,7 @@ export const RootRoute = () => {
       console.log(nodeInfoResponse)
 
       if (nodeInfoResponse.isError) {
-        if (error.status !== 'FETCH_ERROR') {
+        if (error.status !== 400) {
           navigate(WALLET_UNLOCK_PATH)
         } else {
           navigate(WALLET_SETUP_PATH)

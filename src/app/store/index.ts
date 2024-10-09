@@ -18,7 +18,7 @@ const rootReducer = combineReducers({
   ui: uiSlice.reducer,
 })
 
-export const store: any = configureStore({
+export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
       .concat(nodeApi.middleware)

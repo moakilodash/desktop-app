@@ -1,73 +1,54 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
-import { invoke } from '@tauri-apps/api'
-
-export const readSettings = createAsyncThunk(
-  'nodeSettings/readSettings',
-  async () => {
-    return (await invoke('get_config')) as NodeSettings
-  }
-)
-
-export const writeSettings = createAsyncThunk(
-  'nodeSettings/writeSettings',
-  async (settings: NodeSettings) => {
-    return await invoke('write_config', { config: settings })
-  }
-)
 
 export type Account = {
   name: string
   datapath: string
-}
-
-export type NodeSettings = {
-  network: 'regtest' | 'testnet' | 'signet' | 'mainnet'
-  datapath: string
+  network: 'regtest' | 'testnet' | 'mainnet'
   rpc_connection_url: string
-  accounts: Account[]
+  node_url: string
 }
 
 export interface NodeSettingsState {
-  data: NodeSettings
-  isLoading: boolean
+  data: Account
 }
 
 const initialState: NodeSettingsState = {
   data: {
-    accounts: [],
-    datapath: '../bin/dataldk',
+    datapath: '',
+    name: '',
     network: 'regtest',
-    rpc_connection_url: 'user:password@localhost:18443',
+    node_url: '',
+    rpc_connection_url: '',
   },
-  isLoading: false,
 }
+
+export const setSettingsAsync = createAsyncThunk(
+  'nodeSettings/setSettingsAsync',
+  async (settings: Account) => {
+    return settings
+  }
+)
 
 export const nodeSettingsSlice = createSlice({
   extraReducers: (builder) => {
-    builder.addCase(readSettings.fulfilled, (state, action) => {
+    builder.addCase(setSettingsAsync.fulfilled, (state, action) => {
       state.data = action.payload
-      state.isLoading = false
-    })
-    builder.addCase(readSettings.pending, (state) => {
-      state.isLoading = true
-    })
-    builder.addCase(readSettings.rejected, (state) => {
-      state.isLoading = false
-    })
-    builder.addCase(writeSettings.fulfilled, (state, action) => {
-      state.data = action.meta.arg
-      state.isLoading = false
-    })
-    builder.addCase(writeSettings.pending, (state) => {
-      state.isLoading = true
-    })
-    builder.addCase(writeSettings.rejected, (state) => {
-      state.isLoading = false
     })
   },
   initialState,
   name: 'nodeSettings',
-  reducers: {},
+  reducers: {
+    resetNodeSettings: (state) => {
+      state.data = initialState.data
+    },
+    setNodeSettings: (state, action) => {
+      state.data = action.payload
+    },
+  },
 })
 
 export const nodeSettingsReducer = nodeSettingsSlice.reducer
+
+export const nodeSettingsActions = {
+  ...nodeSettingsSlice.actions,
+}

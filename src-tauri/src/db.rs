@@ -10,6 +10,7 @@ pub struct Account {
     network: String,
     datapath: String,
     rpc_connection_url: String,
+    node_url: String,
 }
 
 // impl Default for Config {
@@ -46,6 +47,7 @@ pub fn init() {
                 'network'	TEXT NOT NULL,
                 'datapath'	TEXT NOT NULL,
                 'rpc_connection_url'	TEXT NOT NULL,
+                'node_url'  TEXT NOT NULL,
                 PRIMARY KEY('id' AUTOINCREMENT)
             );",
             (),
@@ -92,6 +94,7 @@ pub fn get_accounts() -> Result<Vec<Account>, rusqlite::Error> {
                 network: row.get(2)?,
                 datapath: row.get(3)?,
                 rpc_connection_url: row.get(4)?,
+                node_url: row.get(5)?,
             })
         })?
         .map(|res| res.unwrap())
@@ -105,10 +108,11 @@ pub fn insert_account(
     network: String,
     datapath: String,
     rpc_connection_url: String,
+    node_url: String,
 ) -> Result<usize, rusqlite::Error> {
     let conn = Connection::open(get_db_path()).unwrap();
     conn.execute(
-        "INSERT INTO Accounts (name, network, datapath, rpc_connection_url) VALUES (?1, ?2, ?3, ?4)",
-        rusqlite::params![name, network, datapath, rpc_connection_url],
+        "INSERT INTO Accounts (name, network, datapath, rpc_connection_url, node_url) VALUES (?1, ?2, ?3, ?4, ?5)",
+        rusqlite::params![name, network, datapath, rpc_connection_url, node_url],
     )
 }
