@@ -37,7 +37,7 @@ interface OpenChannelRequest {
   asset_amount?: number
   asset_id?: string
   with_anchors?: boolean
-  fee_base_msat?: number
+  fee_rate_msat?: number
   fee_proportional_millionths?: number
   temporary_channel_id?: string
 }
@@ -439,6 +439,7 @@ export const nodeApi = createApi({
       query: (body) => {
         const requestBody: any = {
           capacity_sat: body.capacity_sat,
+          fee_rate_msat: body.fee_rate_msat,
           peer_pubkey_and_opt_addr: body.peer_pubkey_and_opt_addr,
           public: true,
           push_msat: 3100000,

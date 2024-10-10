@@ -16,6 +16,7 @@ export const NewChannelFormSchema = z.object({
     .number()
     .min(MIN_CHANNEL_CAPACITY, 'Minimum amount is 50000 satoshis')
     .max(100000000, 'Maximum amount is 100000000 satoshis'),
+  fee: z.enum(['slow', 'medium', 'fast']),
   pubKeyAndAddress: z.string().regex(/^([a-zA-Z0-9]{66})@.+/),
 })
 
@@ -34,7 +35,8 @@ export const initialState: SliceState = {
       assetId: '',
       assetTicker: '',
       capacitySat: MIN_CHANNEL_CAPACITY,
-      pubKeyAndAddress: '',
+      fee: 'medium',
+      pubKeyAndAddress: '', // Default to medium
     },
   },
 }

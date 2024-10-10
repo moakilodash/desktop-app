@@ -27,6 +27,7 @@ interface FormFields {
   assetAmount: number
   assetId: string
   assetTicker: string
+  fee: 'slow' | 'medium' | 'fast'
 }
 
 export const Step2 = (props: Props) => {
@@ -149,6 +150,10 @@ export const Step2 = (props: Props) => {
     }
   }
 
+  const handleFeeChange = (fee: 'slow' | 'medium' | 'fast') => {
+    setValue('fee', fee, { shouldValidate: true })
+  }
+
   const onSubmit: SubmitHandler<FormFields> = useCallback(
     (data) => {
       const selectedAsset = takerAssetsResponse.data?.nia.find(
@@ -163,106 +168,97 @@ export const Step2 = (props: Props) => {
   )
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form className="max-w-3xl mx-auto" onSubmit={handleSubmit(onSubmit)}>
       <div className="text-center mb-10">
-        <h3 className="text-2xl font-semibold mb-4">Open a Channel - Step 2</h3>
-        <h4 className="text-lg font-medium mb-2">
-          Select the amount of satoshi to spend to open the channel
-        </h4>
+        <h3 className="text-3xl font-bold mb-4">Open a Channel - Step 2</h3>
+        <h4 className="text-xl">Configure your channel capacity and assets</h4>
       </div>
 
-      <div className="px-20">
-        <div className="flex mb-10">
+      <div className="bg-section-lighter p-8 rounded-lg mb-10">
+        <div className="flex mb-8">
           <input
-            className="px-6 py-4 w-full border border-divider border-r-0 bg-blue-dark outline-none rounded-l"
+            className="flex-grow px-6 py-4 border border-divider border-r-0 bg-blue-dark outline-none rounded-l"
             {...register('pubKeyAndAddress')}
-            placeholder="Paste the Public Key Here"
+            placeholder="Public Key"
             readOnly={true}
             type="text"
             value={newChannelForm.pubKeyAndAddress}
           />
-
           <div className="bg-blue-dark border border-divider border-l-0 rounded-r flex items-center px-6">
             <CheckmarkIcon />
           </div>
         </div>
 
-        <div className="bg-section-lighter px-6 rounded divide-y divide-divider">
-          <div className="py-6">
-            <div className="text-xs mb-3">Select amount of satoshi</div>
-            <div className="flex space-x-2">
-              <div className="flex-1">
-                <input
-                  {...register('capacitySat', { valueAsNumber: true })}
-                  className="rounded bg-blue-dark px-4 py-3 w-full outline-none"
-                  max={maxCapacity}
-                  min={MIN_CHANNEL_CAPACITY}
-                  onChange={(e) => handleCapacityChange(e.target.value)}
-                  placeholder="Enter amount"
-                  type="text"
-                  value={formatNumber(capacitySat)}
-                />
-
-                <input
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-                  max={maxCapacity}
-                  min={MIN_CHANNEL_CAPACITY}
-                  onChange={(e) => handleCapacityChange(e.target.value)}
-                  step="1"
-                  type="range"
-                  value={capacitySat}
-                />
-                <div className="text-sm text-red mt-2">
-                  {formState.errors.capacitySat && (
-                    <p className="text-red-500 text-xs italic">
-                      {formState.errors.capacitySat.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
+        <div className="mb-8">
+          <label className="block text-sm mb-2">
+            Channel Capacity (satoshis)
+          </label>
+          <div className="flex items-center space-x-4">
+            <input
+              {...register('capacitySat', { valueAsNumber: true })}
+              className="flex-grow rounded bg-blue-dark px-4 py-3 outline-none"
+              max={maxCapacity}
+              min={MIN_CHANNEL_CAPACITY}
+              onChange={(e) => handleCapacityChange(e.target.value)}
+              placeholder="Enter amount"
+              type="text"
+              value={formatNumber(capacitySat)}
+            />
+            <span className="text-sm">{formatNumber(maxCapacity)} max</span>
           </div>
-          {addAsset && (takerAssetsResponse.data?.nia?.length ?? 0) > 0 && (
-            <>
-              <div className="checkbox-container">
-                <label>
-                  <input
-                    checked={addAsset}
-                    className="checkbox-input"
-                    onChange={(e) => setAddAsset(e.target.checked)}
-                    type="checkbox"
-                  />
-                  Add Asset
-                </label>
-              </div>
+          <input
+            className="w-full mt-2"
+            max={maxCapacity}
+            min={MIN_CHANNEL_CAPACITY}
+            onChange={(e) => handleCapacityChange(e.target.value)}
+            type="range"
+            value={capacitySat}
+          />
+          {formState.errors.capacitySat && (
+            <p className="text-red-500 text-sm mt-1">
+              {formState.errors.capacitySat.message}
+            </p>
+          )}
+        </div>
 
-              <div className="py-6">
-                <div className="text-xs mb-3">Select asset</div>
-                <div>
-                  <Controller
-                    control={control}
-                    name="assetId"
-                    render={({ field }) => (
-                      <Select
-                        {...field}
-                        active={field.value}
-                        onSelect={field.onChange}
-                        options={
-                          takerAssetsResponse.data?.nia.map((a: NiaAsset) => ({
-                            label: a.ticker,
-                            value: a.asset_id,
-                          })) || []
-                        }
-                        theme="dark"
-                      />
-                    )}
-                  />
-                </div>
+        {addAsset && (takerAssetsResponse.data?.nia?.length ?? 0) > 0 && (
+          <div className="mb-8">
+            <label className="flex items-center text-sm mb-4">
+              <input
+                checked={addAsset}
+                className="mr-2"
+                onChange={(e) => setAddAsset(e.target.checked)}
+                type="checkbox"
+              />
+              Add Asset
+            </label>
+
+            {addAsset && (
+              <>
+                <label className="block text-sm mb-2">Select Asset</label>
+                <Controller
+                  control={control}
+                  name="assetId"
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      active={field.value}
+                      onSelect={field.onChange}
+                      options={
+                        takerAssetsResponse.data?.nia.map((a: NiaAsset) => ({
+                          label: a.ticker,
+                          value: a.asset_id,
+                        })) || []
+                      }
+                      theme="dark"
+                    />
+                  )}
+                />
+
                 {watch('assetId') && (
-                  <>
-                    <div className="text-xs mb-3">Select asset amount </div>
-
-                    <div className="flex-1">
+                  <div className="mt-4">
+                    <label className="block text-sm mb-2">Asset Amount</label>
+                    <div className="flex items-center space-x-4">
                       <input
                         {...register('assetAmount', {
                           max:
@@ -272,7 +268,7 @@ export const Step2 = (props: Props) => {
                           min: 0,
                           valueAsNumber: true,
                         })}
-                        className="rounded bg-blue-dark px-4 py-3 w-full outline-none"
+                        className="flex-grow rounded bg-blue-dark px-4 py-3 outline-none"
                         onChange={(e) =>
                           handleAssetAmountChange(e.target.value)
                         }
@@ -280,84 +276,73 @@ export const Step2 = (props: Props) => {
                         type="text"
                         value={formatNumber(assetAmount)}
                       />
-
-                      <input
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-                        max={
+                      <span className="text-sm">
+                        {formatNumber(
                           (maxAssetAmountMap as Record<string, number>)[
                             watch('assetId')
                           ] || 0
-                        }
-                        min={0}
-                        onChange={(e) =>
-                          handleAssetAmountChange(e.target.value)
-                        }
-                        step="1"
-                        type="range"
-                        value={assetAmount}
-                      />
-
-                      <div className="text-sm text-red mt-2">
-                        {formState.errors.assetAmount && (
-                          <p className="text-red-500 text-xs italic">
-                            {formState.errors.assetAmount.message}
-                          </p>
-                        )}
-                      </div>
+                        )}{' '}
+                        max
+                      </span>
                     </div>
-                  </>
+                    <input
+                      className="w-full mt-2"
+                      max={
+                        (maxAssetAmountMap as Record<string, number>)[
+                          watch('assetId')
+                        ] || 0
+                      }
+                      min={0}
+                      onChange={(e) => handleAssetAmountChange(e.target.value)}
+                      type="range"
+                      value={assetAmount}
+                    />
+                    {formState.errors.assetAmount && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {formState.errors.assetAmount.message}
+                      </p>
+                    )}
+                  </div>
                 )}
-                <div className="text-sm text-red mt-2">
-                  {formState.errors.assetId?.message}
-                </div>
-              </div>
-            </>
-          )}
-          <div className="py-6">
-            <div className="text-xs mb-3">Transaction Fee</div>
-            <div className="flex items-center space-x-6">
-              <div
-                className="flex items-center space-x-2 cursor-pointer"
-                onClick={() => null}
-              >
-                <div className="flex-auto w-4 h-4 rounded border-2 border-grey-lighter" />
-                <div className="text-grey-lighter">Slow</div>
-              </div>
+              </>
+            )}
+          </div>
+        )}
 
-              <div
-                className="flex items-center space-x-2 cursor-pointer"
-                onClick={() => null}
+        <div>
+          <label className="block text-sm mb-2">Transaction Fee</label>
+          <div className="flex space-x-4">
+            {['slow', 'medium', 'fast'].map((speed) => (
+              <button
+                className={`flex-1 py-2 px-4 bg-blue-dark border border-divider rounded text-center hover:bg-opacity-80 transition-colors ${
+                  watch('fee') === speed ? 'bg-purple bg-opacity-20' : ''
+                }`}
+                key={speed}
+                onClick={() =>
+                  handleFeeChange(speed as 'slow' | 'medium' | 'fast')
+                }
+                type="button"
               >
-                <div className="flex-auto w-4 h-4 rounded border-2 border-grey-lighter" />
-                <div className="text-grey-lighter">Medium</div>
-              </div>
-
-              <div
-                className="flex items-center space-x-2 cursor-pointer"
-                onClick={() => null}
-              >
-                <div className="flex-auto w-4 h-4 rounded border-2 border-grey-lighter" />
-                <div className="text-grey-lighter">Fast</div>
-              </div>
-            </div>
+                {speed.charAt(0).toUpperCase() + speed.slice(1)}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      <div className="flex justify-end mt-20">
+      <div className="flex justify-between">
         <button
-          className="px-6 py-3 rounded text-lg font-medium text-grey-light"
+          className="px-6 py-3 rounded text-lg font-medium text-grey-light hover:bg-blue-dark transition-colors"
           onClick={() => props.onBack()}
           type="button"
         >
-          Go Back
+          Back
         </button>
-
         <button
-          className="px-6 py-3 rounded border text-lg font-bold border-purple"
+          className="px-6 py-3 rounded border text-lg font-bold border-purple hover:bg-purple hover:bg-opacity-20 transition-colors"
           type="submit"
         >
-          Next Step
+          Next
         </button>
       </div>
 

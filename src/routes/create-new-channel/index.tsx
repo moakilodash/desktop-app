@@ -17,6 +17,12 @@ import { Step2 } from './Step2'
 import { Step3 } from './Step3'
 import { Step4 } from './Step4'
 
+const FEE_RATES = {
+  fast: 3000,
+  medium: 2000,
+  slow: 1000,
+}
+
 export const Component = () => {
   const dispatch = useAppDispatch()
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
@@ -29,6 +35,9 @@ export const Component = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [insufficientBalance, setInsufficientBalance] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [channelOpeningError, setChannelOpeningError] = useState<string | null>(
+    null
+  )
 
   const newChannelForm = useAppSelector((state) =>
     channelSliceSelectors.form(state, 'new')
@@ -59,19 +68,29 @@ export const Component = () => {
 
   const onSubmit = useCallback(async () => {
     const form = newChannelForm as TNewChannelForm
+    setChannelOpeningError(null)
 
     try {
       const openChannelResponse = await openChannel({
         asset_amount: form.assetAmount,
         asset_id: form.assetId,
         capacity_sat: form.capacitySat,
+        fee_rate_msat: FEE_RATES[form.fee],
         peer_pubkey_and_opt_addr: form.pubKeyAndAddress,
       })
+
+      if (openChannelResponse.error) {
+        throw new Error(openChannelResponse.error.toString())
+      }
 
       console.log('Opened channel successfully:', openChannelResponse.data)
       setStep(4)
     } catch (error) {
       console.error('Failed to open channel:', error)
+      setChannelOpeningError(
+        error instanceof Error ? error.message : 'An unknown error occurred'
+      )
+      setStep(4)
     }
   }, [openChannel, newChannelForm])
 
@@ -141,7 +160,11 @@ export const Component = () => {
           </div>
 
           <div className={step !== 4 ? 'hidden' : ''}>
-            <Step4 onFinish={() => navigate(TRADE_PATH)} />
+            <Step4
+              error={channelOpeningError}
+              onFinish={() => navigate(TRADE_PATH)}
+              onRetry={() => setStep(3)}
+            />
           </div>
         </>
       )}
