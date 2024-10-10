@@ -29,7 +29,7 @@ interface Fields {
 
 export const Component = () => {
   const [isStartingNode, setIsStartingNode] = useState(false)
-  const [isRemoteNode, setIsRemoteNode] = useState(false)
+  const [isRemoteNode, setIsRemoteNode] = useState(true)
 
   const [unlock, unlockResponse] = nodeApi.endpoints.unlock.useLazyQuery()
   const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
@@ -49,7 +49,7 @@ export const Component = () => {
       datapath: 'dataldk',
       name: 'Test Account',
       network: 'regtest',
-      node_url: '',
+      node_url: 'http://localhost:3001',
       password: 'password',
       rpc_connection_url: 'user:password@localhost:18443',
     },
@@ -88,25 +88,27 @@ export const Component = () => {
     console.log('Unlocking the node...')
     const unlockResponse = await unlock({ password: data.password })
     if (unlockResponse.isSuccess) {
-      try {
-        await invoke('insert_account', {
-          datapath: data.datapath,
-          name: data.name,
-          network: data.network,
-          nodeUrl: data.node_url || 'http://localhost:3001',
-          rpcConnectionUrl: data.rpc_connection_url,
-        })
-      } catch (error) {
-        console.log(error)
+      navigate(TRADE_PATH)
+    } else if (unlockResponse.error && 'data' in unlockResponse.error) {
+      const errorData = unlockResponse.error.data as {
+        error?: string
+        code?: number
+      }
+      if (
+        errorData.error === 'Node is unlocked (hint: call lock)' &&
+        errorData.code === 403
+      ) {
+        // Node is already unlocked, proceed to trade path
+        navigate(TRADE_PATH)
+      } else {
+        console.log('Failed to unlock the node...')
+        console.log(unlockResponse.error)
+        toast.error('Failed to unlock the node...')
         dispatch(nodeSettingsActions.resetNodeSettings())
         await invoke('stop_node')
-        toast.error('Failed to save account...')
-      }
-      const nodeInfoRes = await nodeInfo()
-      if (nodeInfoRes.isSuccess) {
-        navigate(TRADE_PATH)
       }
     } else {
+      // Handle other error cases
       console.log('Failed to unlock the node...')
       console.log(unlockResponse.error)
       toast.error('Failed to unlock the node...')
@@ -170,6 +172,7 @@ export const Component = () => {
                     </div>
                     <div className="relative">
                       <input
+                        checked={isRemoteNode}
                         className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
                         onChange={(e) => setIsRemoteNode(e.target.checked)}
                         type="checkbox"

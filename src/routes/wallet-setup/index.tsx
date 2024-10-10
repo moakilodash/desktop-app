@@ -1,4 +1,4 @@
-import { Wallet, ArrowLeftRight, Bolt } from 'lucide-react'
+import { Wallet, ArrowLeftRight, Cloud } from 'lucide-react'
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -24,14 +24,16 @@ const WalletOption: React.FC<WalletOptionProps> = ({
   icon: Icon,
   onClick,
 }) => (
-  <div className="bg-blue-dark p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
-    <div className="flex items-center gap-2 mb-2">
-      <Icon className="w-6 h-6 text-cyan" />
-      <h2 className="text-xl font-bold text-white">{title}</h2>
+  <div className="bg-blue-dark p-6 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex flex-col h-full">
+    <div className="flex items-center gap-3 mb-4">
+      <div className="bg-cyan bg-opacity-20 p-3 rounded-full">
+        <Icon className="w-8 h-8 text-cyan" />
+      </div>
+      <h2 className="text-2xl font-bold text-white">{title}</h2>
     </div>
-    <p className="text-gray-400 mb-4 flex-grow">{description}</p>
+    <p className="text-gray-300 mb-6 flex-grow">{description}</p>
     <button
-      className="w-full px-4 py-2 bg-cyan text-blue-dark rounded font-bold hover:bg-cyan-600 transition-colors duration-300"
+      className="w-full px-4 py-3 bg-cyan text-blue-dark rounded-md font-bold hover:bg-cyan-600 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-cyan focus:ring-opacity-50"
       onClick={onClick}
     >
       Select
@@ -46,28 +48,31 @@ export const Component = () => {
     <>
       <Toolbar />
       <Layout className="ms-60">
-        <div className="max-w-4xl w-full p-6 bg-blue-darker rounded-lg shadow-md">
-          <h1 className="text-3xl font-bold mb-6 text-center text-white">
-            Wallet Options
+        <div className="max-w-5xl w-full p-8 bg-blue-darker rounded-lg shadow-lg">
+          <h1 className="text-4xl font-bold mb-2 text-center text-white">
+            Welcome to KaleidoSwap
           </h1>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <p className="text-gray-300 text-center mb-10">
+            Choose an option to get started with your KaleidoSwap journey
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <WalletOption
-              description="Set up a new wallet for your cryptocurrency"
+              description="Set up a new wallet and start fresh with your cryptocurrency"
               icon={Wallet}
               onClick={() => navigate(INIT_PATH)}
-              title="Create Wallet"
+              title="Create New Wallet"
             />
             <WalletOption
-              description="Recover your wallet from a backup"
+              description="Recover your existing wallet from a backup or seed phrase"
               icon={ArrowLeftRight}
               onClick={() => navigate(WALLET_RESTORE_PATH)}
               title="Restore Wallet"
             />
             <WalletOption
-              description="Configure your existing wallet"
-              icon={Bolt}
+              description="Connect to an existing remote RGB Lightning node"
+              icon={Cloud}
               onClick={() => navigate(WALLET_CONFIG_PATH)}
-              title="Configure Wallet"
+              title="Connect to Remote Node"
             />
           </div>
         </div>
