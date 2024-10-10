@@ -55,14 +55,6 @@ export const Step3 = (props: Props) => {
         </div>
       </div>
 
-      <div className="mt-10 flex items-center justify-center text-red-500 space-x-2">
-        <WarningIcon />
-        <p className="text-sm max-w-md text-center">
-          When you open a direct channel, the market maker who creates the
-          channel might apply a fee to open the channel for the other asset.
-        </p>
-      </div>
-
       <div className="flex justify-between mt-10">
         <button
           className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white text-lg font-bold rounded shadow-md transition duration-200"

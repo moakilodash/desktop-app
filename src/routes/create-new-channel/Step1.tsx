@@ -1,21 +1,18 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import axios from 'axios'
+import { useState, useEffect } from 'react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
-import { useSelector } from 'react-redux'
-
 
 import { useAppDispatch } from '../../app/store/hooks'
+import { KALEIDOSWAP_LSP_URL } from '../../constants'
 import { BitFinexBoxIcon } from '../../icons/BitFinexBox'
 import { KaleidoswapBoxIcon } from '../../icons/KaleidoswapBox'
 import {
   NewChannelFormSchema,
   channelSliceActions,
 } from '../../slices/channel/channel.slice'
-import { selectNodeInfo } from '../../slices/nodeApi/nodeApi.slice'
 
 import { FormError } from './FormError'
-
-const KALEIDOSWAP_SIGNET_CONNECTION_URL =
-  '036cc53caf12741ca006d63121301b580659dbb6e0101f8b981cfc4496e21097ff@kaleidoswap.com'
 
 interface Props {
   error: string
@@ -27,6 +24,10 @@ interface FormFields {
 }
 
 export const Step1 = (props: Props) => {
+  const [lspConnectionUrl, setLspConnectionUrl] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+
   const form = useForm<FormFields>({
     defaultValues: {
       pubKeyAndAddress: '',
@@ -37,6 +38,26 @@ export const Step1 = (props: Props) => {
   })
 
   const dispatch = useAppDispatch()
+
+  useEffect(() => {
+    const fetchLspInfo = async () => {
+      setIsLoading(true)
+      setError('')
+      try {
+        const response = await axios.get(
+          `${KALEIDOSWAP_LSP_URL}/api/v1/lsps1/get_info`
+        )
+        setLspConnectionUrl(response.data.lsp_connection_url)
+      } catch (err) {
+        console.error('Error fetching LSP info:', err)
+        setError('Failed to fetch LSP connection information')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchLspInfo()
+  }, [])
 
   const onSubmit: SubmitHandler<FormFields> = (data) => {
     dispatch(channelSliceActions.setNewChannelForm(data))
@@ -61,7 +82,7 @@ export const Step1 = (props: Props) => {
           <>
             <input
               className="px-6 py-4 w-full border border-divider bg-blue-dark outline-none rounded"
-              placeholder="Paste the Public Key Here"
+              placeholder="Paste the node connection URL here: pubkey@host:port"
               type="text"
               {...field}
             />
@@ -87,19 +108,27 @@ export const Step1 = (props: Props) => {
         </button>
         <button
           className="flex items-center space-x-2"
+          disabled={isLoading || !lspConnectionUrl}
           onClick={() => {
-            dispatch(
-              channelSliceActions.setNewChannelForm({
-                pubKeyAndAddress: KALEIDOSWAP_SIGNET_CONNECTION_URL,
-              })
-            )
-            props.onNext()
+            if (lspConnectionUrl) {
+              dispatch(
+                channelSliceActions.setNewChannelForm({
+                  pubKeyAndAddress: lspConnectionUrl,
+                })
+              )
+              props.onNext()
+            } else {
+              setError('LSP connection URL is not available')
+            }
           }}
           type="button"
         >
           <KaleidoswapBoxIcon />
         </button>
       </div>
+
+      {isLoading && <p>Loading LSP information...</p>}
+      {error && <p className="text-red-500">{error}</p>}
 
       <div className="flex justify-end mt-20">
         <button
