@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
 
 import { TRADE_PATH, WALLET_SETUP_PATH } from '../../app/router/paths'
 import { Layout } from '../../components/Layout'
@@ -19,7 +20,17 @@ export const Component = () => {
   const navigate = useNavigate()
 
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
-  const [additionalErrors, setAdditionalErrors] = useState<Array<string>>([])
+  const [isUnlocking, setIsUnlocking] = useState(false)
+
+  useEffect(() => {
+    const checkNodeStatus = async () => {
+      const nodeInfoRes = await nodeInfo()
+      if (nodeInfoRes.isSuccess) {
+        navigate(TRADE_PATH)
+      }
+    }
+    checkNodeStatus()
+  }, [])
 
   const form = useForm<Fields>({
     defaultValues: {
@@ -28,95 +39,101 @@ export const Component = () => {
   })
 
   const onSubmit: SubmitHandler<Fields> = async (data) => {
-    let nodeInfoRes = await nodeInfo()
+    setIsUnlocking(true)
 
-    if (nodeInfoRes.isSuccess) {
-      navigate(TRADE_PATH)
-      return
-    }
-
-    const unlockResponse = await unlock({ password: data.password })
-    if (unlockResponse.isSuccess) {
-      nodeInfoRes = await nodeInfo()
-      if (nodeInfoRes.isSuccess) {
-        navigate(TRADE_PATH)
+    try {
+      const unlockResponse = await unlock({ password: data.password })
+      if (unlockResponse.isSuccess) {
+        const nodeInfoRes = await nodeInfo()
+        if (nodeInfoRes.isSuccess) {
+          navigate(TRADE_PATH)
+        } else {
+          throw new Error('Failed to get node info after unlock')
+        }
+      } else {
+        throw new Error(
+          unlockResponse.error?.data?.message || 'Failed to unlock the node'
+        )
       }
-    } else {
-      setAdditionalErrors((s) => [...s, 'Failed to unlock the node.'])
+    } catch (error) {
+      toast.error(error.message || 'An unexpected error occurred', {
+        autoClose: 5000,
+        closeOnClick: true,
+        draggable: true,
+        hideProgressBar: false,
+        pauseOnHover: true,
+        position: 'top-right',
+      })
+    } finally {
+      setIsUnlocking(false)
     }
   }
 
   return (
     <Layout>
-      <div className="max-w-2xl w-full bg-blue-dark py-8 px-6 rounded">
-        {unlockResponse.isLoading ? (
+      <div className="max-w-md w-full bg-blue-dark py-12 px-8 rounded-lg shadow-lg">
+        {isUnlocking ? (
           <div className="py-20 flex flex-col items-center space-y-4">
             <Spinner size={10} />
-
-            <div className="text-center">Unlocking the node...</div>
+            <div className="text-center text-lg">Unlocking your wallet...</div>
           </div>
         ) : (
           <>
-            <div>
+            <div className="mb-8">
               <button
-                className="px-3 py-1 rounded border text-sm border-gray-500"
+                className="px-4 py-2 rounded-full border text-sm border-gray-500 hover:bg-gray-700 transition-colors"
                 onClick={() => navigate(WALLET_SETUP_PATH)}
               >
-                Go Back
+                ← Back
               </button>
             </div>
             <div className="text-center mb-10">
-              <h3 className="text-2xl font-semibold mb-4">
-                Unlock your Wallet
-              </h3>
+              <h3 className="text-3xl font-bold mb-2">Unlock your Wallet</h3>
+              <p className="text-gray-400">Enter your password to continue</p>
             </div>
 
-            <div>
-              <form
-                className="flex items-center justify-center flex-col"
-                onSubmit={form.handleSubmit(onSubmit)}
-              >
-                <div className="w-80 space-y-4">
-                  <div>
-                    <div className="text-xs mb-3">Your Password</div>
-
-                    <div className="relative">
-                      <input
-                        className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
-                        type={isPasswordVisible ? 'text' : 'password'}
-                        {...form.register('password', {
-                          required: 'Required',
-                        })}
-                      />
-
-                      <div
-                        className="absolute top-0 right-4 h-full flex items-center cursor-pointer"
-                        onClick={() => setIsPasswordVisible((a) => !a)}
-                      >
-                        <EyeIcon />
-                      </div>
-                    </div>
-
-                    <div className="text-sm text-red mt-2">
-                      {form.formState.errors.password?.message}
-                      <ul>
-                        {additionalErrors.map((e, i) => (
-                          <li key={i}>{e}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex self-end justify-end mt-8">
+            <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
+              <div>
+                <label
+                  className="block text-sm font-medium mb-2"
+                  htmlFor="password"
+                >
+                  Your Password
+                </label>
+                <div className="relative">
+                  <input
+                    className="border border-gray-600 rounded-lg bg-blue-dark px-4 py-3 w-full outline-none focus:ring-2 focus:ring-cyan transition-shadow"
+                    id="password"
+                    type={isPasswordVisible ? 'text' : 'password'}
+                    {...form.register('password', {
+                      required: 'Password is required',
+                    })}
+                  />
                   <button
-                    className="px-6 py-3 rounded border text-lg font-bold border-cyan"
-                    type="submit"
+                    className="absolute top-0 right-3 h-full flex items-center text-gray-400 hover:text-white transition-colors"
+                    onClick={() => setIsPasswordVisible((prev) => !prev)}
+                    type="button"
                   >
-                    Proceed
+                    <EyeIcon />
                   </button>
                 </div>
-              </form>
-            </div>
+                {form.formState.errors.password && (
+                  <p className="mt-2 text-sm text-red-500">
+                    {form.formState.errors.password.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <button
+                  className="w-full px-6 py-3 rounded-lg bg-cyan text-blue-dark text-lg font-bold hover:bg-cyan-light transition-colors"
+                  disabled={isUnlocking}
+                  type="submit"
+                >
+                  {isUnlocking ? 'Unlocking...' : 'Unlock Wallet'}
+                </button>
+              </div>
+            </form>
           </>
         )}
       </div>
