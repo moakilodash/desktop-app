@@ -199,7 +199,9 @@ export const Component = () => {
         isStartingNode ? (
           <div className="py-20 flex flex-col items-center space-y-4">
             <Spinner />
-            <div className="text-center">Initializing the node...</div>
+            <div className="text-center">
+              Initializing your node. This may take a few moments...
+            </div>
           </div>
         ) : isShowingMnemonic ? (
           <>
@@ -213,11 +215,12 @@ export const Component = () => {
             </div>
             <div className="py-20 flex flex-col items-center space-y-4">
               <h3 className="text-2xl font-semibold mb-4">
-                Backup your mnemonic in a secure place
+                Secure Your Wallet: Save Your Recovery Phrase
               </h3>
-              <p className="text-red-500">
-                Warning: Do not share your mnemonic with anyone. If someone has
-                your mnemonic, they can access your wallet.
+              <p className="text-red-500 text-center">
+                Warning: Your recovery phrase is the key to your wallet. Write
+                it down and store it in a secure location. Never share it with
+                anyone.
               </p>
               <div className="grid grid-cols-4 gap-4">
                 {mnemonic.map((word, i) => (
@@ -233,14 +236,14 @@ export const Component = () => {
                 className="px-6 py-3 mt-4 rounded border font-bold border-cyan"
                 onClick={copyMnemonicToClipboard}
               >
-                Copy Mnemonic
+                Copy Recovery Phrase
               </button>
               <div className="flex self-center justify-center mt-8">
                 <button
                   className="px-6 py-3 mt-7 rounded border font-bold border-cyan"
                   onClick={onMnemonicSaved}
                 >
-                  I have saved my mnemonic!
+                  I've Securely Saved My Recovery Phrase
                 </button>
               </div>
             </div>
@@ -255,13 +258,17 @@ export const Component = () => {
                   setIsShowingMnemonic(true)
                 }}
               >
-                Go back to mnemonic
+                Back to Recovery Phrase
               </button>
             </div>
             <div className="text-center mb-10">
               <h3 className="text-2xl font-semibold mb-4">
-                Verify your mnemonic
+                Verify Your Recovery Phrase
               </h3>
+              <p>
+                Please enter your recovery phrase to confirm you've saved it
+                correctly.
+              </p>
             </div>
             <div>
               <form
@@ -312,12 +319,12 @@ export const Component = () => {
             </div>
             <div className="text-center mb-10">
               <h3 className="text-2xl font-semibold mb-4">
-                Configure your wallet
+                Set Up Your Kaleidoswap Node
               </h3>
               <p>
-                Craft a robust password using a mix of elements like letters,
-                numbers, and symbols. Your wallet's protection starts with a
-                strong password.
+                Configure your node settings and create a strong password to
+                secure your wallet. This is a crucial step in ensuring the
+                safety of your assets.
               </p>
             </div>
             <div>
@@ -332,6 +339,7 @@ export const Component = () => {
                     <div className="relative">
                       <input
                         className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
+                        placeholder="Enter a name for your account"
                         type="text"
                         {...form.register('name', {
                           required: 'Required',
@@ -347,17 +355,19 @@ export const Component = () => {
                       </ul>
                     </div>
                   </div>
-                  {/* Datapath Field */}
+                  {/* Remote Node Checkbox */}
                   <div>
-                    <div className="text-xs mb-3">
-                      Remote Node (check if you have a remote node)
-                    </div>
-                    <div className="relative">
+                    <div className="text-xs mb-3">Use Remote Node</div>
+                    <div className="relative flex items-center">
                       <input
-                        className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
+                        className="mr-2"
+                        id="remoteNode"
                         onChange={(e) => setIsRemoteNode(e.target.checked)}
                         type="checkbox"
                       />
+                      <label htmlFor="remoteNode">
+                        Check if you're connecting to a remote node
+                      </label>
                     </div>
                   </div>
                   {!isRemoteNode ? (
@@ -452,10 +462,11 @@ export const Component = () => {
                   </div>
                   {/* Password Fields */}
                   <div>
-                    <div className="text-xs mb-3">Your Password</div>
+                    <div className="text-xs mb-3">Create Password</div>
                     <div className="relative">
                       <input
                         className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
+                        placeholder="Enter a strong password"
                         type={isPasswordVisible ? 'text' : 'password'}
                         {...form.register('password', {
                           minLength: {
@@ -482,10 +493,11 @@ export const Component = () => {
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs mb-3">Confirm Your Password</div>
+                    <div className="text-xs mb-3">Confirm Password</div>
                     <div className="relative">
                       <input
                         className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
+                        placeholder="Re-enter your password"
                         type={isPasswordVisible ? 'text' : 'password'}
                         {...form.register('confirmPassword', {
                           minLength: {
@@ -518,7 +530,7 @@ export const Component = () => {
                     className="px-6 py-3 rounded border text-lg font-bold border-cyan"
                     type="submit"
                   >
-                    Proceed
+                    Initialize Node
                   </button>
                 </div>
               </form>
