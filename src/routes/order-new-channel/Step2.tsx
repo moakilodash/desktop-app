@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import * as z from 'zod'
 
-import { CREATEUTXOS_PATH } from '../../app/router/paths'
 import { useAppDispatch } from '../../app/store/hooks'
 import { AssetSelector } from '../../components/AssetSelector'
 import { Select } from '../../components/Select'
@@ -16,7 +15,6 @@ import {
   TChannelRequestForm,
 } from '../../slices/channel/orderChannel.slice'
 import { makerApi } from '../../slices/makerApi/makerApi.slice'
-import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 
 import { FormError } from './FormError'
 import 'react-toastify/dist/ReactToastify.css'
@@ -54,7 +52,6 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
   const dispatch = useAppDispatch()
   const [assetMap, setAssetMap] = useState<Record<string, AssetInfo>>({})
   const [addAsset, setAddAsset] = useState(false)
-  const [coloredBtcBalance, setColoredBtcBalance] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
 
   const { register, handleSubmit, setValue, control, watch, formState } =
@@ -70,7 +67,6 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
     })
 
   const [getInfoRequest] = makerApi.endpoints.get_info.useLazyQuery()
-  const [getBtcBalanceRequest] = nodeApi.endpoints.btcBalance.useLazyQuery()
 
   const assetAmount = watch('assetAmount')
   const capacitySat = watch('capacitySat')
@@ -81,10 +77,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
     const fetchData = async () => {
       setIsLoading(true)
       try {
-        const [infoResponse, balanceResponse] = await Promise.all([
-          getInfoRequest(),
-          getBtcBalanceRequest(),
-        ])
+        const infoResponse = await getInfoRequest()
 
         if (infoResponse.data?.assets) {
           const tmpMap: Record<string, AssetInfo> = {}
@@ -95,10 +88,6 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
           }
           setAssetMap(tmpMap)
         }
-
-        if (balanceResponse.data) {
-          setColoredBtcBalance(balanceResponse.data.colored.spendable)
-        }
       } catch (error) {
         toast.error('Error fetching data. Please try again later.')
       } finally {
@@ -107,7 +96,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
     }
 
     fetchData()
-  }, [getInfoRequest, getBtcBalanceRequest])
+  }, [getInfoRequest])
 
   const getAssetPrecision = useCallback(
     (assetId: string) => {
@@ -216,7 +205,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
         }
       }
     },
-    [addAsset, coloredBtcBalance, onNext, parseAssetAmount, dispatch]
+    [addAsset, onNext, parseAssetAmount, dispatch]
   )
 
   const handleAssetAmountSliderChange = (
@@ -232,20 +221,6 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
     return max_channel_amount / Math.pow(10, precision)
   }, [assetId, assetMap])
 
-  const handleCreateUTXO = async () => {
-    try {
-      setIsLoading(true)
-      navigate(CREATEUTXOS_PATH)
-    } catch (error) {
-      toast.error('Failed to create new colored UTXOs. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const isCapacityExceedingBalance =
-    addAsset &&
-    parseInt(capacitySat.replace(/[^0-9]/g, ''), 10) > coloredBtcBalance
   return (
     <form
       className="bg-gray-900 text-white p-8 rounded-lg shadow-lg"
@@ -269,9 +244,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
             <div className="flex items-center space-x-4">
               <input
                 {...register('capacitySat')}
-                className={`bg-gray-700 text-white px-4 py-2 rounded-md w-full ${
-                  isCapacityExceedingBalance ? 'border-red-500 border-2' : ''
-                }`}
+                className="bg-gray-700 text-white px-4 py-2 rounded-md w-full"
                 onChange={(e) => handleAmountChange(e, 'capacitySat')}
                 placeholder="Enter amount"
                 type="text"
@@ -290,22 +263,6 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
               <p className="text-red-500 text-sm mt-2">
                 {formState.errors.capacitySat.message}
               </p>
-            )}
-            {isCapacityExceedingBalance && (
-              <div className="mt-2 text-red-500">
-                <p>
-                  Capacity exceeds available colored sats (
-                  {new Intl.NumberFormat('en-US').format(coloredBtcBalance)}{' '}
-                  sats).
-                </p>
-                <button
-                  className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                  onClick={handleCreateUTXO}
-                  type="button"
-                >
-                  Create New Colored UTXO
-                </button>
-              </div>
             )}
           </div>
 
@@ -431,11 +388,11 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
         </button>
         <button
           className={`px-6 py-3 rounded-lg text-lg font-bold ${
-            isCapacityExceedingBalance || isLoading
+            isLoading
               ? 'bg-gray-500 cursor-not-allowed'
               : 'bg-purple-600 hover:bg-purple-700 transition-colors'
           }`}
-          disabled={isCapacityExceedingBalance || isLoading}
+          disabled={isLoading}
           type="submit"
         >
           Next Step
