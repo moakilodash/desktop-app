@@ -353,8 +353,8 @@ export const Component: React.FC = () => {
         </form>
 
         {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="bg-white p-6 rounded-lg shadow-xl">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm">
               <h2 className="text-2xl font-semibold mb-4 text-gray-800">
                 Settings Saved
               </h2>
@@ -366,7 +366,7 @@ export const Component: React.FC = () => {
         )}
 
         {backupModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-gray-800 p-8 rounded-xl shadow-2xl w-full max-w-md">
               <h2 className="text-2xl font-bold mb-6 text-center text-white">
                 Create Backup
@@ -449,7 +449,7 @@ export const Component: React.FC = () => {
           </div>
         )}
         {showLogoutConfirmation && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-sm">
               <div className="flex items-center justify-center text-yellow-500 mb-4">
                 <AlertTriangle size={48} />

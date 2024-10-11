@@ -84,56 +84,72 @@ export const Component = () => {
         })
         await new Promise((resolve) => setTimeout(resolve, 5000))
       } catch (error) {
-        console.log(error)
-        toast.error('Failed to start the node...')
+        console.error('Failed to start the node:', error)
+        toast.error(
+          'Failed to start the node. Please check your settings and try again.'
+        )
+        setIsStartingNode(false)
+        return
       } finally {
         setIsStartingNode(false)
       }
     }
 
     console.log('Changing Node Settings')
-    await dispatch(
-      setSettingsAsync({
-        datapath: data.datapath,
-        name: data.name,
-        network: data.network,
-        node_url: data.node_url || 'http://localhost:3001',
-        rpc_connection_url: data.rpc_connection_url,
-      })
-    )
-    console.log('Node Settings: ', nodeSettingsData)
-
-    console.log('Initializing the node...')
-    const initResponse = await init({ password: data.password })
-    const error: any = initResponse.error
-    console.log('Init response: ', initResponse)
-    if (!initResponse.isSuccess) {
-      if (!(error.data.error === 'Node has already been initialized')) {
-        toast.error('Node is unreachable...')
-      } else {
-        toast.error('Node has already been initialized...')
-      }
-      dispatch(nodeSettingsActions.resetNodeSettings())
-      await invoke('stop_node')
-    } else {
-      try {
-        await invoke('insert_account', {
+    try {
+      await dispatch(
+        setSettingsAsync({
           datapath: data.datapath,
           name: data.name,
           network: data.network,
-          nodeUrl: data.node_url || 'http://localhost:3001',
-          rpcConnectionUrl: data.rpc_connection_url,
+          node_url: data.node_url || 'http://localhost:3001',
+          rpc_connection_url: data.rpc_connection_url,
         })
-      } catch (error) {
-        console.log(error)
-        dispatch(nodeSettingsActions.resetNodeSettings())
-        await invoke('stop_node')
-        toast.error('Failed to save account...')
-      }
-      setMnemonic(initResponse.data.mnemonic.split(' '))
-      setPassword(data.password)
-      setIsShowingMnemonic(true)
+      )
+    } catch (error) {
+      console.error('Failed to set node settings:', error)
+      toast.error('Failed to save node settings. Please try again.')
+      return
     }
+
+    console.log('Initializing the node...')
+    const initResponse = await init({ password: data.password })
+    if (!initResponse.isSuccess) {
+      const error: any = initResponse.error
+      if (error.data?.error === 'Node has already been initialized') {
+        toast.error(
+          'Node has already been initialized. Please use existing credentials.'
+        )
+      } else {
+        toast.error(
+          'Failed to initialize the node. Please check your settings and try again.'
+        )
+      }
+      dispatch(nodeSettingsActions.resetNodeSettings())
+      await invoke('stop_node')
+      return
+    }
+
+    try {
+      await invoke('insert_account', {
+        datapath: data.datapath,
+        name: data.name,
+        network: data.network,
+        nodeUrl: data.node_url || 'http://localhost:3001',
+        rpcConnectionUrl: data.rpc_connection_url,
+      })
+    } catch (error) {
+      console.error('Failed to save account:', error)
+      dispatch(nodeSettingsActions.resetNodeSettings())
+      await invoke('stop_node')
+      toast.error('Failed to save account. Please try again.')
+      return
+    }
+
+    setMnemonic(initResponse.data.mnemonic.split(' '))
+    setPassword(data.password)
+    setIsShowingMnemonic(true)
+    toast.success('Node initialized successfully!')
   }
 
   const onMnemonicSaved = async () => {
@@ -182,7 +198,7 @@ export const Component = () => {
         unlockResponse.isLoading ||
         isStartingNode ? (
           <div className="py-20 flex flex-col items-center space-y-4">
-            <Spinner size={10} />
+            <Spinner />
             <div className="text-center">Initializing the node...</div>
           </div>
         ) : isShowingMnemonic ? (
