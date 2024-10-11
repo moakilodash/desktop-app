@@ -45,9 +45,9 @@ export const Component = () => {
   const navigate = useNavigate()
 
   return (
-    <>
+    <div className="relative">
       <Toolbar />
-      <Layout className="ms-60">
+      <Layout className="ml-64">
         <div className="max-w-5xl w-full p-8 bg-blue-darker rounded-lg shadow-lg">
           <h1 className="text-4xl font-bold mb-2 text-center text-white">
             Welcome to KaleidoSwap
@@ -77,6 +77,6 @@ export const Component = () => {
           </div>
         </div>
       </Layout>
-    </>
+    </div>
   )
 }

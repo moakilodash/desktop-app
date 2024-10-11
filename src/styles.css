@@ -11,3 +11,9 @@ body {
   background: theme('colors.background');
   color: theme('colors.white');
 }
+
+/* Add this new style */
+#root {
+  position: relative;
+  z-index: 0;
+}
