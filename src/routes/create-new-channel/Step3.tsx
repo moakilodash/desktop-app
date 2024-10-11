@@ -1,6 +1,5 @@
 import { useAppSelector } from '../../app/store/hooks'
 import { ArrowRightIcon } from '../../icons/ArrowRight'
-import { WarningIcon } from '../../icons/Warning'
 import {
   channelSliceSelectors,
   TNewChannelForm,

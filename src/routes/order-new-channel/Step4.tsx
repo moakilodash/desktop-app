@@ -1,5 +1,4 @@
 import { CheckCircle, XCircle, ArrowRight, RefreshCcw } from 'lucide-react'
-import React from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { TRADE_PATH } from '../../app/router/paths'

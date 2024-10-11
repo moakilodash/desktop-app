@@ -1,3 +1,4 @@
+import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import { useState, useEffect } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
@@ -14,7 +15,7 @@ interface Fields {
 }
 
 export const Component = () => {
-  const [unlock, unlockResponse] = nodeApi.endpoints.unlock.useLazyQuery()
+  const [unlock] = nodeApi.endpoints.unlock.useLazyQuery()
   const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
 
   const navigate = useNavigate()
@@ -51,12 +52,19 @@ export const Component = () => {
           throw new Error('Failed to get node info after unlock')
         }
       } else {
-        throw new Error(
-          unlockResponse.error?.data?.message || 'Failed to unlock the node'
-        )
+        const errorMessage =
+          'error' in unlockResponse && unlockResponse.error
+            ? isFetchBaseQueryError(unlockResponse.error)
+              ? (unlockResponse.error.data as { message: string })?.message ||
+                'Unknown error'
+              : unlockResponse.error.message || 'Unknown error'
+            : 'Failed to unlock the node'
+        throw new Error(errorMessage)
       }
-    } catch (error) {
-      toast.error(error.message || 'An unexpected error occurred', {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'An unexpected error occurred'
+      toast.error(errorMessage, {
         autoClose: 5000,
         closeOnClick: true,
         draggable: true,
@@ -139,4 +147,9 @@ export const Component = () => {
       </div>
     </Layout>
   )
+}
+
+// Add this helper function at the end of the file
+function isFetchBaseQueryError(error: unknown): error is FetchBaseQueryError {
+  return typeof error === 'object' && error != null && 'status' in error
 }

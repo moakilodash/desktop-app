@@ -1,7 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
-import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import * as z from 'zod'
 
@@ -48,7 +47,6 @@ const FormFieldsSchema = z.object({
 type FormFields = z.infer<typeof FormFieldsSchema>
 
 export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
-  const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const [assetMap, setAssetMap] = useState<Record<string, AssetInfo>>({})
   const [addAsset, setAddAsset] = useState(false)

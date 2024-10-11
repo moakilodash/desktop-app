@@ -21,7 +21,7 @@ export const BTCtoSatoshi = (value: number): number =>
 
 export const formatBitcoinAmount = (
   amount: number,
-  bitcoinUnit: 'BTC' | 'SAT',
+  bitcoinUnit: string,
   precision: number = 8
 ): string => {
   if (bitcoinUnit === 'SAT') {

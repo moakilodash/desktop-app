@@ -143,7 +143,7 @@ interface ExchangeRateDisplayProps {
   toAsset: string
   price: number | null
   selectedPair: TradingPair | null
-  bitcoinUnit: 'BTC' | 'SAT'
+  bitcoinUnit: string
   formatAmount: (amount: number, asset: string) => string
   getAssetPrecision: (asset: string) => number
 }

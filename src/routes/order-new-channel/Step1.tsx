@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
-import { useSelector, useDispatch } from 'react-redux'
+import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
@@ -86,7 +86,6 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
   const [listPeers] = nodeApi.endpoints.listPeers.useLazyQuery()
 
   const navigate = useNavigate()
-  const dispatch = useDispatch()
   const lspUrl = useSelector(selectDefaultLspUrl)
 
   useEffect(() => {

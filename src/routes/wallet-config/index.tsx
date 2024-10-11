@@ -32,7 +32,6 @@ export const Component = () => {
   const [isRemoteNode, setIsRemoteNode] = useState(true)
 
   const [unlock, unlockResponse] = nodeApi.endpoints.unlock.useLazyQuery()
-  const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
   const dispatch = useAppDispatch()
 
   const navigate = useNavigate()
