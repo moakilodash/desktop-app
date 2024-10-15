@@ -3,6 +3,7 @@ import React, { useState } from 'react'
 
 import { useAppSelector } from '../../app/store/hooks'
 import { formatBitcoinAmount } from '../../helpers/number'
+// import { LiquidityBar } from '../LiquidityBar' // Import LiquidityBar
 
 interface ModalProps {
   isOpen: boolean
@@ -93,6 +94,14 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
     })
   }
 
+  // Calculate Bitcoin liquidity
+  const localBitcoin = channel.outbound_balance_msat / 1000
+  const remoteBitcoin = channel.inbound_balance_msat / 1000
+
+  // Calculate Asset liquidity
+  const localAsset = parseFloat(formatAssetAmount(channel.asset_local_amount))
+  const remoteAsset = parseFloat(formatAssetAmount(channel.asset_remote_amount))
+
   return (
     <div className="relative bg-gray-800 text-white rounded-lg shadow p-4">
       <div className="absolute inset-0 bg-black bg-opacity-30 rounded-lg"></div>
@@ -164,6 +173,34 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
             {assetTicker}
           </div>
         </div>
+
+        {/* Liquidity Bars */}
+        {/* <div className="mt-4">
+          <div className="mb-2">
+            <span className="text-sm font-semibold">Bitcoin Liquidity</span>
+            <LiquidityBar
+              localAmount={localBitcoin}
+              remoteAmount={remoteBitcoin}
+              type="bitcoin"
+            />
+            <div className="flex justify-between text-xs text-gray-300 mt-1">
+              <span>Local: {formatBitcoinAmount(localBitcoin, bitcoinUnit)}</span>
+              <span>Remote: {formatBitcoinAmount(remoteBitcoin, bitcoinUnit)}</span>
+            </div>
+          </div>
+          <div className="mb-2">
+            <span className="text-sm font-semibold">Asset Liquidity</span>
+            <LiquidityBar
+              localAmount={localAsset}
+              remoteAmount={remoteAsset}
+              type="asset"
+            />
+            <div className="flex justify-between text-xs text-gray-300 mt-1">
+              <span>Local: {localAsset} {assetTicker}</span>
+              <span>Remote: {remoteAsset} {assetTicker}</span>
+            </div>
+          </div>
+        </div> */}
 
         <button
           className={`w-full py-2 px-4 rounded font-bold text-white ${

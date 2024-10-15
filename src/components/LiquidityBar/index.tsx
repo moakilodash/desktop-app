@@ -1,30 +1,42 @@
-export const LiquidityBar = ({
-  localAmount,
-  remoteAmount,
-}: {
+import React from 'react'
+
+interface LiquidityBarProps {
   localAmount: number
   remoteAmount: number
+  type: 'bitcoin' | 'asset'
+}
+
+export const LiquidityBar: React.FC<LiquidityBarProps> = ({
+  localAmount,
+  remoteAmount,
+  type,
 }) => {
-  const totalAmount = localAmount + remoteAmount
-  const localAmountPercentage = (localAmount / totalAmount) * 100
-  const remoteAmountPercentage = (remoteAmount / totalAmount) * 100
+  const total = localAmount + remoteAmount
+  const localPercentage = total === 0 ? 0 : (localAmount / total) * 100
+  const remotePercentage = total === 0 ? 0 : (remoteAmount / total) * 100
+
+  // Define colors based on the type
+  const colors = {
+    asset: {
+      local: 'bg-blue-500',
+      remote: 'bg-blue-500 opacity-50',
+    },
+    bitcoin: {
+      local: 'bg-yellow-500',
+      remote: 'bg-yellow-500 opacity-50',
+    },
+  }
 
   return (
-    <div className="w-full h-6 bg-gray-300 rounded-full overflow-hidden relative">
+    <div className="w-full bg-gray-700 rounded-full h-4 overflow-hidden mt-2">
       <div
-        className="h-full bg-purple transition-all duration-300 ease-in-out"
-        style={{ width: `${localAmountPercentage}%` }}
-        title={`Local: ${localAmount.toFixed(2)} (${localAmountPercentage.toFixed(0)}%)`}
-      />
+        className={`${colors[type].local} h-full`}
+        style={{ width: `${localPercentage}%` }}
+      ></div>
       <div
-        className="h-full bg-cyan transition-all duration-300 ease-in-out"
-        style={{
-          position: 'absolute',
-          right: '0',
-          width: `${remoteAmountPercentage}%`,
-        }}
-        title={`Remote: ${remoteAmount.toFixed(2)} (${remoteAmountPercentage.toFixed(0)}%)`}
-      />
+        className={`${colors[type].remote} h-full`}
+        style={{ width: `${remotePercentage}%` }}
+      ></div>
     </div>
   )
 }
