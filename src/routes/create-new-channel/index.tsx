@@ -80,7 +80,13 @@ export const Component = () => {
       })
 
       if (openChannelResponse.error) {
-        throw new Error(openChannelResponse.error.toString())
+        const errorMessage =
+          typeof openChannelResponse.error === 'object' &&
+          openChannelResponse.error !== null
+            ? (openChannelResponse.error as any).data?.error ||
+              JSON.stringify(openChannelResponse.error)
+            : String(openChannelResponse.error)
+        throw new Error(errorMessage)
       }
 
       console.log('Opened channel successfully:', openChannelResponse.data)
@@ -106,7 +112,13 @@ export const Component = () => {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-full">
-        <Spinner size={10} />
+        <Spinner
+          color="#8FD5EA"
+          overlay={false}
+          size={120}
+          speed="normal"
+          thickness={4}
+        />
         <div className="ml-4">Checking balance...</div>
       </div>
     )

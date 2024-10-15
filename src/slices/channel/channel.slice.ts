@@ -9,10 +9,10 @@ import { RootState } from '../../app/store'
 import { MIN_CHANNEL_CAPACITY } from '../../constants'
 
 export const NewChannelFormSchema = z.object({
-  assetAmount: z.z.number().gte(0),
-  assetId: z.string(),
-  assetTicker: z.string(),
-  capacitySat: z.z
+  assetAmount: z.number().gte(0),
+  assetId: z.string().optional(),
+  assetTicker: z.string().optional(),
+  capacitySat: z
     .number()
     .min(MIN_CHANNEL_CAPACITY, 'Minimum amount is 50000 satoshis')
     .max(100000000, 'Maximum amount is 100000000 satoshis'),

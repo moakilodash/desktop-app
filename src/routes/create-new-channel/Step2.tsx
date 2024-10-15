@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useCallback, useEffect, useState } from 'react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
+import { z } from 'zod' // Add this import
 
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { Select } from '../../components/Select'
@@ -30,6 +31,11 @@ interface FormFields {
   fee: 'slow' | 'medium' | 'fast'
 }
 
+const Step2Schema = NewChannelFormSchema.extend({
+  assetId: z.string().optional(),
+  assetTicker: z.string().optional(),
+})
+
 export const Step2 = (props: Props) => {
   const newChannelForm = useAppSelector(
     (state) => channelSliceSelectors.form(state, 'new') as TNewChannelForm
@@ -38,12 +44,12 @@ export const Step2 = (props: Props) => {
   const dispatch = useAppDispatch()
 
   const [maxCapacity, setMaxCapacity] = useState<number>(MAX_CHANNEL_CAPACITY)
-  const [addAsset, setAddAsset] = useState(true)
-  const [assetAmount, setAssetAmount] = useState(0)
+  const [addAsset, setAddAsset] = useState<boolean>(false)
+  const [assetAmount, setAssetAmount] = useState<number>(0)
+  const [hasAvailableAssets, setHasAvailableAssets] = useState<boolean>(false)
 
   const [takerAssets, takerAssetsResponse] =
     nodeApi.endpoints.listAssets.useLazyQuery()
-  const [assetBalance] = nodeApi.endpoints.assetBalance.useLazyQuery()
 
   const [maxAssetAmountMap, setMaxAssetAmountMap] = useState<
     Record<string, number>
@@ -55,7 +61,7 @@ export const Step2 = (props: Props) => {
       defaultValues: {
         ...newChannelForm,
       },
-      resolver: zodResolver(NewChannelFormSchema),
+      resolver: zodResolver(Step2Schema), // Use the extended schema here
     })
 
   useEffect(() => {
@@ -63,48 +69,43 @@ export const Step2 = (props: Props) => {
   }, [takerAssets])
 
   useEffect(() => {
-    const fetchAssetBalances = async () => {
+    const fetchFilteredAssets = () => {
       if (
         takerAssetsResponse.isSuccess &&
         takerAssetsResponse.data?.nia.length > 0
       ) {
-        setAddAsset(true)
         try {
-          const assetPromises = takerAssetsResponse.data.nia.map(
-            (asset: NiaAsset) =>
-              assetBalance({ asset_id: asset.asset_id }).then((response) => ({
-                asset_id: asset.asset_id,
-                spendable: response.data?.spendable || 0,
-              }))
+          const filteredAssets = takerAssetsResponse.data.nia.filter(
+            (asset) => asset.balance.spendable > 0
           )
-          const assetsWithBalances = await Promise.all(assetPromises)
-          const newMaxAssetAmountMap = assetsWithBalances.reduce(
-            (
-              acc: Record<string, number>,
-              current: { asset_id: string; spendable: number }
-            ) => {
-              const key = current.asset_id ?? ''
-              acc[key] = current.spendable
-              return acc
-            },
-            {} as Record<string, number>
-          )
-          setMaxAssetAmountMap(newMaxAssetAmountMap)
+
+          if (filteredAssets.length > 0) {
+            setHasAvailableAssets(true)
+            const newMaxAssetAmountMap = filteredAssets.reduce(
+              (acc: Record<string, number>, current: NiaAsset) => {
+                acc[current.asset_id] = current.balance.spendable
+                return acc
+              },
+              {}
+            )
+            setMaxAssetAmountMap(newMaxAssetAmountMap)
+          } else {
+            setHasAvailableAssets(false)
+            setAddAsset(false)
+          }
         } catch (error) {
-          console.error('Failed to fetch asset balances:', error)
+          console.error('Failed to filter assets:', error)
+          setHasAvailableAssets(false)
+          setAddAsset(false)
         }
       } else {
+        setHasAvailableAssets(false)
         setAddAsset(false)
       }
     }
 
-    fetchAssetBalances()
-  }, [
-    takerAssets,
-    assetBalance,
-    takerAssetsResponse.isSuccess,
-    takerAssetsResponse.data?.nia,
-  ])
+    fetchFilteredAssets()
+  }, [takerAssetsResponse])
 
   const [btcBalance] = nodeApi.endpoints.btcBalance.useLazyQuery()
 
@@ -145,8 +146,10 @@ export const Step2 = (props: Props) => {
   const handleAssetAmountChange = (value: string) => {
     const numericValue = parseInt(value.replace(/,/g, ''), 10)
     if (!isNaN(numericValue)) {
-      setValue('assetAmount', numericValue, { shouldValidate: true })
-      setAssetAmount(numericValue)
+      const maxAmount = maxAssetAmountMap[watch('assetId')] || 0
+      const clampedValue = Math.min(Math.max(numericValue, 0), maxAmount)
+      setValue('assetAmount', clampedValue, { shouldValidate: true })
+      setAssetAmount(clampedValue)
     }
   }
 
@@ -160,11 +163,23 @@ export const Step2 = (props: Props) => {
         (asset: NiaAsset) => asset.asset_id === data.assetId
       )
       const assetTicker = selectedAsset?.ticker || ''
-      dispatch(channelSliceActions.setNewChannelForm({ ...data, assetTicker }))
-      console.log('New channel form:', { ...data })
+      const formData = {
+        ...data,
+        // Set to undefined if empty string
+assetAmount: addAsset ? data.assetAmount : 0,
+        
+assetId: data.assetId || undefined, 
+        assetTicker, // Set to 0 if not adding asset
+      }
+      dispatch(channelSliceActions.setNewChannelForm(formData))
+      console.log('New channel form:', formData)
       props.onNext()
     },
-    [dispatch, takerAssetsResponse.data?.nia, props]
+    [dispatch, takerAssetsResponse.data?.nia, props, addAsset]
+  )
+
+  const availableAssets = takerAssetsResponse.data?.nia.filter(
+    (asset) => asset.balance.spendable > 0
   )
 
   return (
@@ -175,23 +190,36 @@ export const Step2 = (props: Props) => {
       </div>
 
       <div className="bg-section-lighter p-8 rounded-lg mb-10">
-        <div className="flex mb-8">
-          <input
-            className="flex-grow px-6 py-4 border border-divider border-r-0 bg-blue-dark outline-none rounded-l"
-            {...register('pubKeyAndAddress')}
-            placeholder="Public Key"
-            readOnly={true}
-            type="text"
-            value={newChannelForm.pubKeyAndAddress}
-          />
-          <div className="bg-blue-dark border border-divider border-l-0 rounded-r flex items-center px-6">
-            <CheckmarkIcon />
+        <div className="mb-8">
+          <label className="block text-sm mb-2" htmlFor="pubKeyAndAddress">
+            Node Public Key and Host
+            <span className="text-xs text-gray-500 ml-2">
+              This is the public key and host address of the node you want to
+              open a channel with.
+            </span>
+          </label>
+          <div className="flex">
+            <input
+              className="flex-grow px-6 py-4 border border-divider border-r-0 bg-blue-dark outline-none rounded-l"
+              id="pubKeyAndAddress"
+              {...register('pubKeyAndAddress')}
+              placeholder="pubkey@host:port"
+              readOnly={true}
+              type="text"
+              value={newChannelForm.pubKeyAndAddress}
+            />
+            <div className="bg-blue-dark border border-divider border-l-0 rounded-r flex items-center px-6">
+              <CheckmarkIcon />
+            </div>
           </div>
         </div>
 
         <div className="mb-8">
           <label className="block text-sm mb-2">
             Channel Capacity (satoshis)
+            <span className="text-xs text-gray-500 ml-2">
+              (The amount of BTC you want to allocate to this channel)
+            </span>
           </label>
           <div className="flex items-center space-x-4">
             <input
@@ -221,8 +249,11 @@ export const Step2 = (props: Props) => {
           )}
         </div>
 
-        {addAsset && (takerAssetsResponse.data?.nia?.length ?? 0) > 0 && (
+        <div className="border-t border-divider my-8"></div>
+
+        {hasAvailableAssets ? (
           <div className="mb-8">
+            <h5 className="text-lg font-semibold mb-4">RGB Assets</h5>
             <label className="flex items-center text-sm mb-4">
               <input
                 checked={addAsset}
@@ -245,7 +276,7 @@ export const Step2 = (props: Props) => {
                       active={field.value}
                       onSelect={field.onChange}
                       options={
-                        takerAssetsResponse.data?.nia.map((a: NiaAsset) => ({
+                        availableAssets.map((a: NiaAsset) => ({
                           label: a.ticker,
                           value: a.asset_id,
                         })) || []
@@ -261,10 +292,7 @@ export const Step2 = (props: Props) => {
                     <div className="flex items-center space-x-4">
                       <input
                         {...register('assetAmount', {
-                          max:
-                            (maxAssetAmountMap as Record<string, number>)[
-                              watch('assetId')
-                            ] || 0,
+                          max: maxAssetAmountMap[watch('assetId')] || 0,
                           min: 0,
                           valueAsNumber: true,
                         })}
@@ -277,21 +305,13 @@ export const Step2 = (props: Props) => {
                         value={formatNumber(assetAmount)}
                       />
                       <span className="text-sm">
-                        {formatNumber(
-                          (maxAssetAmountMap as Record<string, number>)[
-                            watch('assetId')
-                          ] || 0
-                        )}{' '}
+                        {formatNumber(maxAssetAmountMap[watch('assetId')] || 0)}{' '}
                         max
                       </span>
                     </div>
                     <input
                       className="w-full mt-2"
-                      max={
-                        (maxAssetAmountMap as Record<string, number>)[
-                          watch('assetId')
-                        ] || 0
-                      }
+                      max={maxAssetAmountMap[watch('assetId')] || 0}
                       min={0}
                       onChange={(e) => handleAssetAmountChange(e.target.value)}
                       type="range"
@@ -307,7 +327,16 @@ export const Step2 = (props: Props) => {
               </>
             )}
           </div>
+        ) : (
+          <div className="mb-8 text-center">
+            <p className="text-yellow-500">
+              You do not have any spendable on-chain RGB assets to open a
+              channel with.
+            </p>
+          </div>
         )}
+
+        <div className="border-t border-divider my-8"></div>
 
         <div>
           <label className="block text-sm mb-2">Transaction Fee</label>
@@ -324,6 +353,15 @@ export const Step2 = (props: Props) => {
                 type="button"
               >
                 {speed.charAt(0).toUpperCase() + speed.slice(1)}
+                <span className="text-xs text-gray-500 ml-2">
+                  (
+                  {speed === 'slow'
+                    ? '1 sat/Bv'
+                    : speed === 'medium'
+                      ? '2 sat/Bv'
+                      : '3 sat/Bv'}
+                  )
+                </span>
               </button>
             ))}
           </div>
