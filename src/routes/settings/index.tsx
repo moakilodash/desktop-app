@@ -9,6 +9,7 @@ import {
   Shield,
   Folder,
   AlertTriangle,
+  Power,
 } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
@@ -59,11 +60,14 @@ export const Component: React.FC = () => {
       },
     })
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false)
+  const [showShutdownConfirmation, setShowShutdownConfirmation] =
+    useState(false)
 
   const [backup, { isLoading: isBackupLoading }] =
     nodeApi.endpoints.backup.useLazyQuery()
   const [lock] = nodeApi.endpoints.lock.useLazyQuery()
   const [unlock] = nodeApi.endpoints.unlock.useLazyQuery()
+  const [shutdown] = nodeApi.endpoints.shutdown.useLazyQuery()
   // const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
 
   const [isBackupInProgress, setIsBackupInProgress] = useState(false)
@@ -243,6 +247,25 @@ export const Component: React.FC = () => {
     })
   }
 
+  const handleShutdown = () => {
+    setShowShutdownConfirmation(true)
+  }
+
+  const confirmShutdown = async () => {
+    try {
+      await shutdown().unwrap()
+      await invoke('stop_node')
+      dispatch(nodeSettingsActions.resetNodeSettings())
+      navigate(WALLET_SETUP_PATH)
+      toast.success('Node shut down successfully')
+    } catch (error) {
+      console.error('Error shutting down node:', error)
+      toast.error('Failed to shut down node')
+    } finally {
+      setShowShutdownConfirmation(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-gray-800 p-8 rounded-xl shadow-2xl">
@@ -317,7 +340,7 @@ export const Component: React.FC = () => {
           />
           <div className="pt-4 space-y-4">
             <button
-              className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+              className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition duration-150 ease-in-out"
               onClick={() => setBackupModal(true)}
               type="button"
             >
@@ -325,17 +348,25 @@ export const Component: React.FC = () => {
               Backup
             </button>
             <button
-              className="w-full flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+              className="w-full flex items-center justify-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition duration-150 ease-in-out"
               onClick={handleLogout}
               type="button"
             >
               <LogOut className="w-5 h-5 mr-2" />
               Logout
             </button>
+            <button
+              className="w-full flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition duration-150 ease-in-out"
+              onClick={handleShutdown}
+              type="button"
+            >
+              <Power className="w-5 h-5 mr-2" />
+              Shutdown Node
+            </button>
           </div>
           <div className="flex justify-between space-x-4 pt-6">
             <button
-              className="flex-1 flex items-center justify-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+              className="flex-1 flex items-center justify-center px-4 py-2 bg-gray-700 text-gray-300 rounded-md hover:bg-gray-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition duration-150 ease-in-out"
               onClick={handleUndo}
               type="button"
             >
@@ -343,7 +374,7 @@ export const Component: React.FC = () => {
               Undo
             </button>
             <button
-              className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+              className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition duration-150 ease-in-out"
               type="submit"
             >
               <Save className="w-5 h-5 mr-2" />
@@ -474,6 +505,38 @@ export const Component: React.FC = () => {
                   type="button"
                 >
                   Confirm Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {showShutdownConfirmation && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-sm">
+              <div className="flex items-center justify-center text-red-500 mb-4">
+                <AlertTriangle size={48} />
+              </div>
+              <h2 className="text-2xl font-bold mb-4 text-center text-white">
+                Confirm Shutdown
+              </h2>
+              <p className="text-gray-300 text-center mb-6">
+                Are you sure you want to shut down the node? This action cannot
+                be undone.
+              </p>
+              <div className="flex justify-between space-x-4">
+                <button
+                  className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                  onClick={() => setShowShutdownConfirmation(false)}
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <button
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                  onClick={confirmShutdown}
+                  type="button"
+                >
+                  Confirm Shutdown
                 </button>
               </div>
             </div>

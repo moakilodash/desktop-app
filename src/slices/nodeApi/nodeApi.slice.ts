@@ -513,6 +513,12 @@ export const nodeApi = createApi({
         url: '/sendbtc',
       }),
     }),
+    shutdown: builder.query<void, void>({
+      query: () => ({
+        method: 'POST',
+        url: '/shutdown',
+      }),
+    }),
     taker: builder.query<void, TakerRequest>({
       query: (body) => ({
         body,
