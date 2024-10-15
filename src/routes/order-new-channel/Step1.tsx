@@ -170,9 +170,11 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
         <div className="flex items-start">
           <Info className="text-blue-300 mr-3 mt-1" size={24} />
           <p className="text-blue-100">
-            Connecting to an LSP is the first step in opening a new channel. The
-            LSP will help facilitate the channel opening process and provide
-            liquidity.
+            Connecting to an LSP is the first step to request a new channel.{' '}
+            <br />
+            Based on the requested channel options, after a payment, the LSP
+            will open a channel to your node and you will be able to use the
+            channel to swap assets.
           </p>
         </div>
       </div>
