@@ -1,163 +1,198 @@
 # Kaleidoswap Desktop App
 
+![Kaleidoswap Logo](./docs/logo-kaleido.png)
+
+## Table of Contents
+
+- [Kaleidoswap Desktop App](#kaleidoswap-desktop-app)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Screenshots](#screenshots)
+  - [Features 🚀](#features-)
+  - [Supported Networks](#supported-networks)
+  - [Installation 🛠️](#installation-️)
+    - [1. Download Binaries](#1-download-binaries)
+    - [2. Building Locally](#2-building-locally)
+      - [Prerequisites](#prerequisites)
+      - [Building](#building)
+  - [Usage 💡](#usage-)
+    - [Connecting to an RGB Lightning Node](#connecting-to-an-rgb-lightning-node)
+    - [Trading and Swapping Assets](#trading-and-swapping-assets)
+    - [Managing Channels](#managing-channels)
+    - [Deposits and Withdrawals](#deposits-and-withdrawals)
+    - [Backup](#backup)
+  - [Security Considerations 🔒](#security-considerations-)
+  - [Roadmap 🛣️](#roadmap-️)
+    - [Coming Soon](#coming-soon)
+  - [Contributing 🤝](#contributing-)
+    - [How to Contribute](#how-to-contribute)
+  - [Support 📞](#support-)
+  - [License 📜](#license-)
+
 ## Overview
-Kaleidoswap is an open-source desktop application that facilitates trustless digital asset trading on the Lightning Network. Utilizing a Tauri-based frontend, Kaleidoswap provides a seamless interface for connecting to an rgb-lightning-node. It offers a comprehensive LDK lightning node dashboard, enabling complete channel management within the app.
 
-## Features
+Kaleidoswap is a cutting-edge, open-source desktop application that facilitates decentralized, trustless trading of digital assets over the Bitcoin Lightning Network using the RGB protocol.
+ Built with [Tauri](https://tauri.app/), Kaleidoswap offers users a streamlined interface to connect with RGB Lightning nodes—whether running locally or remotely—and engage in seamless asset swaps.
 
-- [X] **RGB-Lightning Node Integration:** Connect with a node to manage your assets and trade on the Lightning Network.
-- [X] **Real-time Price Streaming:** Subscribe to trading pairs like BTC/rUSDT and receive live price updates via websockets.
-- [ ] **Lightning Channel Management:** Open and manage Lightning channels directly through the app.
-- [ ] **Trustless Swaps:** Initiate and execute P2P swaps of RGB assets.
+By leveraging RGB's unique smart contract capabilities, Kaleidoswap allows for multi-asset trading on top of Bitcoin without relying on intermediaries, preserving sovereignty over your assets. The app integrates Lightning Service Providers (LSPs) to manage liquidity and channels, enabling efficient, atomic asset swaps for assets like Bitcoin and RGB tokens.
 
-## Getting Started
+Kaleidoswap's primary features include opening and managing Lightning channels, handling deposits and withdrawals, and providing a powerful trading interface. It is particularly tailored for users wanting to tap into the RGB protocol's power on Lightning, without compromising on user experience or security.
 
-### Prerequisites
-
-- Ensure you have [Tauri](https://tauri.app/v1/guides/getting-started/prerequisites) installed on your system.
-- Node.js and npm must be installed to run the Tauri app in the development environment.
-- Rust (for Tauri backend)
-- Docker (for arm64 systems like M1-M2 Macs)
+**Note:** Kaleidoswap is designed for testing on networks like regtest, signet, and testnet3. Mainnet use is not recommended at this stage.
 
 
+## Screenshots  
 
+![App Screenshot](./docs/trade-screenshot.png)
 
+## Features 🚀
 
-## Setting Up `rgb-lightning-node`
+- **Asset Trading and Swapping:** Interact with market makers using the [RGB Lightning DEX API](https://github.com/kaleidoswap/docs) to trade assets trustlessly. 🎯
+- **Lightning Channel Management:** Easily open, close, and manage channels with optional RGB assets. ⚡
+- **Deposits & Withdrawals:** Handle both on-chain and Lightning Network transactions for Bitcoin and RGB assets. 💸
+- **Channel Requests:** Customize and request channels from LSPs with specific parameters like liquidity and RGB assets. 🔧
+- **Transaction History:** Keep track of your deposits, withdrawals, and swaps. 📊
+- **Node Backup:** Secure your node's data with a backup option available in the settings page. 🔐
+- **Customizable LSP:** Swap with a single LSP by default, or modify your LSP settings for different makers. 🔄
 
-The `rgb-lightning-node` can be set up for a regtest or testbet environment. There are two main approaches: compiling from source or using Docker.
-
-### Compiling from Source
-
-1. Clone the `rgb-lightning-node` repository:
-
-```bash
-git clone https://github.com/RGB-Tools/rgb-lightning-node --recurse-submodules --shallow-submodules
-```
-
-2. Compile the node :
-```bash
-cd rgb-lightning-node
-cargo install --debug --path .
-```
-
-3. Run the node in regtest or testnet mode:
+## Supported Networks
 
 - **Regtest**
+- **Signet**
+- **Testnet3**
 
-```bash
-rgb-lightning-node user:password@localhost:18443 dataldk0/ --daemon-listening-port 3001 --ldk-peer-listening-port 9735 --network regtest
-```
+⚠️ **Note:** Kaleidoswap is still in alpha and should not be used with real money on mainnet.
 
-- **Testnet**
+## Installation 🛠️
 
-```bash
-rgb-lightning-node user:password@electrum.iriswallet.com:18332 dataldk1/ --daemon-listening-port 3001 --ldk-peer-listening-port 9735 --network testnet
-```
+You can install the app in two ways:
 
+### 1. Download Binaries
 
-### Using Docker
+1. Download the appropriate binary for your OS from the [Releases](https://github.com/kaleidoswap/desktop-app/releases) page.
+2. Extract the downloaded file.
+3. Verify the SHA256 checksum of the binary.
+4. Run the app by executing the binary.
 
-For systems like M1 Macs where direct compilation might be problematic, Docker can be used.
+### 2. Building Locally
 
-1. Ensure Docker is installed and running on your system.
+#### Prerequisites
 
-2. Build the Docker image for `rgb-lightning-node`:
+If you are building the app locally, ensure you have the following:
 
-```bash
-docker build -t rgb-lightning-node:latest .
-```
+- **[Tauri Prerequisites](https://tauri.app/v1/guides/getting-started/prerequisites)**: Required to build the frontend.
+- **Node.js & npm**: For running the Tauri app in a development environment.
+- **Rust**: Needed for the Tauri backend.
 
-3. Add the following services to your `docker-compose.yml` to integrate `rgb-lightning-node` with other containers such as `bitcoind` and `electrs`:
+#### Building
 
-```yaml
-services:
-  kaleidoswap-node:
-    image: rgb-lightning-node:latest
-    command: >
-      user:password@bitcoind:18443
-      /tmp/kaleidoswap/dataldk1/  
-      --daemon-listening-port 3001
-      --ldk-peer-listening-port 9735
-      --network regtest
-    depends_on:
-      - bitcoind
-      - electrs
-    ports:
-      - 3001:3001
-      - 9735:9735
-```
+1. Clone the repository:
 
-1. Start the regtest environment from rgb-lightning-node:
+    ```sh
+    git clone https://github.com/kaleidoswap/desktop-app
+    cd desktop-app
+    ```
 
-```bash
-./regtest.sh start 
-```
+2. Install dependencies:
 
-### Installation
+    ```sh
+    npm install
+    ```
 
-1. **Clone the repository:**
+3. Build the Tauri app:
 
-```sh
-git clone https://github.com/your-username/kaleidoswap.git
-cd kaleidoswap
-```
+    ```sh
+    tauri build
+    ```
 
-2. **Build the Tauri app:**
+4. Run Kaleidoswap in development mode:
 
-```sh
-# Install Dependencies
-npm install
-```
-3. **Run Kaleidoswap:**
-```sh
-# Start the Tauri app in the development environment:
-tauri dev
-```
+    ```sh
+    tauri dev
+    ```
 
-### Usage
+## Usage 💡
 
-- Launch the Kaleidoswap app.
-- Connect to your rgb-lightning-node through the provided interface.
-- Manage your Lightning channels via the dashboard.
-- Subscribe to trading pairs and monitor live price feeds.
-- Use the Swap feature to securely trade assets without counterparty risk.
+### Connecting to an RGB Lightning Node
 
-## API and Trading
+1. Launch the Kaleidoswap App.
+2. Connect to your RGB Lightning Node by either:
+   - Running a local instance of [rgb-lightning-node](https://github.com/RGB-Tools/rgb-lightning-node), or
+   - Connecting to a remote RGB Lightning Node.
+3. Configure the connection settings via the settings page.
 
-### Websockets Subscription
+### Trading and Swapping Assets
 
-- Subscribe to trading pairs for real-time price updates and rfq IDs.
+- Before trading, ensure you have at least one channel with the LSP containing one of the supported assets and enough liquidity.
+- If you don’t have a channel yet, you can buy one with an optional asset via the **Order Channel** page using the [RGB version of the LSPS1 protocol](https://github.com/RGB-OS/rgb-lsp-spec).
+- Select a market maker (LSP) and choose trading pairs from the list provided.
+- Prices are streamed using RFQ mode. Agree to a price to proceed with the swap.
 
-### Swap Requests
+### Managing Channels
 
-- Initiate swaps with `POST /api/v1/swap/init` using the `SwapRequest` model.
-  
-### Confirm Swap
+- **Open Channels**: Create new Lightning channels with optional RGB assets.
+- **Close Channels**: Close existing channels safely.
+- **Request Channels from LSP**: Customize channel parameters such as satoshi capacity, RGB assets, and liquidity.
 
-- Whitelist trades with the rgb-lightning-node and confirm execution with `POST /api/v1/swap/execute` using the `ConfirmSwapRequest` model.
+### Deposits and Withdrawals
 
-### Trade Execution
+- Deposit or withdraw Bitcoin and RGB assets either on-chain or via the Lightning Network.
+- View the detailed history of all transactions in the app.
 
-- The maker instantiates the trade with `makerinit`, providing swap details.
-- Upon successful execution, a 200 OK response confirms the trade.
+### Backup
 
-## TODOs
-- [ ] Integrate RGB Lightning Channel Request API .
-- [ ] Multi-assets trading  
-- [ ] Implement stable swaps functionality with an in-app rgb-lightning-node library.
-- [ ] Introduce Liquidity Optimization features, including Rebalancing, Splicing, and Submarine Swaps, to streamline trading efficiency and saving fees.
-- [ ] Backup and restore wallet functionality.
-- 
-## Contributing
+- Back up your node data from the settings page to secure your setup.
 
-Contributions to Kaleidoswap are welcome! Please refer to the contributing guidelines before making pull requests.
+## Security Considerations 🔒
 
-## Support
+- **Always-online node recommended:** To maintain the Lightning Network's security model, consider using a remote node or keeping your local node online.
+- **API Authentication Warning:** Currently, the node API does not include authentication. Avoid exposing your node to untrusted networks.
+- **Alpha Software Warning:** This is alpha software. **Do not use with real funds on the mainnet.**
 
-For support, questions, or feature requests, open an issue in the [Kaleidoswap repository issues](https://github.com/your-username/kaleidoswap/issues) section.
+## Roadmap 🛣️
 
-## License
+### Coming Soon
 
-Kaleidoswap is released under the [MIT License](LICENSE.md).
+- **🌍 Multi-language Support:** Broaden accessibility by adding support for multiple languages.
+- **💼 Multi-maker RFQ:** Allow users to query prices from multiple makers (LSPs) simultaneously for better trading options.
+- **📊 Advanced Trading Dashboard:** Support for limit orders, stop-loss, and more advanced trading features.
+- **🔗 P2P Trading via Nostr:** Enable decentralized peer-to-peer trading using the Nostr protocol.
+- **🔐 TOR Support:** Integrate TOR for enhanced privacy and anonymity.
+- **✨ Improved UI/UX Design:** Further refine the user interface for a better overall experience.
 
+## Contributing 🤝
+
+Contributions are highly welcome! Whether it's reporting bugs, suggesting features, or submitting pull requests, your input helps improve Kaleidoswap.
+
+### How to Contribute
+
+1. Fork the repository.
+2. Clone your fork:
+
+    ```sh
+    git clone https://github.com/your-username/kaleidoswap.git
+    cd kaleidoswap
+    ```
+
+3. Create a new branch:
+
+    ```sh
+    git checkout -b feature/YourFeatureName
+    ```
+
+4. Make your changes and commit them with a clear message.
+5. Push to your fork:
+
+    ```sh
+    git push origin feature/YourFeatureName
+    ```
+
+6. Open a pull request.
+
+## Support 📞
+
+For any questions, issues, or feature requests, open an issue in the [Issues section](https://github.com/kaleidoswap/desktop-app) of the repository.
+
+## License 📜
+
+Kaleidoswap is licensed under the [MIT License](LICENSE.md).
