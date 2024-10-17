@@ -57,7 +57,7 @@ export const Component = () => {
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <WalletOption
-              description="Set up a new wallet and start fresh with your cryptocurrency"
+              description="Set up a new wallet and start your RGB Lightning journey"
               icon={Wallet}
               onClick={() => navigate(INIT_PATH)}
               title="Create New Wallet"

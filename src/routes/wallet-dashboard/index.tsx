@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import React, { ReactNode, useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
 
 import {
   CREATE_NEW_CHANNEL_PATH,
@@ -63,6 +64,49 @@ interface AssetRowProps {
   offChainBalance: number
 }
 
+const DEFAULT_RGB_ICON =
+  'https://raw.githubusercontent.com/RGB-WG/rgb.tech/refs/heads/master/static/logo/rgb-symbol-color.svg'
+
+interface AssetIconProps {
+  ticker: string
+  className?: string
+}
+
+const AssetIcon: React.FC<AssetIconProps> = ({
+  ticker,
+  className = 'h-6 w-6 mr-2',
+}) => {
+  const [imgSrc, setImgSrc] = useState<string>('')
+
+  useEffect(() => {
+    const loadIcon = async () => {
+      try {
+        const iconUrl = `https://raw.githubusercontent.com/alexandrebouttier/coinmarketcap-icons-cryptos/refs/heads/main/icons/${ticker.toLowerCase()}.png`
+        const response = await fetch(iconUrl)
+        if (response.ok) {
+          setImgSrc(iconUrl)
+        } else {
+          throw new Error('Icon not found')
+        }
+      } catch (error) {
+        console.warn(`Failed to load icon for ${ticker}, using default.`)
+        setImgSrc(DEFAULT_RGB_ICON)
+      }
+    }
+
+    loadIcon()
+  }, [ticker])
+
+  return (
+    <img
+      alt={`${ticker} icon`}
+      className={className}
+      onError={() => setImgSrc(DEFAULT_RGB_ICON)}
+      src={imgSrc}
+    />
+  )
+}
+
 const AssetRow: React.FC<AssetRowProps> = ({
   asset,
   onChainBalance,
@@ -87,11 +131,19 @@ const AssetRow: React.FC<AssetRowProps> = ({
   return (
     <div className="grid grid-cols-4 gap-2 even:bg-blue-dark rounded items-center">
       <div
-        className="py-3 px-4 text-sm truncate cursor-pointer"
-        onClick={() => copyToClipboard(asset.ticker)}
+        className="py-3 px-4 text-sm truncate cursor-pointer flex items-center"
+        onClick={() => {
+          copyToClipboard(asset.asset_id)
+          toast.success(
+            `${asset.ticker} asset ID: ${asset.asset_id} copied to clipboard`
+          )
+        }}
       >
-        <div className="font-bold">{asset.ticker}</div>
-        <div>{asset.name}</div>
+        <AssetIcon ticker={asset.ticker} />
+        <div>
+          <div className="font-bold">{asset.ticker}</div>
+          <div>{asset.name}</div>
+        </div>
       </div>
 
       <div className="text-sm py-3 px-4">
