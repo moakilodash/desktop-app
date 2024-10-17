@@ -13,6 +13,9 @@ interface AssetOptionProps {
   label: string
 }
 
+const DEFAULT_RGB_ICON =
+  'https://raw.githubusercontent.com/RGB-WG/rgb.tech/refs/heads/master/static/logo/rgb-symbol-color.svg'
+
 const AssetOption: React.FC<AssetOptionProps> = React.memo(
   ({ value, label }) => {
     const [imgSrc, setImgSrc] = useState<string>('')
@@ -20,7 +23,7 @@ const AssetOption: React.FC<AssetOptionProps> = React.memo(
     useEffect(() => {
       const loadIcon = async () => {
         try {
-          const iconUrl = `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/svg/color/${value.toLowerCase()}.svg`
+          const iconUrl = `https://raw.githubusercontent.com/alexandrebouttier/coinmarketcap-icons-cryptos/refs/heads/main/icons/${value.toLowerCase()}.png`
           const response = await fetch(iconUrl)
           if (response.ok) {
             setImgSrc(iconUrl)
@@ -29,7 +32,7 @@ const AssetOption: React.FC<AssetOptionProps> = React.memo(
           }
         } catch (error) {
           console.warn(`Failed to load icon for ${value}, using default.`)
-          setImgSrc('/path/to/default-icon.svg') // Make sure to provide a default icon
+          setImgSrc(DEFAULT_RGB_ICON)
         }
       }
 
@@ -41,7 +44,7 @@ const AssetOption: React.FC<AssetOptionProps> = React.memo(
         <img
           alt={label}
           className="w-5 h-5 mr-2"
-          onError={() => setImgSrc('/path/to/default-icon.svg')}
+          onError={() => setImgSrc(DEFAULT_RGB_ICON)}
           src={imgSrc}
         />
         {label}
