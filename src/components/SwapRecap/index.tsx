@@ -2,7 +2,7 @@ import { X } from 'lucide-react'
 import React, { useCallback } from 'react'
 
 import { AssetOption } from '../../components/Trade'
-import { TradingPair } from '../../slices/makerApi/makerApi.slice'
+import { makerApi, TradingPair } from '../../slices/makerApi/makerApi.slice'
 
 const SATOSHIS_PER_BTC = 100000000
 
@@ -14,6 +14,7 @@ export interface SwapDetails {
   toAsset: string
   timestamp: string
   selectedPair: TradingPair | null
+  payment_hash: string
 }
 
 interface SwapRecapProps {
@@ -45,7 +46,13 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
     toAsset,
     timestamp,
     selectedPair,
+    payment_hash,
   } = swapDetails
+
+  const statusResponse = makerApi.useStatusQuery(
+    { payment_hash },
+    { pollingInterval: 3000 }
+  )
 
   const calculateAndFormatRate = useCallback(
     (
@@ -149,6 +156,10 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
           <div className="flex justify-between items-center">
             <span className="text-gray-400">Timestamp:</span>
             <span>{new Date(timestamp).toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-400">Status:</span>
+            <span>{statusResponse.data?.swap.status}</span>
           </div>
         </div>
         <button

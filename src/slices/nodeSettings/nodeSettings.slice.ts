@@ -18,6 +18,7 @@ const initialState: NodeSettingsState = {
     name: '',
     network: 'regtest',
     node_url: '',
+    // node_url: 'http://localhost:3001',
     rpc_connection_url: '',
   },
 }

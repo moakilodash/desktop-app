@@ -152,6 +152,29 @@ interface GetPairsResponse {
   pairs: TradingPair[]
 }
 
+interface StatusRequest {
+  payment_hash: string
+}
+
+type SwapStatus = 'Waiting' | 'Pending' | 'Succeeded' | 'Expired' | 'Failed'
+
+interface Swap {
+  qty_from: number
+  qty_to: number
+  from_asset: number
+  to_asset: number
+  payment_hash: number
+  status: SwapStatus
+  requested_at: number
+  initiated_at: number | undefined
+  expires_at: number | undefined
+  completed_at: number | undefined
+}
+
+interface StatusResponse {
+  swap: Swap
+}
+
 const dynamicBaseQuery = async (args: any, api: any, extraOptions: any) => {
   const state = api.getState()
   const baseUrl = state.settings.defaultLspUrl || 'http://localhost:8000'
@@ -198,6 +221,13 @@ export const makerApi = createApi({
         body,
         method: 'POST',
         url: '/api/v1/swaps/init',
+      }),
+    }),
+    status: builder.query<StatusResponse, StatusRequest>({
+      query: (body) => ({
+        body,
+        method: 'POST',
+        url: '/api/v1/swaps/status',
       }),
     }),
   }),

@@ -829,6 +829,7 @@ export const Component = () => {
       const recapDetails: SwapDetails = {
         fromAmount: data.from,
         fromAsset: data.fromAsset,
+        payment_hash: payment_hash,
         price: selectedPairFeed.price,
         selectedPair: selectedPair,
         timestamp: new Date().toISOString(),

@@ -42,7 +42,10 @@ export const Toolbar = () => {
     )
     try {
       setIsLoading(true)
-      if (account.node_url === 'http://localhost:3001') {
+      if (
+        account.node_url === 'http://localhost:3001' &&
+        account.datapath !== ''
+      ) {
         await invoke('start_node', {
           datapath: account.datapath,
           network: account.network,
