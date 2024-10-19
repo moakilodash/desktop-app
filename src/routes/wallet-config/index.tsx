@@ -87,7 +87,21 @@ export const Component = () => {
     console.log('Unlocking the node...')
     const unlockResponse = await unlock({ password: data.password })
     if (unlockResponse.isSuccess) {
-      navigate(TRADE_PATH)
+      try {
+        await invoke('insert_account', {
+          datapath: data.datapath,
+          name: data.name,
+          network: data.network,
+          nodeUrl: data.node_url || 'http://localhost:3001',
+          rpcConnectionUrl: data.rpc_connection_url,
+        })
+        navigate(TRADE_PATH)
+      } catch (error) {
+        console.log(error)
+        toast.error('Failed to insert account...')
+        dispatch(nodeSettingsActions.resetNodeSettings())
+        await invoke('stop_node')
+      }
     } else if (unlockResponse.error && 'data' in unlockResponse.error) {
       const errorData = unlockResponse.error.data as {
         error?: string
@@ -98,7 +112,21 @@ export const Component = () => {
         errorData.code === 403
       ) {
         // Node is already unlocked, proceed to trade path
-        navigate(TRADE_PATH)
+        try {
+          await invoke('insert_account', {
+            datapath: data.datapath,
+            name: data.name,
+            network: data.network,
+            nodeUrl: data.node_url || 'http://localhost:3001',
+            rpcConnectionUrl: data.rpc_connection_url,
+          })
+          navigate(TRADE_PATH)
+        } catch (error) {
+          console.log(error)
+          toast.error('Failed to insert account...')
+          dispatch(nodeSettingsActions.resetNodeSettings())
+          await invoke('stop_node')
+        }
       } else {
         console.log('Failed to unlock the node...')
         console.log(unlockResponse.error)
@@ -138,11 +166,6 @@ export const Component = () => {
               <h3 className="text-2xl font-semibold mb-4">
                 Configure your wallet
               </h3>
-              <p>
-                Craft a robust password using a mix of elements like letters,
-                numbers, and symbols. Your wallet's protection starts with a
-                strong password.
-              </p>
             </div>
             <div>
               <form
