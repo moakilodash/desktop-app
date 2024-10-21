@@ -1,10 +1,36 @@
 import { CheckCircle, XCircle, ArrowRight, RefreshCcw } from 'lucide-react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
 
-import { TRADE_PATH } from '../../app/router/paths'
+import { CHANNELS_PATH, TRADE_PATH } from '../../app/router/paths'
 
-export const Step4 = ({ paymentStatus }: { paymentStatus: string }) => {
+export const Step4 = ({
+  paymentStatus,
+  toastId,
+}: {
+  paymentStatus: string
+  toastId: string | number | null
+}) => {
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (toastId) {
+      if (paymentStatus === 'success') {
+        toast.update(toastId, {
+          autoClose: 5000,
+          render: 'Payment completed. Channel is being set up.',
+          type: toast.TYPE.SUCCESS,
+        })
+      } else if (paymentStatus === 'error') {
+        toast.update(toastId, {
+          autoClose: 5000,
+          render: 'Payment failed. Please try again.',
+          type: toast.TYPE.ERROR,
+        })
+      }
+    }
+  }, [paymentStatus, toastId])
 
   const statusConfig = {
     failed: {
@@ -15,8 +41,8 @@ export const Step4 = ({ paymentStatus }: { paymentStatus: string }) => {
       title: 'Payment Failed',
     },
     success: {
-      buttonAction: () => navigate(TRADE_PATH),
-      buttonText: 'Go to Trade',
+      buttonAction: () => navigate(CHANNELS_PATH),
+      buttonText: 'Go to Channels Page',
       icon: <CheckCircle className="text-green-500 mb-4" size={64} />,
       message:
         'Your payment has been received and the channel is being opened.',

@@ -3,7 +3,10 @@ import { useCallback, useState, useEffect } from 'react'
 import { ClipLoader } from 'react-spinners'
 import { ToastContainer, toast, Slide } from 'react-toastify'
 
-import { makerApi , Lsps1CreateOrderResponse } from '../../slices/makerApi/makerApi.slice'
+import {
+  makerApi,
+  Lsps1CreateOrderResponse,
+} from '../../slices/makerApi/makerApi.slice'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 
 import { Step1 } from './Step1'
@@ -16,6 +19,7 @@ export const Component = () => {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
   const [loading, setLoading] = useState(false)
   const [orderId, setOrderId] = useState<string | null>(null)
+  const [toastId, setToastId] = useState<string | number | null>(null)
 
   const [nodeInfoRequest] = nodeApi.endpoints.nodeInfo.useLazyQuery()
   const [createOrderRequest, createOrderResponse] =
@@ -32,26 +36,15 @@ export const Component = () => {
         autoClose: false,
         transition: Slide,
       })
+      setToastId(id)
 
       const intervalId = setInterval(async () => {
         const orderResponse = await getOrderRequest({ order_id: orderId })
         if (orderResponse.data?.order_state === 'COMPLETED') {
-          toast.update(id, {
-            autoClose: 5000,
-            render: 'Payment completed. Channel is being set up.',
-            transition: Slide,
-            type: toast.TYPE.SUCCESS,
-          })
           clearInterval(intervalId)
           setPaymentStatus('success')
           setStep(4)
         } else if (orderResponse.data?.order_state === 'FAILED') {
-          toast.update(id, {
-            autoClose: 5000,
-            render: 'Payment failed. Please try again.',
-            transition: Slide,
-            type: toast.TYPE.ERROR,
-          })
           clearInterval(intervalId)
           setPaymentStatus('error')
           setStep(4)
@@ -60,7 +53,6 @@ export const Component = () => {
 
       return () => {
         clearInterval(intervalId)
-        toast.dismiss(id)
       }
     }
   }, [orderId, getOrderRequest])
@@ -176,7 +168,7 @@ export const Component = () => {
       </div>
 
       <div className={step !== 4 ? 'hidden' : ''}>
-        <Step4 paymentStatus={paymentStatus ?? ''} />
+        <Step4 paymentStatus={paymentStatus ?? ''} toastId={toastId} />
       </div>
 
       <ToastContainer />

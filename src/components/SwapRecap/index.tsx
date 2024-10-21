@@ -1,4 +1,4 @@
-import { X } from 'lucide-react'
+import { X, Loader2, RefreshCw } from 'lucide-react'
 import React, { useCallback } from 'react'
 
 import { AssetOption } from '../../components/Trade'
@@ -125,6 +125,8 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
     selectedPair
   )
 
+  const isPending = statusResponse.data?.swap.status === 'Pending'
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-blue-dark text-white rounded-lg p-6 w-full max-w-md mx-4">
@@ -159,7 +161,16 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-400">Status:</span>
-            <span>{statusResponse.data?.swap.status}</span>
+            {statusResponse.isLoading ? (
+              <Loader2 className="animate-spin" size={20} />
+            ) : isPending ? (
+              <div className="flex items-center">
+                <span className="mr-2">Pending</span>
+                <RefreshCw className="animate-spin" size={20} />
+              </div>
+            ) : (
+              <span>{statusResponse.data?.swap.status}</span>
+            )}
           </div>
         </div>
         <button
