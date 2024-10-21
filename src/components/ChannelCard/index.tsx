@@ -3,7 +3,7 @@ import React, { useState } from 'react'
 
 import { useAppSelector } from '../../app/store/hooks'
 import { formatBitcoinAmount } from '../../helpers/number'
-// import { LiquidityBar } from '../LiquidityBar' // Import LiquidityBar
+import { LiquidityBar } from '../LiquidityBar' // Import LiquidityBar
 
 interface ModalProps {
   isOpen: boolean
@@ -175,7 +175,7 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
         </div>
 
         {/* Liquidity Bars */}
-        {/* <div className="mt-4">
+        <div className="mt-4">
           <div className="mb-2">
             <span className="text-sm font-semibold">Bitcoin Liquidity</span>
             <LiquidityBar
@@ -184,8 +184,12 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
               type="bitcoin"
             />
             <div className="flex justify-between text-xs text-gray-300 mt-1">
-              <span>Local: {formatBitcoinAmount(localBitcoin, bitcoinUnit)}</span>
-              <span>Remote: {formatBitcoinAmount(remoteBitcoin, bitcoinUnit)}</span>
+              <span>
+                Local: {formatBitcoinAmount(localBitcoin, bitcoinUnit)}
+              </span>
+              <span>
+                Remote: {formatBitcoinAmount(remoteBitcoin, bitcoinUnit)}
+              </span>
             </div>
           </div>
           <div className="mb-2">
@@ -196,11 +200,15 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
               type="asset"
             />
             <div className="flex justify-between text-xs text-gray-300 mt-1">
-              <span>Local: {localAsset} {assetTicker}</span>
-              <span>Remote: {remoteAsset} {assetTicker}</span>
+              <span>
+                Local: {localAsset} {assetTicker}
+              </span>
+              <span>
+                Remote: {remoteAsset} {assetTicker}
+              </span>
             </div>
           </div>
-        </div> */}
+        </div>
 
         <button
           className={`w-full py-2 px-4 rounded font-bold text-white ${

@@ -166,9 +166,9 @@ export const Step2 = (props: Props) => {
       const formData = {
         ...data,
         // Set to undefined if empty string
-assetAmount: addAsset ? data.assetAmount : 0,
-        
-assetId: data.assetId || undefined, 
+        assetAmount: addAsset ? data.assetAmount : 0,
+
+        assetId: data.assetId || undefined,
         assetTicker, // Set to 0 if not adding asset
       }
       dispatch(channelSliceActions.setNewChannelForm(formData))
@@ -178,9 +178,10 @@ assetId: data.assetId || undefined,
     [dispatch, takerAssetsResponse.data?.nia, props, addAsset]
   )
 
-  const availableAssets = takerAssetsResponse.data?.nia.filter(
-    (asset) => asset.balance.spendable > 0
-  )
+  const availableAssets =
+    takerAssetsResponse.data?.nia.filter(
+      (asset) => asset.balance.spendable > 0
+    ) || []
 
   return (
     <form className="max-w-3xl mx-auto" onSubmit={handleSubmit(onSubmit)}>
@@ -275,12 +276,10 @@ assetId: data.assetId || undefined,
                       {...field}
                       active={field.value}
                       onSelect={field.onChange}
-                      options={
-                        availableAssets.map((a: NiaAsset) => ({
-                          label: a.ticker,
-                          value: a.asset_id,
-                        })) || []
-                      }
+                      options={availableAssets.map((a: NiaAsset) => ({
+                        label: a.ticker,
+                        value: a.asset_id,
+                      }))}
                       theme="dark"
                     />
                   )}
