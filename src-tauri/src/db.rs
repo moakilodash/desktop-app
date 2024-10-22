@@ -8,7 +8,7 @@ pub struct Account {
     id: i32,
     name: String,
     network: String,
-    datapath: String,
+    datapath: Option<String>,
     rpc_connection_url: String,
     node_url: String,
 }
@@ -106,11 +106,23 @@ pub fn get_accounts() -> Result<Vec<Account>, rusqlite::Error> {
 pub fn insert_account(
     name: String,
     network: String,
-    datapath: String,
+    datapath: Option<String>,
     rpc_connection_url: String,
     node_url: String,
 ) -> Result<usize, rusqlite::Error> {
-    let conn = Connection::open(get_db_path()).unwrap();
+    let conn = Connection::open(get_db_path())?;
+    
+    // Check if an account with the same name already exists
+    let mut stmt = conn.prepare("SELECT COUNT(*) FROM Accounts WHERE name = ?")?;
+    let count: i64 = stmt.query_row([&name], |row| row.get(0))?;
+    
+    if count > 0 {
+        return Err(rusqlite::Error::SqliteFailure(
+            rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
+            Some("Account with this name already exists".to_string()),
+        ));
+    }
+    
     conn.execute(
         "INSERT INTO Accounts (name, network, datapath, rpc_connection_url, node_url) VALUES (?1, ?2, ?3, ?4, ?5)",
         rusqlite::params![name, network, datapath, rpc_connection_url, node_url],
@@ -121,7 +133,7 @@ pub fn update_account(
     id: i32,
     name: String,
     network: String,
-    datapath: String,
+    datapath: Option<String>,
     rpc_connection_url: String,
     node_url: String,
 ) -> Result<usize, rusqlite::Error> {
@@ -132,7 +144,7 @@ pub fn update_account(
     )
 }
 
-pub fn delete_account(id: i32) -> Result<usize, rusqlite::Error> {
+pub fn delete_account(name: String) -> Result<usize, rusqlite::Error> {
     let conn = Connection::open(get_db_path())?;
-    conn.execute("DELETE FROM Accounts WHERE id = ?1", [id])
+    conn.execute("DELETE FROM Accounts WHERE name = ?1", [name])
 }

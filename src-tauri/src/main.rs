@@ -60,13 +60,15 @@ async fn close_splashscreen(window: Window) {
 fn start_node(
     node_process: tauri::State<Arc<Mutex<NodeProcess>>>,
     network: String,
-    datapath: String,
+    datapath: Option<String>,
     rpc_connection_url: String,
 ) -> Result<(), String> {
     let mut executable_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     executable_dir.push("../bin");
 
-    let datapath = executable_dir.join(datapath).to_str().unwrap().to_string();
+    let datapath = datapath
+        .map(|path| executable_dir.join(path).to_str().unwrap().to_string())
+        .unwrap_or_else(|| "".to_string()); // Use an empty string if datapath is None
 
     let node_process = node_process.lock().unwrap();
     if !node_process.is_running() {
@@ -102,7 +104,7 @@ fn get_accounts() -> Result<Vec<Account>, String> {
 fn insert_account(
     name: String,
     network: String,
-    datapath: String,
+    datapath: Option<String>,
     rpc_connection_url: String,
     node_url: String,
 ) -> Result<usize, String> {
@@ -117,7 +119,7 @@ fn update_account(
     id: i32,
     name: String,
     network: String,
-    datapath: String,
+    datapath: Option<String>,
     rpc_connection_url: String,
     node_url: String,
 ) -> Result<usize, String> {
@@ -128,8 +130,8 @@ fn update_account(
 }
 
 #[tauri::command]
-fn delete_account(id: i32) -> Result<usize, String> {
-    match db::delete_account(id) {
+fn delete_account(name: String) -> Result<usize, String> {
+    match db::delete_account(name) {
         Ok(num_rows) => Ok(num_rows),
         Err(e) => Err(e.to_string()),
     }
