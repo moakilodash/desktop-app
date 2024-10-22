@@ -137,19 +137,6 @@ interface IssueAssetResponse {
   asset_id: string
 }
 
-// interface BTCBalanceResponse {
-//   vanilla: {
-//     settled: number
-//     future: number
-//     spendable: number
-//   }
-//   colored: {
-//     settled: number
-//     future: number
-//     spendable: number
-//   }
-// }
-
 interface BTCBalanceResponseTransformed {
   vanilla: {
     settled: number

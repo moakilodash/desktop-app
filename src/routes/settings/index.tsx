@@ -68,7 +68,6 @@ export const Component: React.FC = () => {
   const [lock] = nodeApi.endpoints.lock.useLazyQuery()
   const [unlock] = nodeApi.endpoints.unlock.useLazyQuery()
   const [shutdown] = nodeApi.endpoints.shutdown.useLazyQuery()
-  // const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
 
   const [isBackupInProgress, setIsBackupInProgress] = useState(false)
 

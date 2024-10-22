@@ -1,5 +1,3 @@
-// utils/assetIcons.ts
-
 import { useState, useEffect } from 'react'
 
 const iconBaseUrl =

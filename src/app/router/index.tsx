@@ -19,7 +19,6 @@ import {
   WALLET_HISTORY_PATH,
   WALLET_HISTORY_TRADES_PATH,
   WALLET_HISTORY_WITHDRAWALS_PATH,
-  NODE_SETTINGS_PATH,
   CREATEUTXOS_PATH,
 } from './paths'
 
@@ -43,10 +42,6 @@ export const router = createBrowserRouter([
   {
     lazy: () => import('../../routes/wallet-unlock'),
     path: WALLET_UNLOCK_PATH,
-  },
-  {
-    lazy: () => import('../../routes/node-settings'),
-    path: NODE_SETTINGS_PATH,
   },
   {
     children: [

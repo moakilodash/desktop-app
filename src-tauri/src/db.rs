@@ -13,25 +13,6 @@ pub struct Account {
     node_url: String,
 }
 
-// impl Default for Config {
-//     fn default() -> Self {
-//         Self {
-//             network: "regtest".to_string(),
-//             datapath: "../bin/dataldk".to_string(),
-//             rpc_connection_url: "user:password@localhost:18443".to_string(),
-//         }
-//     }
-// }
-
-// #[derive(Debug)]
-// struct Accounts {
-//     id: i32,
-//     name: String,
-//     network: String,
-//     datapath: String,
-//     rpc_connection_url: String,
-// }
-
 // Check if a database file exists, and create one if it does not.
 pub fn init() {
     if !db_file_exists() {

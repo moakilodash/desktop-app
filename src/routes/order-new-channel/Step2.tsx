@@ -99,7 +99,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
   const getAssetPrecision = useCallback(
     (assetId: string) => {
       const assetInfo = assetMap[assetId]
-      return assetInfo ? assetInfo.precision : 8 // Default to 8 if not found
+      return assetInfo ? assetInfo.precision : 8
     },
     [assetMap]
   )

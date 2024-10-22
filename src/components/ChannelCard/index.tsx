@@ -77,7 +77,7 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
 
   const handleCloseChannel = async () => {
     setIsClosing(true)
-    await onClose(channel.channel_id, channel.peer_pubkey)
+    onClose(channel.channel_id, channel.peer_pubkey)
     setIsClosing(false)
     setIsModalOpen(false)
   }
@@ -94,13 +94,13 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
     })
   }
 
-  // Calculate Bitcoin liquidity
-  const localBitcoin = channel.outbound_balance_msat / 1000
-  const remoteBitcoin = channel.inbound_balance_msat / 1000
-
-  // Calculate Asset liquidity
-  const localAsset = parseFloat(formatAssetAmount(channel.asset_local_amount))
-  const remoteAsset = parseFloat(formatAssetAmount(channel.asset_remote_amount))
+  // // Calculate Bitcoin liquidity
+  // const localBitcoin = channel.outbound_balance_msat / 1000
+  // const remoteBitcoin = channel.inbound_balance_msat / 1000
+  //
+  // // Calculate Asset liquidity
+  // const localAsset = parseFloat(formatAssetAmount(channel.asset_local_amount))
+  // const remoteAsset = parseFloat(formatAssetAmount(channel.asset_remote_amount))
 
   return (
     <div className="relative bg-gray-800 text-white rounded-lg shadow p-4">
