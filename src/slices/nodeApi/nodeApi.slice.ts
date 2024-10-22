@@ -286,6 +286,18 @@ interface ListSwapsResponse {
   taker: SwapDetails[]
 }
 
+enum Network {
+  Mainnet = 'Mainnet',
+  Testnet = 'Testnet',
+  Regtest = 'Regtest',
+  Signet = 'Signet',
+}
+
+interface NetworkInfoResponse {
+  network: Network
+  height: number
+}
+
 const dynamicBaseQuery: BaseQueryFn<
   string | FetchArgs,
   unknown,
@@ -431,6 +443,9 @@ export const nodeApi = createApi({
         method: 'POST',
         url: '/lock',
       }),
+    }),
+    networkInfo: builder.query<NetworkInfoResponse, void>({
+      query: () => '/networkinfo',
     }),
     nodeInfo: builder.query<NodeInfoResponse, void>({
       query: () => '/nodeinfo',
