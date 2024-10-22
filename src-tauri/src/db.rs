@@ -116,3 +116,23 @@ pub fn insert_account(
         rusqlite::params![name, network, datapath, rpc_connection_url, node_url],
     )
 }
+
+pub fn update_account(
+    id: i32,
+    name: String,
+    network: String,
+    datapath: String,
+    rpc_connection_url: String,
+    node_url: String,
+) -> Result<usize, rusqlite::Error> {
+    let conn = Connection::open(get_db_path())?;
+    conn.execute(
+        "UPDATE Accounts SET name = ?1, network = ?2, datapath = ?3, rpc_connection_url = ?4, node_url = ?5 WHERE id = ?6",
+        rusqlite::params![name, network, datapath, rpc_connection_url, node_url, id],
+    )
+}
+
+pub fn delete_account(id: i32) -> Result<usize, rusqlite::Error> {
+    let conn = Connection::open(get_db_path())?;
+    conn.execute("DELETE FROM Accounts WHERE id = ?1", [id])
+}

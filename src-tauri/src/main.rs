@@ -37,6 +37,8 @@ fn main() {
             close_splashscreen,
             get_accounts,
             insert_account,
+            update_account,
+            delete_account,
             start_node,
             stop_node
         ])
@@ -105,6 +107,29 @@ fn insert_account(
     node_url: String,
 ) -> Result<usize, String> {
     match db::insert_account(name, network, datapath, rpc_connection_url, node_url) {
+        Ok(num_rows) => Ok(num_rows),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+fn update_account(
+    id: i32,
+    name: String,
+    network: String,
+    datapath: String,
+    rpc_connection_url: String,
+    node_url: String,
+) -> Result<usize, String> {
+    match db::update_account(id, name, network, datapath, rpc_connection_url, node_url) {
+        Ok(num_rows) => Ok(num_rows),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+fn delete_account(id: i32) -> Result<usize, String> {
+    match db::delete_account(id) {
         Ok(num_rows) => Ok(num_rows),
         Err(e) => Err(e.to_string()),
     }
