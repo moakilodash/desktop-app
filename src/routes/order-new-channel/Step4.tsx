@@ -57,7 +57,7 @@ export const Step4 = ({ paymentStatus }: { paymentStatus: string }) => {
       {paymentStatus === 'failed' && (
         <button
           className="mt-4 text-gray-400 hover:text-white transition-colors"
-          onClick={() => navigate(TRADE_PATH)}
+          onClick={() => navigate(ORDER_CHANNEL_PATH)}
         >
           Return to Trade
         </button>

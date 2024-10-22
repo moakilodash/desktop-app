@@ -4,6 +4,7 @@ import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'react-toastify'
 import { twJoin } from 'tailwind-merge'
 
+import { Spinner } from '../../../../components/Spinner' // Assuming you have a Spinner component
 import { BTC_ASSET_ID } from '../../../../constants'
 import { CopyIcon } from '../../../../icons/Copy'
 import { nodeApi } from '../../../../slices/nodeApi/nodeApi.slice'
@@ -23,6 +24,7 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
   const [address, setAddress] = useState<string>()
   const [loading, setLoading] = useState<boolean>(false)
   const [rgbLoading, setRgbLoading] = useState<boolean>(false)
+  const [addressLoading, setAddressLoading] = useState<boolean>(false)
 
   const [assets, assetsResponse] = nodeApi.endpoints.listAssets.useLazyQuery()
   const [addressQuery] = nodeApi.endpoints.address.useLazyQuery()
@@ -42,6 +44,7 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
   const generateLightningInvoice = async () => {
     if (network === 'lightning' && assetId && amount && amount > 0) {
       setLoading(true)
+      setAddressLoading(true)
       try {
         const res = await lnInvoice({
           asset_amount: Number(amount),
@@ -63,6 +66,7 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
         toast.error('An error occurred while generating the Lightning invoice')
       } finally {
         setLoading(false)
+        setAddressLoading(false)
       }
     } else {
       toast.error(
@@ -74,6 +78,7 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
   const generateRgbInvoice = async () => {
     if (network === 'on-chain' && assetId !== BTC_ASSET_ID) {
       setRgbLoading(true)
+      setAddressLoading(true)
       try {
         const res = await rgbInvoice({ asset_id: assetId })
         if ('error' in res && res.error) {
@@ -92,6 +97,7 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
         toast.error('An error occurred while generating the RGB invoice')
       } finally {
         setRgbLoading(false)
+        setAddressLoading(false)
       }
     }
   }
@@ -103,8 +109,10 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
   useEffect(() => {
     if (network === 'on-chain' && assetId === BTC_ASSET_ID) {
       form.setValue('amount', 0)
+      setAddressLoading(true)
       addressQuery().then((res) => {
         setAddress(res.data?.address)
+        setAddressLoading(false)
       })
     } else {
       setAddress('')
@@ -167,12 +175,12 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
           {network === 'on-chain' && assetId !== BTC_ASSET_ID && (
             <div className="mb-6">
               <button
-                className="mt-4 px-6 py-2 bg-cyan rounded text-white"
+                className="mt-4 px-6 py-2 bg-cyan rounded text-white flex items-center justify-center"
                 disabled={rgbLoading}
                 onClick={generateRgbInvoice}
                 type="button"
               >
-                {rgbLoading ? 'Generating...' : 'Generate RGB On-chain Invoice'}
+                {rgbLoading ? <Spinner /> : 'Generate RGB On-chain Invoice'}
               </button>
             </div>
           )}
@@ -202,17 +210,21 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
                 </div>
               </div>
               <button
-                className="mt-4 px-6 py-2 bg-cyan rounded text-white"
+                className="mt-4 px-6 py-2 bg-cyan rounded text-white flex items-center justify-center"
                 disabled={loading}
                 onClick={generateLightningInvoice}
                 type="button"
               >
-                {loading ? 'Generating...' : 'Generate Lightning Invoice'}
+                {loading ? <Spinner /> : 'Generate Lightning Invoice'}
               </button>
             </div>
           )}
 
-          {address && address.length > 0 && (
+          {addressLoading ? (
+            <div className="flex justify-center items-center mt-6">
+              <Spinner />
+            </div>
+          ) : address && address.length > 0 ? (
             <div className="flex items-center space-x-6 max-w-fit mt-6">
               <QRCodeSVG fgColor="#3A3C4A" value={address ?? ''} />
               <div>
@@ -236,7 +248,7 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 
