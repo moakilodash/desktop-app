@@ -40,7 +40,8 @@ fn main() {
             update_account,
             delete_account,
             start_node,
-            stop_node
+            stop_node,
+            check_account_exists
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -68,15 +69,17 @@ fn start_node(
 
     let datapath = datapath
         .map(|path| executable_dir.join(path).to_str().unwrap().to_string())
-        .unwrap_or_else(|| "".to_string()); // Use an empty string if datapath is None
+        .unwrap_or_else(|| "".to_string());
 
-    let node_process = node_process.lock().unwrap();
-    if !node_process.is_running() {
-        node_process.start(network, datapath, rpc_connection_url);
-        Ok(())
-    } else {
-        Err("RGB Lightning Node is already running.".to_string())
+    let mut node_process = node_process.lock().unwrap();
+    if node_process.is_running() {
+        // Stop the current node before starting a new one
+        node_process.stop();
     }
+    
+    // Start the new node
+    node_process.start(network, datapath, rpc_connection_url);
+    Ok(())
 }
 
 #[tauri::command]
@@ -133,6 +136,14 @@ fn update_account(
 fn delete_account(name: String) -> Result<usize, String> {
     match db::delete_account(name) {
         Ok(num_rows) => Ok(num_rows),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+fn check_account_exists(name: String) -> Result<bool, String> {
+    match db::check_account_exists(&name) {
+        Ok(exists) => Ok(exists),
         Err(e) => Err(e.to_string()),
     }
 }

@@ -148,3 +148,10 @@ pub fn delete_account(name: String) -> Result<usize, rusqlite::Error> {
     let conn = Connection::open(get_db_path())?;
     conn.execute("DELETE FROM Accounts WHERE name = ?1", [name])
 }
+
+pub fn check_account_exists(name: &str) -> Result<bool, rusqlite::Error> {
+    let conn = Connection::open(get_db_path())?;
+    let mut stmt = conn.prepare("SELECT COUNT(*) FROM Accounts WHERE name = ?")?;
+    let count: i64 = stmt.query_row([name], |row| row.get(0))?;
+    Ok(count > 0)
+}
