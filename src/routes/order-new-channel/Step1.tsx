@@ -9,13 +9,17 @@ import {
 } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
-import { useSelector } from 'react-redux'
+import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
+import { KaleidoswapBoxIcon } from '../../icons/KaleidoswapBox'
 import { makerApi } from '../../slices/makerApi/makerApi.slice'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
-import { selectDefaultLspUrl } from '../../slices/settings/settings.slice'
+import {
+  selectDefaultLspUrl,
+  setDefaultLspUrl,
+} from '../../slices/settings/settings.slice'
 
 interface Props {
   onNext: (data: any) => void
@@ -84,31 +88,51 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
   const [getInfo] = makerApi.endpoints.get_info.useLazyQuery()
   const [connectPeer] = nodeApi.endpoints.connectPeer.useLazyQuery()
   const [listPeers] = nodeApi.endpoints.listPeers.useLazyQuery()
+  const [getNetworkInfo] = nodeApi.endpoints.networkInfo.useLazyQuery()
 
   const navigate = useNavigate()
+  const dispatch = useDispatch()
   const lspUrl = useSelector(selectDefaultLspUrl)
 
   useEffect(() => {
     console.log('Fetching LSP Info...')
+    fetchLspInfo()
+    checkNetwork()
+  }, [lspUrl])
+
+  const fetchLspInfo = async () => {
     if (lspUrl) {
       setIsLoading(true)
-      getInfo()
-        .then((response) => {
-          console.log('LSP Info response:', response)
-          if (response.data?.lsp_connection_url) {
-            setConnectionUrl(response.data.lsp_connection_url)
-            checkPeerConnection(response.data.lsp_connection_url)
-          } else {
-            toast.error('Failed to get LSP connection URL')
-          }
-        })
-        .catch((error) => {
-          console.error('Error fetching LSP info:', error)
-          toast.error('Failed to fetch LSP information')
-        })
-        .finally(() => setIsLoading(false))
+      try {
+        const response = await getInfo().unwrap()
+        console.log('LSP Info response:', response)
+        if (response.lsp_connection_url) {
+          setConnectionUrl(response.lsp_connection_url)
+          checkPeerConnection(response.lsp_connection_url)
+        } else {
+          toast.error('Failed to get LSP connection URL')
+        }
+      } catch (error) {
+        console.error('Error fetching LSP info:', error)
+        toast.error('Failed to fetch LSP information')
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }, [lspUrl, getInfo])
+  }
+
+  const checkNetwork = async () => {
+    try {
+      const networkInfo = await getNetworkInfo().unwrap()
+      if (networkInfo.network === 'Regtest') {
+        setConnectionUrl('http://localhost:8000')
+      } else if (networkInfo.network === 'Testnet') {
+        setConnectionUrl('https://api.testnet.kaleidoswap.com/')
+      }
+    } catch (error) {
+      console.error('Error checking network:', error)
+    }
+  }
 
   const checkPeerConnection = async (connectionUrl: string) => {
     try {
@@ -161,6 +185,29 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
     navigate('/settings')
   }
 
+  const handleKaleidoswapSelect = async () => {
+    setIsLoading(true)
+    try {
+      const networkInfo = await getNetworkInfo().unwrap()
+      let newLspUrl = ''
+      if (networkInfo.network === 'Regtest') {
+        newLspUrl = 'http://localhost:8000'
+      } else if (networkInfo.network === 'Testnet') {
+        newLspUrl = 'https://api.testnet.kaleidoswap.com/'
+      } else {
+        newLspUrl = 'https://api.kaleidoswap.com/' // Default to mainnet
+      }
+
+      dispatch(setDefaultLspUrl(newLspUrl))
+      await fetchLspInfo()
+    } catch (error) {
+      console.error('Error selecting Kaleidoswap LSP:', error)
+      toast.error('Failed to select Kaleidoswap LSP')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <div className="bg-gray-900 text-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
       <h2 className="text-3xl font-bold mb-6 text-center">
@@ -183,40 +230,45 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
           <label className="block text-lg font-medium mb-2">
             Current LSP URL
           </label>
-          <div className="relative">
-            <Globe
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-              size={20}
-            />
-            <input
-              className="w-full bg-gray-700 text-white pl-10 pr-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
-              readOnly
-              value={lspUrl}
-            />
+          <div className="flex items-center space-x-4">
+            <div className="relative flex-grow">
+              <Globe
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={20}
+              />
+              <input
+                className="w-full bg-gray-700 text-white pl-10 pr-3 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                onChange={(e) => dispatch(setDefaultLspUrl(e.target.value))}
+                value={lspUrl}
+              />
+            </div>
           </div>
           <p className="mt-2 text-sm text-gray-400">
-            This is the LSP URL defined in your settings.
+            You can modify the LSP URL here or click the Kaleidoswap button to
+            use the default LSP.
           </p>
-          <button
-            className="mt-4 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors inline-flex items-center"
-            onClick={navigateToSettings}
-          >
-            <Settings className="mr-2" size={16} />
-            Change LSP in Settings
-          </button>
+          <div className="flex flex-col items-center">
+            <button
+              className="bg-gray-700 hover:bg-gray-600 p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 flex flex-col items-center justify-center"
+              disabled={isLoading}
+              onClick={handleKaleidoswapSelect}
+              title="Use default Kaleidoswap LSP"
+            >
+              <div className="flex flex-col items-center">
+                <KaleidoswapBoxIcon />
+              </div>
+            </button>
+          </div>
         </div>
 
-        <div className="bg-gray-800 p-6 rounded-lg">
+        <div className="bg-gray-800 p-6 rounded-lg mt-6">
           <label className="block text-lg font-medium mb-2">
             LSP Connection URL
           </label>
           <div className="relative">
-            <Link
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-              size={20}
-            />
-            <input
-              className="w-full bg-gray-700 text-white pl-10 pr-12 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+            <Link className="absolute left-3 top-3 text-gray-400" size={20} />
+            <textarea
+              className="w-full bg-gray-700 text-white pl-10 pr-12 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all h-24 resize-none"
               readOnly
               value={connectionUrl}
             />
@@ -224,10 +276,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
               onCopy={() => toast.success('Connection URL copied to clipboard')}
               text={connectionUrl}
             >
-              <button
-                className="absolute right-3 top-1/2 transform -translate-y-1/2"
-                type="button"
-              >
+              <button className="absolute right-3 top-3" type="button">
                 <Copy
                   className="text-gray-400 hover:text-white transition-colors"
                   size={20}

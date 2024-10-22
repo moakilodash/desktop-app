@@ -60,7 +60,7 @@ export const KaleidoswapBoxIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </g>
     <text
       fill="#FFFFFF"
-      fontFamily="'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif"
+      fontFamily="Mulish"
       fontSize="14"
       fontWeight="600"
       letterSpacing="0.5"
