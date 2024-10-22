@@ -116,7 +116,7 @@ export const Component = () => {
       <div className="max-w-2xl w-full bg-blue-dark py-8 px-6 rounded">
         {restoreResponse.isLoading || isStartingNode ? (
           <div className="py-20 flex flex-col items-center space-y-4">
-            <Spinner size={10} />
+            <Spinner size={20} />
 
             <div className="text-center">Restoring the node...</div>
           </div>

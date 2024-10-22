@@ -41,23 +41,33 @@ export const Component = () => {
   useEffect(() => {
     dispatch(readSettings())
       .unwrap()
-      .then((settings: NodeSettings) => reset(settings))
-      .catch((err: string) => toast.error(err))
-  }, [dispatch, reset])
+      .then((settings: NodeSettings) => {
+        reset(settings)
+        toast.success('Settings loaded successfully')
+      })
+      .catch((err: Error) => {
+        toast.error(`Error loading settings: ${err.message}`)
+        // Set default values if loading fails
+        reset(defaultValues)
+      })
+  }, [dispatch, reset, defaultValues])
 
   const handleSave: SubmitHandler<FormFields> = async (data) => {
     dispatch(
       writeSettings({
         ...data,
-        accounts: nodeSettings.data.accounts,
+        name: nodeSettings.data.name,
+        node_url: nodeSettings.data.node_url,
       } as NodeSettings)
     )
       .unwrap()
       .then(() => {
         setShowModal(true)
-        toast.success('Settings saved')
+        toast.success('Settings saved successfully')
       })
-      .catch((err: string) => toast.error(err))
+      .catch((err: Error) =>
+        toast.error(`Error saving settings: ${err.message}`)
+      )
   }
 
   const handleUndo = () => {

@@ -31,12 +31,13 @@ export const Component = () => {
   >(null)
 
   useEffect(() => {
+    let toastId: string | number | null = null
+
     if (orderId) {
-      const id = toast.info('Waiting for payment...', {
+      toastId = toast.info('Waiting for payment...', {
         autoClose: false,
         transition: Slide,
       })
-      setToastId(id)
 
       const intervalId = setInterval(async () => {
         const orderResponse = await getOrderRequest({ order_id: orderId })
@@ -44,15 +45,32 @@ export const Component = () => {
           clearInterval(intervalId)
           setPaymentStatus('success')
           setStep(4)
+          if (toastId !== null) {
+            toast.update(toastId, {
+              autoClose: 5000,
+              render: 'Payment completed. Channel is being set up.',
+              type: toast.TYPE.SUCCESS,
+            })
+          }
         } else if (orderResponse.data?.order_state === 'FAILED') {
           clearInterval(intervalId)
           setPaymentStatus('error')
           setStep(4)
+          if (toastId !== null) {
+            toast.update(toastId, {
+              autoClose: 5000,
+              render: 'Payment failed. Please try again.',
+              type: toast.TYPE.ERROR,
+            })
+          }
         }
       }, 5000)
 
       return () => {
         clearInterval(intervalId)
+        if (toastId) {
+          toast.dismiss(toastId)
+        }
       }
     }
   }, [orderId, getOrderRequest])
@@ -168,7 +186,7 @@ export const Component = () => {
       </div>
 
       <div className={step !== 4 ? 'hidden' : ''}>
-        <Step4 paymentStatus={paymentStatus ?? ''} toastId={toastId} />
+        <Step4 paymentStatus={paymentStatus ?? ''} />
       </div>
 
       <ToastContainer />

@@ -1,7 +1,7 @@
 //import { appWindow } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api'
 import { ChevronDown } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -45,7 +45,7 @@ export const Component = () => {
 
   const form = useForm<Fields>({
     defaultValues: {
-      datapath: 'dataldk',
+      datapath: '',
       name: 'Test Account',
       network: 'regtest',
       node_url: 'http://localhost:3001',
@@ -54,7 +54,35 @@ export const Component = () => {
     },
   })
 
+  // Add this effect to update RPC connection URL when network changes
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'network' && value.network === 'testnet') {
+        form.setValue(
+          'rpc_connection_url',
+          'user:password@electrum.iriswallet.com:18332'
+        )
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [form])
+
   const onSubmit: SubmitHandler<Fields> = async (data) => {
+    // Check if account with the same name already exists
+    try {
+      const accountExists = await invoke('check_account_exists', {
+        name: data.name,
+      })
+      if (accountExists) {
+        toast.error('An account with this name already exists')
+        return
+      }
+    } catch (error) {
+      console.error('Failed to check account existence:', error)
+      toast.error('Failed to check account existence. Please try again.')
+      return
+    }
+
     if (data.node_url === '') {
       try {
         setIsStartingNode(true)
@@ -65,8 +93,12 @@ export const Component = () => {
         })
         await new Promise((resolve) => setTimeout(resolve, 5000))
       } catch (error) {
-        console.log(error)
-        toast.error('Failed to start the node...')
+        console.error('Failed to start the node:', error)
+        toast.error(
+          'Failed to start the node. Please check your settings and try again.'
+        )
+        setIsStartingNode(false)
+        return
       } finally {
         setIsStartingNode(false)
       }
@@ -127,10 +159,20 @@ export const Component = () => {
           dispatch(nodeSettingsActions.resetNodeSettings())
           await invoke('stop_node')
         }
+      } else if (
+        errorData.error ===
+          'Wallet has not been initialized (hint: call init)' &&
+        errorData.code === 403
+      ) {
+        console.log('Wallet not initialized')
+        toast.error(
+          'Wallet has not been initialized. Please initialize the node first.'
+        )
+        dispatch(nodeSettingsActions.resetNodeSettings())
+        await invoke('stop_node')
       } else {
-        console.log('Failed to unlock the node...')
-        console.log(unlockResponse.error)
-        toast.error('Failed to unlock the node...')
+        console.log('Failed to unlock the node:', errorData.error)
+        toast.error(`Failed to unlock the node: ${errorData.error}`)
         dispatch(nodeSettingsActions.resetNodeSettings())
         await invoke('stop_node')
       }
@@ -149,8 +191,8 @@ export const Component = () => {
       <div className="max-w-2xl w-full bg-blue-dark py-8 px-6 rounded">
         {unlockResponse.isLoading || isStartingNode ? (
           <div className="py-20 flex flex-col items-center space-y-4">
-            <Spinner size={10} />
-            <div className="text-center">Configuring the node...</div>
+            <Spinner size={20} />
+            <div className="text-center">Connecting to the node...</div>
           </div>
         ) : (
           <>
@@ -164,7 +206,7 @@ export const Component = () => {
             </div>
             <div className="text-center mb-10">
               <h3 className="text-2xl font-semibold mb-4">
-                Configure your wallet
+                Connect to your remote node
               </h3>
             </div>
             <div>
@@ -188,20 +230,22 @@ export const Component = () => {
                       {form.formState.errors.name?.message}
                     </div>
                   </div>
-                  <div>
-                    <div className="text-xs mb-3">
-                      Remote Node (check if you have a remote node)
-                    </div>
-                    <div className="relative">
-                      <input
-                        checked={isRemoteNode}
-                        className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
-                        onChange={(e) => setIsRemoteNode(e.target.checked)}
-                        type="checkbox"
-                      />
-                    </div>
+                  <div className="flex items-center">
+                    <input
+                      checked={isRemoteNode}
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                      id="remote-node"
+                      onChange={(e) => setIsRemoteNode(e.target.checked)}
+                      type="checkbox"
+                    />
+                    <label
+                      className="ml-2 text-sm font-medium text-gray-300"
+                      htmlFor="remote-node"
+                    >
+                      Remote Node
+                    </label>
                   </div>
-                  {!isRemoteNode ? (
+                  {!isRemoteNode && (
                     <div>
                       <div className="text-xs mb-3">Datapath</div>
                       <div className="relative">
@@ -217,23 +261,22 @@ export const Component = () => {
                         {form.formState.errors.datapath?.message}
                       </div>
                     </div>
-                  ) : (
-                    <div>
-                      <div className="text-xs mb-3">Node URL</div>
-                      <div className="relative">
-                        <input
-                          className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
-                          type="text"
-                          {...form.register('node_url', {
-                            required: 'Required',
-                          })}
-                        />
-                      </div>
-                      <div className="text-sm text-red mt-2">
-                        {form.formState.errors.node_url?.message}
-                      </div>
-                    </div>
                   )}
+                  <div>
+                    <div className="text-xs mb-3">Node URL</div>
+                    <div className="relative">
+                      <input
+                        className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
+                        type="text"
+                        {...form.register('node_url', {
+                          required: 'Required',
+                        })}
+                      />
+                    </div>
+                    <div className="text-sm text-red mt-2">
+                      {form.formState.errors.node_url?.message}
+                    </div>
+                  </div>
                   <div>
                     <div className="text-xs mb-3">Network</div>
                     <div className="relative">

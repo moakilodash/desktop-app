@@ -1,36 +1,10 @@
 import { CheckCircle, XCircle, ArrowRight, RefreshCcw } from 'lucide-react'
-import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { toast } from 'react-toastify'
 
 import { CHANNELS_PATH, TRADE_PATH } from '../../app/router/paths'
 
-export const Step4 = ({
-  paymentStatus,
-  toastId,
-}: {
-  paymentStatus: string
-  toastId: string | number | null
-}) => {
+export const Step4 = ({ paymentStatus }: { paymentStatus: string }) => {
   const navigate = useNavigate()
-
-  useEffect(() => {
-    if (toastId) {
-      if (paymentStatus === 'success') {
-        toast.update(toastId, {
-          autoClose: 5000,
-          render: 'Payment completed. Channel is being set up.',
-          type: toast.TYPE.SUCCESS,
-        })
-      } else if (paymentStatus === 'error') {
-        toast.update(toastId, {
-          autoClose: 5000,
-          render: 'Payment failed. Please try again.',
-          type: toast.TYPE.ERROR,
-        })
-      }
-    }
-  }, [paymentStatus, toastId])
 
   const statusConfig = {
     failed: {

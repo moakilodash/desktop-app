@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api'
 import { ChevronDown } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -32,7 +32,7 @@ interface FieldsVerify {
 
 export const Component = () => {
   const [isStartingNode, setIsStartingNode] = useState(false)
-  const [isRemoteNode, setIsRemoteNode] = useState(false)
+  const [isRemoteNode, setIsRemoteNode] = useState(true)
 
   const [init, initResponse] = nodeApi.endpoints.init.useLazyQuery()
   const [unlock, unlockResponse] = nodeApi.endpoints.unlock.useLazyQuery()
@@ -58,10 +58,10 @@ export const Component = () => {
   const form = useForm<Fields>({
     defaultValues: {
       confirmPassword: 'password',
-      datapath: 'dataldk',
+      datapath: '',
       name: 'Test Account',
       network: 'regtest',
-      node_url: '',
+      node_url: 'http://localhost:3001',
       password: 'password',
       rpc_connection_url: 'user:password@localhost:18443',
     },
@@ -73,7 +73,38 @@ export const Component = () => {
     },
   })
 
+  // Add this effect to update RPC connection URL when network changes
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'network' && value.network === 'testnet') {
+        form.setValue(
+          'rpc_connection_url',
+          'user:password@electrum.iriswallet.com:18332'
+        )
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [form])
+
   const onSubmit: SubmitHandler<Fields> = async (data) => {
+    // Check if account with the same name already exists
+    try {
+      const accountExists = await invoke('check_account_exists', {
+        name: data.name,
+      })
+      if (accountExists) {
+        setAdditionalErrors((s) => [
+          ...s,
+          'An account with this name already exists',
+        ])
+        return
+      }
+    } catch (error) {
+      console.error('Failed to check account existence:', error)
+      toast.error('Failed to check account existence. Please try again.')
+      return
+    }
+
     if (data.node_url === '') {
       try {
         setIsStartingNode(true)
@@ -355,20 +386,17 @@ export const Component = () => {
                       </ul>
                     </div>
                   </div>
-                  {/* Remote Node Checkbox */}
-                  <div>
-                    <div className="text-xs mb-3">Use Remote Node</div>
-                    <div className="relative flex items-center">
-                      <input
-                        className="mr-2"
-                        id="remoteNode"
-                        onChange={(e) => setIsRemoteNode(e.target.checked)}
-                        type="checkbox"
-                      />
-                      <label htmlFor="remoteNode">
-                        Check if you're connecting to a remote node
-                      </label>
-                    </div>
+                  {/* Updated Remote Node Checkbox */}
+                  <div className="flex items-center">
+                    <input
+                      className="form-checkbox h-5 w-5 text-cyan border-gray-300 rounded"
+                      id="remoteNode"
+                      onChange={(e) => setIsRemoteNode(e.target.checked)}
+                      type="checkbox"
+                    />
+                    <label className="ml-2 block text-sm" htmlFor="remoteNode">
+                      Use Remote Node
+                    </label>
                   </div>
                   {!isRemoteNode ? (
                     <div>

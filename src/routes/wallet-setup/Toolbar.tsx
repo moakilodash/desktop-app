@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/tauri'
-import { Plus, Settings, Trash2, Edit, X } from 'lucide-react'
+import { Plus, Settings, Trash2, Edit, X, Server, Cloud } from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -15,7 +15,7 @@ import {
 
 type Account = {
   name: string
-  datapath: string
+  datapath: string | null
   network: 'mainnet' | 'testnet' | 'regtest'
   rpc_connection_url: string
   node_url: string
@@ -118,7 +118,7 @@ export const Toolbar = () => {
 
   return (
     <>
-      <aside className="fixed h-full w-64 bg-gray-900 shadow-lg flex flex-col justify-between py-6 px-4 z-10">
+      <aside className="fixed h-full w-72 bg-gray-900 shadow-lg flex flex-col justify-between py-6 px-4 z-10">
         <div className="flex flex-col items-start space-y-4">
           <div className="flex justify-between items-center w-full mb-4">
             <h2 className="text-2xl font-bold text-white">Your Accounts</h2>
@@ -126,48 +126,66 @@ export const Toolbar = () => {
               className="text-gray-400 hover:text-white transition-colors duration-200"
               onClick={toggleEditing}
             >
-              {isEditing ? <X size={18} /> : <Edit size={18} />}
+              {isEditing ? <X size={20} /> : <Edit size={20} />}
             </button>
           </div>
           {accounts?.map((account, index) => (
             <div
-              className="w-full text-left hover:bg-gray-800 rounded-lg transition-colors duration-200 p-2 flex justify-between items-center"
+              className="w-full bg-gray-800 rounded-lg transition-colors duration-200 p-3 hover:bg-gray-700"
               key={index}
             >
               <button
-                className="flex-grow flex items-center"
+                className="w-full flex items-center justify-between"
                 onClick={() => {
                   setSelectedAccount(account)
                   setShowModal(true)
                 }}
               >
-                <MinidenticonImg
-                  className="rounded-full mr-3"
-                  height="40"
-                  saturation="90"
-                  username={account.name}
-                  width="40"
-                />
-                <div>
-                  <div className="text-white font-medium">
-                    {account.name.length > 15
-                      ? `${account.name.slice(0, 13)}...`
-                      : account.name}
+                <div className="flex items-center">
+                  <MinidenticonImg
+                    className="rounded-md mr-3"
+                    height="40"
+                    saturation="90"
+                    username={account.name}
+                    width="40"
+                  />
+                  <div className="text-left">
+                    <div className="text-white font-medium text-lg">
+                      {account.name.length > 15
+                        ? `${account.name.slice(0, 13)}...`
+                        : account.name}
+                    </div>
+                    <div className="flex items-center text-gray-400 text-sm mt-1">
+                      <span className="mr-2 bg-gray-700 px-2 py-0.5 rounded-full">
+                        {account.network}
+                      </span>
+                      {account.datapath !== '' ? (
+                        <span className="flex items-center text-green-400">
+                          <Server className="mr-1" size={14} />
+                          Local
+                        </span>
+                      ) : (
+                        <span className="flex items-center text-blue-400">
+                          <Cloud className="mr-1" size={14} />
+                          Remote
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-gray-400 text-sm">{account.network}</div>
                 </div>
+                {isEditing && (
+                  <button
+                    className="text-gray-400 hover:text-red-500 transition-colors duration-200"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setAccountToDelete(account)
+                      setShowDeleteModal(true)
+                    }}
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                )}
               </button>
-              {isEditing && (
-                <button
-                  className="text-gray-400 hover:text-red-500 transition-colors duration-200"
-                  onClick={() => {
-                    setAccountToDelete(account)
-                    setShowDeleteModal(true)
-                  }}
-                >
-                  <Trash2 size={18} />
-                </button>
-              )}
             </div>
           ))}
         </div>
@@ -200,10 +218,29 @@ export const Toolbar = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-2xl font-semibold mb-4">Switch Account</h2>
-            <p className="mb-6">
-              Are you sure you want to switch to the account "
-              {selectedAccount?.name}"?
+            <p className="mb-4">
+              Are you sure you want to switch to the following account?
             </p>
+            {selectedAccount && (
+              <div className="bg-gray-700 p-4 rounded-lg mb-6 text-left">
+                <p>
+                  <strong>Name:</strong> {selectedAccount.name}
+                </p>
+                <p>
+                  <strong>Network:</strong> {selectedAccount.network}
+                </p>
+                <p>
+                  <strong>Node Type:</strong>{' '}
+                  {selectedAccount.datapath ? 'Local' : 'Remote'}
+                </p>
+                <p>
+                  <strong>Node URL:</strong> {selectedAccount.node_url}
+                </p>
+                <p>
+                  <strong>RPC URL:</strong> {selectedAccount.rpc_connection_url}
+                </p>
+              </div>
+            )}
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
               <button
                 className="w-full sm:w-1/2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white text-lg font-bold rounded shadow-md transition duration-200"

@@ -140,17 +140,26 @@ export const Component: React.FC = () => {
   }
 
   const confirmLogout = async () => {
-    const lockResponse = await attemptLock()
-    if (lockResponse.status === 200) {
-      await invoke('stop_node')
-      dispatch(nodeSettingsActions.resetNodeSettings())
+    try {
+      const lockResponse = await attemptLock()
+      if (lockResponse.status === 200) {
+        await invoke('stop_node')
+        dispatch(nodeSettingsActions.resetNodeSettings())
+        toast.success('Logout successful')
+      } else {
+        throw new Error('Node lock unsuccessful')
+      }
+    } catch (error) {
+      console.error('Logout error:', error)
+      if (error instanceof Error) {
+        toast.error(`Logout failed: ${error.message}. Redirecting anyway.`)
+      } else {
+        toast.error(`Logout failed. Redirecting anyway.`)
+      }
+    } finally {
       navigate(WALLET_SETUP_PATH)
-      toast.success('Logout successful')
-      // nodeInfo()
-    } else {
-      toast.error('Node lock unsuccessful')
+      setShowLogoutConfirmation(false)
     }
-    setShowLogoutConfirmation(false)
   }
 
   const attemptLock = async (): Promise<Response> => {
