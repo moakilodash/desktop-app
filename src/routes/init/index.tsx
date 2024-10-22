@@ -187,10 +187,6 @@ export const Component = () => {
     )
   }
 
-  // useEffect(() => {
-  //   dispatch(readSettings())
-  // }, [])
-
   return (
     <Layout>
       <div className="max-w-2xl w-full bg-blue-dark py-8 px-6 rounded">

@@ -24,8 +24,6 @@ export const WALLET_DASHBOARD_PATH = makePath(['wallet-dashboard'])
 
 export const SETTINGS_PATH = makePath(['settings'])
 
-export const NODE_SETTINGS_PATH = makePath(['node-settings'])
-
 export const WALLET_HISTORY_PATH = makePath(['wallet-history'])
 
 export const WALLET_HISTORY_DEPOSITS_PATH = makePath([

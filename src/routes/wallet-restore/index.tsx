@@ -90,25 +90,6 @@ export const Component = () => {
       setAdditionalErrors((s) => [...s, 'Failed to restore wallet'])
       await invoke('stop_node')
     }
-
-    // let nodeInfoRes = await nodeInfo()
-    // if (nodeInfoRes.isSuccess) {
-    //   navigate(TRADE_PATH)
-    //   return
-    // }
-    //
-    // const restoreResponse = await restore({
-    //   backup_path: data.backup_path,
-    //   password: data.password,
-    // })
-    // if (restoreResponse.isSuccess) {
-    //   nodeInfoRes = await nodeInfo()
-    //   if (nodeInfoRes.isSuccess) {
-    //     navigate(TRADE_PATH)
-    //   }
-    // } else {
-    //   setAdditionalErrors((s) => [...s, 'Failed to restore wallet'])
-    // }
   }
 
   return (

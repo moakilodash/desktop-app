@@ -149,7 +149,6 @@ export const Component = () => {
   )
 }
 
-// Add this helper function at the end of the file
 function isFetchBaseQueryError(error: unknown): error is FetchBaseQueryError {
   return typeof error === 'object' && error != null && 'status' in error
 }

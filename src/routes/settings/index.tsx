@@ -68,7 +68,6 @@ export const Component: React.FC = () => {
   const [lock] = nodeApi.endpoints.lock.useLazyQuery()
   const [unlock] = nodeApi.endpoints.unlock.useLazyQuery()
   const [shutdown] = nodeApi.endpoints.shutdown.useLazyQuery()
-  // const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
 
   const [isBackupInProgress, setIsBackupInProgress] = useState(false)
 
@@ -146,7 +145,6 @@ export const Component: React.FC = () => {
       dispatch(nodeSettingsActions.resetNodeSettings())
       navigate(WALLET_SETUP_PATH)
       toast.success('Logout successful')
-      // nodeInfo()
     } else {
       toast.error('Node lock unsuccessful')
     }

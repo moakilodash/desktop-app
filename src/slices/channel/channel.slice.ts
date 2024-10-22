@@ -36,7 +36,7 @@ export const initialState: SliceState = {
       assetTicker: '',
       capacitySat: MIN_CHANNEL_CAPACITY,
       fee: 'medium',
-      pubKeyAndAddress: '', // Default to medium
+      pubKeyAndAddress: '',
     },
   },
 }

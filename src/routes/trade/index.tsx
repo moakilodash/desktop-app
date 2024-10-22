@@ -122,7 +122,7 @@ export const Component = () => {
         return bitcoinUnit === 'BTC' ? 8 : 0
       }
       const assetInfo = assets.find((a) => a.ticker === asset)
-      return assetInfo ? assetInfo.precision : 8 // Default to 8 if not found
+      return assetInfo ? assetInfo.precision : 8
     },
     [assets, bitcoinUnit]
   )
@@ -176,9 +176,6 @@ export const Component = () => {
         const rate = calculateRate()
 
         let toAmountValue = fromAmountValue * rate
-        // console.log(
-        //   `fromAmountValue: ${fromAmountValue} rate: ${rate} toAmountValue: ${toAmountValue}, fromAsset: ${fromAsset}, toAsset: ${toAsset}`
-        // )
         const formattedToAmount = formatAmount(
           Math.round(toAmountValue),
           toAsset

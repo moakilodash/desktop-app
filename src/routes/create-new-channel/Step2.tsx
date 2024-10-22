@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useCallback, useEffect, useState } from 'react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
-import { z } from 'zod' // Add this import
+import { z } from 'zod'
 
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { Select } from '../../components/Select'
@@ -61,7 +61,7 @@ export const Step2 = (props: Props) => {
       defaultValues: {
         ...newChannelForm,
       },
-      resolver: zodResolver(Step2Schema), // Use the extended schema here
+      resolver: zodResolver(Step2Schema),
     })
 
   useEffect(() => {
@@ -166,10 +166,10 @@ export const Step2 = (props: Props) => {
       const formData = {
         ...data,
         // Set to undefined if empty string
-assetAmount: addAsset ? data.assetAmount : 0,
-        
-assetId: data.assetId || undefined, 
-        assetTicker, // Set to 0 if not adding asset
+        assetAmount: addAsset ? data.assetAmount : 0,
+
+        assetId: data.assetId || undefined,
+        assetTicker,
       }
       dispatch(channelSliceActions.setNewChannelForm(formData))
       console.log('New channel form:', formData)
@@ -276,7 +276,7 @@ assetId: data.assetId || undefined,
                       active={field.value}
                       onSelect={field.onChange}
                       options={
-                        availableAssets.map((a: NiaAsset) => ({
+                        availableAssets?.map((a: NiaAsset) => ({
                           label: a.ticker,
                           value: a.asset_id,
                         })) || []
