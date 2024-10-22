@@ -1,16 +1,7 @@
-import {
-  Globe,
-  Link,
-  Copy,
-  ArrowRight,
-  CheckCircle,
-  Settings,
-  Info,
-} from 'lucide-react'
+import { Globe, Link, Copy, ArrowRight, CheckCircle, Info } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
 import { useSelector, useDispatch } from 'react-redux'
-import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
 import { KaleidoswapBoxIcon } from '../../icons/KaleidoswapBox'
@@ -90,7 +81,6 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
   const [listPeers] = nodeApi.endpoints.listPeers.useLazyQuery()
   const [getNetworkInfo] = nodeApi.endpoints.networkInfo.useLazyQuery()
 
-  const navigate = useNavigate()
   const dispatch = useDispatch()
   const lspUrl = useSelector(selectDefaultLspUrl)
 
@@ -179,10 +169,6 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const navigateToSettings = () => {
-    navigate('/settings')
   }
 
   const handleKaleidoswapSelect = async () => {

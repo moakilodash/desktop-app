@@ -36,7 +36,7 @@ export const Toolbar = () => {
   const handleAccountChange = async (account: Account) => {
     await dispatch(
       setSettingsAsync({
-        datapath: account.datapath,
+        datapath: account.datapath || '',
         name: account.name,
         network: account.network,
         node_url: account.node_url,
