@@ -3,7 +3,6 @@
 
 use db::Account;
 use dotenv::dotenv;
-use fs_extra::dir::create_all;
 use rgb_node::NodeProcess;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -23,7 +22,7 @@ fn main() {
             let node_process = Arc::clone(&node_process);
             move |event| {
                 if let tauri::WindowEvent::CloseRequested { .. } = event.event() {
-                    let mut node_process = node_process.lock().unwrap();
+                    let node_process = node_process.lock().unwrap();
                     node_process.stop();
                 }
             }
@@ -67,18 +66,26 @@ fn start_node(
 
     let datapath = executable_dir.join(datapath).to_str().unwrap().to_string();
 
-    let mut node_process = node_process.lock().unwrap();
-    node_process.start(network, datapath, rpc_connection_url);
-    Ok(())
+    let node_process = node_process.lock().unwrap();
+    if !node_process.is_running() {
+        node_process.start(network, datapath, rpc_connection_url);
+        Ok(())
+    } else {
+        Err("RGB Lightning Node is already running.".to_string())
+    }
 }
 
 #[tauri::command]
 fn stop_node(node_process: tauri::State<Arc<Mutex<NodeProcess>>>) -> Result<(), String> {
     println!("Locking mutex");
-    let mut node_process = node_process.lock().unwrap();
-    node_process.stop();
-    println!("Node stopped");
-    Ok(())
+    let node_process = node_process.lock().unwrap();
+    if node_process.is_running() {
+        node_process.stop();
+        println!("Node stopped");
+        Ok(())
+    } else {
+        Err("RGB Lightning Node is not running.".to_string())
+    }
 }
 
 #[tauri::command]
