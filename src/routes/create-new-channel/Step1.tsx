@@ -11,6 +11,7 @@ import {
   NewChannelFormSchema,
   channelSliceActions,
 } from '../../slices/channel/channel.slice'
+import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 
 import { FormError } from './FormError'
 
@@ -28,6 +29,8 @@ export const Step1 = (props: Props) => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
+  const [getNetworkInfo] = nodeApi.endpoints.networkInfo.useLazyQuery()
+
   const form = useForm<FormFields>({
     defaultValues: {
       pubKeyAndAddress: '',
@@ -44,9 +47,16 @@ export const Step1 = (props: Props) => {
       setIsLoading(true)
       setError('')
       try {
-        const response = await axios.get(
-          `${KALEIDOSWAP_LSP_URL}/api/v1/lsps1/get_info`
-        )
+        const networkInfo = await getNetworkInfo().unwrap()
+        let apiUrl = KALEIDOSWAP_LSP_URL
+
+        if (networkInfo.network === 'Regtest') {
+          apiUrl = 'http://localhost:8000'
+        } else if (networkInfo.network === 'Testnet') {
+          apiUrl = 'https://api.testnet.kaleidoswap.com'
+        }
+
+        const response = await axios.get(`${apiUrl}/api/v1/lsps1/get_info`)
         setLspConnectionUrl(response.data.lsp_connection_url)
       } catch (err) {
         console.error('Error fetching LSP info:', err)
@@ -57,7 +67,7 @@ export const Step1 = (props: Props) => {
     }
 
     fetchLspInfo()
-  }, [])
+  }, [getNetworkInfo])
 
   const onSubmit: SubmitHandler<FormFields> = (data) => {
     dispatch(channelSliceActions.setNewChannelForm(data))
