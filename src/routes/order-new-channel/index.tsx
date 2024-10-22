@@ -1,5 +1,5 @@
 import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback, useState, useEffect, useRef } from 'react'
 import { ClipLoader } from 'react-spinners'
 import { ToastContainer, toast, Slide } from 'react-toastify'
 
@@ -29,11 +29,11 @@ export const Component = () => {
     'success' | 'error' | null
   >(null)
 
-  useEffect(() => {
-    let toastId: string | number | null = null
+  const toastIdRef = useRef<string | number | null>(null)
 
+  useEffect(() => {
     if (orderId) {
-      toastId = toast.info('Waiting for payment...', {
+      toastIdRef.current = toast.info('Waiting for payment...', {
         autoClose: false,
         transition: Slide,
       })
@@ -44,8 +44,8 @@ export const Component = () => {
           clearInterval(intervalId)
           setPaymentStatus('success')
           setStep(4)
-          if (toastId !== null) {
-            toast.update(toastId, {
+          if (toastIdRef.current) {
+            toast.update(toastIdRef.current, {
               autoClose: 5000,
               render: 'Payment completed. Channel is being set up.',
               type: toast.TYPE.SUCCESS,
@@ -55,8 +55,8 @@ export const Component = () => {
           clearInterval(intervalId)
           setPaymentStatus('error')
           setStep(4)
-          if (toastId !== null) {
-            toast.update(toastId, {
+          if (toastIdRef.current) {
+            toast.update(toastIdRef.current, {
               autoClose: 5000,
               render: 'Payment failed. Please try again.',
               type: toast.TYPE.ERROR,
@@ -67,8 +67,8 @@ export const Component = () => {
 
       return () => {
         clearInterval(intervalId)
-        if (toastId) {
-          toast.dismiss(toastId)
+        if (toastIdRef.current) {
+          toast.dismiss(toastIdRef.current)
         }
       }
     }

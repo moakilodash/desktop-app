@@ -71,7 +71,7 @@ fn start_node(
         .map(|path| executable_dir.join(path).to_str().unwrap().to_string())
         .unwrap_or_else(|| "".to_string());
 
-    let mut node_process = node_process.lock().unwrap();
+    let node_process = node_process.lock().unwrap();
     if node_process.is_running() {
         // Stop the current node before starting a new one
         node_process.stop();
