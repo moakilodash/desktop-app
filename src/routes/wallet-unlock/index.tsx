@@ -82,7 +82,7 @@ export const Component = () => {
       <div className="max-w-md w-full bg-blue-dark py-12 px-8 rounded-lg shadow-lg">
         {isUnlocking ? (
           <div className="py-20 flex flex-col items-center space-y-4">
-            <Spinner size={10} />
+            <Spinner size={30} />
             <div className="text-center text-lg">Unlocking your wallet...</div>
           </div>
         ) : (
