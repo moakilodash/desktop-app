@@ -1,8 +1,9 @@
-import { X, Loader2, RefreshCw } from 'lucide-react'
+import { X, Loader2, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react'
 import React, { useCallback } from 'react'
 
 import { AssetOption } from '../../components/Trade'
 import { makerApi, TradingPair } from '../../slices/makerApi/makerApi.slice'
+import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 
 const SATOSHIS_PER_BTC = 100000000
 
@@ -49,9 +50,13 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
     payment_hash,
   } = swapDetails
 
-  const statusResponse = makerApi.useStatusQuery(
-    { payment_hash },
-    { pollingInterval: 3000 }
+  const { data: swapsData, isLoading: isSwapsLoading } =
+    nodeApi.useListSwapsQuery(undefined, {
+      pollingInterval: 3000,
+    })
+
+  const currentSwap = swapsData?.taker.find(
+    (swap) => swap.payment_hash === payment_hash
   )
 
   const calculateAndFormatRate = useCallback(
@@ -125,7 +130,9 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
     selectedPair
   )
 
-  const isPending = statusResponse.data?.swap.status === 'Pending'
+  const isPending = currentSwap?.status === 'Pending'
+  const isSucceeded = currentSwap?.status === 'Succeeded'
+  const isExpired = currentSwap?.status === 'Expired'
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -161,15 +168,25 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
           </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-400">Status:</span>
-            {statusResponse.isLoading ? (
+            {isSwapsLoading ? (
               <Loader2 className="animate-spin" size={20} />
             ) : isPending ? (
               <div className="flex items-center">
                 <span className="mr-2">Pending</span>
                 <RefreshCw className="animate-spin" size={20} />
               </div>
+            ) : isSucceeded ? (
+              <div className="flex items-center text-green-500">
+                <CheckCircle className="mr-2" size={20} />
+                <span>Succeeded</span>
+              </div>
+            ) : isExpired ? (
+              <div className="flex items-center text-red-500">
+                <AlertCircle className="mr-2" size={20} />
+                <span>Expired</span>
+              </div>
             ) : (
-              <span>{statusResponse.data?.swap.status}</span>
+              <span>{currentSwap?.status || 'Unknown'}</span>
             )}
           </div>
         </div>
@@ -177,7 +194,7 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
           className="w-full bg-cyan text-blue-dark py-2 rounded-lg font-bold hover:bg-cyan-dark transition-colors"
           onClick={onClose}
         >
-          Close
+          {isSucceeded ? 'Done' : isExpired ? 'Close' : 'OK'}
         </button>
       </div>
     </div>
