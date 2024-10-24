@@ -675,14 +675,14 @@ export const Component = () => {
       return
     }
 
-    let toastId: any = null
-    let timeoutId: any = null
+    let toastId: string | number | null = null
+    let timeoutId: NodeJS.Timeout | null = null
 
     const clearToastAndTimeout = () => {
-      if (toastId) {
+      if (toastId !== null) {
         toast.dismiss(toastId)
       }
-      if (timeoutId) {
+      if (timeoutId !== null) {
         clearTimeout(timeoutId)
       }
       setIsSwapInProgress(false)
@@ -690,7 +690,9 @@ export const Component = () => {
 
     try {
       setIsSwapInProgress(true)
-      toastId = toast.loading('(1/3) Initializing swap...')
+      toastId = toast.loading('(1/3) Initializing swap...', {
+        autoClose: false,
+      })
 
       // Set a timeout for the entire swap process (e.g., 60 seconds)
       timeoutId = setTimeout(() => {
@@ -751,7 +753,9 @@ export const Component = () => {
       }
 
       const { swapstring, payment_hash } = initSwapResponse.data
+
       toast.update(toastId, {
+        isLoading: true,
         render: '(2/3) Processing taker whitelisting...',
       })
 
@@ -805,6 +809,7 @@ export const Component = () => {
         taker_pubkey: pubKey,
       }
       toast.update(toastId, {
+        isLoading: true,
         render: '(3/3) Waiting for maker to execute swap...',
       })
 
@@ -837,10 +842,9 @@ export const Component = () => {
       setShowRecap(true)
     } catch (error) {
       logger.error('Error executing swap', error)
-      if (toastId) {
+      if (toastId !== null) {
         toast.update(toastId, {
           autoClose: 5000,
-          closeOnClick: true,
           isLoading: false,
           render: `An error occurred: ${error}`,
           type: 'error',
@@ -1112,6 +1116,68 @@ export const Component = () => {
     </form>
   )
 
+  const refreshData = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const [listChannelsResponse, listAssetsResponse, getPairsResponse] =
+        await Promise.all([listChannels(), listAssets(), getPairs()])
+
+      if ('data' in listChannelsResponse && listChannelsResponse.data) {
+        setChannels(listChannelsResponse.data.channels)
+      }
+
+      if ('data' in listAssetsResponse && listAssetsResponse.data) {
+        setAssets(listAssetsResponse.data.nia)
+      }
+
+      if ('data' in getPairsResponse && getPairsResponse.data) {
+        dispatch(setTradingPairs(getPairsResponse.data.pairs))
+        const tradableAssets = new Set([
+          ...channels.map((c) => c.asset_id).filter((id) => id !== null),
+        ])
+        const filteredPairs = getPairsResponse.data.pairs.filter(
+          (pair) =>
+            tradableAssets.has(pair.base_asset_id) ||
+            tradableAssets.has(pair.quote_asset_id)
+        )
+        setTradablePairs(filteredPairs)
+        setHasValidChannelsForTrading(filteredPairs.length > 0)
+
+        if (filteredPairs.length > 0) {
+          setSelectedPair(filteredPairs[0])
+          form.setValue('fromAsset', filteredPairs[0].base_asset)
+          form.setValue('toAsset', filteredPairs[0].quote_asset)
+          // Set default minimum value for from amount
+          const defaultMinAmount = filteredPairs[0].min_order_size
+          form.setValue(
+            'from',
+            formatAmount(defaultMinAmount, filteredPairs[0].base_asset)
+          )
+        }
+      }
+
+      await updateMinMaxAmounts()
+      await refreshAmounts()
+
+      logger.info('Data refreshed successfully')
+    } catch (error) {
+      logger.error('Error refreshing data:', error)
+      toast.error('Failed to refresh data. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [
+    listChannels,
+    listAssets,
+    getPairs,
+    dispatch,
+    form,
+    channels,
+    formatAmount,
+    updateMinMaxAmounts,
+    refreshAmounts,
+  ])
+
   return (
     <>
       {isLoading ? (
@@ -1130,7 +1196,10 @@ export const Component = () => {
           formatAmount={formatAmount}
           getAssetPrecision={getAssetPrecision}
           isOpen={showRecap}
-          onClose={() => setShowRecap(false)}
+          onClose={() => {
+            setShowRecap(false)
+            refreshData() // Refresh data when closing the recap modal
+          }}
           swapDetails={swapRecapDetails}
         />
       )}
