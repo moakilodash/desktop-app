@@ -99,7 +99,7 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isCopied, setIsCopied] = useState(false)
-  const [isClosing, setIsClosing] = useState(false)
+  // const [ setIsClosing] = useState(false)
   const bitcoinUnit = useAppSelector((state) => state.settings.bitcoinUnit)
 
   const copyToClipboard = (text: string) => {
@@ -113,15 +113,15 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
   }
 
   const handleCloseChannel = async () => {
-    setIsClosing(true)
+    // setIsClosing(true)
     onClose(channel.channel_id, channel.peer_pubkey)
-    setIsClosing(false)
+    // setIsClosing(false)
     setIsModalOpen(false)
   }
 
-  const assetTicker = asset?.ticker || 'BTC'
+  // const assetTicker = asset?.ticker || 'BTC'
   const assetPrecision = asset?.precision || 8
-  const peerName = channel.peer_alias || channel.peer_pubkey.slice(0, 8)
+  // const peerName = channel.peer_alias || channel.peer_pubkey.slice(0, 8)
 
   const formatAssetAmount = (amount: number) => {
     const factor = Math.pow(10, assetPrecision)
@@ -131,11 +131,11 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
     })
   }
 
-  const localBitcoin = channel.outbound_balance_msat / 1000
-  const remoteBitcoin = channel.inbound_balance_msat / 1000
+  // const localBitcoin = channel.outbound_balance_msat / 1000
+  // const remoteBitcoin = channel.inbound_balance_msat / 1000
 
-  const localAsset = parseFloat(formatAssetAmount(channel.asset_local_amount))
-  const remoteAsset = parseFloat(formatAssetAmount(channel.asset_remote_amount))
+  // const localAsset = parseFloat(formatAssetAmount(channel.asset_local_amount))
+  // const remoteAsset = parseFloat(formatAssetAmount(channel.asset_remote_amount))
 
   return (
     <div className="bg-gray-800 text-white rounded-lg shadow-lg p-6">

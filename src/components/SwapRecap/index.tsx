@@ -2,7 +2,7 @@ import { X, Loader2, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react'
 import React, { useCallback } from 'react'
 
 import { AssetOption } from '../../components/Trade'
-import { makerApi, TradingPair } from '../../slices/makerApi/makerApi.slice'
+import { TradingPair } from '../../slices/makerApi/makerApi.slice'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 
 const SATOSHIS_PER_BTC = 100000000
