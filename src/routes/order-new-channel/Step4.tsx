@@ -1,14 +1,14 @@
 import { CheckCircle, XCircle, ArrowRight, RefreshCcw } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
-import { CHANNELS_PATH, ORDER_CHANNEL_PATH } from '../../app/router/paths'
+import { CHANNELS_PATH } from '../../app/router/paths'
 
 export const Step4 = ({ paymentStatus }: { paymentStatus: string }) => {
   const navigate = useNavigate()
 
   const statusConfig = {
     failed: {
-      buttonAction: () => navigate(ORDER_CHANNEL_PATH),
+      buttonAction: () => navigate(CHANNELS_PATH),
       buttonText: 'Try Again',
       icon: <XCircle className="text-red-500 mb-4" size={64} />,
       message: 'There was an issue with your payment. Please try again.',
@@ -57,7 +57,7 @@ export const Step4 = ({ paymentStatus }: { paymentStatus: string }) => {
       {paymentStatus === 'failed' && (
         <button
           className="mt-4 text-gray-400 hover:text-white transition-colors"
-          onClick={() => navigate(ORDER_CHANNEL_PATH)}
+          onClick={() => navigate(CHANNELS_PATH)}
         >
           Return to Trade
         </button>
