@@ -116,10 +116,15 @@ interface ListPeersResponse {
   ]
 }
 
+interface BtcBalanceRequest {
+  skip_sync: boolean
+}
+
 interface CreateUTXOsRequest {
   num: number
   size: number
   fee_rate: number
+  skip_sync: boolean
 }
 
 interface AddressResponse {
@@ -137,7 +142,7 @@ interface IssueAssetResponse {
   asset_id: string
 }
 
-interface BTCBalanceResponseTransformed {
+interface BTCBalanceResponse {
   vanilla: {
     settled: number
     future: number
@@ -211,6 +216,10 @@ interface SendPaymentResponse {
   status: string
 }
 
+interface ListTransactionsRequest {
+  skip_sync: boolean
+}
+
 interface ListTransactionsResponse {
   transactions: {
     transaction_type: string
@@ -259,6 +268,14 @@ interface ListUnspentsResponse {
   ]
 }
 
+interface ListUnspentsRequest {
+  skip_sync: boolean
+}
+
+interface RefreshTransfersRequest {
+  skip_sync: boolean
+}
+
 interface SwapDetails {
   qty_from: number
   qty_to: number
@@ -283,6 +300,16 @@ enum Network {
 interface NetworkInfoResponse {
   network: Network
   height: number
+}
+
+interface UnlockRequest {
+  password: string
+  bitcoind_rpc_username: string
+  bitcoind_rpc_password: string
+  bitcoind_rpc_host: string
+  bitcoind_rpc_port: number
+  indexer_url: string
+  proxy_endpoint: string
 }
 
 const dynamicBaseQuery: BaseQueryFn<
@@ -335,8 +362,14 @@ export const nodeApi = createApi({
         url: '/backup',
       }),
     }),
-    btcBalance: builder.query<BTCBalanceResponseTransformed, void>({
-      query: () => '/btcbalance',
+    btcBalance: builder.query<BTCBalanceResponse, BtcBalanceRequest>({
+      query: () => ({
+        body: {
+          skip_sync: false,
+        },
+        method: 'POST',
+        url: '/btcbalance',
+      }),
     }),
     closeChannel: builder.query<void, CloseChannelRequest>({
       query: (body) => ({
@@ -407,11 +440,22 @@ export const nodeApi = createApi({
     listSwaps: builder.query<ListSwapsResponse, void>({
       query: () => '/listswaps',
     }),
-    listTransactions: builder.query<ListTransactionsResponse, void>({
-      query: () => '/listtransactions',
+    listTransactions: builder.query<
+      ListTransactionsResponse,
+      ListTransactionsRequest
+    >({
+      query: (body) => ({
+        body,
+        method: 'POST',
+        url: '/listtransactions',
+      }),
     }),
-    listUnspents: builder.query<ListUnspentsResponse, void>({
-      query: () => '/listunspents',
+    listUnspents: builder.query<ListUnspentsResponse, ListUnspentsRequest>({
+      query: (body) => ({
+        body,
+        method: 'POST',
+        url: '/listunspents',
+      }),
     }),
     lnInvoice: builder.query<LNINvoiceResponse, LNInvoiceRequest>({
       query: (body) => ({
@@ -458,8 +502,9 @@ export const nodeApi = createApi({
         }
       },
     }),
-    refreshRgbTransfers: builder.query<void, void>({
-      query: () => ({
+    refreshRgbTransfers: builder.query<void, RefreshTransfersRequest>({
+      query: (body) => ({
+        body,
         method: 'POST',
         url: '/refreshtransfers',
       }),
@@ -521,6 +566,12 @@ export const nodeApi = createApi({
         url: '/shutdown',
       }),
     }),
+    sync: builder.query<void, void>({
+      query: () => ({
+        method: 'POST',
+        url: '/sync',
+      }),
+    }),
     taker: builder.query<void, TakerRequest>({
       query: (body) => ({
         body,
@@ -531,7 +582,13 @@ export const nodeApi = createApi({
     unlock: builder.query<void, UnlockRequest>({
       query: (body) => ({
         body: {
+          bitcoind_rpc_host: body.bitcoind_rpc_host,
+          bitcoind_rpc_password: body.bitcoind_rpc_password,
+          bitcoind_rpc_port: body.bitcoind_rpc_port,
+          bitcoind_rpc_username: body.bitcoind_rpc_username,
+          indexer_url: body.indexer_url,
           password: body.password,
+          proxy_endpoint: body.proxy_endpoint,
         },
         method: 'POST',
         url: '/unlock',
