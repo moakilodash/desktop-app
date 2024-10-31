@@ -62,7 +62,6 @@ fn start_node(
     node_process: tauri::State<Arc<Mutex<NodeProcess>>>,
     network: String,
     datapath: Option<String>,
-    rpc_connection_url: String,
 ) -> Result<(), String> {
     let mut executable_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     executable_dir.push("../bin");
@@ -78,7 +77,7 @@ fn start_node(
     }
     
     // Start the new node
-    node_process.start(network, datapath, rpc_connection_url);
+    node_process.start(network, datapath);
     Ok(())
 }
 
@@ -110,8 +109,10 @@ fn insert_account(
     datapath: Option<String>,
     rpc_connection_url: String,
     node_url: String,
+    indexer_url: String,
+    proxy_endpoint: String,
 ) -> Result<usize, String> {
-    match db::insert_account(name, network, datapath, rpc_connection_url, node_url) {
+    match db::insert_account(name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint) {
         Ok(num_rows) => Ok(num_rows),
         Err(e) => Err(e.to_string()),
     }
@@ -125,8 +126,10 @@ fn update_account(
     datapath: Option<String>,
     rpc_connection_url: String,
     node_url: String,
+    indexer_url: String,
+    proxy_endpoint: String,
 ) -> Result<usize, String> {
-    match db::update_account(id, name, network, datapath, rpc_connection_url, node_url) {
+    match db::update_account(id, name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint) {
         Ok(num_rows) => Ok(num_rows),
         Err(e) => Err(e.to_string()),
     }
