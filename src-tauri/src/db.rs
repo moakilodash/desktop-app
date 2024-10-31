@@ -11,6 +11,8 @@ pub struct Account {
     datapath: Option<String>,
     rpc_connection_url: String,
     node_url: String,
+    indexer_url: String,
+    proxy_endpoint: String,
 }
 
 // Check if a database file exists, and create one if it does not.
@@ -29,6 +31,8 @@ pub fn init() {
                 'datapath'	TEXT NOT NULL,
                 'rpc_connection_url'	TEXT NOT NULL,
                 'node_url'  TEXT NOT NULL,
+                'indexer_url'  TEXT NOT NULL,
+                'proxy_endpoint'  TEXT NOT NULL,
                 PRIMARY KEY('id' AUTOINCREMENT)
             );",
             (),
@@ -76,6 +80,8 @@ pub fn get_accounts() -> Result<Vec<Account>, rusqlite::Error> {
                 datapath: row.get(3)?,
                 rpc_connection_url: row.get(4)?,
                 node_url: row.get(5)?,
+                indexer_url: row.get(6)?,
+                proxy_endpoint: row.get(7)?,
             })
         })?
         .map(|res| res.unwrap())
@@ -90,6 +96,8 @@ pub fn insert_account(
     datapath: Option<String>,
     rpc_connection_url: String,
     node_url: String,
+    indexer_url: String,
+    proxy_endpoint: String,
 ) -> Result<usize, rusqlite::Error> {
     let conn = Connection::open(get_db_path())?;
     
@@ -105,8 +113,8 @@ pub fn insert_account(
     }
     
     conn.execute(
-        "INSERT INTO Accounts (name, network, datapath, rpc_connection_url, node_url) VALUES (?1, ?2, ?3, ?4, ?5)",
-        rusqlite::params![name, network, datapath, rpc_connection_url, node_url],
+        "INSERT INTO Accounts (name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        rusqlite::params![name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint],
     )
 }
 
@@ -117,11 +125,13 @@ pub fn update_account(
     datapath: Option<String>,
     rpc_connection_url: String,
     node_url: String,
+    indexer_url: String,
+    proxy_endpoint: String,
 ) -> Result<usize, rusqlite::Error> {
     let conn = Connection::open(get_db_path())?;
     conn.execute(
-        "UPDATE Accounts SET name = ?1, network = ?2, datapath = ?3, rpc_connection_url = ?4, node_url = ?5 WHERE id = ?6",
-        rusqlite::params![name, network, datapath, rpc_connection_url, node_url, id],
+        "UPDATE Accounts SET name = ?1, network = ?2, datapath = ?3, rpc_connection_url = ?4, node_url = ?5, indexer_url = ?6, proxy_endpoint = ?7 WHERE id = ?8",
+        rusqlite::params![name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint, id],
     )
 }
 
