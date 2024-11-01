@@ -259,7 +259,7 @@ interface ListUnspentsResponse {
   ]
 }
 
-interface SwapDetails {
+export interface SwapDetails {
   qty_from: number
   qty_to: number
   from_asset: string | null
