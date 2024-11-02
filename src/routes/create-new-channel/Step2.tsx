@@ -120,7 +120,7 @@ export const Step2 = (props: Props) => {
   useEffect(() => {
     const fetchMaxCapacity = async () => {
       try {
-        const balance = await btcBalance()
+        const balance = await btcBalance({ skip_sync: false })
         const maxSpendable = balance.data?.vanilla.spendable || 100_000_000
         setMaxCapacity(Math.min(MAX_CHANNEL_CAPACITY, maxSpendable))
         console.log('BTC balance:', maxSpendable)

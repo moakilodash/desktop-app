@@ -47,7 +47,7 @@ export const Component = () => {
     const checkInitialBalance = async () => {
       setIsLoading(true)
       try {
-        const response = await getBtcBalance()
+        const response = await getBtcBalance({ skip_sync: false })
         if (response.data) {
           const totalSpendable =
             response.data.vanilla.spendable + response.data.colored.spendable

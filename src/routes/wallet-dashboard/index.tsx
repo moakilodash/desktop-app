@@ -219,10 +219,9 @@ export const Component = () => {
     try {
       await Promise.all([
         assets(),
-        btcBalance(),
+        btcBalance({ skip_sync: false }),
         listChannels(),
         sync(),
-        // refreshRgbTransfers(),
       ])
     } finally {
       setIsRefreshing(false)

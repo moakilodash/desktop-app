@@ -18,9 +18,9 @@ import {
   PasswordFields,
 } from '../../components/PasswordSetupForm'
 import { Spinner } from '../../components/Spinner'
+import { parseRpcUrl } from '../../helpers/utils'
 import { EyeIcon } from '../../icons/Eye'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
-
 interface Fields {
   password: string
 }
@@ -74,22 +74,6 @@ export const Component = () => {
       mnemonic: '',
     },
   })
-
-  const parseRpcUrl = (url: string) => {
-    try {
-      const [credentials, hostPort] = url.split('@')
-      const [username, password] = credentials.split(':')
-      const [host, port] = hostPort.split(':')
-      return { host, password, port: parseInt(port, 10), username }
-    } catch {
-      return {
-        host: 'localhost',
-        password: 'password',
-        port: 18443,
-        username: 'user',
-      }
-    }
-  }
 
   const onSubmit: SubmitHandler<Fields> = async (data) => {
     setIsUnlocking(true)
@@ -156,7 +140,9 @@ export const Component = () => {
       const initResponse = await init({ password: data.password })
       if (!initResponse.isSuccess) {
         throw new Error(
-          initResponse.error?.data?.error || 'Initialization failed'
+          initResponse.error && 'data' in initResponse.error
+            ? (initResponse.error.data as { error: string }).error
+            : 'Initialization failed'
         )
       }
 

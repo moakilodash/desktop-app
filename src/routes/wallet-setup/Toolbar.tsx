@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/tauri'
-import { Plus, Settings, Trash2, Edit, X, Server, Cloud } from 'lucide-react'
+import { Plus, Trash2, Edit, X, Server, Cloud } from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'

@@ -19,6 +19,8 @@ import { toast } from 'react-toastify'
 
 import { WALLET_SETUP_PATH } from '../../app/router/paths'
 import { RootState } from '../../app/store'
+import { useAppSelector } from '../../app/store/hooks'
+import { parseRpcUrl } from '../../helpers/utils'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 import { nodeSettingsActions } from '../../slices/nodeSettings/nodeSettings.slice'
 import {
@@ -49,6 +51,11 @@ export const Component: React.FC = () => {
 
   const [showModal, setShowModal] = useState(false)
   const [backupModal, setBackupModal] = useState(false)
+  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false)
+  const [showShutdownConfirmation, setShowShutdownConfirmation] =
+    useState(false)
+  const [isBackupInProgress, setIsBackupInProgress] = useState(false)
+
   const { control, handleSubmit, formState, reset, watch, setValue } =
     useForm<FormFields>({
       defaultValues: {
@@ -59,9 +66,6 @@ export const Component: React.FC = () => {
         nodePassword: '',
       },
     })
-  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false)
-  const [showShutdownConfirmation, setShowShutdownConfirmation] =
-    useState(false)
 
   const [backup, { isLoading: isBackupLoading }] =
     nodeApi.endpoints.backup.useLazyQuery()
@@ -69,7 +73,7 @@ export const Component: React.FC = () => {
   const [unlock] = nodeApi.endpoints.unlock.useLazyQuery()
   const [shutdown] = nodeApi.endpoints.shutdown.useLazyQuery()
 
-  const [isBackupInProgress, setIsBackupInProgress] = useState(false)
+  const nodeSettings = useAppSelector((state) => state.nodeSettings.data)
 
   useEffect(() => {
     setIsBackupInProgress(isBackupLoading)
@@ -92,22 +96,29 @@ export const Component: React.FC = () => {
     dispatch(setNodeConnectionString(data.nodeConnectionString))
     dispatch(setDefaultLspUrl(data.lspUrl))
     setShowModal(true)
-    setTimeout(() => {
-      setShowModal(false)
-    }, 2000)
+    setTimeout(() => setShowModal(false), 2000)
   }
 
   const performBackup = async (data: FormFields) => {
-    const pathToBackup = data.backupPath
-    const nodePass = data.nodePassword
+    const { backupPath: pathToBackup, nodePassword: nodePass } = data
 
     try {
       const lockResponse = await attemptLock()
+      const rpcConfig = parseRpcUrl(nodeSettings.rpc_connection_url)
+
       if (lockResponse.status === 200) {
         const backupResponse = await attemptBackup(pathToBackup, nodePass)
         if (backupResponse.status === 200) {
           toast.success('Backup successful')
-          await unlock({ password: nodePass }).unwrap()
+          await unlock({
+            bitcoind_rpc_host: rpcConfig.host,
+            bitcoind_rpc_password: rpcConfig.password,
+            bitcoind_rpc_port: rpcConfig.port,
+            bitcoind_rpc_username: rpcConfig.username,
+            indexer_url: nodeSettings.indexer_url,
+            password: nodePass,
+            proxy_endpoint: nodeSettings.proxy_endpoint,
+          }).unwrap()
         } else if (backupResponse.status === 401) {
           toast.error('Wrong password')
         } else {
@@ -120,7 +131,15 @@ export const Component: React.FC = () => {
           const backupResponse = await attemptBackup(pathToBackup, nodePass)
           if (backupResponse.status === 200) {
             toast.success('Backup successful')
-            await unlock({ password: nodePass }).unwrap()
+            await unlock({
+              bitcoind_rpc_host: rpcConfig.host,
+              bitcoind_rpc_password: rpcConfig.password,
+              bitcoind_rpc_port: rpcConfig.port,
+              bitcoind_rpc_username: rpcConfig.username,
+              indexer_url: nodeSettings.indexer_url,
+              password: nodePass,
+              proxy_endpoint: nodeSettings.proxy_endpoint,
+            }).unwrap()
           }
         } else if (unlockResponse.status === 401) {
           toast.error('Wrong password')
@@ -134,6 +153,7 @@ export const Component: React.FC = () => {
       toast.error('Backup error')
     }
   }
+
   const handleLogout = async () => {
     setShowLogoutConfirmation(true)
   }
@@ -150,11 +170,9 @@ export const Component: React.FC = () => {
       }
     } catch (error) {
       console.error('Logout error:', error)
-      if (error instanceof Error) {
-        toast.error(`Logout failed: ${error.message}. Redirecting anyway.`)
-      } else {
-        toast.error(`Logout failed. Redirecting anyway.`)
-      }
+      toast.error(
+        `Logout failed: ${error instanceof Error ? error.message : ''}. Redirecting anyway.`
+      )
     } finally {
       navigate(WALLET_SETUP_PATH)
       setShowLogoutConfirmation(false)
@@ -164,20 +182,29 @@ export const Component: React.FC = () => {
   const attemptLock = async (): Promise<Response> => {
     try {
       await lock().unwrap()
+      return { data: {}, status: 200 }
     } catch (err) {
       console.log(err)
       return err as Response
     }
-    return { data: {}, status: 200 }
   }
 
   const attemptUnlock = async (password: string): Promise<Response> => {
     try {
-      await unlock({ password: password }).unwrap()
+      const rpcConfig = parseRpcUrl(nodeSettings.rpc_connection_url)
+      await unlock({
+        bitcoind_rpc_host: rpcConfig.host,
+        bitcoind_rpc_password: rpcConfig.password,
+        bitcoind_rpc_port: rpcConfig.port,
+        bitcoind_rpc_username: rpcConfig.username,
+        indexer_url: nodeSettings.indexer_url,
+        password: password,
+        proxy_endpoint: nodeSettings.proxy_endpoint,
+      }).unwrap()
+      return { data: {}, status: 200 }
     } catch (err) {
       return err as Response
     }
-    return { data: {}, status: 200 }
   }
 
   const attemptBackup = async (
@@ -185,14 +212,11 @@ export const Component: React.FC = () => {
     password: string
   ): Promise<Response> => {
     try {
-      await backup({
-        backup_path: backupPath,
-        password,
-      }).unwrap()
+      await backup({ backup_path: backupPath, password }).unwrap()
+      return { data: {}, status: 200 }
     } catch (err) {
       return err as Response
     }
-    return { data: {}, status: 200 }
   }
 
   const handleBackup = async (data: FormFields) => {
@@ -228,10 +252,7 @@ export const Component: React.FC = () => {
   }
 
   const selectBackupFolder = async () => {
-    const selected = await open({
-      directory: true,
-      multiple: false,
-    })
+    const selected = await open({ directory: true, multiple: false })
     if (typeof selected === 'string') {
       const timestamp = new Date()
         .toLocaleString()
@@ -241,9 +262,7 @@ export const Component: React.FC = () => {
     }
   }
 
-  const isValidPath = (path: string) => {
-    return path.trim() !== ''
-  }
+  const isValidPath = (path: string) => path.trim() !== ''
 
   const handleUndo = () => {
     reset({
@@ -487,6 +506,7 @@ export const Component: React.FC = () => {
             </div>
           </div>
         )}
+
         {showLogoutConfirmation && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-sm">
@@ -518,6 +538,7 @@ export const Component: React.FC = () => {
             </div>
           </div>
         )}
+
         {showShutdownConfirmation && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-sm">

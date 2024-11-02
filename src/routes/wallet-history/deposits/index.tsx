@@ -76,7 +76,7 @@ export const Component: React.FC = () => {
     isLoading: transactionsLoading,
     isError: transactionsError,
     refetch: refetchTransactions,
-  } = nodeApi.endpoints.listTransactions.useQuery()
+  } = nodeApi.endpoints.listTransactions.useQuery({ skip_sync: false })
   const {
     data: paymentsData,
     isLoading: paymentsLoading,

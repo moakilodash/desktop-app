@@ -40,6 +40,7 @@ export const Component = () => {
         data.fee_rate !== 'custom' ? parseFloat(data.fee_rate) : customFee,
       num: data.num,
       size: data.size,
+      skip_sync: false,
     }).then((res: any) => {
       if (res.error) {
         toast.error(res.error.data.error)
@@ -51,7 +52,7 @@ export const Component = () => {
   }
 
   const refreshData = useCallback(() => {
-    btcBalance()
+    btcBalance({ skip_sync: false })
   }, [btcBalance])
 
   useEffect(() => {

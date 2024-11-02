@@ -4,7 +4,7 @@ import { toast } from 'react-toastify'
 import { twJoin } from 'tailwind-merge'
 
 import { useAppDispatch } from '../../../../app/store/hooks'
-import { ASSET_ID_TO_TICKER, BTC_ASSET_ID } from '../../../../constants'
+import { BTC_ASSET_ID } from '../../../../constants'
 import { nodeApi } from '../../../../slices/nodeApi/nodeApi.slice'
 import { uiSliceActions } from '../../../../slices/ui/ui.slice'
 import { Select } from '../../../Select'
@@ -44,7 +44,7 @@ export const WithdrawModalContent = () => {
   const feeRate = form.watch('fee_rate')
 
   const availableAssets = [
-    { label: ASSET_ID_TO_TICKER[BTC_ASSET_ID], value: BTC_ASSET_ID },
+    { label: 'BTC', value: BTC_ASSET_ID },
     ...(assets.data?.nia.map((asset) => ({
       label: asset.ticker,
       value: asset.asset_id,
@@ -102,7 +102,7 @@ export const WithdrawModalContent = () => {
 
   useEffect(() => {
     if (assetId === BTC_ASSET_ID) {
-      dispatch(nodeApi.endpoints.btcBalance.initiate())
+      dispatch(nodeApi.endpoints.btcBalance.initiate({ skip_sync: false }))
         .unwrap()
         .then((balance: any) => {
           setAssetBalance(balance.vanilla.spendable)

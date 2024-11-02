@@ -118,7 +118,9 @@ export const Component = () => {
       const initResponse = await init({ password: data.password })
       if (!initResponse.isSuccess) {
         throw new Error(
-          initResponse.error?.data?.error || 'Initialization failed'
+          initResponse.error && 'data' in initResponse.error
+            ? (initResponse.error.data as { error: string }).error
+            : 'Initialization failed'
         )
       }
 
