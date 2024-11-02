@@ -54,7 +54,9 @@ export const Toolbar = () => {
         account.datapath !== ''
       ) {
         await invoke('start_node', {
+          daemonListeningPort: '3001',
           datapath: account.datapath,
+          ldkPeerListeningPort: '9735',
           network: account.network,
         })
       }

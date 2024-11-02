@@ -34,7 +34,8 @@ interface NodeSetupFields {
   rpc_connection_url: string
   indexer_url: string
   proxy_endpoint: string
-  node_port: string
+  daemon_listening_port: string
+  ldk_peer_listening_port: string
 }
 
 type SetupStep = 'setup' | 'password' | 'mnemonic' | 'verify'
@@ -93,7 +94,7 @@ export const Component = () => {
           indexer_url: data.indexer_url,
           name: data.name,
           network: data.network,
-          node_url: `http://localhost:${data.node_port}`,
+          node_url: `http://localhost:${data.daemon_listening_port}`,
           proxy_endpoint: data.proxy_endpoint,
           rpc_connection_url: data.rpc_connection_url,
         })
@@ -110,11 +111,13 @@ export const Component = () => {
     setIsStartingNode(true)
     try {
       await invoke('start_node', {
+        daemonListeningPort: '3001',
         datapath: nodeSetupForm.getValues('datapath'),
+        ldkPeerListeningPort: '9735',
         network: nodeSetupForm.getValues('network'),
       })
       await new Promise((resolve) => setTimeout(resolve, 5000))
-
+      console.log('init')
       const initResponse = await init({ password: data.password })
       if (!initResponse.isSuccess) {
         throw new Error(
@@ -129,7 +132,7 @@ export const Component = () => {
         indexerUrl: nodeSetupForm.getValues('indexer_url'),
         name: nodeSetupForm.getValues('name'),
         network: nodeSetupForm.getValues('network'),
-        nodeUrl: `http://localhost:${nodeSetupForm.getValues('node_port')}`,
+        nodeUrl: `http://localhost:${nodeSetupForm.getValues('daemon_listening_port')}`,
         proxyEndpoint: nodeSetupForm.getValues('proxy_endpoint'),
         rpcConnectionUrl: nodeSetupForm.getValues('rpc_connection_url'),
       })
@@ -241,14 +244,14 @@ export const Component = () => {
   return (
     <Layout>
       <div className="max-w-2xl w-full bg-blue-dark py-8 px-6 rounded">
-        <div>
-          <button
+        {/* <div> */}
+        {/* <button
             className="px-3 py-1 rounded border text-sm border-gray-500"
             onClick={() => navigate(WALLET_SETUP_PATH)}
           >
             Go Back
-          </button>
-        </div>
+          </button> */}
+        {/* </div> */}
         {renderCurrentStep()}
       </div>
     </Layout>
@@ -265,6 +268,7 @@ interface NodeSetupFormProps {
 const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const network = form.watch('network')
+  const navigate = useNavigate()
 
   // Update form values when network changes
   useEffect(() => {
@@ -272,11 +276,21 @@ const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
     form.setValue('rpc_connection_url', defaults.rpc_connection_url)
     form.setValue('indexer_url', defaults.indexer_url)
     form.setValue('proxy_endpoint', defaults.proxy_endpoint)
-    form.setValue('node_port', defaults.node_port)
+    form.setValue('daemon_listening_port', defaults.daemon_listening_port)
+    form.setValue('ldk_peer_listening_port', defaults.ldk_peer_listening_port)
   }, [network, form])
 
   return (
     <>
+      <div className="flex justify-between">
+        <button
+          className="px-4 py-2 rounded-full border text-sm border-gray-500 hover:bg-gray-700 transition-colors"
+          onClick={() => navigate(WALLET_SETUP_PATH)}
+          type="button"
+        >
+          ← Back
+        </button>
+      </div>
       <div className="text-center mb-10">
         <h3 className="text-2xl font-semibold mb-4">
           Set Up Your Kaleidoswap Node
@@ -428,7 +442,7 @@ const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
                     className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
                     placeholder="Enter the node port"
                     type="text"
-                    {...form.register('node_port', {
+                    {...form.register('daemon_listening_port', {
                       pattern: {
                         message: 'Please enter a valid port number',
                         value: /^\d+$/,
@@ -439,7 +453,7 @@ const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
                 </div>
                 <div className="text-sm text-gray-400">Default: 3001</div>
                 <div className="text-sm text-red mt-2">
-                  {form.formState.errors.node_port?.message}
+                  {form.formState.errors.daemon_listening_port?.message}
                 </div>
               </div>
             </div>

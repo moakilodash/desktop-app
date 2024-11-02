@@ -80,6 +80,16 @@ export const Component = () => {
 
     try {
       const rpcConfig = parseRpcUrl(nodeSettings.rpc_connection_url)
+      console.log(
+        'Unlocking the node with params: ',
+        rpcConfig.host,
+        rpcConfig.password,
+        rpcConfig.port,
+        rpcConfig.username,
+        nodeSettings.indexer_url,
+        data.password,
+        nodeSettings.proxy_endpoint
+      )
       const unlockResponse = await unlock({
         bitcoind_rpc_host: rpcConfig.host,
         bitcoind_rpc_password: rpcConfig.password,
@@ -109,14 +119,14 @@ export const Component = () => {
           setShowInitModal(true)
           return
         }
-        const errorMessage =
-          'error' in unlockResponse && unlockResponse.error
-            ? isFetchBaseQueryError(unlockResponse.error)
-              ? (unlockResponse.error.data as { message: string })?.message ||
-                'Unknown error'
-              : unlockResponse.error.message || 'Unknown error'
-            : 'Failed to unlock the node'
-        throw new Error(errorMessage)
+        if ('error' in unlockResponse && unlockResponse.error) {
+          const errorData = isFetchBaseQueryError(unlockResponse.error)
+            ? (unlockResponse.error.data as { error?: string })?.error ||
+              'Unknown error'
+            : unlockResponse.error.message || 'Unknown error'
+          throw new Error(errorData)
+        }
+        throw new Error('Failed to unlock the node')
       }
     } catch (error: unknown) {
       const errorMessage =

@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tauri::{Manager, Window};
 
+
 mod db;
 mod rgb_node;
 
@@ -62,6 +63,8 @@ fn start_node(
     node_process: tauri::State<Arc<Mutex<NodeProcess>>>,
     network: String,
     datapath: Option<String>,
+    daemon_listening_port: String,
+    ldk_peer_listening_port: String,
 ) -> Result<(), String> {
     let mut executable_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     executable_dir.push("../bin");
@@ -72,12 +75,10 @@ fn start_node(
 
     let node_process = node_process.lock().unwrap();
     if node_process.is_running() {
-        // Stop the current node before starting a new one
         node_process.stop();
     }
     
-    // Start the new node
-    node_process.start(network, datapath);
+    node_process.start(network, datapath, daemon_listening_port, ldk_peer_listening_port);
     Ok(())
 }
 

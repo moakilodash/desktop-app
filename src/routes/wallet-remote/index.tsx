@@ -47,7 +47,7 @@ export const Component = () => {
     defaultValues: {
       name: 'Test Account',
       network: 'regtest',
-      node_url: `http://localhost:${NETWORK_DEFAULTS.regtest.node_port}`,
+      node_url: `http://localhost:${NETWORK_DEFAULTS.regtest.daemon_listening_port}`,
       password: 'password',
       ...NETWORK_DEFAULTS.regtest,
       authToken: '',
@@ -63,7 +63,10 @@ export const Component = () => {
         form.setValue('rpc_connection_url', defaults.rpc_connection_url)
         form.setValue('indexer_url', defaults.indexer_url)
         form.setValue('proxy_endpoint', defaults.proxy_endpoint)
-        form.setValue('node_url', `http://localhost:${defaults.node_port}`)
+        form.setValue(
+          'node_url',
+          `http://localhost:${defaults.daemon_listening_port}`
+        )
       }
     })
     return () => subscription.unsubscribe()
