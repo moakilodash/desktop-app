@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import { Id, toast, ToastContainer } from 'react-toastify'
 
-import { nodeApi , SwapDetails } from '../../slices/nodeApi/nodeApi.slice'
+import { nodeApi, SwapDetails } from '../../slices/nodeApi/nodeApi.slice'
 
 const StatusToastElement: React.FC<{ swap: SwapDetails }> = ({ swap }) => {
   // make a nice component to display the swap details using tailwind css
@@ -58,6 +58,7 @@ export const StatusToast: React.FC = () => {
   })
 
   useEffect(() => {
+    console.log('Called')
     data?.taker.forEach((swap) => {
       // toast already exists
       if (paymentHashToToastId.current[swap.payment_hash]) {
