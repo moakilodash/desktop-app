@@ -82,7 +82,7 @@ export const Layout = (props: Props) => {
         </div>
       </div>
       <LayoutModal />
-      <ToastContainer enableMultiContainer />
+      <ToastContainer />
     </div>
   )
 }

@@ -1205,7 +1205,7 @@ export const Component = () => {
         />
       )}
 
-      {!showRecap && <StatusToast />}
+      {!showRecap && assets.length > 0 && <StatusToast assets={assets} />}
     </>
   )
 }
