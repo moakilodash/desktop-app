@@ -12,7 +12,6 @@ const StatusToastElement: React.FC<{
   swap: SwapDetails
   assets: NiaAsset[]
 }> = ({ swap, assets }) => {
-  console.log(swap)
   const bitcoinUnit = useAppSelector((state) => state.settings.bitcoinUnit)
 
   const fromAssetTicker =
@@ -30,7 +29,6 @@ const StatusToastElement: React.FC<{
     fromAssetQty *= 100000
   }
 
-  console.log(assets)
   const toAssetTicker =
     assets.find((asset) => asset.asset_id === swap.to_asset)?.ticker ||
     bitcoinUnit
@@ -86,9 +84,7 @@ const StatusToastElement: React.FC<{
 export const StatusToast: React.FC<{
   assets: NiaAsset[]
 }> = ({ assets }) => {
-  const paymentHashToToastId = useRef<
-    Record<string, { id: Id; status: string }>
-  >({})
+  const paymentHashToStatus = useRef<Record<string, string>>({})
 
   const { data } = nodeApi.useListSwapsQuery(undefined, {
     pollingInterval: 3000,
@@ -97,55 +93,56 @@ export const StatusToast: React.FC<{
   useEffect(() => {
     data?.taker.forEach((swap) => {
       // toast already exists
-      if (paymentHashToToastId.current[swap.payment_hash]) {
+      if (paymentHashToStatus.current[swap.payment_hash]) {
         // remove from map if swap is not pending anymore
         if (
-          paymentHashToToastId.current[swap.payment_hash].status !==
-            'Waiting' &&
-          paymentHashToToastId.current[swap.payment_hash].status !== 'Pending'
+          paymentHashToStatus.current[swap.payment_hash] !== 'Waiting' &&
+          paymentHashToStatus.current[swap.payment_hash] !== 'Pending'
         ) {
-          delete paymentHashToToastId.current[swap.payment_hash]
+          delete paymentHashToStatus.current[swap.payment_hash]
         } else if (
-          swap.status !== paymentHashToToastId.current[swap.payment_hash].status
+          swap.status !== paymentHashToStatus.current[swap.payment_hash]
         ) {
           // if status has changed, update toast
           if (swap.status === 'Failed' || swap.status === 'Expired') {
-            toast.update(paymentHashToToastId.current[swap.payment_hash].id, {
+            toast.update(swap.payment_hash, {
               autoClose: 5000,
+              containerId: 'status-toast',
               isLoading: false,
-              render: <StatusToastElement assets={assets} swap={swap} />,
+              render: () => <StatusToastElement assets={assets} swap={swap} />,
               type: 'error',
             })
           } else if (swap.status === 'Succeeded') {
-            toast.update(paymentHashToToastId.current[swap.payment_hash].id, {
+            toast.update(swap.payment_hash, {
               autoClose: 5000,
+              containerId: 'status-toast',
               isLoading: false,
-              render: <StatusToastElement assets={assets} swap={swap} />,
+              render: () => <StatusToastElement assets={assets} swap={swap} />,
               type: 'success',
             })
           } else {
-            toast.update(paymentHashToToastId.current[swap.payment_hash].id, {
-              render: <StatusToastElement assets={assets} swap={swap} />,
+            toast.update(swap.payment_hash, {
+              containerId: 'status-toast',
+              render: () => <StatusToastElement assets={assets} swap={swap} />,
               type: 'default',
             })
           }
-          paymentHashToToastId.current[swap.payment_hash].status = swap.status
+          paymentHashToStatus.current[swap.payment_hash] = swap.status
         }
       } else if (swap.status === 'Waiting' || swap.status === 'Pending') {
         // new toast
-        const toastId = toast.loading(
-          <StatusToastElement assets={assets} swap={swap} />,
+        toast.loading(
+          () => <StatusToastElement assets={assets} swap={swap} />,
           {
             autoClose: false,
+            closeOnClick: true,
             containerId: 'status-toast',
             isLoading: true,
+            toastId: swap.payment_hash,
           }
         )
         // insert toast into map
-        paymentHashToToastId.current[swap.payment_hash] = {
-          id: toastId,
-          status: swap.status,
-        }
+        paymentHashToStatus.current[swap.payment_hash] = swap.status
       }
     })
   }, [data])
