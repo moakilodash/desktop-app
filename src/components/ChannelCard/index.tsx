@@ -138,7 +138,7 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
   // const remoteAsset = parseFloat(formatAssetAmount(channel.asset_remote_amount))
 
   return (
-    <div className="bg-gray-800 text-white rounded-lg shadow-lg p-6">
+    <div className="bg-gray-900 text-white rounded-lg shadow-lg p-6">
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center space-x-2">
           <span className="font-bold text-lg">

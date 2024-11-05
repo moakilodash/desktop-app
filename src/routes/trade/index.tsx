@@ -677,7 +677,7 @@ export const Component = () => {
     }
 
     let toastId: string | number | null = null
-    let timeoutId: NodeJS.Timeout | null = null
+    let timeoutId: any | null = null
 
     const clearToastAndTimeout = () => {
       if (toastId !== null) {

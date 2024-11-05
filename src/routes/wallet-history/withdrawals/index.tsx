@@ -6,7 +6,9 @@ import { nodeApi } from '../../../slices/nodeApi/nodeApi.slice'
 const COL_CLASS_NAME = 'py-3 px-4'
 
 export const Component = () => {
-  const transactions = nodeApi.endpoints.listTransactions.useQuery()
+  const transactions = nodeApi.endpoints.listTransactions.useQuery({
+    skip_sync: false,
+  })
 
   if (transactions.isLoading) {
     return <div>Loading...</div>

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
 
 import { useAppSelector } from '../../../../app/store/hooks.ts'
-import { ASSET_ID_TO_TICKER, BTC_ASSET_ID } from '../../../../constants'
+import { BTC_ASSET_ID } from '../../../../constants'
 import { nodeApi } from '../../../../slices/nodeApi/nodeApi.slice'
 import {
   DepositModal,
@@ -59,7 +59,7 @@ export const Step1 = (props: Props) => {
             active={assetId}
             onSelect={handleSelect}
             options={[
-              { label: ASSET_ID_TO_TICKER[BTC_ASSET_ID], value: BTC_ASSET_ID },
+              { label: 'BTC', value: BTC_ASSET_ID },
               ...(assets.data?.nia.map((asset) => ({
                 label: asset.ticker,
                 value: asset.asset_id,

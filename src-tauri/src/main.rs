@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tauri::{Manager, Window};
 
+
 mod db;
 mod rgb_node;
 
@@ -62,7 +63,8 @@ fn start_node(
     node_process: tauri::State<Arc<Mutex<NodeProcess>>>,
     network: String,
     datapath: Option<String>,
-    rpc_connection_url: String,
+    daemon_listening_port: String,
+    ldk_peer_listening_port: String,
 ) -> Result<(), String> {
     let mut executable_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     executable_dir.push("../bin");
@@ -73,12 +75,10 @@ fn start_node(
 
     let node_process = node_process.lock().unwrap();
     if node_process.is_running() {
-        // Stop the current node before starting a new one
         node_process.stop();
     }
     
-    // Start the new node
-    node_process.start(network, datapath, rpc_connection_url);
+    node_process.start(network, datapath, daemon_listening_port, ldk_peer_listening_port);
     Ok(())
 }
 
@@ -110,8 +110,10 @@ fn insert_account(
     datapath: Option<String>,
     rpc_connection_url: String,
     node_url: String,
+    indexer_url: String,
+    proxy_endpoint: String,
 ) -> Result<usize, String> {
-    match db::insert_account(name, network, datapath, rpc_connection_url, node_url) {
+    match db::insert_account(name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint) {
         Ok(num_rows) => Ok(num_rows),
         Err(e) => Err(e.to_string()),
     }
@@ -125,8 +127,10 @@ fn update_account(
     datapath: Option<String>,
     rpc_connection_url: String,
     node_url: String,
+    indexer_url: String,
+    proxy_endpoint: String,
 ) -> Result<usize, String> {
-    match db::update_account(id, name, network, datapath, rpc_connection_url, node_url) {
+    match db::update_account(id, name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint) {
         Ok(num_rows) => Ok(num_rows),
         Err(e) => Err(e.to_string()),
     }

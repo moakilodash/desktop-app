@@ -28,11 +28,11 @@ export const router = createBrowserRouter([
     path: WALLET_SETUP_PATH,
   },
   {
-    lazy: () => import('../../routes/init'),
+    lazy: () => import('../../routes/wallet-init'),
     path: INIT_PATH,
   },
   {
-    lazy: () => import('../../routes/wallet-config'),
+    lazy: () => import('../../routes/wallet-remote'),
     path: WALLET_CONFIG_PATH,
   },
   {

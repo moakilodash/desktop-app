@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/tauri'
-import { Plus, Settings, Trash2, Edit, X, Server, Cloud } from 'lucide-react'
+import { Plus, Trash2, Edit, X, Server, Cloud } from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -16,9 +16,11 @@ import {
 type Account = {
   name: string
   datapath: string | null
-  network: 'mainnet' | 'testnet' | 'regtest'
+  network: 'mainnet' | 'testnet' | 'regtest' | 'signet'
   rpc_connection_url: string
   node_url: string
+  indexer_url: string
+  proxy_endpoint: string
 }
 
 export const Toolbar = () => {
@@ -37,9 +39,11 @@ export const Toolbar = () => {
     await dispatch(
       setSettingsAsync({
         datapath: account.datapath || '',
+        indexer_url: account.indexer_url,
         name: account.name,
         network: account.network,
         node_url: account.node_url,
+        proxy_endpoint: account.proxy_endpoint,
         rpc_connection_url: account.rpc_connection_url,
       })
     )
@@ -50,9 +54,10 @@ export const Toolbar = () => {
         account.datapath !== ''
       ) {
         await invoke('start_node', {
+          daemonListeningPort: '3001',
           datapath: account.datapath,
+          ldkPeerListeningPort: '9735',
           network: account.network,
-          rpcConnectionUrl: account.rpc_connection_url,
         })
       }
       await new Promise((resolve) => setTimeout(resolve, 5000))
@@ -196,15 +201,6 @@ export const Toolbar = () => {
           >
             <Plus className="mr-2" size={18} />
             Add Account
-          </button>
-          <button
-            className="flex items-center justify-center w-full py-2 px-4 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors duration-200"
-            onClick={() => {
-              /* Add settings navigation logic */
-            }}
-          >
-            <Settings className="mr-2" size={18} />
-            Settings
           </button>
         </div>
       </aside>

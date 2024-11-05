@@ -210,22 +210,23 @@ export const Component = () => {
   const [assetsMap, setAssetsMap] = useState<Record<string, NiaAsset>>({})
   const bitcoinUnit = useAppSelector((state) => state.settings.bitcoinUnit)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [refreshRgbTransfers] =
-    nodeApi.endpoints.refreshRgbTransfers.useLazyQuery()
+  // const [refreshRgbTransfers] =
+  //   nodeApi.endpoints.refreshRgbTransfers.useLazyQuery()
+  const [sync] = nodeApi.endpoints.sync.useLazyQuery()
 
   const refreshData = useCallback(async () => {
     setIsRefreshing(true)
     try {
       await Promise.all([
         assets(),
-        btcBalance(),
+        btcBalance({ skip_sync: false }),
         listChannels(),
-        refreshRgbTransfers(),
+        sync(),
       ])
     } finally {
       setIsRefreshing(false)
     }
-  }, [assets, btcBalance, listChannels, refreshRgbTransfers])
+  }, [assets, btcBalance, listChannels, sync])
 
   useEffect(() => {
     if (assetsResponse.data?.nia) {

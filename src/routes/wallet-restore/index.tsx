@@ -52,9 +52,10 @@ export const Component = () => {
     try {
       setIsStartingNode(true)
       await invoke('start_node', {
+        daemonListeningPort: '3001',
         datapath: data.datapath,
+        ldkPeerListeningPort: '9735',
         network: data.network,
-        rpcConnectionUrl: data.rpc_connection_url,
       })
       await new Promise((resolve) => setTimeout(resolve, 5000))
     } catch (error) {

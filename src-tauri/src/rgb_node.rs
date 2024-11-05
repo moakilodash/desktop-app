@@ -28,7 +28,7 @@ impl NodeProcess {
         }
     }
 
-    pub fn start(&self, network: String, datapath: String, rpc_connection_url: String) {
+    pub fn start(&self, network: String, datapath: String, daemon_listening_port: String, ldk_peer_listening_port: String) {
         if self.is_running.load(Ordering::SeqCst) {
             println!("RGB Lightning Node is already running.");
             return;
@@ -39,7 +39,7 @@ impl NodeProcess {
         let is_running = Arc::clone(&self.is_running);
 
         std::thread::spawn(move || {
-            let process = run_rgb_lightning_node(&network, &datapath, &rpc_connection_url);
+            let process = run_rgb_lightning_node(&network, &datapath, &daemon_listening_port, &ldk_peer_listening_port);
             
             if let Some(child) = process {
                 *child_process.lock().unwrap() = Some(child);
@@ -96,7 +96,8 @@ impl NodeProcess {
 fn run_rgb_lightning_node(
     network: &str,
     datapath: &str,
-    rpc_connection_url: &str,
+    daemon_listening_port: &str,
+    ldk_peer_listening_port: &str,
 ) -> Option<Child> {
     let mut executable_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     executable_path.push("../bin/rgb-lightning-node");
@@ -104,9 +105,9 @@ fn run_rgb_lightning_node(
     if executable_path.exists() {
         Some(
             Command::new(executable_path)
-                .args(&[rpc_connection_url, datapath])
-                .args(&["--daemon-listening-port", "3001"])
-                .args(&["--ldk-peer-listening-port", "9736"])
+                .args(&[datapath])
+                .args(&["--daemon-listening-port", daemon_listening_port])
+                .args(&["--ldk-peer-listening-port", ldk_peer_listening_port])
                 .args(&["--network", network])
                 .spawn()
                 .expect("Failed to start rgb-lightning-node process"),
