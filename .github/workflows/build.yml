@@ -1,140 +1,128 @@
-name: Build Kaleidoswap App
+name: Release Tauri App
 
 on:
   push:
     branches:
-      - dev
       - ci_cd
     tags:
       - 'v*.*.*'
 
 jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create-release.outputs.result }}
+    
+    steps:
+      - uses: actions/checkout@v3
+      - name: Create Release
+        id: create-release
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: context.ref.replace('refs/tags/', ''),
+              name: `Release ${context.ref.replace('refs/tags/', '')}`,
+              draft: true,
+              prerelease: false
+            });
+            return data.id;
+
   build:
+    needs: create-release
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-22.04
             runner-label: [self-hosted, Linux, X64]
+            artifact_name: linux
+            asset_name: kaleidoswap-app-linux-amd64.deb
           - os: macos-ventura
             runner-label: [self-hosted, macOS, X64]
+            artifact_name: macos
+            asset_name: kaleidoswap-app-macos-amd64.dmg
           - os: windows-server-2022
             runner-label: [self-hosted, Windows, X64]
+            artifact_name: windows
+            asset_name: kaleidoswap-app-windows-amd64.msi
 
     runs-on: ${{ matrix.runner-label }}
 
     steps:
-    - name: Check out code
-      uses: actions/checkout@v3
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
-    # Install Chocolatey only if not already installed
-    - name: Install Chocolatey on Windows
-      if: runner.os == 'Windows'
-      shell: powershell
-      run: |
-        if (-Not (Test-Path "C:\ProgramData\chocolatey\bin\choco.exe")) {
-          Set-ExecutionPolicy Bypass -Scope Process -Force; `
-          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; `
-          iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'));
-        } else {
-          Write-Host "Chocolatey is already installed";
-        }
+    # Setup cache for dependencies
+    - name: Cache pnpm modules
+      uses: actions/cache@v3
+      with:
+        path: ~/.pnpm-store
+        key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-
 
-    # Install MSVC Build Tools and OpenSSL via Chocolatey
-    - name: Install MSVC Build Tools and OpenSSL on Windows
-      if: runner.os == 'Windows'
-      shell: powershell
-      run: |
-        & "C:\ProgramData\chocolatey\bin\choco.exe" install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows10SDK.19041 --add Microsoft.VisualStudio.Component.VC.CMake.Project --includeRecommended --includeOptional" -y
+    - name: Cache Rust dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          src-tauri/target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
 
-    # Check Visual Studio installations
-    - name: Check Visual Studio installations
-      if: runner.os == 'Windows'
-      shell: powershell
-      run: |
-        & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -all
+    # Windows-specific setup
+    - name: Windows Setup
+      if: matrix.os == 'windows-server-2022'
+      uses: microsoft/setup-msbuild@v1.1
 
-    # Set up MSVC environment manually
-    - name: Set up MSVC environment manually
-      if: runner.os == 'Windows'
-      shell: powershell
-      run: |
-        $vsPath = &"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find "**\vcvarsall.bat"
-        if ($vsPath) {
-          Write-Host "Found vcvarsall.bat at $vsPath"
-          & $vsPath x64
-        } else {
-          Write-Host "vcvarsall.bat not found"
-          exit 1
-        }
-
-    # Steps for Linux/macOS or other shared tasks...
-    - name: Create askpass.sh script
-      if: matrix.os == 'ubuntu-22.04' || matrix.os == 'macos-ventura'
-      run: |
-        echo "#!/bin/sh" > /tmp/askpass.sh
-        echo "echo '${{ secrets.SUDO_PASSWORD }}'" >> /tmp/askpass.sh
-        chmod +x /tmp/askpass.sh
-      env:
-        SUDO_ASKPASS: /tmp/askpass.sh
-
-    - name: Install system dependencies on Linux
+    # Install system dependencies based on OS
+    - name: Install Linux Dependencies
       if: matrix.os == 'ubuntu-22.04'
       run: |
-        sudo -A apt-get update
-        sudo -A apt-get install -y build-essential libgtk-3-dev libsoup2.4-dev libjavascriptcoregtk-4.0-dev libwebkit2gtk-4.0-dev
-      env:
-        SUDO_ASKPASS: /tmp/askpass.sh
+        sudo apt-get update
+        sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev librsvg2-dev
 
-    - name: Set up Node.js
+    - name: Setup Node
       uses: actions/setup-node@v3
       with:
         node-version: '20'
+        cache: 'pnpm'
 
     - name: Install pnpm
-      run: |
-        npm install -g pnpm
+      run: npm install -g pnpm
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
 
     - name: Install dependencies
       run: pnpm install
 
-    # Install Rust on Linux/macOS
-    - name: Set up Rust on Linux/macOS
-      if: runner.os != 'Windows'
-      uses: actions-rs/toolchain@v1
+    # Build the application
+    - name: Build Tauri App
+      uses: tauri-apps/tauri-action@v0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+        TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
       with:
-        toolchain: stable
-        override: true
-
-    # Install Rust on Windows
-    - name: Install Rust on Windows
-      if: runner.os == 'Windows'
-      shell: powershell
-      run: |
-        Invoke-WebRequest -Uri https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe -OutFile rustup-init.exe
-        Start-Process -FilePath ./rustup-init.exe -ArgumentList "-y" -Wait
-        $cargoPath = "$env:USERPROFILE\.cargo\bin"
-        echo $cargoPath | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-        $env:Path += ";$cargoPath"
-        & rustup default stable
-
-    - name: Install Tauri CLI
-      run: pnpm install --save-dev @tauri-apps/cli
-
-    - name: Build Tauri app on Linux/macOS
-      if: runner.os != 'Windows'
-      run: pnpm run tauri build
-      shell: bash
-
-    - name: Build Tauri app on Windows
-      if: runner.os == 'Windows'
-      shell: cmd
-      run: |
-        pnpm run tauri build
-
-    # Upload build artifacts
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+        tagName: ${{ github.ref_name }}
+        releaseName: "Release ${{ github.ref_name }}"
+        releaseId: ${{ needs.create-release.outputs.release_id }}
+        releaseBody: "See the assets to download this version and install."
+        
+    # Upload artifacts
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        name: tauri-artifacts-${{ matrix.os }}
-        path: ./src-tauri/target/release/bundle/**
-
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./src-tauri/target/release/bundle/${{ matrix.artifact_name }}/${{ matrix.asset_name }}
+        asset_name: ${{ matrix.asset_name }}
+        asset_content_type: application/octet-stream
