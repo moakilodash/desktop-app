@@ -7,6 +7,7 @@ import {
 } from '@reduxjs/toolkit/query/react'
 
 import { RootState } from '../../app/store'
+import { DEFAULT_TRANSPORT_ENDPOINT } from '../../constants'
 
 interface InitRequest {
   password: string
@@ -534,7 +535,7 @@ export const nodeApi = createApi({
           donation: false,
           min_confirmations: 1,
           recipient_id: body.recipient_id,
-          transport_endpoints: ['rpc://localhost:3000/json-rpc'],
+          transport_endpoints: [DEFAULT_TRANSPORT_ENDPOINT],
         },
         method: 'POST',
         url: '/sendasset',
