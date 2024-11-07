@@ -31,3 +31,5 @@ bin/dataldk
 shell.nix
 bin
 .env
+
+rgb-lightning-node
