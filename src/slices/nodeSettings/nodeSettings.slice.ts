@@ -1,9 +1,11 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 
+import { BitcoinNetwork } from '../../constants'
+
 export type Account = {
   name: string
   datapath: string
-  network: 'regtest' | 'testnet' | 'mainnet' | 'signet'
+  network: BitcoinNetwork
   rpc_connection_url: string
   node_url: string
   indexer_url: string

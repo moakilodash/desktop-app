@@ -8,13 +8,14 @@ import { toast } from 'react-toastify'
 import { TRADE_PATH, WALLET_SETUP_PATH } from '../../app/router/paths'
 import { Layout } from '../../components/Layout'
 import { Spinner } from '../../components/Spinner'
+import { BitcoinNetwork } from '../../constants'
 import { EyeIcon } from '../../icons/Eye'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 
 interface Fields {
   name: string
   datapath: string
-  network: 'mainnet' | 'testnet' | 'regtest'
+  network: BitcoinNetwork
   rpc_connection_url: string
   backup_path: string
   password: string

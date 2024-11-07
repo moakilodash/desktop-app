@@ -67,10 +67,10 @@
         "width": 1200
       },
       {
-        "alwaysOnTop": true,
+        "alwaysOnTop": false,
         "center": true,
         "decorations": false,
-        "focus": true,
+        "focus": false,
         "height": 600,
         "label": "splashscreen",
         "skipTaskbar": true,

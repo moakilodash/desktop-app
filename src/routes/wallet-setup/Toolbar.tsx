@@ -8,6 +8,7 @@ import { ROOT_PATH, WALLET_CONFIG_PATH } from '../../app/router/paths'
 import { useAppDispatch } from '../../app/store/hooks'
 import { MinidenticonImg } from '../../components/MinidenticonImg'
 import { Spinner } from '../../components/Spinner'
+import { BitcoinNetwork } from '../../constants'
 import {
   nodeSettingsActions,
   setSettingsAsync,
@@ -16,7 +17,7 @@ import {
 type Account = {
   name: string
   datapath: string | null
-  network: 'mainnet' | 'testnet' | 'regtest' | 'signet'
+  network: BitcoinNetwork
   rpc_connection_url: string
   node_url: string
   indexer_url: string

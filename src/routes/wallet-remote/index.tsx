@@ -13,6 +13,7 @@ import {
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { Layout } from '../../components/Layout'
 import { Spinner } from '../../components/Spinner'
+import { BitcoinNetwork } from '../../constants'
 import { NETWORK_DEFAULTS } from '../../constants/networks'
 import {
   nodeSettingsActions,
@@ -21,7 +22,7 @@ import {
 
 interface Fields {
   name: string
-  network: 'regtest' | 'testnet' | 'mainnet' | 'signet'
+  network: BitcoinNetwork
   node_url: string
   rpc_connection_url: string
   indexer_url: string
