@@ -19,6 +19,11 @@ interface Fields {
 
 export const WithdrawModalContent = () => {
   const [assetBalance, setAssetBalance] = useState(0)
+  const [feeEstimations, setFeeEstimations] = useState({
+    fast: 3,
+    normal: 2,
+    slow: 1,
+  })
   const [customFee, setCustomFee] = useState(1.0)
 
   const dispatch = useAppDispatch()
@@ -26,6 +31,7 @@ export const WithdrawModalContent = () => {
   const [sendBtc] = nodeApi.useLazySendBtcQuery()
   const [sendAsset] = nodeApi.useLazySendAssetQuery()
   const [sendPayment] = nodeApi.useLazySendPaymentQuery()
+  const [estimateFee] = nodeApi.useLazyEstimateFeeQuery()
 
   const assets = nodeApi.endpoints.listAssets.useQuery()
 
@@ -52,11 +58,12 @@ export const WithdrawModalContent = () => {
   ]
 
   const feeRates = [
-    { label: 'Slow', value: '1.0' },
-    { label: 'Normal', value: '2.0' },
-    { label: 'Fast', value: '3.0' },
+    { label: 'Slow', value: feeEstimations.slow.toString() },
+    { label: 'Normal', value: feeEstimations.normal.toString() },
+    { label: 'Fast', value: feeEstimations.fast.toString() },
     { label: 'Custom', value: 'custom' },
   ]
+  console.log('feeRates', feeRates)
 
   const onSubmit: SubmitHandler<Fields> = async (data) => {
     if (data.network === 'on-chain' && data.asset_id === BTC_ASSET_ID) {
@@ -115,6 +122,40 @@ export const WithdrawModalContent = () => {
         })
     }
   }, [assetId, dispatch])
+
+  useEffect(() => {
+    const fetchFees = async () => {
+      const slowFeePromise = estimateFee({ blocks: 6 }).unwrap()
+      // .catch(() => ({
+      //   fee_rate: 1,
+      // }))
+      const normalFeePromise = estimateFee({ blocks: 3 }).unwrap()
+      // .catch(() => ({
+      //   fee_rate: 2,
+      // }))
+      const fastFeePromise = estimateFee({ blocks: 1 }).unwrap()
+      // .catch(() => ({
+      //   fee_rate: 3,
+      // }))
+
+      try {
+        const [slowFee, normalFee, fastFee] = await Promise.all([
+          slowFeePromise,
+          normalFeePromise,
+          fastFeePromise,
+        ])
+        setFeeEstimations({
+          fast: fastFee.fee_rate,
+          normal: normalFee.fee_rate,
+          slow: slowFee.fee_rate,
+        })
+      } catch (e) {
+        console.error(e)
+      }
+    }
+
+    fetchFees()
+  }, [estimateFee])
 
   return (
     <form

@@ -5,6 +5,8 @@ import {
   fetchBaseQuery,
   FetchBaseQueryError,
 } from '@reduxjs/toolkit/query/react'
+import { Body } from '@tauri-apps/api/http'
+import { Blocks } from 'lucide-react'
 
 import { RootState } from '../../app/store'
 
@@ -312,6 +314,14 @@ interface UnlockRequest {
   proxy_endpoint: string
 }
 
+interface EstimateFeeResponse {
+  fee_rate: number
+}
+
+interface EstimateFeeRequest {
+  blocks: number
+}
+
 const dynamicBaseQuery: BaseQueryFn<
   string | FetchArgs,
   unknown,
@@ -501,6 +511,13 @@ export const nodeApi = createApi({
           url: '/openchannel',
         }
       },
+    }),
+    estimateFee: builder.query<EstimateFeeResponse, EstimateFeeRequest>({
+      query: (body) => ({
+        body,
+        method: 'POST',
+        url: '/estimatefee',
+      }),
     }),
     refreshRgbTransfers: builder.query<void, RefreshTransfersRequest>({
       query: (body) => ({

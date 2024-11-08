@@ -26,11 +26,14 @@ const FEE_RATES = {
 export const Component = () => {
   const dispatch = useAppDispatch()
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
+  const [feeRates, setFeeRates] = useState(FEE_RATES)
+
   const navigate = useNavigate()
 
   const [openChannel, openChannelResponse] =
     nodeApi.endpoints.openChannel.useLazyQuery()
   const [getBtcBalance] = nodeApi.endpoints.btcBalance.useLazyQuery()
+  const [estimateFee] = nodeApi.endpoints.estimateFee.useLazyQuery()
 
   const [isLoading, setIsLoading] = useState(true)
   const [insufficientBalance, setInsufficientBalance] = useState(false)
@@ -42,6 +45,40 @@ export const Component = () => {
   const newChannelForm = useAppSelector((state) =>
     channelSliceSelectors.form(state, 'new')
   )
+
+  useEffect(() => {
+    const fetchFees = async () => {
+      const slowFeePromise = estimateFee({ blocks: 6 }).unwrap()
+      // .catch(() => ({
+      //   fee_rate: 1,
+      // }))
+      const mediumFeePromise = estimateFee({ blocks: 3 }).unwrap()
+      // .catch(() => ({
+      //   fee_rate: 2,
+      // }))
+      const fastFeePromise = estimateFee({ blocks: 1 }).unwrap()
+      // .catch(() => ({
+      //   fee_rate: 3,
+      // }))
+
+      try {
+        const [slowFee, mediumFee, fastFee] = await Promise.all([
+          slowFeePromise,
+          mediumFeePromise,
+          fastFeePromise,
+        ])
+        setFeeRates({
+          fast: fastFee.fee_rate * 1000,
+          medium: mediumFee.fee_rate * 1000,
+          slow: slowFee.fee_rate * 1000,
+        })
+      } catch (e) {
+        console.error(e)
+      }
+    }
+
+    fetchFees()
+  }, [estimateFee])
 
   useEffect(() => {
     const checkInitialBalance = async () => {
@@ -75,7 +112,7 @@ export const Component = () => {
         asset_amount: form.assetAmount,
         asset_id: form.assetId,
         capacity_sat: form.capacitySat,
-        fee_rate_msat: FEE_RATES[form.fee],
+        fee_rate_msat: feeRates[form.fee],
         peer_pubkey_and_opt_addr: form.pubKeyAndAddress,
       })
 
@@ -157,7 +194,11 @@ export const Component = () => {
           </div>
 
           <div className={step !== 2 ? 'hidden' : ''}>
-            <Step2 onBack={onStep2Back} onNext={() => setStep(3)} />
+            <Step2
+              feeRates={feeRates}
+              onBack={onStep2Back}
+              onNext={() => setStep(3)}
+            />
           </div>
 
           <div className={step !== 3 ? 'hidden' : ''}>
