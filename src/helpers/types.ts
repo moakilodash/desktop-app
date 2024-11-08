@@ -1,10 +1,11 @@
 import { UseFormReturn } from 'react-hook-form'
 
+import { BitcoinNetwork } from '../constants'
 export type SetupStep = 'setup' | 'password' | 'mnemonic' | 'verify'
 
 export interface NodeSetupFields {
   name: string
-  network: 'regtest' | 'testnet' | 'mainnet' | 'signet'
+  network: BitcoinNetwork
   datapath: string
   rpc_connection_url: string
   indexer_url: string

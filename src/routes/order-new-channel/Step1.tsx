@@ -115,7 +115,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
     try {
       const networkInfo = await getNetworkInfo().unwrap()
       if (networkInfo.network === 'Regtest') {
-        setConnectionUrl('http://localhost:8000')
+        setConnectionUrl('https://api.regtest.kaleidoswap.com/')
       } else if (networkInfo.network === 'Testnet') {
         setConnectionUrl('https://api.testnet.kaleidoswap.com/')
       }

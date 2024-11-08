@@ -11,6 +11,7 @@ import {
 } from '../../app/router/paths'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { Loader } from '../../components/Loader'
+import { StatusToast } from '../../components/StatusToast'
 import { SwapDetails, SwapRecap } from '../../components/SwapRecap'
 import { AssetSelect, ExchangeRateDisplay } from '../../components/Trade'
 import { SparkIcon } from '../../icons/Spark'
@@ -1203,6 +1204,8 @@ export const Component = () => {
           swapDetails={swapRecapDetails}
         />
       )}
+
+      {!showRecap && assets.length > 0 && <StatusToast assets={assets} />}
     </>
   )
 }

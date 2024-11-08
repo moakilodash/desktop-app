@@ -51,11 +51,17 @@
         border-radius: 50%;
         border-top: 4px solid #ffffff;
         animation: spin 1s linear infinite;
+        margin-bottom: 10px;
       }
 
       @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
+      }
+
+      .loading-text {
+        font-size: 16px;
+        opacity: 0.8;
       }
     </style>
   </head>
@@ -64,6 +70,7 @@
         <img src="logo.svg" alt="Logo" class="logo">
         <div class="text">Trustless trading on Lightning Network</div>
         <div class="spinner"></div>
+        <div class="loading-text">Loading...</div>
     </div>
   </body>
 </html>

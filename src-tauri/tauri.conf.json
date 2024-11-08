@@ -12,8 +12,14 @@
   "tauri": {
     "allowlist": {
       "all": false,
+      "clipboard": {
+        "readText": true,
+        "writeText": true
+      },
       "dialog": {
-        "open": true
+        "message": true,
+        "open": true,
+        "save": true
       },
       "fs": {
         "all": true
@@ -43,23 +49,31 @@
       "targets": "all"
     },
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
     },
     "windows": [
       {
+        "center": true,
         "decorations": true,
+        "focus": true,
         "fullscreen": false,
         "height": 800,
         "label": "main",
+        "minHeight": 600,
+        "minWidth": 800,
         "resizable": true,
         "title": "KaleidoSwap",
         "visible": false,
         "width": 1200
       },
       {
+        "alwaysOnTop": false,
+        "center": true,
         "decorations": false,
+        "focus": false,
         "height": 600,
         "label": "splashscreen",
+        "skipTaskbar": true,
         "url": "splashscreen.html",
         "width": 500
       }

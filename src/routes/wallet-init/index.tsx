@@ -18,6 +18,7 @@ import {
   PasswordFields,
 } from '../../components/PasswordSetupForm'
 import { Spinner } from '../../components/Spinner'
+import { BitcoinNetwork } from '../../constants'
 import { NETWORK_DEFAULTS } from '../../constants/networks'
 import { parseRpcUrl } from '../../helpers/utils'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
@@ -25,11 +26,10 @@ import {
   nodeSettingsActions,
   setSettingsAsync,
 } from '../../slices/nodeSettings/nodeSettings.slice'
-
 // Separate interfaces for each step
 interface NodeSetupFields {
   name: string
-  network: 'regtest' | 'testnet' | 'mainnet' | 'signet'
+  network: BitcoinNetwork
   datapath: string
   rpc_connection_url: string
   indexer_url: string

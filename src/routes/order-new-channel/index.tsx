@@ -48,7 +48,7 @@ export const Component = () => {
             toast.update(toastIdRef.current, {
               autoClose: 5000,
               render: 'Payment completed. Channel is being set up.',
-              type: toast.TYPE.SUCCESS,
+              type: 'success',
             })
           }
         } else if (orderResponse.data?.order_state === 'FAILED') {
@@ -59,7 +59,7 @@ export const Component = () => {
             toast.update(toastIdRef.current, {
               autoClose: 5000,
               render: 'Payment failed. Please try again.',
-              type: toast.TYPE.ERROR,
+              type: 'error',
             })
           }
         }

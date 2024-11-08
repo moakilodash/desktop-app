@@ -9,6 +9,7 @@ import { Body } from '@tauri-apps/api/http'
 import { Blocks } from 'lucide-react'
 
 import { RootState } from '../../app/store'
+import { DEFAULT_TRANSPORT_ENDPOINT } from '../../constants'
 
 interface InitRequest {
   password: string
@@ -278,7 +279,7 @@ interface RefreshTransfersRequest {
   skip_sync: boolean
 }
 
-interface SwapDetails {
+export interface SwapDetails {
   qty_from: number
   qty_to: number
   from_asset: string | null
@@ -551,7 +552,7 @@ export const nodeApi = createApi({
           donation: false,
           min_confirmations: 1,
           recipient_id: body.recipient_id,
-          transport_endpoints: ['rpc://localhost:3000/json-rpc'],
+          transport_endpoints: [DEFAULT_TRANSPORT_ENDPOINT],
         },
         method: 'POST',
         url: '/sendasset',

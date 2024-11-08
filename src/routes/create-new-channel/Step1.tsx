@@ -51,9 +51,11 @@ export const Step1 = (props: Props) => {
         let apiUrl = KALEIDOSWAP_LSP_URL
 
         if (networkInfo.network === 'Regtest') {
-          apiUrl = 'http://localhost:8000'
+          apiUrl = 'https://api.regtest.kaleidoswap.com'
         } else if (networkInfo.network === 'Testnet') {
           apiUrl = 'https://api.testnet.kaleidoswap.com'
+        } else if (networkInfo.network === 'Signet') {
+          apiUrl = 'https://api.signet.kaleidoswap.com'
         }
 
         const response = await axios.get(`${apiUrl}/api/v1/lsps1/get_info`)
