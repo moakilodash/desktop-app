@@ -126,17 +126,8 @@ export const WithdrawModalContent = () => {
   useEffect(() => {
     const fetchFees = async () => {
       const slowFeePromise = estimateFee({ blocks: 6 }).unwrap()
-      // .catch(() => ({
-      //   fee_rate: 1,
-      // }))
       const normalFeePromise = estimateFee({ blocks: 3 }).unwrap()
-      // .catch(() => ({
-      //   fee_rate: 2,
-      // }))
       const fastFeePromise = estimateFee({ blocks: 1 }).unwrap()
-      // .catch(() => ({
-      //   fee_rate: 3,
-      // }))
 
       try {
         const [slowFee, normalFee, fastFee] = await Promise.all([

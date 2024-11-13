@@ -19,10 +19,10 @@ export const NETWORK_DEFAULTS: Record<string, NetworkDefaults> = {
   regtest: {
     daemon_listening_port: '3001',
     default_lsp_url: 'https://api.regtest.kaleidoswap.com/',
-    indexer_url: 'electrum.rgbtools.org:50041',
+    indexer_url: 'electrs:50001',
     ldk_peer_listening_port: '9735',
-    proxy_endpoint: 'rpcs://proxy.iriswallet.com/0.2/json-rpc',
-    rpc_connection_url: 'user:password@regtest-bitcoind.rgbtools.org:80',
+    proxy_endpoint: 'rpc://proxy:3000/json-rpc',
+    rpc_connection_url: 'user:password@bitcoind:18443',
   },
   signet: {
     daemon_listening_port: '3001',

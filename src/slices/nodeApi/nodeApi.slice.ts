@@ -5,8 +5,6 @@ import {
   fetchBaseQuery,
   FetchBaseQueryError,
 } from '@reduxjs/toolkit/query/react'
-import { Body } from '@tauri-apps/api/http'
-import { Blocks } from 'lucide-react'
 
 import { RootState } from '../../app/store'
 import { DEFAULT_TRANSPORT_ENDPOINT } from '../../constants'
@@ -79,21 +77,24 @@ interface CloseChannelRequest {
 }
 
 export interface Channel {
-  channel_id: string
-  funding_txid: string
-  peer_pubkey: string
-  peer_alias: string
+  channel_id: string | null
+  funding_txid: string | null
+  peer_pubkey: string | null
+  peer_alias: string | null
+  short_channel_id: number | null
+  status: ChannelStatus
   ready: boolean
-  short_channel_id: number
-  capacity_sat: number
-  local_balance_msat: number
-  outbound_balance_msat: number
-  inbound_balance_msat: number
+  capacity_sat: number | null
+  local_balance_msat: number | null
+  outbound_balance_msat: number | null
+  inbound_balance_msat: number | null
+  next_outbound_htlc_limit_msat: number | null
+  next_outbound_htlc_minimum_msat: number | null
   is_usable: boolean
   public: boolean
-  asset_id: string
-  asset_local_amount: number
-  asset_remote_amount: number
+  asset_id: string | null
+  asset_local_amount: number | null
+  asset_remote_amount: number | null
 }
 interface ListChannelsResponse {
   channels: Channel[]
@@ -168,6 +169,12 @@ interface AssetBalanceResponse {
   spendable: number
   offchain_outbound: number
   offchain_inbound: number
+}
+
+enum ChannelStatus {
+  Opening = 'Opening',
+  Opened = 'Opened',
+  Closing = 'Closing',
 }
 
 interface RGBInvoiceRequest {
@@ -414,6 +421,13 @@ export const nodeApi = createApi({
         url: '/createutxos',
       }),
     }),
+    estimateFee: builder.query<EstimateFeeResponse, EstimateFeeRequest>({
+      query: (body) => ({
+        body,
+        method: 'POST',
+        url: '/estimatefee',
+      }),
+    }),
     init: builder.query<InitResponse, InitRequest>({
       query: (body) => ({
         body: {
@@ -513,13 +527,6 @@ export const nodeApi = createApi({
         }
       },
     }),
-    estimateFee: builder.query<EstimateFeeResponse, EstimateFeeRequest>({
-      query: (body) => ({
-        body,
-        method: 'POST',
-        url: '/estimatefee',
-      }),
-    }),
     refreshRgbTransfers: builder.query<void, RefreshTransfersRequest>({
       query: (body) => ({
         body,
@@ -600,6 +607,8 @@ export const nodeApi = createApi({
     unlock: builder.query<void, UnlockRequest>({
       query: (body) => ({
         body: {
+          announce_addresses: [],
+          announce_alias: '',
           bitcoind_rpc_host: body.bitcoind_rpc_host,
           bitcoind_rpc_password: body.bitcoind_rpc_password,
           bitcoind_rpc_port: body.bitcoind_rpc_port,

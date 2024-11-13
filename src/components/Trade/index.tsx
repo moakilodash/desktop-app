@@ -1,4 +1,3 @@
-import PropTypes from 'prop-types'
 import React, { useCallback, useState, useEffect, useRef } from 'react'
 import { twJoin } from 'tailwind-merge'
 
@@ -16,49 +15,41 @@ interface AssetOptionProps {
 const DEFAULT_RGB_ICON =
   'https://raw.githubusercontent.com/RGB-WG/rgb.tech/refs/heads/master/static/logo/rgb-symbol-color.svg'
 
-const AssetOption: React.FC<AssetOptionProps> = React.memo(
-  ({ value, label }) => {
-    const [imgSrc, setImgSrc] = useState<string>('')
+const AssetOption = React.memo(({ value, label }: AssetOptionProps) => {
+  const [imgSrc, setImgSrc] = useState<string>('')
 
-    useEffect(() => {
-      const loadIcon = async () => {
-        try {
-          const iconUrl = `https://raw.githubusercontent.com/alexandrebouttier/coinmarketcap-icons-cryptos/refs/heads/main/icons/${value.toLowerCase()}.png`
-          const response = await fetch(iconUrl)
-          if (response.ok) {
-            setImgSrc(iconUrl)
-          } else {
-            throw new Error('Icon not found')
-          }
-        } catch (error) {
-          console.warn(`Failed to load icon for ${value}, using default.`)
-          setImgSrc(DEFAULT_RGB_ICON)
+  useEffect(() => {
+    const loadIcon = async () => {
+      try {
+        const iconUrl = `https://raw.githubusercontent.com/alexandrebouttier/coinmarketcap-icons-cryptos/refs/heads/main/icons/${value.toLowerCase()}.png`
+        const response = await fetch(iconUrl)
+        if (response.ok) {
+          setImgSrc(iconUrl)
+        } else {
+          throw new Error('Icon not found')
         }
+      } catch (error) {
+        console.warn(`Failed to load icon for ${value}, using default.`)
+        setImgSrc(DEFAULT_RGB_ICON)
       }
+    }
 
-      loadIcon()
-    }, [value])
+    loadIcon()
+  }, [value])
 
-    return (
-      <div className="flex items-center">
-        <img
-          alt={label}
-          className="w-5 h-5 mr-2"
-          onError={() => setImgSrc(DEFAULT_RGB_ICON)}
-          src={imgSrc}
-        />
-        {label}
-      </div>
-    )
-  }
-)
-
+  return (
+    <div className="flex items-center">
+      <img
+        alt={label}
+        className="w-5 h-5 mr-2"
+        onError={() => setImgSrc(DEFAULT_RGB_ICON)}
+        src={imgSrc}
+      />
+      {label}
+    </div>
+  )
+})
 AssetOption.displayName = 'AssetOption'
-
-AssetOption.propTypes = {
-  label: PropTypes.string.isRequired,
-  value: PropTypes.string.isRequired,
-}
 
 interface SelectProps {
   active?: string
