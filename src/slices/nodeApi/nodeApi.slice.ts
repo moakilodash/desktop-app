@@ -77,24 +77,24 @@ interface CloseChannelRequest {
 }
 
 export interface Channel {
-  channel_id: string | null
-  funding_txid: string | null
-  peer_pubkey: string | null
-  peer_alias: string | null
-  short_channel_id: number | null
+  channel_id: string
+  funding_txid: string
+  peer_pubkey: string
+  peer_alias: string
+  short_channel_id: number
   status: ChannelStatus
   ready: boolean
-  capacity_sat: number | null
-  local_balance_msat: number | null
-  outbound_balance_msat: number | null
-  inbound_balance_msat: number | null
-  next_outbound_htlc_limit_msat: number | null
-  next_outbound_htlc_minimum_msat: number | null
+  capacity_sat: number
+  local_balance_msat: number
+  outbound_balance_msat: number
+  inbound_balance_msat: number
+  next_outbound_htlc_limit_msat: number
+  next_outbound_htlc_minimum_msat: number
   is_usable: boolean
   public: boolean
-  asset_id: string | null
-  asset_local_amount: number | null
-  asset_remote_amount: number | null
+  asset_id: string
+  asset_local_amount: number
+  asset_remote_amount: number
 }
 interface ListChannelsResponse {
   channels: Channel[]
