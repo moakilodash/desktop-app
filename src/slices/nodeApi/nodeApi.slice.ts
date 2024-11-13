@@ -5,6 +5,7 @@ import {
   fetchBaseQuery,
   FetchBaseQueryError,
 } from '@reduxjs/toolkit/query/react'
+import { build } from 'vite'
 
 import { RootState } from '../../app/store'
 import { DEFAULT_TRANSPORT_ENDPOINT } from '../../constants'
@@ -313,6 +314,14 @@ interface UnlockRequest {
   proxy_endpoint: string
 }
 
+interface InvoiceStatusRequest {
+  invoice: string
+}
+
+interface InvoiceStatusResponse {
+  status: 'Pending' | 'Succeeded' | 'Failed' | 'Expired'
+}
+
 const dynamicBaseQuery: BaseQueryFn<
   string | FetchArgs,
   unknown,
@@ -411,6 +420,13 @@ export const nodeApi = createApi({
         },
         method: 'POST',
         url: '/init',
+      }),
+    }),
+    invoiceStatus: builder.query<InvoiceStatusResponse, InvoiceStatusRequest>({
+      query: (body) => ({
+        body,
+        method: 'POST',
+        url: '/invoicestatus',
       }),
     }),
     issueAsset: builder.query<IssueAssetResponse, IssueAssetRequest>({
