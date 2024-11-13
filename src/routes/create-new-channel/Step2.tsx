@@ -20,6 +20,7 @@ import { FormError } from './FormError'
 interface Props {
   onBack: VoidFunction
   onNext: VoidFunction
+  feeRates: Record<string, number>
 }
 
 interface FormFields {
@@ -355,13 +356,7 @@ export const Step2 = (props: Props) => {
               >
                 {speed.charAt(0).toUpperCase() + speed.slice(1)}
                 <span className="text-xs text-gray-500 ml-2">
-                  (
-                  {speed === 'slow'
-                    ? '1 sat/Bv'
-                    : speed === 'medium'
-                      ? '2 sat/Bv'
-                      : '3 sat/Bv'}
-                  )
+                  ({`${props.feeRates[speed] / 1000} sat/Bv`})
                 </span>
               </button>
             ))}
