@@ -87,7 +87,10 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
           setAssetMap(tmpMap)
         }
       } catch (error) {
-        toast.error('Error fetching data. Please try again later.')
+        toast.error('Error fetching data. Please try again later.', {
+          autoClose: 5000,
+          position: 'bottom-right',
+        })
       } finally {
         setIsLoading(false)
       }
