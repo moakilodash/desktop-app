@@ -27,11 +27,11 @@ export const NETWORK_DEFAULTS: Record<string, NetworkDefaults> = {
   signet: {
     daemon_listening_port: '3001',
     default_lsp_url: 'https://api.signet.kaleidoswap.com/',
-    indexer_url: 'electrs.signet.kaleidoswap.com:60601',
+    indexer_url: 'electrum.signet.kaleidoswap.com:60601',
     ldk_peer_listening_port: '9735',
-    proxy_endpoint: 'rpcs://proxy.signet.kaleidoswap.com/json-rpc',
+    proxy_endpoint: 'rpc://proxy.signet.kaleidoswap.com:3000/json-rpc',
     rpc_connection_url:
-      'user:default_password@bitcoind.signet.kaleidoswap.com:18443',
+      'user:default_password@bitcoind.signet.kaleidoswap.com:38332',
   },
   testnet: {
     daemon_listening_port: '3001',
