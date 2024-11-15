@@ -2,7 +2,7 @@ import QRCode from 'qrcode.react'
 import React, { useState, useCallback } from 'react'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
 import { ClipLoader } from 'react-spinners'
-import { ToastContainer, toast } from 'react-toastify'
+import { toast } from 'react-toastify'
 
 import 'react-toastify/dist/ReactToastify.css'
 import { Lsps1CreateOrderResponse } from '../../slices/makerApi/makerApi.slice'
@@ -222,7 +222,6 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
           </button>
         </div>
       </div>
-      <ToastContainer />
     </div>
   )
 }

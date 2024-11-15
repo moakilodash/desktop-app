@@ -181,7 +181,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
       } else if (networkInfo.network === 'Testnet') {
         newLspUrl = 'https://api.testnet.kaleidoswap.com/'
       } else {
-        newLspUrl = 'https://api.kaleidoswap.com/' // Default to mainnet
+        newLspUrl = 'http://localhost:8000' // Default to mainnet
       }
 
       dispatch(setDefaultLspUrl(newLspUrl))

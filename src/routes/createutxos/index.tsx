@@ -14,13 +14,18 @@ interface FormFields {
 }
 
 export const Component = () => {
+  const [feeRates, setFeeRates] = useState({
+    fast: 3.0,
+    normal: 2.0,
+    slow: 1.0,
+  })
   const [customFee, setCustomFee] = useState(1.0)
 
   const navigate = useNavigate()
 
   const { handleSubmit, register, watch, setValue } = useForm<FormFields>({
     defaultValues: {
-      fee_rate: '2.0',
+      fee_rate: feeRates.normal.toString(),
       num: 4,
       size: 32500,
     },
@@ -33,6 +38,7 @@ export const Component = () => {
   const [btcBalance, btcBalanceResponse] =
     nodeApi.endpoints.btcBalance.useLazyQuery()
   const [createutxos] = nodeApi.useLazyCreateUTXOsQuery()
+  const [estimateFee] = nodeApi.useLazyEstimateFeeQuery()
 
   const onSubmit = (data: FormFields) => {
     createutxos({
@@ -54,6 +60,31 @@ export const Component = () => {
   const refreshData = useCallback(() => {
     btcBalance({ skip_sync: false })
   }, [btcBalance])
+
+  useEffect(() => {
+    const fetchFees = async () => {
+      const slowFeePromise = estimateFee({ blocks: 6 }).unwrap()
+      const normalFeePromise = estimateFee({ blocks: 3 }).unwrap()
+      const fastFeePromise = estimateFee({ blocks: 1 }).unwrap()
+
+      try {
+        const [slowFee, normalFee, fastFee] = await Promise.all([
+          slowFeePromise,
+          normalFeePromise,
+          fastFeePromise,
+        ])
+        setFeeRates({
+          fast: fastFee.fee_rate,
+          normal: normalFee.fee_rate,
+          slow: slowFee.fee_rate,
+        })
+      } catch (e) {
+        console.error(e)
+      }
+    }
+
+    fetchFees()
+  }, [estimateFee])
 
   useEffect(() => {
     refreshData()

@@ -81,12 +81,15 @@ export interface Channel {
   funding_txid: string
   peer_pubkey: string
   peer_alias: string
-  ready: boolean
   short_channel_id: number
+  status: ChannelStatus
+  ready: boolean
   capacity_sat: number
   local_balance_msat: number
   outbound_balance_msat: number
   inbound_balance_msat: number
+  next_outbound_htlc_limit_msat: number
+  next_outbound_htlc_minimum_msat: number
   is_usable: boolean
   public: boolean
   asset_id: string
@@ -166,6 +169,12 @@ interface AssetBalanceResponse {
   spendable: number
   offchain_outbound: number
   offchain_inbound: number
+}
+
+enum ChannelStatus {
+  Opening = 'Opening',
+  Opened = 'Opened',
+  Closing = 'Closing',
 }
 
 interface RGBInvoiceRequest {
@@ -322,6 +331,14 @@ interface InvoiceStatusResponse {
   status: 'Pending' | 'Succeeded' | 'Failed' | 'Expired'
 }
 
+interface EstimateFeeResponse {
+  fee_rate: number
+}
+
+interface EstimateFeeRequest {
+  blocks: number
+}
+
 const dynamicBaseQuery: BaseQueryFn<
   string | FetchArgs,
   unknown,
@@ -411,6 +428,13 @@ export const nodeApi = createApi({
         },
         method: 'POST',
         url: '/createutxos',
+      }),
+    }),
+    estimateFee: builder.query<EstimateFeeResponse, EstimateFeeRequest>({
+      query: (body) => ({
+        body,
+        method: 'POST',
+        url: '/estimatefee',
       }),
     }),
     init: builder.query<InitResponse, InitRequest>({
@@ -600,6 +624,8 @@ export const nodeApi = createApi({
     unlock: builder.query<void, UnlockRequest>({
       query: (body) => ({
         body: {
+          announce_addresses: [],
+          announce_alias: '',
           bitcoind_rpc_host: body.bitcoind_rpc_host,
           bitcoind_rpc_password: body.bitcoind_rpc_password,
           bitcoind_rpc_port: body.bitcoind_rpc_port,

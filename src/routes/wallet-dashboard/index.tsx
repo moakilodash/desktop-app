@@ -269,7 +269,16 @@ export const Component = () => {
   ])
 
   const onChainBalance = btcBalanceResponse.data?.vanilla.settled || 0
+  const onChainFutureBalance = btcBalanceResponse.data?.vanilla.future || 0
+  const onChainSpendableBalance =
+    btcBalanceResponse.data?.vanilla.spendable || 0
+
   const onChainColoredBalance = btcBalanceResponse.data?.colored.settled || 0
+  const onChainColoredFutureBalance =
+    btcBalanceResponse.data?.colored.future || 0
+  const onChainColoredSpendableBalance =
+    btcBalanceResponse.data?.colored.spendable || 0
+
   const channels = listChannelsResponse?.data?.channels || []
   const offChainBalance = channels.reduce(
     (sum, channel) => sum + channel.local_balance_msat / 1000,
@@ -381,20 +390,63 @@ export const Component = () => {
                   </button>
                 </Tooltip>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-sm mt-1">
-                <div>
-                  <span className="text-grey-light">Normal:</span>
-                  <span className="ml-2 text-white">
-                    {formatBitcoinAmount(onChainBalance, bitcoinUnit)}{' '}
-                    {bitcoinUnit}
-                  </span>
+              <div className="grid grid-cols-2 gap-4 text-sm mt-2">
+                <div className="space-y-1">
+                  <h3 className="font-medium text-white">Normal Balance</h3>
+                  <div>
+                    <span className="text-grey-light">Settled:</span>
+                    <span className="ml-2 text-white">
+                      {formatBitcoinAmount(onChainBalance, bitcoinUnit)}{' '}
+                      {bitcoinUnit}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-grey-light">Future:</span>
+                    <span className="ml-2 text-white">
+                      {formatBitcoinAmount(onChainFutureBalance, bitcoinUnit)}{' '}
+                      {bitcoinUnit}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-grey-light">Spendable:</span>
+                    <span className="ml-2 text-white">
+                      {formatBitcoinAmount(
+                        onChainSpendableBalance,
+                        bitcoinUnit
+                      )}{' '}
+                      {bitcoinUnit}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-grey-light">Colored:</span>
-                  <span className="ml-2 text-white">
-                    {formatBitcoinAmount(onChainColoredBalance, bitcoinUnit)}{' '}
-                    {bitcoinUnit}
-                  </span>
+                <div className="space-y-1">
+                  <h3 className="font-medium text-white">Colored Balance</h3>
+                  <div>
+                    <span className="text-grey-light">Settled:</span>
+                    <span className="ml-2 text-white">
+                      {formatBitcoinAmount(onChainColoredBalance, bitcoinUnit)}{' '}
+                      {bitcoinUnit}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-grey-light">Future:</span>
+                    <span className="ml-2 text-white">
+                      {formatBitcoinAmount(
+                        onChainColoredFutureBalance,
+                        bitcoinUnit
+                      )}{' '}
+                      {bitcoinUnit}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-grey-light">Spendable:</span>
+                    <span className="ml-2 text-white">
+                      {formatBitcoinAmount(
+                        onChainColoredSpendableBalance,
+                        bitcoinUnit
+                      )}{' '}
+                      {bitcoinUnit}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

@@ -222,6 +222,7 @@ export const Component = () => {
                         <option value="mainnet">Mainnet</option>
                         <option value="testnet">Testnet</option>
                         <option value="regtest">Regtest</option>
+                        <option value="signet">Signet</option>
                       </select>
                       <ChevronDown className="absolute right-2 top-2.5 h-5 w-5 text-gray-400 pointer-events-none" />
                     </div>

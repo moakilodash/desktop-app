@@ -1,7 +1,7 @@
 import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import { useCallback, useState, useEffect, useRef } from 'react'
 import { ClipLoader } from 'react-spinners'
-import { ToastContainer, toast, Slide } from 'react-toastify'
+import { ToastContainer, toast } from 'react-toastify'
 
 import {
   makerApi,
@@ -32,14 +32,24 @@ export const Component = () => {
   const toastIdRef = useRef<string | number | null>(null)
 
   useEffect(() => {
+    return () => {
+      toast.dismiss()
+    }
+  }, [])
+
+  useEffect(() => {
     if (orderId) {
-      toastIdRef.current = toast.info('Waiting for payment...', {
-        autoClose: false,
-        transition: Slide,
+      if (toastIdRef.current) {
+        toast.dismiss(toastIdRef.current)
+      }
+
+      toastIdRef.current = toast.loading('Waiting for payment...', {
+        position: 'bottom-right',
       })
 
       const intervalId = setInterval(async () => {
         const orderResponse = await getOrderRequest({ order_id: orderId })
+
         if (orderResponse.data?.order_state === 'COMPLETED') {
           clearInterval(intervalId)
           setPaymentStatus('success')
@@ -47,6 +57,7 @@ export const Component = () => {
           if (toastIdRef.current) {
             toast.update(toastIdRef.current, {
               autoClose: 5000,
+              isLoading: false,
               render: 'Payment completed. Channel is being set up.',
               type: 'success',
             })
@@ -58,6 +69,7 @@ export const Component = () => {
           if (toastIdRef.current) {
             toast.update(toastIdRef.current, {
               autoClose: 5000,
+              isLoading: false,
               render: 'Payment failed. Please try again.',
               type: 'error',
             })
@@ -129,7 +141,6 @@ export const Component = () => {
       const channelResponse = await createOrderRequest(payload)
       setLoading(false)
       if (channelResponse.error) {
-        // toast error the message
         let errorMessage = 'An error occurred'
         if ('status' in channelResponse.error) {
           const fetchError = channelResponse.error as FetchBaseQueryError
@@ -137,8 +148,10 @@ export const Component = () => {
         } else {
           errorMessage = channelResponse.error.message || errorMessage
         }
-        toast.error(errorMessage, { autoClose: 5000, transition: Slide })
-        console.error(channelResponse.error)
+        toast.error(errorMessage, {
+          autoClose: 5000,
+          position: 'bottom-right',
+        })
         return
       } else {
         console.log('Request of channel created successfully!')
@@ -188,7 +201,18 @@ export const Component = () => {
         <Step4 paymentStatus={paymentStatus ?? ''} />
       </div>
 
-      <ToastContainer />
+      <ToastContainer
+        autoClose={5000}
+        closeOnClick
+        draggable
+        hideProgressBar={false}
+        newestOnTop={false}
+        pauseOnFocusLoss
+        pauseOnHover
+        position="bottom-right"
+        rtl={false}
+        theme="dark"
+      />
     </div>
   )
 }
