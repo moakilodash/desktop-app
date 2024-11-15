@@ -117,8 +117,40 @@ export const Component = () => {
         network: nodeSetupForm.getValues('network'),
       })
       await new Promise((resolve) => setTimeout(resolve, 5000))
-      console.log('init')
+
       const initResponse = await init({ password: data.password })
+
+      if (
+        initResponse.error &&
+        'status' in initResponse.error &&
+        initResponse.error.status === 403
+      ) {
+        toast.info('Node is already initialized, attempting to unlock...')
+        setNodePassword(data.password)
+        // Try unlocking directly
+        const rpcConfig = parseRpcUrl(
+          nodeSetupForm.getValues('rpc_connection_url')
+        )
+        const unlockResponse = await unlock({
+          bitcoind_rpc_host: rpcConfig.host,
+          bitcoind_rpc_password: rpcConfig.password,
+          bitcoind_rpc_port: rpcConfig.port,
+          bitcoind_rpc_username: rpcConfig.username,
+          indexer_url: nodeSetupForm.getValues('indexer_url'),
+          password: data.password,
+          proxy_endpoint: nodeSetupForm.getValues('proxy_endpoint'),
+        })
+
+        if (unlockResponse.isSuccess) {
+          const nodeInfoRes = await nodeInfo()
+          if (nodeInfoRes.isSuccess) {
+            navigate(TRADE_PATH)
+            return
+          }
+        }
+        throw new Error('Failed to unlock the node')
+      }
+
       if (!initResponse.isSuccess) {
         throw new Error(
           initResponse.error && 'data' in initResponse.error
