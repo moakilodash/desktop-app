@@ -5,7 +5,7 @@ BUILD_DIR = $(PROJECT_NAME)/target
 ROOT_DIR = $(CURDIR)
 ARCH = $(shell uname -m)
 OS = $(shell uname -s)
-REPO_URL = https://github.com/RGB-Tools/rgb-lightning-node
+REPO_URL = https://github.com/kaleidoswap/rgb-lightning-node
 PROJECT_DIR = $(ROOT_DIR)/$(PROJECT_NAME)
 BIN_DIR = $(ROOT_DIR)/bin
 

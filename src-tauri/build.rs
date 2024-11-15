@@ -303,7 +303,7 @@ impl ProjectBuilder {
 
         // Clone the repository into the project root
         let clone_status = Command::new("git")
-            .args(&["clone", "https://github.com/RGB-Tools/rgb-lightning-node", "--recurse-submodules", "--shallow-submodules"])
+            .args(&["clone", "https://github.com/kaleidoswap/rgb-lightning-node", "--recurse-submodules", "--shallow-submodules"])
             .current_dir(&project_root) // Ensure the working directory is set to the project root
             .status()
             .expect("Failed to clone the repository");
