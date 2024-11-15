@@ -71,6 +71,7 @@ export const Component: React.FC = () => {
     (state: RootState) => state.settings.bitcoinUnit
   )
 
+  const { data: listAsstetsData } = nodeApi.endpoints.listAssets.useQuery()
   const {
     data: transactionsData,
     isLoading: transactionsLoading,
@@ -128,7 +129,9 @@ export const Component: React.FC = () => {
         amount: payment.asset_id
           ? payment.asset_amount.toString()
           : (payment.amt_msat / 1000).toString(),
-        asset: payment.asset_id || 'BTC',
+        asset:
+          listAsstetsData?.nia.find((a) => a.asset_id === payment.asset_id)
+            ?.ticker || 'BTC',
         txId: payment.payment_hash,
         type: 'off-chain' as const,
       })) || []

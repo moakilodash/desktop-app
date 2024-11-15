@@ -188,8 +188,9 @@ interface RGBInvoiceResponse {
 }
 
 interface LNInvoiceRequest {
-  asset_id: string
-  asset_amount: number
+  amt_msat?: number
+  asset_id?: string
+  asset_amount?: number
 }
 
 interface LNINvoiceResponse {
@@ -322,6 +323,14 @@ interface UnlockRequest {
   proxy_endpoint: string
 }
 
+interface InvoiceStatusRequest {
+  invoice: string
+}
+
+interface InvoiceStatusResponse {
+  status: 'Pending' | 'Succeeded' | 'Failed' | 'Expired'
+}
+
 interface EstimateFeeResponse {
   fee_rate: number
 }
@@ -437,6 +446,13 @@ export const nodeApi = createApi({
         url: '/init',
       }),
     }),
+    invoiceStatus: builder.query<InvoiceStatusResponse, InvoiceStatusRequest>({
+      query: (body) => ({
+        body,
+        method: 'POST',
+        url: '/invoicestatus',
+      }),
+    }),
     issueAsset: builder.query<IssueAssetResponse, IssueAssetRequest>({
       query: (body) => ({
         body,
@@ -484,12 +500,13 @@ export const nodeApi = createApi({
     }),
     lnInvoice: builder.query<LNINvoiceResponse, LNInvoiceRequest>({
       query: (body) => ({
-        body: {
-          amt_msat: 3000000,
-          asset_amount: body.asset_amount,
-          asset_id: body.asset_id === 'btc' ? null : body.asset_id,
-          expiry_sec: 420,
-        },
+        body: { ...body, amt_msat: body.amt_msat || 3000000, expiry_sec: 420 },
+        // body: {
+        //   amt_msat: body.amt_msat || 3000000,
+        //   asset_amount: body.asset_amount,
+        //   asset_id: body.asset_id === 'btc' ? null : body.asset_id,
+        //   expiry_sec: 420,
+        // },
         method: 'POST',
         url: '/lninvoice',
       }),

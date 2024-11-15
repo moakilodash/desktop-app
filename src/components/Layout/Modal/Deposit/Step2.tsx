@@ -1,13 +1,16 @@
+import { CircleCheckBig, CircleX } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useEffect, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'react-toastify'
 import { twJoin } from 'tailwind-merge'
 
+import { useAppSelector } from '../../../../app/store/hooks'
 import { Spinner } from '../../../../components/Spinner' // Assuming you have a Spinner component
 import { BTC_ASSET_ID } from '../../../../constants'
 import { CopyIcon } from '../../../../icons/Copy'
 import { nodeApi } from '../../../../slices/nodeApi/nodeApi.slice'
+
 
 interface Props {
   assetId: string
@@ -26,6 +29,8 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
   const [rgbLoading, setRgbLoading] = useState<boolean>(false)
   const [addressLoading, setAddressLoading] = useState<boolean>(false)
 
+  const bitcoinUnit = useAppSelector((state) => state.settings.bitcoinUnit)
+
   const [assets, assetsResponse] = nodeApi.endpoints.listAssets.useLazyQuery()
   const [addressQuery] = nodeApi.endpoints.address.useLazyQuery()
   const [lnInvoice] = nodeApi.endpoints.lnInvoice.useLazyQuery()
@@ -41,15 +46,32 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
   const amount = form.watch('amount')
   const network = form.watch('network')
 
+  const { data: invoiceStatus } = nodeApi.useInvoiceStatusQuery(
+    { invoice: address as string },
+    {
+      pollingInterval: 1000,
+      skip: !address?.startsWith('ln') || network != 'lightning',
+    }
+  )
+
   const generateLightningInvoice = async () => {
     if (network === 'lightning' && assetId && amount && amount > 0) {
       setLoading(true)
       setAddressLoading(true)
       try {
-        const res = await lnInvoice({
-          asset_amount: Number(amount),
-          asset_id: assetId,
-        })
+        const res = await lnInvoice(
+          assetId === BTC_ASSET_ID
+            ? {
+                amt_msat:
+                  bitcoinUnit === 'SAT'
+                    ? Number(amount) * 1000
+                    : Number(amount) * Math.pow(10, 8) * 1000,
+              }
+            : {
+                asset_amount: Number(amount),
+                asset_id: assetId,
+              }
+        )
         if ('error' in res && res.error) {
           toast.error(
             'data' in res.error &&
@@ -203,7 +225,9 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
                 />
                 <div className="bg-blue-dark rounded-r flex items-center pr-4 text-cyan">
                   {assetId === BTC_ASSET_ID
-                    ? 'BTC'
+                    ? bitcoinUnit === 'SAT'
+                      ? 'SAT'
+                      : 'BTC'
                     : assetsResponse.data?.nia.find(
                         (a) => a.asset_id === assetId
                       )?.ticker}
@@ -225,25 +249,49 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
               <Spinner />
             </div>
           ) : address && address.length > 0 ? (
-            <div className="flex items-center space-x-6 max-w-fit mt-6">
-              <QRCodeSVG fgColor="#3A3C4A" value={address ?? ''} />
-              <div>
-                <div className="text-xs font-light">Wallet Address:</div>
-                <div className="flex items-center space-x-4">
-                  <div className="break-words overflow-hidden whitespace-normal">
-                    {address.length > 67
-                      ? address.slice(0, 64) + '...'
-                      : address}
-                  </div>{' '}
-                  <div
-                    className="cursor-pointer"
-                    onClick={() => {
-                      navigator.clipboard.writeText(address ?? '').then(() => {
-                        toast.success('Invoice copied to clipboard')
-                      })
-                    }}
-                  >
-                    <CopyIcon />
+            <div className="flex flex-col space-y-10">
+              {network === 'lightning' &&
+              invoiceStatus?.status === 'Pending' ? (
+                <div className="flex">
+                  <Spinner size="sm" />
+                  <div className="ms-2">Waiting for invoice to be paid</div>
+                </div>
+              ) : invoiceStatus?.status === 'Succeeded' ? (
+                <div className="flex">
+                  <CircleCheckBig />
+                  <div className="ms-2">Invoice Paid Successfully</div>
+                </div>
+              ) : (
+                (invoiceStatus?.status === 'Expired' ||
+                  invoiceStatus?.status === 'Failed') && (
+                  <div className="flex">
+                    <CircleX />
+                    <div className="ms-2">{invoiceStatus?.status}</div>
+                  </div>
+                )
+              )}
+              <div className="flex items-center space-x-6 max-w-fit mt-6">
+                <QRCodeSVG fgColor="#3A3C4A" value={address ?? ''} />
+                <div>
+                  <div className="text-xs font-light">Wallet Address:</div>
+                  <div className="flex items-center space-x-4">
+                    <div className="break-words overflow-hidden whitespace-normal">
+                      {address.length > 67
+                        ? address.slice(0, 64) + '...'
+                        : address}
+                    </div>{' '}
+                    <div
+                      className="cursor-pointer"
+                      onClick={() => {
+                        navigator.clipboard
+                          .writeText(address ?? '')
+                          .then(() => {
+                            toast.success('Invoice copied to clipboard')
+                          })
+                      }}
+                    >
+                      <CopyIcon />
+                    </div>
                   </div>
                 </div>
               </div>
