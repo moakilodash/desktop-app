@@ -5,10 +5,12 @@ import { Controller, useForm } from 'react-hook-form'
 import { toast } from 'react-toastify'
 import { twJoin } from 'tailwind-merge'
 
+import { useAppSelector } from '../../../../app/store/hooks'
 import { Spinner } from '../../../../components/Spinner' // Assuming you have a Spinner component
 import { BTC_ASSET_ID } from '../../../../constants'
 import { CopyIcon } from '../../../../icons/Copy'
 import { nodeApi } from '../../../../slices/nodeApi/nodeApi.slice'
+
 
 interface Props {
   assetId: string
@@ -26,6 +28,8 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
   const [loading, setLoading] = useState<boolean>(false)
   const [rgbLoading, setRgbLoading] = useState<boolean>(false)
   const [addressLoading, setAddressLoading] = useState<boolean>(false)
+
+  const bitcoinUnit = useAppSelector((state) => state.settings.bitcoinUnit)
 
   const [assets, assetsResponse] = nodeApi.endpoints.listAssets.useLazyQuery()
   const [addressQuery] = nodeApi.endpoints.address.useLazyQuery()
@@ -58,7 +62,10 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
         const res = await lnInvoice(
           assetId === BTC_ASSET_ID
             ? {
-                amt_msat: Number(amount) * 1000,
+                amt_msat:
+                  bitcoinUnit === 'SAT'
+                    ? Number(amount) * 1000
+                    : Number(amount) * Math.pow(10, 8) * 1000,
               }
             : {
                 asset_amount: Number(amount),
@@ -218,7 +225,9 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
                 />
                 <div className="bg-blue-dark rounded-r flex items-center pr-4 text-cyan">
                   {assetId === BTC_ASSET_ID
-                    ? 'BTC'
+                    ? bitcoinUnit === 'SAT'
+                      ? 'SAT'
+                      : 'BTC'
                     : assetsResponse.data?.nia.find(
                         (a) => a.asset_id === assetId
                       )?.ticker}
