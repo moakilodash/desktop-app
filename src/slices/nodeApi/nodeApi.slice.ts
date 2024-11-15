@@ -5,7 +5,6 @@ import {
   fetchBaseQuery,
   FetchBaseQueryError,
 } from '@reduxjs/toolkit/query/react'
-import { build } from 'vite'
 
 import { RootState } from '../../app/store'
 import { DEFAULT_TRANSPORT_ENDPOINT } from '../../constants'
@@ -180,8 +179,9 @@ interface RGBInvoiceResponse {
 }
 
 interface LNInvoiceRequest {
-  asset_id: string
-  asset_amount: number
+  amt_msat?: number
+  asset_id?: string
+  asset_amount?: number
 }
 
 interface LNINvoiceResponse {
@@ -476,12 +476,13 @@ export const nodeApi = createApi({
     }),
     lnInvoice: builder.query<LNINvoiceResponse, LNInvoiceRequest>({
       query: (body) => ({
-        body: {
-          amt_msat: 3000000,
-          asset_amount: body.asset_amount,
-          asset_id: body.asset_id === 'btc' ? null : body.asset_id,
-          expiry_sec: 420,
-        },
+        body: { ...body, amt_msat: body.amt_msat || 3000000, expiry_sec: 420 },
+        // body: {
+        //   amt_msat: body.amt_msat || 3000000,
+        //   asset_amount: body.asset_amount,
+        //   asset_id: body.asset_id === 'btc' ? null : body.asset_id,
+        //   expiry_sec: 420,
+        // },
         method: 'POST',
         url: '/lninvoice',
       }),

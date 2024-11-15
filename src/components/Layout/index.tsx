@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { ToastContainer } from 'react-toastify'
+import { toast, ToastContainer } from 'react-toastify'
 
 import {
   TRADE_PATH,
@@ -14,6 +14,7 @@ import { LayoutModal } from './Modal'
 import { WalletMenu } from './WalletMenu'
 
 import 'react-toastify/dist/ReactToastify.min.css'
+import { useEffect, useState } from 'react'
 
 interface Props {
   className?: string
@@ -34,8 +35,36 @@ const NAV_ITEMS = [
 ]
 
 export const Layout = (props: Props) => {
+  const [lastDeposit, setLastDeposit] = useState<number | undefined>(undefined)
+
   const location = useLocation()
   const nodeInfo = nodeApi.endpoints.nodeInfo.useQueryState()
+
+  const { data } = nodeApi.useListTransactionsQuery(
+    { skip_sync: false },
+    { pollingInterval: 10_000 }
+  )
+
+  useEffect(() => {
+    console.log('Checking for deposits')
+    const highestBlockDeposit = data?.transactions
+      .filter((transaction) => transaction.transaction_type === 'User')
+      .reduce((prev, current) =>
+        prev?.confirmation_time?.height > current?.confirmation_time?.height
+          ? prev
+          : current
+      )
+    if (
+      lastDeposit &&
+      highestBlockDeposit &&
+      highestBlockDeposit?.confirmation_time?.height > lastDeposit
+    ) {
+      console.log('Deposit received')
+      toast.info('Deposit received')
+    }
+
+    setLastDeposit(highestBlockDeposit?.confirmation_time?.height)
+  }, [data])
 
   return (
     <div className={props.className}>

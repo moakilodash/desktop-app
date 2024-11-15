@@ -55,10 +55,16 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
       setLoading(true)
       setAddressLoading(true)
       try {
-        const res = await lnInvoice({
-          asset_amount: Number(amount),
-          asset_id: assetId,
-        })
+        const res = await lnInvoice(
+          assetId === BTC_ASSET_ID
+            ? {
+                amt_msat: Number(amount) * 1000,
+              }
+            : {
+                asset_amount: Number(amount),
+                asset_id: assetId,
+              }
+        )
         if ('error' in res && res.error) {
           toast.error(
             'data' in res.error &&
