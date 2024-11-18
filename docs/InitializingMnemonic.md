@@ -1,25 +1,13 @@
-# Creating a New Wallet
+# Initializing with Mnemonic Backup
 
 [← Back to Documentation](README.md)
 
-When you first launch the app, you'll need to create a new wallet. You have two options:
+Backing up your wallet is crucial. The app will generate a mnemonic phrase (a series of words) that acts as a backup.
 
-## Remote Wallet
-
-A remote wallet stores your keys on a remote server, allowing access from multiple devices.
-
-1. **Select "Create Remote Wallet"**: On the welcome screen, choose the remote wallet option.
-2. **Set Credentials**: Enter a strong password and any additional required information.
-3. **Backup**: Ensure you save any backup phrases or keys provided.
-
-## Local Wallet
-
-A local wallet stores your keys on your device, offering enhanced security.
-
-1. **Select "Create Local Wallet"**: Choose the local wallet option on the welcome screen.
-2. **Set a Secure Password**: Enter a strong password to protect your wallet.
-3. **Backup**: Write down the mnemonic phrase provided and store it securely.
+1. **Generate Mnemonic**: The app will display a 12 or 24-word mnemonic phrase.
+2. **Save the Mnemonic**: Write down the phrase on paper or a secure medium. Do not store it digitally if possible.
+3. **Confirm Mnemonic**: The app may prompt you to confirm certain words to verify you've saved it correctly.
 
 ---
 
-*Next: [Initializing with Mnemonic Backup](InitializingMnemonic.md)*
+*Next: [Unlocking Your Wallet](UnlockingWallet.md)*

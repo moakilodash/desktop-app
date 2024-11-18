@@ -21,4 +21,4 @@ For testnet coins, you can use the [Mutiny Faucet](https://faucet.mutinywallet.c
 
 ---
 
-*Next: [Opening a New Channel with Assets](OpeningChannel.md)*
+*Next: [Opening a New Channel](OpeningChannel.md)*

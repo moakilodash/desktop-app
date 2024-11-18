@@ -10,4 +10,4 @@ When another user wants to open a channel with you:
 
 ---
 
-*Next: [How It Works in the Background](Background.md)*
+*Next: [Asset Swaps](AssetSwaps.md)*

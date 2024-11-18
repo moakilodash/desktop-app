@@ -15,4 +15,4 @@ To access your wallet features, you'll need to unlock it each time you open the 
 
 ---
 
-*Next: [Funding Your Bitcoin Wallet](FundingWallet.md)*
+*Next: [Settings](Settings.md)*
