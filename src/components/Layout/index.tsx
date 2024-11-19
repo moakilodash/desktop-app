@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { toast, ToastContainer } from 'react-toastify'
 
@@ -12,9 +13,9 @@ import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 import { ChannelMenu } from './ChannelMenu'
 import { LayoutModal } from './Modal'
 import { WalletMenu } from './WalletMenu'
-
 import 'react-toastify/dist/ReactToastify.min.css'
-import { useEffect, useState } from 'react'
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 interface Props {
   className?: string
@@ -36,35 +37,56 @@ const NAV_ITEMS = [
 
 export const Layout = (props: Props) => {
   const [lastDeposit, setLastDeposit] = useState<number | undefined>(undefined)
-
+  const [isRetrying, setIsRetrying] = useState(false)
   const location = useLocation()
-  const nodeInfo = nodeApi.endpoints.nodeInfo.useQueryState()
 
-  const { data } = nodeApi.useListTransactionsQuery(
+  const nodeInfo = nodeApi.endpoints.nodeInfo.useQueryState()
+  const shouldPoll = nodeInfo.isSuccess
+
+  const { data, error } = nodeApi.useListTransactionsQuery(
     { skip_sync: false },
-    { pollingInterval: 10_000 }
+    {
+      pollingInterval: 10_000,
+      skip: isRetrying || !shouldPoll,
+    }
   )
 
   useEffect(() => {
-    console.log('Checking for deposits')
-    const highestBlockDeposit = data?.transactions
-      .filter((transaction) => transaction.transaction_type === 'User')
-      .reduce((prev, current) =>
-        prev?.confirmation_time?.height > current?.confirmation_time?.height
-          ? prev
-          : current
-      )
-    if (
-      lastDeposit &&
-      highestBlockDeposit &&
-      highestBlockDeposit?.confirmation_time?.height > lastDeposit
-    ) {
-      console.log('Deposit received')
-      toast.info('Deposit received')
+    const checkDeposits = async () => {
+      if (!shouldPoll) return
+
+      console.log('Checking for deposits')
+
+      if (error && 'status' in error && error.status === 403) {
+        console.log('Node is locked, waiting to retry...')
+        setIsRetrying(true)
+        await sleep(3000)
+        setIsRetrying(false)
+        return
+      }
+
+      const highestBlockDeposit = data?.transactions
+        .filter((transaction) => transaction.transaction_type === 'User')
+        .reduce((prev, current) =>
+          prev?.confirmation_time?.height > current?.confirmation_time?.height
+            ? prev
+            : current
+        )
+
+      if (
+        lastDeposit &&
+        highestBlockDeposit &&
+        highestBlockDeposit?.confirmation_time?.height > lastDeposit
+      ) {
+        console.log('Deposit received')
+        toast.info('Deposit received')
+      }
+
+      setLastDeposit(highestBlockDeposit?.confirmation_time?.height)
     }
 
-    setLastDeposit(highestBlockDeposit?.confirmation_time?.height)
-  }, [data])
+    checkDeposits()
+  }, [data, error, shouldPoll, lastDeposit])
 
   return (
     <div className={props.className}>
@@ -73,7 +95,7 @@ export const Layout = (props: Props) => {
           <header className="flex items-center mb-20">
             <img alt="KaleidoSwap" src={logo} />
 
-            {nodeInfo.isSuccess ? (
+            {nodeInfo.isSuccess && (
               <>
                 <nav className="flex-1 ml-16">
                   <ul className="flex space-x-6 items-center">
@@ -98,11 +120,10 @@ export const Layout = (props: Props) => {
 
                 <div className="flex space-x-6 items-center">
                   <ChannelMenu />
-
                   <WalletMenu />
                 </div>
               </>
-            ) : null}
+            )}
           </header>
 
           <main className="flex justify-center items-center flex-1">
