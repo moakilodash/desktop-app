@@ -53,7 +53,8 @@ export const Component = () => {
             Welcome to KaleidoSwap
           </h1>
           <p className="text-gray-300 text-center mb-10">
-            Choose an option to get started with your KaleidoSwap journey
+            Select an existing account or create a new one to get started with
+            your KaleidoSwap journey
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <WalletOption
