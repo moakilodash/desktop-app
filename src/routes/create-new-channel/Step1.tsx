@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
 
 import { useAppDispatch } from '../../app/store/hooks'
-import { KALEIDOSWAP_LSP_URL } from '../../constants'
+import { NETWORK_DEFAULTS } from '../../constants/networks'
 import { BitFinexBoxIcon } from '../../icons/BitFinexBox'
 import { KaleidoswapBoxIcon } from '../../icons/KaleidoswapBox'
 import {
@@ -48,15 +48,8 @@ export const Step1 = (props: Props) => {
       setError('')
       try {
         const networkInfo = await getNetworkInfo().unwrap()
-        let apiUrl = KALEIDOSWAP_LSP_URL
-
-        if (networkInfo.network === 'Regtest') {
-          apiUrl = 'https://api.regtest.kaleidoswap.com'
-        } else if (networkInfo.network === 'Testnet') {
-          apiUrl = 'https://api.testnet.kaleidoswap.com'
-        } else if (networkInfo.network === 'Signet') {
-          apiUrl = 'https://api.signet.kaleidoswap.com'
-        }
+        const apiUrl =
+          NETWORK_DEFAULTS[networkInfo.network.toLowerCase()].default_lsp_url
 
         const response = await axios.get(`${apiUrl}/api/v1/lsps1/get_info`)
         setLspConnectionUrl(response.data.lsp_connection_url)

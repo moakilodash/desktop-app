@@ -46,7 +46,7 @@ export const Layout = (props: Props) => {
   const { data, error } = nodeApi.useListTransactionsQuery(
     { skip_sync: false },
     {
-      pollingInterval: 10_000,
+      pollingInterval: 60_000,
       skip: isRetrying || !shouldPoll,
     }
   )

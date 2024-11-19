@@ -172,7 +172,7 @@ interface Toast {
   autoClose?: number
 }
 
-const ToastContainer: React.FC<{
+const StatusToastContainer: React.FC<{
   toasts: Toast[]
   onRemove: (id: string) => void
 }> = ({ toasts, onRemove }) => {
@@ -278,7 +278,7 @@ export const StatusToast: React.FC<{
     })
   }, [data, assets])
 
-  return <ToastContainer onRemove={removeToast} toasts={toasts} />
+  return <StatusToastContainer onRemove={removeToast} toasts={toasts} />
 }
 
 // Helper function to update a specific toast

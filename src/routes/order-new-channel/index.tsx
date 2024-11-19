@@ -1,7 +1,7 @@
 import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import { useCallback, useState, useEffect, useRef } from 'react'
 import { ClipLoader } from 'react-spinners'
-import { ToastContainer, toast } from 'react-toastify'
+import { toast } from 'react-toastify'
 
 import {
   makerApi,
@@ -86,10 +86,20 @@ export const Component = () => {
     }
   }, [orderId, getOrderRequest])
 
-  const onSubmitStep1 = useCallback(async (data: { connectionUrl: string }) => {
-    console.log('Step 1 submitted:', data)
-    setStep(2)
-  }, [])
+  const onSubmitStep1 = useCallback(
+    async (data: { connectionUrl: string; success: boolean }) => {
+      console.log('Step 1 submitted:', data)
+      if (data.success) {
+        setStep(2)
+      } else {
+        toast.error('Failed to connect to LSP. Please try again.', {
+          autoClose: 5000,
+          position: 'bottom-right',
+        })
+      }
+    },
+    []
+  )
 
   const onSubmitStep2 = useCallback(
     async (data: any) => {
@@ -200,19 +210,6 @@ export const Component = () => {
       <div className={step !== 4 ? 'hidden' : ''}>
         <Step4 paymentStatus={paymentStatus ?? ''} />
       </div>
-
-      <ToastContainer
-        autoClose={5000}
-        closeOnClick
-        draggable
-        hideProgressBar={false}
-        newestOnTop={false}
-        pauseOnFocusLoss
-        pauseOnHover
-        position="bottom-right"
-        rtl={false}
-        theme="dark"
-      />
     </div>
   )
 }

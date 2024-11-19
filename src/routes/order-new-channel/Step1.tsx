@@ -1,3 +1,4 @@
+import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import { Globe, Link, Copy, ArrowRight, CheckCircle, Info } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
@@ -14,7 +15,7 @@ import {
 } from '../../slices/settings/settings.slice'
 
 interface Props {
-  onNext: (data: any) => void
+  onNext: (data: { connectionUrl: string; success: boolean }) => void
 }
 
 const ConnectPopup: React.FC<{
@@ -115,11 +116,9 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
   const checkNetwork = async () => {
     try {
       const networkInfo = await getNetworkInfo().unwrap()
-      if (networkInfo.network === 'Regtest') {
-        setConnectionUrl('https://api.regtest.kaleidoswap.com/')
-      } else if (networkInfo.network === 'Testnet') {
-        setConnectionUrl('https://api.testnet.kaleidoswap.com/')
-      }
+      setConnectionUrl(
+        NETWORK_DEFAULTS[networkInfo.network.toLowerCase()].default_lsp_url
+      )
     } catch (error) {
       console.error('Error checking network:', error)
     }
@@ -155,18 +154,27 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
     setShowConnectPopup(false)
     if (isAlreadyConnected) {
       toast.success('Already connected to LSP')
-      onNext({ connectionUrl })
+      onNext({ connectionUrl, success: true })
       return
     }
     setIsLoading(true)
     try {
       const response = await connectPeer({ pubkey_and_addr: connectionUrl })
+      if ('error' in response) {
+        const error = response.error as FetchBaseQueryError
+        const errorMessage =
+          error.data && typeof error.data === 'object' && 'error' in error.data
+            ? String(error.data.error)
+            : 'Failed to connect to peer'
+        throw new Error(errorMessage)
+      }
       console.log('Connect peer response:', response)
       toast.success('Successfully connected to LSP')
-      onNext({ connectionUrl })
+      onNext({ connectionUrl, success: true })
     } catch (error) {
       console.error('Failed to connect to peer:', error)
-      toast.error('Failed to connect to LSP')
+      toast.error(`${error}`)
+      setShowConnectPopup(false)
     } finally {
       setIsLoading(false)
     }
@@ -177,7 +185,9 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
     try {
       const networkInfo = await getNetworkInfo().unwrap()
       dispatch(
-        setDefaultLspUrl(NETWORK_DEFAULTS[networkInfo.network].default_lsp_url)
+        setDefaultLspUrl(
+          NETWORK_DEFAULTS[networkInfo.network.toLowerCase()].default_lsp_url
+        )
       )
       await fetchLspInfo()
     } catch (error) {
