@@ -211,7 +211,7 @@ export const Toolbar = () => {
           onClick={closeModal}
         >
           <div
-            className="bg-gray-800 text-white p-6 rounded-lg shadow-lg text-center max-w-md w-full mx-4"
+            className="bg-gray-800 text-white p-6 rounded-lg shadow-lg text-center max-w-md w-full mx-4 overflow-auto max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-2xl font-semibold mb-4">Switch Account</h2>
@@ -219,21 +219,21 @@ export const Toolbar = () => {
               Are you sure you want to switch to the following account?
             </p>
             {selectedAccount && (
-              <div className="bg-gray-700 p-4 rounded-lg mb-6 text-left">
-                <p>
+              <div className="bg-gray-700 p-4 rounded-lg mb-6 text-left space-y-2">
+                <p className="break-words">
                   <strong>Name:</strong> {selectedAccount.name}
                 </p>
-                <p>
+                <p className="break-words">
                   <strong>Network:</strong> {selectedAccount.network}
                 </p>
-                <p>
+                <p className="break-words">
                   <strong>Node Type:</strong>{' '}
                   {selectedAccount.datapath ? 'Local' : 'Remote'}
                 </p>
-                <p>
+                <p className="break-words">
                   <strong>Node URL:</strong> {selectedAccount.node_url}
                 </p>
-                <p>
+                <p className="break-words">
                   <strong>RPC URL:</strong> {selectedAccount.rpc_connection_url}
                 </p>
               </div>

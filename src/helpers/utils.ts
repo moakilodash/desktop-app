@@ -5,6 +5,7 @@ export const parseRpcUrl = (url: string) => {
     const [host, port] = hostPort.split(':')
     return { host, password, port: parseInt(port, 10), username }
   } catch {
+    console.error('Error parsing RPC URL:', url)
     return {
       host: 'localhost',
       password: 'password',
