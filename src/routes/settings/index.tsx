@@ -48,6 +48,7 @@ export const Component: React.FC = () => {
   const { bitcoinUnit, nodeConnectionString, defaultLspUrl } = useSelector(
     (state: RootState) => state.settings
   )
+  const currentAccount = useAppSelector((state) => state.nodeSettings.data)
 
   const [showModal, setShowModal] = useState(false)
   const [backupModal, setBackupModal] = useState(false)
@@ -85,18 +86,36 @@ export const Component: React.FC = () => {
     reset({
       backupPath: '',
       bitcoinUnit,
-      lspUrl: defaultLspUrl || 'http://localhost:8000',
+      lspUrl: nodeSettings.default_lsp_url || 'http://localhost:8000',
       nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
       nodePassword: '',
     })
-  }, [bitcoinUnit, nodeConnectionString, defaultLspUrl, reset])
+  }, [bitcoinUnit, nodeConnectionString, nodeSettings.default_lsp_url, reset])
 
-  const handleSave = (data: FormFields) => {
-    dispatch(setBitcoinUnit(data.bitcoinUnit))
-    dispatch(setNodeConnectionString(data.nodeConnectionString))
-    dispatch(setDefaultLspUrl(data.lspUrl))
-    setShowModal(true)
-    setTimeout(() => setShowModal(false), 2000)
+  const handleSave = async (data: FormFields) => {
+    try {
+      dispatch(setBitcoinUnit(data.bitcoinUnit))
+      dispatch(setNodeConnectionString(data.nodeConnectionString))
+      dispatch(setDefaultLspUrl(data.lspUrl))
+
+      // Update the account in the database
+      await invoke('update_account', {
+        datapath: currentAccount.datapath,
+        defaultLspUrl: data.lspUrl,
+        indexerUrl: currentAccount.indexer_url,
+        name: currentAccount.name,
+        network: currentAccount.network,
+        nodeUrl: currentAccount.node_url,
+        proxyEndpoint: currentAccount.proxy_endpoint,
+        rpcConnectionUrl: currentAccount.rpc_connection_url,
+      })
+
+      setShowModal(true)
+      setTimeout(() => setShowModal(false), 2000)
+    } catch (error) {
+      console.error('Failed to save settings:', error)
+      toast.error('Failed to save settings')
+    }
   }
 
   const performBackup = async (data: FormFields) => {

@@ -89,26 +89,41 @@ export const Component = () => {
       return
     }
 
-    // Save node settings first
-    try {
-      await dispatch(
-        setSettingsAsync({
-          datapath: '',
-          indexer_url: data.indexer_url,
-          name: data.name,
-          network: data.network,
-          node_url: data.node_url,
-          proxy_endpoint: data.proxy_endpoint,
-          rpc_connection_url: data.rpc_connection_url,
-        })
-      )
+    // Save node settings
+    await dispatch(
+      setSettingsAsync({
+        datapath: '',
+        default_lsp_url: NETWORK_DEFAULTS[data.network].default_lsp_url,
+        indexer_url: data.indexer_url,
+        name: data.name,
+        network: data.network,
+        node_url: data.node_url,
+        proxy_endpoint: data.proxy_endpoint,
+        rpc_connection_url: data.rpc_connection_url,
+      })
+    )
 
-      // Check node status with direct fetch
+    // Insert account
+    await invoke('insert_account', {
+      datapath: '',
+      defaultLspUrl: NETWORK_DEFAULTS[data.network].default_lsp_url,
+      indexerUrl: data.indexer_url,
+      name: data.name,
+      network: data.network,
+      nodeUrl: data.node_url,
+      proxyEndpoint: data.proxy_endpoint,
+      rpcConnectionUrl: data.rpc_connection_url,
+    })
+
+    // Set as current account
+    await invoke('set_current_account', { accountName: data.name })
+
+    try {
+      // Check node status
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       }
 
-      // Add auth token if enabled
       if (data.useAuth && data.authToken) {
         headers['Authorization'] = `Bearer ${data.authToken}`
       }
@@ -118,35 +133,19 @@ export const Component = () => {
         method: 'GET',
       })
 
-      try {
-        await invoke('insert_account', {
-          datapath: '',
-          indexerUrl: data.indexer_url,
-          name: data.name,
-          network: data.network,
-          nodeUrl: data.node_url,
-          proxyEndpoint: data.proxy_endpoint,
-          rpcConnectionUrl: data.rpc_connection_url,
-        })
-
-        if (response.status === 403) {
-          navigate(WALLET_UNLOCK_PATH)
-          return
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-
-        navigate(TRADE_PATH)
-      } catch (error) {
-        console.error('Failed to insert account:', error)
-        toast.error('Failed to insert account...')
-        dispatch(nodeSettingsActions.resetNodeSettings())
+      if (response.status === 403) {
+        navigate(WALLET_UNLOCK_PATH)
+        return
       }
-    } catch (error: any) {
-      console.error('Failed to connect to node:', error)
-      toast.error('Failed to connect to node. Please check your settings.')
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      navigate(TRADE_PATH)
+    } catch (error) {
+      console.error('Failed to setup remote node:', error)
+      toast.error('Failed to setup remote node. Please check your settings.')
       dispatch(nodeSettingsActions.resetNodeSettings())
     }
   }

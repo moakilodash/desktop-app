@@ -91,6 +91,7 @@ export const Component = () => {
       await dispatch(
         setSettingsAsync({
           datapath: data.datapath,
+          default_lsp_url: NETWORK_DEFAULTS[data.network].default_lsp_url,
           indexer_url: data.indexer_url,
           name: data.name,
           network: data.network,
@@ -161,12 +162,18 @@ export const Component = () => {
 
       await invoke('insert_account', {
         datapath: nodeSetupForm.getValues('datapath'),
+        defaultLspUrl:
+          NETWORK_DEFAULTS[nodeSetupForm.getValues('network')].default_lsp_url,
         indexerUrl: nodeSetupForm.getValues('indexer_url'),
         name: nodeSetupForm.getValues('name'),
         network: nodeSetupForm.getValues('network'),
         nodeUrl: `http://localhost:${nodeSetupForm.getValues('daemon_listening_port')}`,
         proxyEndpoint: nodeSetupForm.getValues('proxy_endpoint'),
         rpcConnectionUrl: nodeSetupForm.getValues('rpc_connection_url'),
+      })
+
+      await invoke('set_current_account', {
+        accountName: nodeSetupForm.getValues('name'),
       })
 
       setNodePassword(data.password)

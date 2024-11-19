@@ -22,6 +22,7 @@ type Account = {
   node_url: string
   indexer_url: string
   proxy_endpoint: string
+  default_lsp_url: string
 }
 
 export const Toolbar = () => {
@@ -37,18 +38,22 @@ export const Toolbar = () => {
   const navigate = useNavigate()
 
   const handleAccountChange = async (account: Account) => {
-    await dispatch(
-      setSettingsAsync({
-        datapath: account.datapath || '',
-        indexer_url: account.indexer_url,
-        name: account.name,
-        network: account.network,
-        node_url: account.node_url,
-        proxy_endpoint: account.proxy_endpoint,
-        rpc_connection_url: account.rpc_connection_url,
-      })
-    )
     try {
+      await invoke('set_current_account', { accountName: account.name })
+
+      await dispatch(
+        setSettingsAsync({
+          datapath: account.datapath || '',
+          default_lsp_url: account.default_lsp_url,
+          indexer_url: account.indexer_url,
+          name: account.name,
+          network: account.network,
+          node_url: account.node_url,
+          proxy_endpoint: account.proxy_endpoint,
+          rpc_connection_url: account.rpc_connection_url,
+        })
+      )
+
       setIsLoading(true)
       if (
         account.node_url === 'http://localhost:3001' &&

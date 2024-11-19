@@ -5,12 +5,15 @@ use db::Account;
 use dotenv::dotenv;
 use rgb_node::NodeProcess;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use tauri::{Manager, Window};
 
 
 mod db;
 mod rgb_node;
+
+#[derive(Default)]
+struct CurrentAccount(RwLock<Option<Account>>);
 
 fn main() {
     dotenv().ok();
@@ -19,6 +22,7 @@ fn main() {
 
     tauri::Builder::default()
         .manage(Arc::clone(&node_process))
+        .manage(CurrentAccount::default())
         .on_window_event({
             let node_process = Arc::clone(&node_process);
             move |event| {
@@ -42,7 +46,9 @@ fn main() {
             delete_account,
             start_node,
             stop_node,
-            check_account_exists
+            check_account_exists,
+            set_current_account,
+            get_current_account
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -112,8 +118,9 @@ fn insert_account(
     node_url: String,
     indexer_url: String,
     proxy_endpoint: String,
+    default_lsp_url: String,
 ) -> Result<usize, String> {
-    match db::insert_account(name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint) {
+    match db::insert_account(name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint, default_lsp_url) {
         Ok(num_rows) => Ok(num_rows),
         Err(e) => Err(e.to_string()),
     }
@@ -121,7 +128,6 @@ fn insert_account(
 
 #[tauri::command]
 fn update_account(
-    id: i32,
     name: String,
     network: String,
     datapath: Option<String>,
@@ -129,8 +135,9 @@ fn update_account(
     node_url: String,
     indexer_url: String,
     proxy_endpoint: String,
+    default_lsp_url: String,
 ) -> Result<usize, String> {
-    match db::update_account(id, name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint) {
+    match db::update_account(name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint, default_lsp_url) {
         Ok(num_rows) => Ok(num_rows),
         Err(e) => Err(e.to_string()),
     }
@@ -150,4 +157,24 @@ fn check_account_exists(name: String) -> Result<bool, String> {
         Ok(exists) => Ok(exists),
         Err(e) => Err(e.to_string()),
     }
+}
+
+#[tauri::command]
+fn set_current_account(
+    state: tauri::State<CurrentAccount>,
+    account_name: String,
+) -> Result<Account, String> {
+    let accounts = db::get_accounts().map_err(|e| e.to_string())?;
+    let account = accounts
+        .into_iter()
+        .find(|a| a.name == account_name)
+        .ok_or_else(|| "Account not found".to_string())?;
+    
+    *state.0.write().unwrap() = Some(account.clone());
+    Ok(account)
+}
+
+#[tauri::command]
+fn get_current_account(state: tauri::State<CurrentAccount>) -> Option<Account> {
+    state.0.read().unwrap().clone()
 }

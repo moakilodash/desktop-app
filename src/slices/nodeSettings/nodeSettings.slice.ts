@@ -10,6 +10,7 @@ export type Account = {
   node_url: string
   indexer_url: string
   proxy_endpoint: string
+  default_lsp_url: string
 }
 
 export interface NodeSettingsState {
@@ -21,6 +22,7 @@ export type NodeSettings = Account
 const initialState: NodeSettingsState = {
   data: {
     datapath: '',
+    default_lsp_url: '',
     indexer_url: '',
     name: '',
     network: 'regtest',

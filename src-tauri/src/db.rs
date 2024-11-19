@@ -3,16 +3,17 @@ use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::{env, fs};
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct Account {
-    id: i32,
-    name: String,
-    network: String,
-    datapath: Option<String>,
-    rpc_connection_url: String,
-    node_url: String,
-    indexer_url: String,
-    proxy_endpoint: String,
+    pub id: i32,
+    pub name: String,
+    pub network: String,
+    pub datapath: Option<String>,
+    pub rpc_connection_url: String,
+    pub node_url: String,
+    pub indexer_url: String,
+    pub proxy_endpoint: String,
+    pub default_lsp_url: String,
 }
 
 // Check if a database file exists, and create one if it does not.
@@ -33,6 +34,7 @@ pub fn init() {
                 'node_url'  TEXT NOT NULL,
                 'indexer_url'  TEXT NOT NULL,
                 'proxy_endpoint'  TEXT NOT NULL,
+                'default_lsp_url'  TEXT NOT NULL,
                 PRIMARY KEY('id' AUTOINCREMENT)
             );",
             (),
@@ -82,6 +84,7 @@ pub fn get_accounts() -> Result<Vec<Account>, rusqlite::Error> {
                 node_url: row.get(5)?,
                 indexer_url: row.get(6)?,
                 proxy_endpoint: row.get(7)?,
+                default_lsp_url: row.get(8)?,
             })
         })?
         .map(|res| res.unwrap())
@@ -98,6 +101,7 @@ pub fn insert_account(
     node_url: String,
     indexer_url: String,
     proxy_endpoint: String,
+    default_lsp_url: String,
 ) -> Result<usize, rusqlite::Error> {
     let conn = Connection::open(get_db_path())?;
     
@@ -113,13 +117,12 @@ pub fn insert_account(
     }
     
     conn.execute(
-        "INSERT INTO Accounts (name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-        rusqlite::params![name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint],
+        "INSERT INTO Accounts (name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint, default_lsp_url) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        rusqlite::params![name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint, default_lsp_url],
     )
 }
 
 pub fn update_account(
-    id: i32,
     name: String,
     network: String,
     datapath: Option<String>,
@@ -127,11 +130,12 @@ pub fn update_account(
     node_url: String,
     indexer_url: String,
     proxy_endpoint: String,
+    default_lsp_url: String,
 ) -> Result<usize, rusqlite::Error> {
     let conn = Connection::open(get_db_path())?;
     conn.execute(
-        "UPDATE Accounts SET name = ?1, network = ?2, datapath = ?3, rpc_connection_url = ?4, node_url = ?5, indexer_url = ?6, proxy_endpoint = ?7 WHERE id = ?8",
-        rusqlite::params![name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint, id],
+        "UPDATE Accounts SET name = ?1, network = ?2, datapath = ?3, rpc_connection_url = ?4, node_url = ?5, indexer_url = ?6, proxy_endpoint = ?7, default_lsp_url = ?8 WHERE name = ?9",
+        rusqlite::params![name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint, default_lsp_url, name],
     )
 }
 

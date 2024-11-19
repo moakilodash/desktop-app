@@ -4,6 +4,7 @@ import { CopyToClipboard } from 'react-copy-to-clipboard'
 import { useSelector, useDispatch } from 'react-redux'
 import { toast } from 'react-toastify'
 
+import { NETWORK_DEFAULTS } from '../../constants/networks'
 import { KaleidoswapBoxIcon } from '../../icons/KaleidoswapBox'
 import { makerApi } from '../../slices/makerApi/makerApi.slice'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
@@ -175,16 +176,9 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
     setIsLoading(true)
     try {
       const networkInfo = await getNetworkInfo().unwrap()
-      let newLspUrl = ''
-      if (networkInfo.network === 'Regtest') {
-        newLspUrl = 'http://localhost:8000'
-      } else if (networkInfo.network === 'Testnet') {
-        newLspUrl = 'https://api.testnet.kaleidoswap.com/'
-      } else {
-        newLspUrl = 'http://localhost:8000' // Default to mainnet
-      }
-
-      dispatch(setDefaultLspUrl(newLspUrl))
+      dispatch(
+        setDefaultLspUrl(NETWORK_DEFAULTS[networkInfo.network].default_lsp_url)
+      )
       await fetchLspInfo()
     } catch (error) {
       console.error('Error selecting Kaleidoswap LSP:', error)

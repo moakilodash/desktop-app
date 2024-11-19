@@ -9,6 +9,7 @@ import { TRADE_PATH, WALLET_SETUP_PATH } from '../../app/router/paths'
 import { Layout } from '../../components/Layout'
 import { Spinner } from '../../components/Spinner'
 import { BitcoinNetwork } from '../../constants'
+import { NETWORK_DEFAULTS } from '../../constants/networks'
 import { EyeIcon } from '../../icons/Eye'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 
@@ -75,6 +76,7 @@ export const Component = () => {
       try {
         await invoke('insert_account', {
           datapath: data.datapath,
+          defaultLspUrl: NETWORK_DEFAULTS[data.network].default_lsp_url,
           name: data.name,
           network: data.network,
           rpcConnectionUrl: data.rpc_connection_url,
