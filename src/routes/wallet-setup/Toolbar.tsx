@@ -207,35 +207,83 @@ export const Toolbar = () => {
       </aside>
       {showModal && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50"
           onClick={closeModal}
         >
           <div
-            className="bg-gray-800 text-white p-6 rounded-lg shadow-lg text-center max-w-md w-full mx-4 overflow-auto max-h-[90vh]"
+            className="bg-gray-800 text-white p-8 rounded-xl shadow-xl text-center max-w-lg w-full mx-4 overflow-auto max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-2xl font-semibold mb-4">Switch Account</h2>
-            <p className="mb-4">
-              Are you sure you want to switch to the following account?
-            </p>
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold mb-2">Switch Account</h2>
+              <p className="text-gray-400">
+                Review the account details before switching
+              </p>
+            </div>
             {selectedAccount && (
-              <div className="bg-gray-700 p-4 rounded-lg mb-6 text-left space-y-2">
-                <p className="break-words">
-                  <strong>Name:</strong> {selectedAccount.name}
-                </p>
-                <p className="break-words">
-                  <strong>Network:</strong> {selectedAccount.network}
-                </p>
-                <p className="break-words">
-                  <strong>Node Type:</strong>{' '}
-                  {selectedAccount.datapath ? 'Local' : 'Remote'}
-                </p>
-                <p className="break-words">
-                  <strong>Node URL:</strong> {selectedAccount.node_url}
-                </p>
-                <p className="break-words">
-                  <strong>RPC URL:</strong> {selectedAccount.rpc_connection_url}
-                </p>
+              <div className="bg-gray-700/50 p-6 rounded-xl mb-8 text-left space-y-4 border border-gray-600">
+                <div className="flex items-center gap-4 mb-6">
+                  <MinidenticonImg
+                    className="rounded-lg"
+                    height="48"
+                    saturation="90"
+                    username={selectedAccount.name}
+                    width="48"
+                  />
+                  <div>
+                    <h3 className="text-xl font-semibold">
+                      {selectedAccount.name}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="bg-gray-600 px-3 py-1 rounded-full text-sm">
+                        {selectedAccount.network}
+                      </span>
+                      {selectedAccount.datapath ? (
+                        <span className="flex items-center text-green-400 text-sm">
+                          <Server className="mr-1" size={14} />
+                          Local Node
+                        </span>
+                      ) : (
+                        <span className="flex items-center text-blue-400 text-sm">
+                          <Cloud className="mr-1" size={14} />
+                          Remote Node
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <label className="text-gray-400 block mb-1">Node URL</label>
+                    <div className="text-white break-all">
+                      {selectedAccount.node_url}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-gray-400 block mb-1">
+                      RPC Connection
+                    </label>
+                    <div className="text-white break-all">
+                      {selectedAccount.rpc_connection_url}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-gray-400 block mb-1">
+                      Indexer URL
+                    </label>
+                    <div className="text-white break-all">
+                      {selectedAccount.indexer_url}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-gray-400 block mb-1">
+                      RGB Proxy
+                    </label>
+                    <div className="text-white break-all">
+                      {selectedAccount.proxy_endpoint}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
