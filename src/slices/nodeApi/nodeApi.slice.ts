@@ -409,10 +409,10 @@ export const nodeApi = createApi({
         url: '/closechannel',
       }),
     }),
-    connectPeer: builder.query<void, ConnectPeerRequest>({
+    connectPeer: builder.mutation<void, { peer_connection_string: string }>({
       query: (body) => ({
         body: {
-          peer_pubkey_and_addr: body.pubkey_and_addr,
+          peer_pubkey_and_addr: body.peer_connection_string,
         },
         method: 'POST',
         url: '/connectpeer',
