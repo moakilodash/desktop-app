@@ -284,7 +284,8 @@ export const Component = () => {
     (sum, channel) => sum + channel.local_balance_msat / 1000,
     0
   )
-  const totalBalance = offChainBalance + onChainBalance + onChainColoredBalance
+  const totalBalance =
+    offChainBalance + onChainFutureBalance + onChainColoredFutureBalance
   const totalInboundLiquidity = channels.reduce(
     (sum, channel) => sum + channel.inbound_balance_msat / 1000,
     0
