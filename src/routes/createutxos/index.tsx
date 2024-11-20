@@ -20,6 +20,7 @@ export const Component = () => {
     slow: 1.0,
   })
   const [customFee, setCustomFee] = useState(1.0)
+  const [isLoading, setIsLoading] = useState(false)
 
   const navigate = useNavigate()
 
@@ -41,6 +42,7 @@ export const Component = () => {
   const [estimateFee] = nodeApi.useLazyEstimateFeeQuery()
 
   const onSubmit = (data: FormFields) => {
+    setIsLoading(true)
     createutxos({
       fee_rate:
         data.fee_rate !== 'custom' ? parseFloat(data.fee_rate) : customFee,
@@ -48,6 +50,7 @@ export const Component = () => {
       size: data.size,
       skip_sync: false,
     }).then((res: any) => {
+      setIsLoading(false)
       if (res.error) {
         toast.error(res.error.data.error)
       } else {
@@ -208,11 +211,21 @@ export const Component = () => {
             </span>
           </div>
           <button
-            className="px-6 py-3 rounded-lg text-lg font-bold bg-purple-600 hover:bg-purple-700 transition-colors flex items-center"
+            className="px-6 py-3 rounded-lg text-lg font-bold bg-purple-600 hover:bg-purple-700 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isLoading}
             type="submit"
           >
-            <Zap className="mr-2" size={20} />
-            Create UTXOs
+            {isLoading ? (
+              <>
+                <div className="animate-spin h-5 w-5 mr-2 border-2 border-white border-t-transparent rounded-full" />
+                Creating...
+              </>
+            ) : (
+              <>
+                <Zap className="mr-2" size={20} />
+                Create UTXOs
+              </>
+            )}
           </button>
         </div>
       </form>

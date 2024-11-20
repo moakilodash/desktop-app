@@ -424,6 +424,7 @@ export const nodeApi = createApi({
           fee_rate: body.fee_rate,
           num: body.num,
           size: body.size,
+          skip_sync: false,
           up_to: false,
         },
         method: 'POST',
