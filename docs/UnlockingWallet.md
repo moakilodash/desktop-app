@@ -11,7 +11,7 @@ To access your wallet features, you'll need to unlock it each time you open the 
 
 - **Password**: Protects access to your wallet.
 - **Network Selection**: Determines which blockchain network you interact with.
-- **Advanced Settings**: Configure node connections or proxy settings if necessary.
+- **Advanced Settings**: Configure the node connections, i.e. RPC auth to Bitcoin Core and the Electrum indexer address, or the RGB proxy and port settings used by RGB Lightning Node to communicate with the app.
 
 ---
 

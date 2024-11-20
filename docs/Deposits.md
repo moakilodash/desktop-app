@@ -6,19 +6,15 @@ Depositing funds into your wallet is straightforward.
 
 ## Depositing Bitcoin
 
-1. **Navigate to "Receive"**: Click on the "Receive" tab.
-2. **Generate Address**: Click "Generate New Address" to get a Bitcoin address.
-3. **Copy Address**: Use the copy button to copy the address.
-4. **Transfer Funds**: Send Bitcoin to this address from an exchange or another wallet.
-5. **Confirm Deposit**: Check your wallet balance after the transaction is confirmed.
+1. **Navigate to "Channels"**: Click on the "Channels" tab.
+2. **Choose Asset**: Select BTC from the drop-down menu.
+3. **Deposit Method**: Click on one of two available methods to deposit assets: onchain or Lightning Network.
+4. **Copy Address**: If you have selected the onchain method, then you will need to copy the automatically generated address to deposit the desired amount of assets.
+5. **Generate Lightning Invoice**: If you selected deposit by LN, then you will need to introduce the amount of assets you want to deposit to generate an invoice. 
 
 ## Depositing RGB Assets
 
-1. **Select Asset**: In the "Receive" tab, choose the RGB asset you wish to deposit.
-2. **Generate Asset Address**: Click "Generate New Address" for the selected asset.
-3. **Copy Address**: Copy the asset-specific address.
-4. **Transfer Assets**: Send the RGB asset to this address.
-5. **Confirm Deposit**: Verify the asset balance in your wallet.
+**TODO**
 
 ---
 

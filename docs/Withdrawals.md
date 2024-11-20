@@ -6,19 +6,18 @@ Withdrawing funds from your wallet allows you to send Bitcoin or RGB assets to o
 
 ## Withdrawing Bitcoin
 
-1. **Navigate to "Send"**: Click on the "Send" tab.
-2. **Enter Recipient Address**: Input the Bitcoin address you wish to send funds to.
-3. **Enter Amount**: Specify the amount of Bitcoin to send.
-4. **Review Transaction**: Double-check the details.
-5. **Confirm and Send**: Click "Send" to initiate the transaction.
+1. **Navigate to "Channels"**: Click on the "Withdraw" tab.
+2. **Withdrawal Method**: Select the method of withdrawal: onchain or Lightning Network.
+3. **Enter Amount**: Specify the amount of Bitcoin to send for onchain transaction.
+4. **Fee Rate**: slow, normal or fast for onchain transaction.
+5. **Withdrawal Address**: The address on which the BTC will be deposited.
+6. **Invoice**: If you chose LN, then simply paste the invoice.
+7. **Review Transaction**: Double-check the details.
+8. **Confirm and Send**: Click "Withdraw" to initiate the transaction.
 
 ## Withdrawing RGB Assets
 
-1. **Select Asset**: In the "Send" tab, choose the RGB asset you wish to withdraw.
-2. **Enter Recipient Address**: Input the recipient's asset-specific address.
-3. **Enter Amount**: Specify the amount of the asset to send.
-4. **Review Transaction**: Ensure all details are correct.
-5. **Confirm and Send**: Click "Send" to complete the transfer.
+**TODO**
 
 ---
 
