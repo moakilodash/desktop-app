@@ -204,6 +204,8 @@ export const Component = () => {
     nodeApi.endpoints.listChannels.useLazyQuery()
   const [assetBalance] = nodeApi.endpoints.assetBalance.useLazyQuery()
   const [closeChannel] = nodeApi.endpoints.closeChannel.useLazyQuery()
+  const [refreshTransfers] =
+    nodeApi.endpoints.refreshRgbTransfers.useLazyQuery()
   const [assetBalances, setAssetBalances] = useState<
     Record<string, { offChain: number; onChain: number }>
   >({})
@@ -219,14 +221,15 @@ export const Component = () => {
     try {
       await Promise.all([
         assets(),
-        btcBalance({ skip_sync: false }),
         listChannels(),
+        btcBalance({ skip_sync: false }),
+        refreshTransfers({ skip_sync: false }),
         sync(),
       ])
     } finally {
       setIsRefreshing(false)
     }
-  }, [assets, btcBalance, listChannels, sync])
+  }, [assets, btcBalance, listChannels, refreshTransfers, sync])
 
   useEffect(() => {
     if (assetsResponse.data?.nia) {
