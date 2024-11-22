@@ -1,16 +1,22 @@
-import { CircleCheckBig, CircleX } from 'lucide-react'
-import { QRCodeSVG } from 'qrcode.react'
-import { useEffect, useState } from 'react'
-import { Controller, useForm } from 'react-hook-form'
+// Step2.tsx - Main deposit component with improved UI
+import {
+  CircleCheckBig,
+  CircleX,
+  ArrowRight,
+  ArrowLeft,
+  Copy,
+  Loader,
+  Wallet,
+  Zap,
+  Link as ChainIcon,
+} from 'lucide-react'
+import { QRCodeCanvas } from 'qrcode.react'
+import { useState, useEffect } from 'react'
 import { toast } from 'react-toastify'
-import { twJoin } from 'tailwind-merge'
 
 import { useAppSelector } from '../../../../app/store/hooks'
-import { Spinner } from '../../../../components/Spinner' // Assuming you have a Spinner component
 import { BTC_ASSET_ID } from '../../../../constants'
-import { CopyIcon } from '../../../../icons/Copy'
 import { nodeApi } from '../../../../slices/nodeApi/nodeApi.slice'
-
 
 interface Props {
   assetId: string
@@ -18,47 +24,61 @@ interface Props {
   onNext: VoidFunction
 }
 
-interface Fields {
-  amount?: number
-  network: 'on-chain' | 'lightning'
-}
-
 export const Step2 = ({ assetId, onBack, onNext }: Props) => {
+  const [network, setNetwork] = useState<'on-chain' | 'lightning'>('on-chain')
   const [address, setAddress] = useState<string>()
   const [loading, setLoading] = useState<boolean>(false)
-  const [rgbLoading, setRgbLoading] = useState<boolean>(false)
-  const [addressLoading, setAddressLoading] = useState<boolean>(false)
+  const [amount, setAmount] = useState<string>('')
 
   const bitcoinUnit = useAppSelector((state) => state.settings.bitcoinUnit)
-
-  const [assets, assetsResponse] = nodeApi.endpoints.listAssets.useLazyQuery()
   const [addressQuery] = nodeApi.endpoints.address.useLazyQuery()
   const [lnInvoice] = nodeApi.endpoints.lnInvoice.useLazyQuery()
   const [rgbInvoice] = nodeApi.endpoints.rgbInvoice.useLazyQuery()
-
-  const form = useForm<Fields>({
-    defaultValues: {
-      amount: 0,
-      network: 'on-chain',
-    },
-  })
-
-  const amount = form.watch('amount')
-  const network = form.watch('network')
 
   const { data: invoiceStatus } = nodeApi.useInvoiceStatusQuery(
     { invoice: address as string },
     {
       pollingInterval: 1000,
-      skip: !address?.startsWith('ln') || network != 'lightning',
+      skip: !address?.startsWith('ln') || network !== 'lightning',
     }
   )
 
-  const generateLightningInvoice = async () => {
-    if (network === 'lightning' && assetId && amount && amount > 0) {
-      setLoading(true)
-      setAddressLoading(true)
-      try {
+  // Reset address when switching networks
+  useEffect(() => {
+    setAddress(undefined)
+    setAmount('')
+  }, [network])
+
+  // Add new state and query for asset info
+  const [assetTicker, setAssetTicker] = useState<string>('')
+  const { data: assetList } = nodeApi.endpoints.listAssets.useQuery()
+
+  // Add useEffect to set asset ticker when assetList is loaded
+  useEffect(() => {
+    if (assetList?.nia && assetId !== BTC_ASSET_ID) {
+      const asset = assetList.nia.find((a) => a.asset_id === assetId)
+      if (asset) {
+        setAssetTicker(asset.ticker)
+      }
+    }
+  }, [assetList, assetId])
+
+  // Add effect to clear address when amount changes for lightning
+  useEffect(() => {
+    if (network === 'lightning' && address) {
+      setAddress(undefined)
+    }
+  }, [amount, network])
+
+  const generateAddress = async () => {
+    setLoading(true)
+    try {
+      if (network === 'lightning') {
+        if (!amount || parseFloat(amount) <= 0) {
+          toast.error('Please enter a valid amount')
+          setLoading(false)
+          return
+        }
         const res = await lnInvoice(
           assetId === BTC_ASSET_ID
             ? {
@@ -72,251 +92,213 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
                 asset_id: assetId,
               }
         )
-        if ('error' in res && res.error) {
-          toast.error(
-            'data' in res.error &&
-              typeof res.error.data === 'object' &&
-              res.error.data &&
-              'error' in res.error.data
-              ? (res.error.data as { error: string }).error
-              : 'Failed to generate Lightning invoice'
-          )
+        if ('error' in res) {
+          toast.error('Failed to generate Lightning invoice')
         } else {
           setAddress(res.data?.invoice)
         }
-      } catch (error) {
-        toast.error('An error occurred while generating the Lightning invoice')
-      } finally {
-        setLoading(false)
-        setAddressLoading(false)
-      }
-    } else {
-      toast.error(
-        'Please enter a valid amount before generating the Lightning invoice'
-      )
-    }
-  }
-
-  const generateRgbInvoice = async () => {
-    if (network === 'on-chain' && assetId !== BTC_ASSET_ID) {
-      setRgbLoading(true)
-      setAddressLoading(true)
-      try {
+      } else if (assetId !== BTC_ASSET_ID) {
         const res = await rgbInvoice({ asset_id: assetId })
-        if ('error' in res && res.error) {
-          toast.error(
-            'data' in res.error &&
-              typeof res.error.data === 'object' &&
-              res.error.data &&
-              'error' in res.error.data
-              ? (res.error.data as { error: string }).error
-              : 'Failed to generate RGB invoice'
-          )
+        if ('error' in res) {
+          toast.error('Failed to generate RGB invoice')
         } else {
           setAddress(res.data?.invoice)
         }
-      } catch (error) {
-        toast.error('An error occurred while generating the RGB invoice')
-      } finally {
-        setRgbLoading(false)
-        setAddressLoading(false)
+      } else {
+        const res = await addressQuery()
+        setAddress(res.data?.address)
       }
+    } catch (error) {
+      toast.error('Failed to generate address')
+    } finally {
+      setLoading(false)
     }
   }
 
-  useEffect(() => {
-    assets()
-  }, [assets])
-
-  useEffect(() => {
-    if (network === 'on-chain' && assetId === BTC_ASSET_ID) {
-      form.setValue('amount', 0)
-      setAddressLoading(true)
-      addressQuery().then((res) => {
-        setAddress(res.data?.address)
-        setAddressLoading(false)
-      })
-    } else {
-      setAddress('')
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(address ?? '')
+      toast.success('Address copied to clipboard')
+    } catch (error) {
+      toast.error('Failed to copy address')
     }
-  }, [network, assetId, addressQuery, rgbInvoice])
+  }
+
+  const NetworkOption = ({
+    type,
+    icon: Icon,
+    label,
+  }: {
+    type: 'on-chain' | 'lightning'
+    icon: any
+    label: string
+  }) => (
+    <button
+      className={`
+        flex-1 py-4 px-6 flex flex-col items-center justify-center gap-2
+        rounded-xl transition-all duration-200 border-2
+        ${
+          network === type
+            ? 'bg-blue-500/10 border-blue-500 text-blue-500'
+            : 'border-slate-700 hover:border-blue-500/50 text-slate-400 hover:text-blue-500/80'
+        }
+      `}
+      onClick={() => setNetwork(type)}
+    >
+      <Icon className={`w-6 h-6 ${network === type ? 'animate-pulse' : ''}`} />
+      <span className="font-medium">{label}</span>
+    </button>
+  )
+
+  const getStatusColor = () => {
+    if (!invoiceStatus) return 'text-slate-400'
+    switch (invoiceStatus.status) {
+      case 'Pending':
+        return 'text-yellow-500'
+      case 'Succeeded':
+        return 'text-green-500'
+      default:
+        return 'text-red-500'
+    }
+  }
 
   return (
-    <form
-      className="min-h-full flex justify-between flex-col space-y-4"
-      onSubmit={form.handleSubmit((data) =>
-        console.log('form submitted', data)
-      )}
-    >
-      <div>
-        <div className="text-center mb-10">
-          <h3 className="text-2xl font-semibold mb-4">Fund your wallet</h3>
-          <p>
-            Choose your deposit method, fill in the fields, and then generate
-            the invoice to proceed.
-          </p>
+    <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
+      <div className="flex flex-col items-center mb-8">
+        <Wallet className="w-12 h-12 text-blue-500 mb-4" />
+        <h3 className="text-3xl font-bold text-white mb-2">Fund Your Wallet</h3>
+        <p className="text-slate-400 text-center max-w-md">
+          Choose your preferred deposit method and follow the steps below
+        </p>
+      </div>
+
+      <div className="space-y-6">
+        {/* Network Selection */}
+        <div className="flex gap-4 p-1">
+          <NetworkOption icon={ChainIcon} label="On-chain" type="on-chain" />
+          <NetworkOption icon={Zap} label="Lightning" type="lightning" />
         </div>
 
-        <div className="mx-auto bg-section-lighter rounded p-8">
-          <Controller
-            control={form.control}
-            name="network"
-            render={({ field }) => (
-              <div className="mb-6">
-                <div className="text-xs mb-3">Deposit Method</div>
-                <div className="flex items-center space-x-6">
-                  <div
-                    className="flex items-center space-x-2 cursor-pointer"
-                    onClick={() => field.onChange('on-chain')}
-                  >
-                    <div
-                      className={twJoin(
-                        'w-4 h-4 rounded border-2 border-grey-lighter',
-                        field.value === 'on-chain' ? 'bg-grey-lighter' : null
-                      )}
-                    />
-                    <div className="text-grey-lighter">On-chain</div>
-                  </div>
-                  <div
-                    className="flex items-center space-x-2 cursor-pointer"
-                    onClick={() => field.onChange('lightning')}
-                  >
-                    <div
-                      className={twJoin(
-                        'w-4 h-4 rounded border-2 border-grey-lighter',
-                        field.value === 'lightning' ? 'bg-grey-lighter' : null
-                      )}
-                    />
-                    <div className="text-grey-lighter">Lightning Network</div>
-                  </div>
-                </div>
+        {/* Amount Input for Lightning */}
+        {network === 'lightning' && (
+          <div className="space-y-2 animate-fadeIn">
+            <label className="text-sm font-medium text-slate-400">Amount</label>
+            <div className="flex items-center gap-2">
+              <input
+                className="flex-1 px-4 py-3 bg-slate-800/50 rounded-xl border border-slate-700 
+                         focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white
+                         placeholder:text-slate-600 transition-all duration-200"
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="Enter amount"
+                type="number"
+                value={amount}
+              />
+              <div className="px-4 py-3 bg-slate-800/50 rounded-xl border border-slate-700 text-slate-400">
+                {assetId === BTC_ASSET_ID ? bitcoinUnit : assetTicker}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Generate Button or Address Display */}
+        {!address ? (
+          <button
+            className="w-full py-4 px-6 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-900
+                     text-white rounded-xl font-medium transition-all duration-200 
+                     flex items-center justify-center gap-2 disabled:cursor-not-allowed"
+            disabled={loading || (network === 'lightning' && !amount)}
+            onClick={generateAddress}
+          >
+            {loading ? (
+              <Loader className="w-5 h-5 animate-spin" />
+            ) : (
+              <>
+                <span>
+                  Generate {network === 'lightning' ? 'Invoice' : 'Address'}
+                </span>
+                <ArrowRight className="w-5 h-5" />
+              </>
+            )}
+          </button>
+        ) : (
+          <div className="space-y-6 animate-fadeIn">
+            {/* Payment Status */}
+            {invoiceStatus && (
+              <div
+                className={`flex items-center justify-center gap-2 ${getStatusColor()}`}
+              >
+                {invoiceStatus.status === 'Pending' ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    <span>Waiting for payment...</span>
+                  </>
+                ) : invoiceStatus.status === 'Succeeded' ? (
+                  <>
+                    <CircleCheckBig className="w-5 h-5" />
+                    <span>Payment received!</span>
+                  </>
+                ) : (
+                  <>
+                    <CircleX className="w-5 h-5" />
+                    <span>{invoiceStatus.status}</span>
+                  </>
+                )}
               </div>
             )}
-          />
 
-          {network === 'on-chain' && assetId !== BTC_ASSET_ID && (
-            <div className="mb-6">
-              <button
-                className="mt-4 px-6 py-2 bg-cyan rounded text-white flex items-center justify-center"
-                disabled={rgbLoading}
-                onClick={generateRgbInvoice}
-                type="button"
-              >
-                {rgbLoading ? <Spinner /> : 'Generate RGB On-chain Invoice'}
-              </button>
-            </div>
-          )}
-
-          {network === 'lightning' && (
-            <div className="mb-12">
-              <div className="text-xs mb-3">Amount</div>
-              <div className="flex items-stretch">
-                <Controller
-                  control={form.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <input
-                      className="flex-1 rounded-l bg-blue-dark px-4 py-3 w-full outline-none"
-                      type="number"
-                      {...field}
-                      placeholder="Enter amount"
-                    />
-                  )}
+            {/* QR Code */}
+            <div className="flex justify-center">
+              <div className="p-6 bg-white rounded-2xl shadow-xl">
+                <QRCodeCanvas
+                  includeMargin={true}
+                  level="H"
+                  size={200}
+                  value={address}
                 />
-                <div className="bg-blue-dark rounded-r flex items-center pr-4 text-cyan">
-                  {assetId === BTC_ASSET_ID
-                    ? bitcoinUnit === 'SAT'
-                      ? 'SAT'
-                      : 'BTC'
-                    : assetsResponse.data?.nia.find(
-                        (a) => a.asset_id === assetId
-                      )?.ticker}
-                </div>
+              </div>
+            </div>
+
+            {/* Address Display */}
+            <div
+              className="p-4 bg-slate-800/50 rounded-xl border border-slate-700 
+                          flex items-center justify-between group hover:border-blue-500/50 
+                          transition-all duration-200"
+            >
+              <div className="truncate flex-1 text-slate-300 font-mono text-sm">
+                {address.length > 45 ? `${address.slice(0, 42)}...` : address}
               </div>
               <button
-                className="mt-4 px-6 py-2 bg-cyan rounded text-white flex items-center justify-center"
-                disabled={loading}
-                onClick={generateLightningInvoice}
-                type="button"
+                className="ml-2 p-2 hover:bg-blue-500/10 rounded-lg transition-colors
+                         text-slate-400 hover:text-blue-500"
+                onClick={handleCopy}
               >
-                {loading ? <Spinner /> : 'Generate Lightning Invoice'}
+                <Copy className="w-5 h-5" />
               </button>
             </div>
-          )}
+          </div>
+        )}
 
-          {addressLoading ? (
-            <div className="flex justify-center items-center mt-6">
-              <Spinner />
-            </div>
-          ) : address && address.length > 0 ? (
-            <div className="flex flex-col space-y-10">
-              {network === 'lightning' &&
-              invoiceStatus?.status === 'Pending' ? (
-                <div className="flex">
-                  <Spinner size="sm" />
-                  <div className="ms-2">Waiting for invoice to be paid</div>
-                </div>
-              ) : invoiceStatus?.status === 'Succeeded' ? (
-                <div className="flex">
-                  <CircleCheckBig />
-                  <div className="ms-2">Invoice Paid Successfully</div>
-                </div>
-              ) : (
-                (invoiceStatus?.status === 'Expired' ||
-                  invoiceStatus?.status === 'Failed') && (
-                  <div className="flex">
-                    <CircleX />
-                    <div className="ms-2">{invoiceStatus?.status}</div>
-                  </div>
-                )
-              )}
-              <div className="flex items-center space-x-6 max-w-fit mt-6">
-                <QRCodeSVG fgColor="#3A3C4A" value={address ?? ''} />
-                <div>
-                  <div className="text-xs font-light">Wallet Address:</div>
-                  <div className="flex items-center space-x-4">
-                    <div className="break-words overflow-hidden whitespace-normal">
-                      {address.length > 67
-                        ? address.slice(0, 64) + '...'
-                        : address}
-                    </div>{' '}
-                    <div
-                      className="cursor-pointer"
-                      onClick={() => {
-                        navigator.clipboard
-                          .writeText(address ?? '')
-                          .then(() => {
-                            toast.success('Invoice copied to clipboard')
-                          })
-                      }}
-                    >
-                      <CopyIcon />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : null}
+        {/* Navigation */}
+        <div className="flex justify-between pt-6">
+          <button
+            className="px-4 py-2 text-slate-400 hover:text-white transition-colors 
+                     flex items-center gap-2 hover:bg-slate-800/50 rounded-lg"
+            onClick={onBack}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back</span>
+          </button>
+
+          <button
+            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg 
+                     transition-colors flex items-center gap-2"
+            onClick={onNext}
+          >
+            <span>Finish</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
-
-      <div className="flex justify-end">
-        <button
-          className="px-6 py-3 rounded text-lg font-medium text-grey-light"
-          onClick={onBack}
-          type="button"
-        >
-          Go Back
-        </button>
-
-        <button
-          className="px-6 py-3 rounded border text-lg font-bold border-cyan"
-          onClick={onNext}
-          type="button"
-        >
-          Finish
-        </button>
-      </div>
-    </form>
+    </div>
   )
 }

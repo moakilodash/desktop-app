@@ -11,8 +11,24 @@ export const DepositModalContent = () => {
   const [step, setStep] = useState<number>(1)
   const [assetId, setAssetId] = useState<string>()
 
+  const progress = (step / 2) * 100
+
   return (
-    <>
+    <div className="max-w-2xl mx-auto p-4">
+      {/* Progress bar */}
+      <div className="mb-6">
+        <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-blue-600 transition-all duration-300"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div className="flex justify-between mt-2 text-sm text-slate-400">
+          <span>Select Asset</span>
+          <span>Deposit Details</span>
+        </div>
+      </div>
+
       {step === 1 && (
         <Step1
           onNext={(a) => {
@@ -29,6 +45,6 @@ export const DepositModalContent = () => {
           onNext={() => dispatch(uiSliceActions.setModal({ type: 'none' }))}
         />
       )}
-    </>
+    </div>
   )
 }

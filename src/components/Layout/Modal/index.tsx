@@ -1,5 +1,3 @@
-import './styles.css'
-
 import { useRef } from 'react'
 
 import { useAppDispatch, useAppSelector } from '../../../app/store/hooks'
@@ -20,12 +18,15 @@ export const LayoutModal = () => {
   if (modal.type === 'none') return null
 
   return (
-    <div className="fixed top-0 inset-0 modal-backdrop flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div
-        className="flex-1 h-4/6 w-full max-w-screen-lg bg-blue-dark rounded px-14 pt-20 pb-8 overflow-y-auto"
+        className="w-full max-w-5xl bg-slate-900 rounded-3xl border border-slate-800/50 
+                   shadow-2xl shadow-black/20 overflow-hidden"
         ref={modalRef}
       >
-        <Content modal={modal} />
+        <div className="max-h-[85vh] overflow-y-auto px-8 py-10">
+          <Content modal={modal} />
+        </div>
       </div>
     </div>
   )
