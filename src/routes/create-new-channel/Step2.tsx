@@ -55,7 +55,7 @@ export const Step2 = (props: Props) => {
     nodeApi.endpoints.listAssets.useLazyQuery()
   const [btcBalance] = nodeApi.endpoints.btcBalance.useLazyQuery()
 
-  const { register, handleSubmit, setValue, control, watch, formState } =
+  const { handleSubmit, setValue, control, watch, formState } =
     useForm<FormFields>({
       criteriaMode: 'all',
       defaultValues: {

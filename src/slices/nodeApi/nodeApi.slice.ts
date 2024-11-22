@@ -159,6 +159,13 @@ interface BTCBalanceResponse {
   }
 }
 
+export interface ApiError {
+  data: {
+    error: string
+  }
+  status: number
+}
+
 interface AssetBalanceRequest {
   asset_id: string
 }
@@ -409,10 +416,10 @@ export const nodeApi = createApi({
         url: '/closechannel',
       }),
     }),
-    connectPeer: builder.mutation<void, { peer_connection_string: string }>({
+    connectPeer: builder.mutation<void, ConnectPeerRequest>({
       query: (body) => ({
         body: {
-          peer_pubkey_and_addr: body.peer_connection_string,
+          peer_pubkey_and_addr: body.pubkey_and_addr,
         },
         method: 'POST',
         url: '/connectpeer',
@@ -589,6 +596,7 @@ export const nodeApi = createApi({
           address: body.address,
           amount: body.amount,
           fee_rate: body.fee_rate,
+          skip_sync: false,
         },
         method: 'POST',
         url: '/sendbtc',

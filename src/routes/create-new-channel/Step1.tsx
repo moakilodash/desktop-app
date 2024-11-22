@@ -85,7 +85,7 @@ export const Step1 = (props: Props) => {
 
     setIsConnecting(true)
     try {
-      await connectPeer({ peer_connection_string: selectedPeerInfo }).unwrap()
+      await connectPeer({ pubkey_and_addr: selectedPeerInfo }).unwrap()
       dispatch(
         channelSliceActions.setNewChannelForm({
           pubKeyAndAddress: selectedPeerInfo,

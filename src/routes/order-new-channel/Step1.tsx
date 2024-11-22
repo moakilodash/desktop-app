@@ -79,7 +79,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
   const [isAlreadyConnected, setIsAlreadyConnected] = useState(false)
   const [connectionUrl, setConnectionUrl] = useState('')
   const [getInfo] = makerApi.endpoints.get_info.useLazyQuery()
-  const [connectPeer] = nodeApi.endpoints.connectPeer.useLazyQuery()
+  const [connectPeer] = nodeApi.endpoints.connectPeer.useMutation()
   const [listPeers] = nodeApi.endpoints.listPeers.useLazyQuery()
   const [getNetworkInfo] = nodeApi.endpoints.networkInfo.useLazyQuery()
 
