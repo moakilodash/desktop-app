@@ -7,7 +7,6 @@ import {
 } from '@reduxjs/toolkit/query/react'
 
 import { RootState } from '../../app/store'
-import { DEFAULT_TRANSPORT_ENDPOINT } from '../../constants'
 
 interface InitRequest {
   password: string
@@ -218,6 +217,8 @@ interface SendAssetRequest {
   asset_id: string
   amount: number
   recipient_id: string
+  fee_rate: number
+  transport_endpoint: string
 }
 
 interface SendAssetResponse {
@@ -318,6 +319,22 @@ enum Network {
 interface NetworkInfoResponse {
   network: Network
   height: number
+}
+
+interface DecodeInvoiceRequest {
+  invoice: string
+}
+
+export interface DecodeInvoiceResponse {
+  amt_msat: number
+  expiry_sec: number
+  timestamp: number
+  asset_id: string | null
+  asset_amount: number | null
+  payment_hash: string
+  payment_secret: string
+  payee_pubkey: string
+  network: string
 }
 
 interface UnlockRequest {
@@ -438,6 +455,13 @@ export const nodeApi = createApi({
         url: '/createutxos',
       }),
     }),
+    decodeInvoice: builder.query<DecodeInvoiceResponse, DecodeInvoiceRequest>({
+      query: (body) => ({
+        body,
+        method: 'POST',
+        url: '/decodelninvoice',
+      }),
+    }),
     estimateFee: builder.query<EstimateFeeResponse, EstimateFeeRequest>({
       query: (body) => ({
         body,
@@ -509,12 +533,6 @@ export const nodeApi = createApi({
     lnInvoice: builder.query<LNINvoiceResponse, LNInvoiceRequest>({
       query: (body) => ({
         body: { ...body, amt_msat: body.amt_msat || 3000000, expiry_sec: 420 },
-        // body: {
-        //   amt_msat: body.amt_msat || 3000000,
-        //   asset_amount: body.asset_amount,
-        //   asset_id: body.asset_id === 'btc' ? null : body.asset_id,
-        //   expiry_sec: 420,
-        // },
         method: 'POST',
         url: '/lninvoice',
       }),
@@ -582,9 +600,11 @@ export const nodeApi = createApi({
           amount: body.amount,
           asset_id: body.asset_id,
           donation: false,
+          fee_rate: body.fee_rate,
           min_confirmations: 1,
           recipient_id: body.recipient_id,
-          transport_endpoints: [DEFAULT_TRANSPORT_ENDPOINT],
+          skip_sync: false,
+          transport_endpoints: [body.transport_endpoint],
         },
         method: 'POST',
         url: '/sendasset',
@@ -608,7 +628,7 @@ export const nodeApi = createApi({
           invoice: body.invoice,
         },
         method: 'POST',
-        url: '/sendbtc',
+        url: '/sendpayment',
       }),
     }),
     shutdown: builder.query<void, void>({
