@@ -1,4 +1,4 @@
-import { Info, DollarSign, Zap, ArrowLeft } from 'lucide-react'
+import { Info, DollarSign, Zap, ArrowLeft, Wallet } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
@@ -96,58 +96,58 @@ export const Component = () => {
   }, [refreshData])
 
   return (
-    <div className="max-w-screen-xl w-full bg-gray-900 py-8 rounded-lg px-8 md:px-14 pt-20 pb-8 relative">
+    <div className="max-w-2xl mx-auto bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
       <button
-        className="absolute top-4 left-4 text-gray-400 hover:text-white transition-colors"
+        className="absolute top-4 left-4 text-slate-400 hover:text-white transition-colors"
         onClick={() => navigate(-1)}
       >
         <ArrowLeft size={24} />
       </button>
 
-      <form
-        className="bg-gray-800 text-white p-8 rounded-lg shadow-lg"
-        onSubmit={handleSubmit(onSubmit)}
-      >
-        <h3 className="text-3xl font-bold mb-6 text-center">
-          Create Colored UTXOs
-        </h3>
-        <div className="bg-blue-600 text-white p-4 rounded-lg mb-8">
-          <div className="flex items-start mb-2">
-            <Info className="mr-2 flex-shrink-0 mt-1" size={24} />
-            <p className="text-sm">
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="flex flex-col items-center mb-8">
+          <Wallet className="w-12 h-12 text-blue-500 mb-4" />
+          <h3 className="text-3xl font-bold text-white mb-2">
+            Create Colored UTXOs
+          </h3>
+
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-start gap-3">
+            <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-slate-300">
               Colored UTXOs are necessary for opening RGB asset lightning
-              channels. They allow for the creation of asset-specific payment
-              channels, enabling fast and secure transactions of RGB assets over
-              the Lightning Network.
+              channels. <br />
+              They allow for the creation of asset-specific payment channels,
+              enabling fast and secure transactions of RGB assets over the
+              Lightning Network.
             </p>
           </div>
         </div>
 
-        <div className="space-y-8">
-          <div className="bg-gray-700 p-6 rounded-lg">
-            <label className="block text-sm font-medium mb-2">
+        <div className="space-y-6">
+          <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6">
+            <label className="block text-sm font-medium text-slate-400 mb-2">
               Number of UTXOs
             </label>
-            <div className="flex items-center space-x-4">
-              <input
-                {...register('num', { valueAsNumber: true })}
-                className="bg-gray-600 text-white px-4 py-2 rounded-md w-full"
-                max={10}
-                min={1}
-                placeholder="Enter amount"
-                type="number"
-              />
-            </div>
+            <input
+              {...register('num', { valueAsNumber: true })}
+              className="w-full bg-slate-900/50 text-white px-4 py-3 rounded-lg border border-slate-600 
+                       focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              max={10}
+              min={1}
+              placeholder="Enter amount"
+              type="number"
+            />
           </div>
 
-          <div className="bg-gray-700 p-6 rounded-lg">
-            <label className="block text-sm font-medium mb-2">
+          <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6">
+            <label className="block text-sm font-medium text-slate-400 mb-2">
               UTXO Size (in satoshis)
             </label>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-4">
               <input
                 {...register('size', { valueAsNumber: true })}
-                className="bg-gray-600 text-white px-4 py-2 rounded-md w-full"
+                className="flex-1 bg-slate-900/50 text-white px-4 py-3 rounded-lg border border-slate-600 
+                         focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 max={
                   btcBalanceResponse.data
                     ? Math.floor(
@@ -159,12 +159,12 @@ export const Component = () => {
                 placeholder="Enter size"
                 type="number"
               />
-              <span className="text-lg font-semibold w-24 text-right">
+              <span className="text-lg font-semibold text-white min-w-[100px] text-right">
                 {size.toLocaleString()}
               </span>
             </div>
             <input
-              className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer mt-4"
+              className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer mt-4"
               max={
                 btcBalanceResponse.data
                   ? Math.floor(btcBalanceResponse.data?.vanilla.spendable / num)
@@ -178,21 +178,31 @@ export const Component = () => {
             />
           </div>
 
-          <div className="bg-gray-700 p-6 rounded-lg">
-            <label className="block text-sm font-medium mb-2">Fee Rate</label>
+          <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6">
+            <label className="block text-sm font-medium text-slate-400 mb-2">
+              Fee Rate
+            </label>
             <select
-              className="bg-gray-600 text-white px-4 py-2 rounded-md w-full"
+              className="w-full bg-slate-900/50 text-white px-4 py-3 rounded-lg border border-slate-600 
+                       focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               value={feeRate}
               {...register('fee_rate')}
             >
-              <option value="1.0">Slow</option>
-              <option value="2.0">Normal</option>
-              <option value="3.0">Fast</option>
+              <option value={feeRates.slow}>
+                Slow ({feeRates.slow} sat/vB)
+              </option>
+              <option value={feeRates.normal}>
+                Normal ({feeRates.normal} sat/vB)
+              </option>
+              <option value={feeRates.fast}>
+                Fast ({feeRates.fast} sat/vB)
+              </option>
               <option value="custom">Custom</option>
             </select>
             {feeRate === 'custom' && (
               <input
-                className="bg-gray-600 text-white px-4 py-2 mt-4 rounded-md w-full"
+                className="w-full bg-slate-900/50 text-white px-4 py-3 mt-4 rounded-lg border border-slate-600 
+                         focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 defaultValue={customFee}
                 onChange={(e) => setCustomFee(parseFloat(e.target.value))}
                 step={0.1}
@@ -202,28 +212,30 @@ export const Component = () => {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-between items-center mt-10">
-          <div className="flex items-center mb-4 sm:mb-0">
-            <DollarSign className="text-yellow-500 mr-2" size={24} />
-            <span className="text-gray-300">
+        <div className="flex flex-col sm:flex-row justify-between items-center mt-8 gap-4">
+          <div className="flex items-center text-slate-300">
+            <DollarSign className="text-yellow-500 mr-2" size={20} />
+            <span>
               Available Balance:{' '}
               {btcBalanceResponse.data?.vanilla.spendable.toLocaleString()} sats
             </span>
           </div>
           <button
-            className="px-6 py-3 rounded-lg text-lg font-bold bg-purple-600 hover:bg-purple-700 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-900
+                     disabled:cursor-not-allowed text-white rounded-xl font-medium 
+                     transition-colors flex items-center justify-center gap-2"
             disabled={isLoading}
             type="submit"
           >
             {isLoading ? (
               <>
-                <div className="animate-spin h-5 w-5 mr-2 border-2 border-white border-t-transparent rounded-full" />
-                Creating...
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Creating...</span>
               </>
             ) : (
               <>
-                <Zap className="mr-2" size={20} />
-                Create UTXOs
+                <Zap size={20} />
+                <span>Create UTXOs</span>
               </>
             )}
           </button>

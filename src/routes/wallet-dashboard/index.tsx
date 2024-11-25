@@ -6,8 +6,10 @@ import {
   Info,
   Plus,
   Loader,
+  Wallet,
+  Link as ChainIcon,
 } from 'lucide-react'
-import React, { ReactNode, useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
@@ -18,54 +20,15 @@ import {
 } from '../../app/router/paths'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { ChannelCard } from '../../components/ChannelCard'
+import { DEFAULT_RGB_ICON } from '../../constants/networks'
 import { formatBitcoinAmount } from '../../helpers/number'
 import { nodeApi, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
 import { uiSliceActions } from '../../slices/ui/ui.slice'
-
-interface TooltipProps {
-  content: ReactNode
-  children: ReactNode
-}
-
-const Tooltip: React.FC<TooltipProps> = ({ content, children }) => {
-  const [isVisible, setIsVisible] = useState(false)
-
-  return (
-    <div className="relative inline-block">
-      <div
-        onMouseEnter={() => setIsVisible(true)}
-        onMouseLeave={() => setIsVisible(false)}
-      >
-        {children}
-      </div>
-      {isVisible && (
-        <div className="absolute z-10 p-4 bg-gray-800 text-white text-sm rounded shadow-lg -top-24 left-1/2 transform -translate-x-1/2 w-64">
-          {content}
-        </div>
-      )}
-    </div>
-  )
-}
-
-interface CardProps {
-  children: React.ReactNode
-  className?: string
-}
-
-const Card: React.FC<CardProps> = ({ children, className = '' }) => (
-  <div className={`bg-section-lighter rounded-lg shadow p-4 ${className}`}>
-    {children}
-  </div>
-)
-
 interface AssetRowProps {
   asset: NiaAsset
   onChainBalance: number
   offChainBalance: number
 }
-
-const DEFAULT_RGB_ICON =
-  'https://raw.githubusercontent.com/RGB-WG/rgb.tech/refs/heads/master/static/logo/rgb-symbol-color.svg'
 
 interface AssetIconProps {
   ticker: string
@@ -194,6 +157,118 @@ const AssetRow: React.FC<AssetRowProps> = ({
   )
 }
 
+const OnChainDetailsOverlay = ({
+  onChainBalance,
+  onChainFutureBalance,
+  onChainSpendableBalance,
+  onChainColoredBalance,
+  onChainColoredFutureBalance,
+  onChainColoredSpendableBalance,
+  bitcoinUnit,
+  onCreateUtxos,
+}: {
+  onChainBalance: number
+  onChainFutureBalance: number
+  onChainSpendableBalance: number
+  onChainColoredBalance: number
+  onChainColoredFutureBalance: number
+  onChainColoredSpendableBalance: number
+  bitcoinUnit: string
+  onCreateUtxos: () => void
+}) => (
+  <div
+    className="absolute inset-0 bg-[#0B101B]/95 backdrop-blur-sm rounded-lg opacity-0 
+                  group-hover:opacity-100 transition-all duration-300 ease-in-out
+                  flex flex-col p-4 sm:p-6"
+  >
+    {/* Header */}
+    <div className="flex justify-between items-center mb-4 sm:mb-6">
+      <h3 className="text-base font-medium text-white">On-chain Details</h3>
+      <button
+        className="p-1.5 sm:p-2 bg-blue-500/10 hover:bg-blue-500/20 
+                   text-blue-500 rounded-lg transition-all duration-200"
+        onClick={onCreateUtxos}
+      >
+        <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+      </button>
+    </div>
+
+    {/* Balance Details */}
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+      {/* Normal Balance */}
+      <div className="bg-[#151C2E] rounded-xl p-3 sm:p-4 border border-slate-700/30">
+        <h4 className="text-base sm:text-lg font-medium text-white mb-3">
+          Normal Balance
+        </h4>
+        <div className="space-y-2 sm:space-y-3">
+          <div className="bg-[#0B101B] rounded-lg p-2 sm:p-3">
+            <div className="text-xs sm:text-sm text-gray-400 mb-0.5">
+              Settled
+            </div>
+            <div className="text-sm sm:text-base font-medium text-white">
+              {formatBitcoinAmount(onChainBalance, bitcoinUnit)} {bitcoinUnit}
+            </div>
+          </div>
+          <div className="bg-[#0B101B] rounded-lg p-2 sm:p-3">
+            <div className="text-xs sm:text-sm text-gray-400 mb-0.5">
+              Future
+            </div>
+            <div className="text-sm sm:text-base font-medium text-white">
+              {formatBitcoinAmount(onChainFutureBalance, bitcoinUnit)}{' '}
+              {bitcoinUnit}
+            </div>
+          </div>
+          <div className="bg-[#0B101B] rounded-lg p-2 sm:p-3">
+            <div className="text-xs sm:text-sm text-gray-400 mb-0.5">
+              Spendable
+            </div>
+            <div className="text-sm sm:text-base font-medium text-white">
+              {formatBitcoinAmount(onChainSpendableBalance, bitcoinUnit)}{' '}
+              {bitcoinUnit}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Colored Balance */}
+      <div className="bg-[#151C2E] rounded-xl p-3 sm:p-4 border border-slate-700/30">
+        <h4 className="text-base sm:text-lg font-medium text-white mb-3">
+          Colored Balance
+        </h4>
+        <div className="space-y-2 sm:space-y-3">
+          <div className="bg-[#0B101B] rounded-lg p-2 sm:p-3">
+            <div className="text-xs sm:text-sm text-gray-400 mb-0.5">
+              Settled
+            </div>
+            <div className="text-sm sm:text-base font-medium text-white">
+              {formatBitcoinAmount(onChainColoredBalance, bitcoinUnit)}{' '}
+              {bitcoinUnit}
+            </div>
+          </div>
+          <div className="bg-[#0B101B] rounded-lg p-2 sm:p-3">
+            <div className="text-xs sm:text-sm text-gray-400 mb-0.5">
+              Future
+            </div>
+            <div className="text-sm sm:text-base font-medium text-white">
+              {formatBitcoinAmount(onChainColoredFutureBalance, bitcoinUnit)}{' '}
+              {bitcoinUnit}
+            </div>
+          </div>
+          <div className="bg-[#0B101B] rounded-lg p-2 sm:p-3">
+            <div className="text-xs sm:text-sm text-gray-400 mb-0.5">
+              Spendable
+            </div>
+            <div className="text-sm sm:text-base font-medium text-white">
+              {formatBitcoinAmount(onChainColoredSpendableBalance, bitcoinUnit)}{' '}
+              {bitcoinUnit}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+)
+
 export const Component = () => {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
@@ -255,7 +330,7 @@ export const Component = () => {
         const balance = await assetBalance({ asset_id: asset.asset_id })
         newBalances[asset.asset_id] = {
           offChain: balance.data?.offchain_outbound || 0,
-          onChain: balance.data?.spendable || 0,
+          onChain: balance.data?.future || 0,
         }
       }
       setAssetBalances(newBalances)
@@ -271,12 +346,12 @@ export const Component = () => {
     assetBalance,
   ])
 
-  const onChainBalance = btcBalanceResponse.data?.vanilla.settled || 0
+  const onChainBalance = btcBalanceResponse.data?.vanilla.spendable || 0
   const onChainFutureBalance = btcBalanceResponse.data?.vanilla.future || 0
   const onChainSpendableBalance =
     btcBalanceResponse.data?.vanilla.spendable || 0
 
-  const onChainColoredBalance = btcBalanceResponse.data?.colored.settled || 0
+  const onChainColoredBalance = btcBalanceResponse.data?.colored.spendable || 0
   const onChainColoredFutureBalance =
     btcBalanceResponse.data?.colored.future || 0
   const onChainColoredSpendableBalance =
@@ -288,7 +363,7 @@ export const Component = () => {
     0
   )
   const totalBalance =
-    offChainBalance + onChainFutureBalance + onChainColoredFutureBalance
+    offChainBalance + onChainSpendableBalance + onChainColoredSpendableBalance
   const totalInboundLiquidity = channels.reduce(
     (sum, channel) => sum + channel.inbound_balance_msat / 1000,
     0
@@ -307,221 +382,236 @@ export const Component = () => {
   }
 
   return (
-    <div className="w-full bg-blue-dark py-8 px-6 rounded space-y-4">
-      <div className="bg-section-lighter rounded p-8">
-        <div className="flex items-center mb-8">
-          <div className="text-2xl flex-1 text-white">Wallet Dashboard</div>
+    <div className="w-full bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
+      <div className="flex flex-col items-center mb-8">
+        <Wallet className="w-12 h-12 text-blue-500 mb-4" />
+        <h3 className="text-3xl font-bold text-white mb-2">Wallet Dashboard</h3>
+        <p className="text-slate-400 text-center max-w-md mb-8">
+          Manage your assets and channels from one place
+        </p>
 
-          <div className="flex items-center space-x-2">
-            <button
-              className="px-6 py-3 rounded border text-lg font-bold border-cyan text-white"
-              onClick={() =>
-                dispatch(
-                  uiSliceActions.setModal({
-                    assetId: assetsResponse.data?.nia[0]?.asset_id,
-                    type: 'deposit',
-                  })
-                )
-              }
+        <div className="flex items-center gap-3">
+          <button
+            className="group px-4 py-2.5 bg-slate-800/50 hover:bg-slate-800 
+                     text-slate-300 hover:text-white rounded-xl 
+                     transition-all duration-200 flex items-center gap-2
+                     border border-slate-700 hover:border-blue-500/50"
+            onClick={() => navigate(CREATE_NEW_CHANNEL_PATH)}
+          >
+            <div
+              className="p-1.5 bg-blue-500/10 rounded-lg 
+                          group-hover:bg-blue-500/20 transition-colors"
             >
-              Deposit
-            </button>
+              <Zap className="w-4 h-4 text-blue-500" />
+            </div>
+            <span className="font-medium">Open Channel</span>
+          </button>
 
-            <button
-              className="px-6 py-3 rounded border text-lg font-bold border-red text-white"
-              onClick={() =>
-                dispatch(
-                  uiSliceActions.setModal({
-                    assetId: assetsResponse.data?.nia[0]?.asset_id,
-                    type: 'withdraw',
-                  })
-                )
-              }
+          <button
+            className="group px-4 py-2.5 bg-slate-800/50 hover:bg-slate-800 
+                     text-slate-300 hover:text-white rounded-xl 
+                     transition-all duration-200 flex items-center gap-2
+                     border border-slate-700 hover:border-blue-500/50"
+            onClick={() => navigate(CREATEUTXOS_PATH)}
+          >
+            <div
+              className="p-1.5 bg-blue-500/10 rounded-lg 
+                          group-hover:bg-blue-500/20 transition-colors"
             >
-              Withdraw
-            </button>
+              <Plus className="w-4 h-4 text-blue-500" />
+            </div>
+            <span className="font-medium">Create UTXOs</span>
+          </button>
 
-            <button
-              className="px-6 py-3 rounded border text-lg font-bold border-cyan text-white"
-              onClick={() => navigate(CREATE_NEW_CHANNEL_PATH)}
+          <button
+            className="group px-4 py-2.5 bg-slate-800/50 hover:bg-slate-800 
+                     text-slate-300 hover:text-white rounded-xl 
+                     transition-all duration-200 flex items-center gap-2
+                     border border-slate-700 hover:border-blue-500/50"
+            disabled={isRefreshing}
+            onClick={refreshData}
+          >
+            <div
+              className="p-1.5 bg-blue-500/10 rounded-lg 
+                          group-hover:bg-blue-500/20 transition-colors"
             >
-              Open New Channel
-            </button>
-          </div>
+              {isRefreshing ? (
+                <Loader className="w-4 h-4 text-blue-500 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4 text-blue-500" />
+              )}
+            </div>
+            <span className="font-medium">
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </span>
+          </button>
         </div>
+      </div>
 
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          <Card className="col-span-2">
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-sm font-medium text-grey-light">
-                Total Balance
-              </h2>
-              <Zap className="h-4 w-4 text-grey-light" />
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="col-span-2 bg-slate-800/50 rounded-xl border border-slate-700 p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-sm font-medium text-slate-400">
+              Total Balance
+            </h2>
+            <div className="flex gap-2">
+              <button
+                className="group px-4 py-2 bg-cyan/10 hover:bg-cyan/20
+                         text-cyan hover:text-cyan-light rounded-lg 
+                         transition-all duration-200 flex items-center gap-2 text-sm
+                         border border-cyan/20 hover:border-cyan/30"
+                onClick={() =>
+                  dispatch(
+                    uiSliceActions.setModal({
+                      assetId: assetsResponse.data?.nia[0]?.asset_id,
+                      type: 'deposit',
+                    })
+                  )
+                }
+              >
+                <ArrowDownRight className="w-4 h-4" />
+                Deposit
+              </button>
+              <button
+                className="group px-4 py-2 bg-red/10 hover:bg-red/20
+                         text-red hover:text-red-light rounded-lg 
+                         transition-all duration-200 flex items-center gap-2 text-sm
+                         border border-red/20 hover:border-red/30"
+                onClick={() =>
+                  dispatch(
+                    uiSliceActions.setModal({
+                      assetId: assetsResponse.data?.nia[0]?.asset_id,
+                      type: 'withdraw',
+                    })
+                  )
+                }
+              >
+                <ArrowUpRight className="w-4 h-4" />
+                Withdraw
+              </button>
             </div>
-            <div className="text-2xl font-bold text-white mb-2">
-              {formatBitcoinAmount(totalBalance, bitcoinUnit)} {bitcoinUnit}
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
+          </div>
+
+          <div className="text-2xl font-bold text-white mb-4">
+            {formatBitcoinAmount(totalBalance, bitcoinUnit)} {bitcoinUnit}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div
+              className="group relative bg-[#0B101B]/80 rounded-lg p-3 sm:p-4 
+                            hover:bg-[#0B101B] transition-all duration-200"
+            >
               <div>
-                <span className="text-grey-light">On-chain:</span>
-                <span className="ml-2 text-white">
+                <span className="text-sm text-gray-400 flex items-center gap-2">
+                  <ChainIcon className="w-4 h-4 text-blue-500" />
+                  On-chain
+                </span>
+                <div className="text-lg sm:text-2xl font-medium text-white">
                   {formatBitcoinAmount(
                     onChainBalance + onChainColoredBalance,
                     bitcoinUnit
                   )}{' '}
                   {bitcoinUnit}
-                </span>
-              </div>
-              <div>
-                <span className="text-grey-light">Off-chain:</span>
-                <span className="ml-2 text-white">
-                  {formatBitcoinAmount(offChainBalance, bitcoinUnit)}{' '}
-                  {bitcoinUnit}
-                </span>
-              </div>
-            </div>
-            <div className="mt-2 pt-2 border-t border-gray-600">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-grey-light">
-                  On-chain Details:
-                </span>
-                <Tooltip content="Create colored UTXOs to use for RGB assets">
-                  <button
-                    className="p-1 rounded-full bg-cyan text-blue-dark hover:bg-cyan-dark transition-colors"
-                    onClick={() => navigate(CREATEUTXOS_PATH)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </Tooltip>
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm mt-2">
-                <div className="space-y-1">
-                  <h3 className="font-medium text-white">Normal Balance</h3>
-                  <div>
-                    <span className="text-grey-light">Settled:</span>
-                    <span className="ml-2 text-white">
-                      {formatBitcoinAmount(onChainBalance, bitcoinUnit)}{' '}
-                      {bitcoinUnit}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-grey-light">Future:</span>
-                    <span className="ml-2 text-white">
-                      {formatBitcoinAmount(onChainFutureBalance, bitcoinUnit)}{' '}
-                      {bitcoinUnit}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-grey-light">Spendable:</span>
-                    <span className="ml-2 text-white">
-                      {formatBitcoinAmount(
-                        onChainSpendableBalance,
-                        bitcoinUnit
-                      )}{' '}
-                      {bitcoinUnit}
-                    </span>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <h3 className="font-medium text-white">Colored Balance</h3>
-                  <div>
-                    <span className="text-grey-light">Settled:</span>
-                    <span className="ml-2 text-white">
-                      {formatBitcoinAmount(onChainColoredBalance, bitcoinUnit)}{' '}
-                      {bitcoinUnit}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-grey-light">Future:</span>
-                    <span className="ml-2 text-white">
-                      {formatBitcoinAmount(
-                        onChainColoredFutureBalance,
-                        bitcoinUnit
-                      )}{' '}
-                      {bitcoinUnit}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-grey-light">Spendable:</span>
-                    <span className="ml-2 text-white">
-                      {formatBitcoinAmount(
-                        onChainColoredSpendableBalance,
-                        bitcoinUnit
-                      )}{' '}
-                      {bitcoinUnit}
-                    </span>
-                  </div>
                 </div>
               </div>
+
+              <OnChainDetailsOverlay
+                bitcoinUnit={bitcoinUnit}
+                onChainBalance={onChainBalance}
+                onChainColoredBalance={onChainColoredBalance}
+                onChainColoredFutureBalance={onChainColoredFutureBalance}
+                onChainColoredSpendableBalance={onChainColoredSpendableBalance}
+                onChainFutureBalance={onChainFutureBalance}
+                onChainSpendableBalance={onChainSpendableBalance}
+                onCreateUtxos={() => navigate(CREATEUTXOS_PATH)}
+              />
             </div>
-          </Card>
-          <div className="grid grid-rows-2 gap-4">
-            <Card>
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="text-sm font-medium text-grey-light">
-                  Total Inbound Liquidity
-                </h2>
-                <ArrowDownRight className="h-4 w-4 text-grey-light" />
-              </div>
-              <div className="text-xl font-bold text-white">
-                {formatBitcoinAmount(totalInboundLiquidity, bitcoinUnit)}{' '}
+
+            <div className="bg-slate-900/50 rounded-lg p-4">
+              <span className="text-sm text-slate-400 flex items-center gap-2">
+                <Zap className="w-4 h-4 text-blue-500" />
+                Off-chain
+              </span>
+              <div className="text-lg text-white font-medium">
+                {formatBitcoinAmount(offChainBalance, bitcoinUnit)}{' '}
                 {bitcoinUnit}
               </div>
-            </Card>
-            <Card>
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="text-sm font-medium text-grey-light">
-                  Total Outbound Liquidity
-                </h2>
-                <ArrowUpRight className="h-4 w-4 text-grey-light" />
-              </div>
-              <div className="text-xl font-bold text-white">
-                {formatBitcoinAmount(totalOutboundLiquidity, bitcoinUnit)}{' '}
-                {bitcoinUnit}
-              </div>
-            </Card>
+            </div>
           </div>
         </div>
 
-        <div className="bg-blue-dark rounded p-6">
-          <div className="flex items-center mb-4">
-            <div className="text-2xl flex-1 text-white">List of Assets</div>
-            <button
-              className="px-4 py-2 rounded border text-sm font-bold border-cyan text-white flex items-center"
-              disabled={isRefreshing}
-              onClick={refreshData}
-            >
-              {isRefreshing ? (
-                <Loader className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
-              )}
-              {isRefreshing ? 'Refreshing...' : 'Refresh'}
-            </button>
+        <div className="space-y-4">
+          <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-sm font-medium text-slate-400">
+                Inbound Liquidity
+              </h2>
+              <ArrowDownRight className="h-4 w-4 text-blue-500" />
+            </div>
+            <div className="text-xl font-bold text-white">
+              {formatBitcoinAmount(totalInboundLiquidity, bitcoinUnit)}{' '}
+              {bitcoinUnit}
+            </div>
           </div>
 
-          <div>
-            <div className="grid grid-cols-4 text-grey-light">
-              <div className="py-3 px-4">Asset</div>
-              <div className="py-3 px-4">Off Chain</div>
-              <div className="py-3 px-4">On Chain</div>
-              <div className="py-3 px-4">Actions</div>
+          <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-sm font-medium text-slate-400">
+                Outbound Liquidity
+              </h2>
+              <ArrowUpRight className="h-4 w-4 text-blue-500" />
             </div>
-
-            {assetsResponse.data?.nia.map((asset) => (
-              <AssetRow
-                asset={asset}
-                key={asset.asset_id}
-                offChainBalance={assetBalances[asset.asset_id]?.offChain || 0}
-                onChainBalance={assetBalances[asset.asset_id]?.onChain || 0}
-              />
-            ))}
+            <div className="text-xl font-bold text-white">
+              {formatBitcoinAmount(totalOutboundLiquidity, bitcoinUnit)}{' '}
+              {bitcoinUnit}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-section-lighter rounded p-8">
-        <div className="text-2xl mb-4 text-white">Lightning Channels</div>
+      <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6 mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-white">Assets</h2>
+          <button
+            className="px-4 py-2 rounded-xl border border-slate-600 text-slate-300
+                     hover:border-blue-500/50 hover:text-blue-500 transition-all
+                     flex items-center gap-2"
+            disabled={isRefreshing}
+            onClick={refreshData}
+          >
+            {isRefreshing ? (
+              <Loader className="w-4 h-4 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
+
+        <div className="rounded-lg overflow-hidden">
+          <div className="grid grid-cols-4 text-grey-light">
+            <div className="py-3 px-4">Asset</div>
+            <div className="py-3 px-4">Off Chain</div>
+            <div className="py-3 px-4">On Chain</div>
+            <div className="py-3 px-4">Actions</div>
+          </div>
+
+          {assetsResponse.data?.nia.map((asset) => (
+            <AssetRow
+              asset={asset}
+              key={asset.asset_id}
+              offChainBalance={assetBalances[asset.asset_id]?.offChain || 0}
+              onChainBalance={assetBalances[asset.asset_id]?.onChain || 0}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6">
+        <h2 className="text-xl font-bold text-white mb-6">
+          Lightning Channels
+        </h2>
+
         {channels.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {channels.map((channel) => {
@@ -537,14 +627,25 @@ export const Component = () => {
             })}
           </div>
         ) : (
-          <div className="text-lg text-grey-light text-center">
-            You don't have any open channels yet.
+          <div className="text-center py-8">
+            <div className="text-slate-400 mb-4">No channels found</div>
+            <button
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl 
+                       font-medium transition-colors flex items-center gap-2 mx-auto"
+              onClick={() => navigate(CREATE_NEW_CHANNEL_PATH)}
+            >
+              <Plus className="w-5 h-5" />
+              Open Your First Channel
+            </button>
           </div>
         )}
       </div>
 
-      <div className="flex items-center space-x-2 text-sm text-grey-light mt-4">
-        <Info className="h-4 w-4" />
+      <div
+        className="flex items-center gap-2 text-sm text-slate-400 mt-6 p-4 
+                    bg-slate-800/30 rounded-xl border border-slate-700"
+      >
+        <Info className="h-4 w-4 text-blue-500" />
         <p>
           Channel liquidity changes as you send and receive payments. Keep your
           channels balanced for optimal performance.
