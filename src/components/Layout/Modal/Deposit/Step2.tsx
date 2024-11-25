@@ -70,6 +70,9 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
     }
   }, [amount, network])
 
+  // Add new state for recipient ID
+  const [recipientId, setRecipientId] = useState<string>()
+
   const generateAddress = async () => {
     setLoading(true)
     try {
@@ -103,6 +106,7 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
           toast.error('Failed to generate RGB invoice')
         } else {
           setAddress(res.data?.invoice)
+          setRecipientId(res.data?.recipient_id)
         }
       } else {
         const res = await addressQuery()
@@ -121,6 +125,15 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
       toast.success('Address copied to clipboard')
     } catch (error) {
       toast.error('Failed to copy address')
+    }
+  }
+
+  const handleCopyRecipientId = async () => {
+    try {
+      await navigator.clipboard.writeText(recipientId ?? '')
+      toast.success('Recipient ID copied to clipboard')
+    } catch (error) {
+      toast.error('Failed to copy recipient ID')
     }
   }
 
@@ -275,6 +288,29 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
                 <Copy className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Recipient ID Display for Assets */}
+            {assetId !== BTC_ASSET_ID && recipientId && (
+              <div
+                className="p-4 bg-slate-800/50 rounded-xl border border-slate-700 
+                            flex items-center justify-between group hover:border-blue-500/50 
+                            transition-all duration-200"
+              >
+                <div className="truncate flex-1 text-slate-300 font-mono text-sm">
+                  <span className="text-slate-400 mr-2">Recipient ID:</span>
+                  {recipientId.length > 45
+                    ? `${recipientId.slice(0, 42)}...`
+                    : recipientId}
+                </div>
+                <button
+                  className="ml-2 p-2 hover:bg-blue-500/10 rounded-lg transition-colors
+                           text-slate-400 hover:text-blue-500"
+                  onClick={handleCopyRecipientId}
+                >
+                  <Copy className="w-5 h-5" />
+                </button>
+              </div>
+            )}
           </div>
         )}
 
