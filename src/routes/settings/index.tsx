@@ -1,15 +1,12 @@
 import { invoke } from '@tauri-apps/api'
-import { open } from '@tauri-apps/api/dialog'
-import { exists } from '@tauri-apps/api/fs'
 import {
   ChevronDown,
   LogOut,
   Undo,
   Save,
   Shield,
-  Folder,
-  AlertTriangle,
   Power,
+  AlertTriangle,
 } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
@@ -20,7 +17,8 @@ import { toast } from 'react-toastify'
 import { WALLET_SETUP_PATH } from '../../app/router/paths'
 import { RootState } from '../../app/store'
 import { useAppSelector } from '../../app/store/hooks'
-import { parseRpcUrl } from '../../helpers/utils'
+import { BackupModal } from '../../components/BackupModal'
+import { useBackup } from '../../hooks/useBackup'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 import { nodeSettingsActions } from '../../slices/nodeSettings/nodeSettings.slice'
 import {
@@ -33,13 +31,6 @@ interface FormFields {
   bitcoinUnit: string
   nodeConnectionString: string
   lspUrl: string
-  backupPath: string
-  nodePassword: string
-}
-
-interface Response {
-  status: number
-  data: { error?: string; code?: number }
 }
 
 export const Component: React.FC = () => {
@@ -51,44 +42,40 @@ export const Component: React.FC = () => {
   const currentAccount = useAppSelector((state) => state.nodeSettings.data)
 
   const [showModal, setShowModal] = useState(false)
-  const [backupModal, setBackupModal] = useState(false)
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false)
   const [showShutdownConfirmation, setShowShutdownConfirmation] =
     useState(false)
-  const [isBackupInProgress, setIsBackupInProgress] = useState(false)
 
-  const { control, handleSubmit, formState, reset, watch, setValue } =
-    useForm<FormFields>({
-      defaultValues: {
-        backupPath: '',
-        bitcoinUnit,
-        lspUrl: defaultLspUrl || 'http://localhost:8000',
-        nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
-        nodePassword: '',
-      },
-    })
+  const { control, handleSubmit, formState, reset } = useForm<FormFields>({
+    defaultValues: {
+      bitcoinUnit,
+      lspUrl: defaultLspUrl || 'http://localhost:8000',
+      nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
+    },
+  })
 
-  const [backup, { isLoading: isBackupLoading }] =
-    nodeApi.endpoints.backup.useLazyQuery()
-  const [lock] = nodeApi.endpoints.lock.useLazyQuery()
-  const [unlock] = nodeApi.endpoints.unlock.useLazyQuery()
   const [shutdown] = nodeApi.endpoints.shutdown.useLazyQuery()
+  const [lock] = nodeApi.endpoints.lock.useLazyQuery()
 
   const nodeSettings = useAppSelector((state) => state.nodeSettings.data)
 
-  useEffect(() => {
-    setIsBackupInProgress(isBackupLoading)
-  }, [isBackupLoading])
-
-  const backupPath = watch('backupPath')
+  const {
+    showBackupModal,
+    setShowBackupModal,
+    isBackupInProgress,
+    control: backupControl,
+    handleSubmit: handleBackupSubmit,
+    formState: backupFormState,
+    backupPath,
+    handleBackup,
+    selectBackupFolder,
+  } = useBackup({ nodeSettings })
 
   useEffect(() => {
     reset({
-      backupPath: '',
       bitcoinUnit,
       lspUrl: nodeSettings.default_lsp_url || 'http://localhost:8000',
       nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
-      nodePassword: '',
     })
   }, [bitcoinUnit, nodeConnectionString, nodeSettings.default_lsp_url, reset])
 
@@ -98,7 +85,6 @@ export const Component: React.FC = () => {
       dispatch(setNodeConnectionString(data.nodeConnectionString))
       dispatch(setDefaultLspUrl(data.lspUrl))
 
-      // Update the account in the database
       await invoke('update_account', {
         datapath: currentAccount.datapath,
         defaultLspUrl: data.lspUrl,
@@ -118,69 +104,14 @@ export const Component: React.FC = () => {
     }
   }
 
-  const performBackup = async (data: FormFields) => {
-    const { backupPath: pathToBackup, nodePassword: nodePass } = data
-
-    try {
-      const lockResponse = await attemptLock()
-      const rpcConfig = parseRpcUrl(nodeSettings.rpc_connection_url)
-
-      if (lockResponse.status === 200) {
-        const backupResponse = await attemptBackup(pathToBackup, nodePass)
-        if (backupResponse.status === 200) {
-          toast.success('Backup successful')
-          await unlock({
-            bitcoind_rpc_host: rpcConfig.host,
-            bitcoind_rpc_password: rpcConfig.password,
-            bitcoind_rpc_port: rpcConfig.port,
-            bitcoind_rpc_username: rpcConfig.username,
-            indexer_url: nodeSettings.indexer_url,
-            password: nodePass,
-            proxy_endpoint: nodeSettings.proxy_endpoint,
-          }).unwrap()
-        } else if (backupResponse.status === 401) {
-          toast.error('Wrong password')
-        } else {
-          toast.error('Backup error')
-        }
-      } else if (lockResponse.status === 403) {
-        const unlockResponse = await attemptUnlock(nodePass)
-        if (unlockResponse.status === 200) {
-          await lock().unwrap()
-          const backupResponse = await attemptBackup(pathToBackup, nodePass)
-          if (backupResponse.status === 200) {
-            toast.success('Backup successful')
-            await unlock({
-              bitcoind_rpc_host: rpcConfig.host,
-              bitcoind_rpc_password: rpcConfig.password,
-              bitcoind_rpc_port: rpcConfig.port,
-              bitcoind_rpc_username: rpcConfig.username,
-              indexer_url: nodeSettings.indexer_url,
-              password: nodePass,
-              proxy_endpoint: nodeSettings.proxy_endpoint,
-            }).unwrap()
-          }
-        } else if (unlockResponse.status === 401) {
-          toast.error('Wrong password')
-        } else {
-          toast.error('Unlock unsuccessful')
-        }
-      } else {
-        toast.error('Lock unsuccessful')
-      }
-    } catch (err) {
-      toast.error('Backup error')
-    }
-  }
-
   const handleLogout = async () => {
     setShowLogoutConfirmation(true)
   }
 
   const confirmLogout = async () => {
     try {
-      const lockResponse = await attemptLock()
-      if (lockResponse.status === 200) {
+      const lockResponse = await lock().unwrap()
+      if (lockResponse) {
         await invoke('stop_node')
         dispatch(nodeSettingsActions.resetNodeSettings())
         toast.success('Logout successful')
@@ -198,98 +129,11 @@ export const Component: React.FC = () => {
     }
   }
 
-  const attemptLock = async (): Promise<Response> => {
-    try {
-      await lock().unwrap()
-      return { data: {}, status: 200 }
-    } catch (err) {
-      console.log(err)
-      return err as Response
-    }
-  }
-
-  const attemptUnlock = async (password: string): Promise<Response> => {
-    try {
-      const rpcConfig = parseRpcUrl(nodeSettings.rpc_connection_url)
-      await unlock({
-        bitcoind_rpc_host: rpcConfig.host,
-        bitcoind_rpc_password: rpcConfig.password,
-        bitcoind_rpc_port: rpcConfig.port,
-        bitcoind_rpc_username: rpcConfig.username,
-        indexer_url: nodeSettings.indexer_url,
-        password: password,
-        proxy_endpoint: nodeSettings.proxy_endpoint,
-      }).unwrap()
-      return { data: {}, status: 200 }
-    } catch (err) {
-      return err as Response
-    }
-  }
-
-  const attemptBackup = async (
-    backupPath: string,
-    password: string
-  ): Promise<Response> => {
-    try {
-      await backup({ backup_path: backupPath, password }).unwrap()
-      return { data: {}, status: 200 }
-    } catch (err) {
-      return err as Response
-    }
-  }
-
-  const handleBackup = async (data: FormFields) => {
-    const pathToBackup = data.backupPath
-
-    if (!isValidPath(pathToBackup)) {
-      toast.error('Invalid backup path')
-      return
-    }
-
-    if (await exists(pathToBackup)) {
-      toast.error('Backup file already exists. Please choose a different path.')
-      return
-    }
-
-    try {
-      setIsBackupInProgress(true)
-      await performBackup(data)
-    } finally {
-      const directoryPath = pathToBackup.substring(
-        0,
-        pathToBackup.lastIndexOf('/')
-      )
-      const timestamp = new Date()
-        .toLocaleString()
-        .replace(/[/, ]/g, '_')
-        .replace(/:/g, '')
-      const newBackupPath = `${directoryPath}/backup_${timestamp}.enc`
-      reset({ ...data, backupPath: newBackupPath, nodePassword: '' })
-      setBackupModal(false)
-      setIsBackupInProgress(false)
-    }
-  }
-
-  const selectBackupFolder = async () => {
-    const selected = await open({ directory: true, multiple: false })
-    if (typeof selected === 'string') {
-      const timestamp = new Date()
-        .toLocaleString()
-        .replace(/[/, ]/g, '_')
-        .replace(/:/g, '')
-      setValue('backupPath', `${selected}/backup_${timestamp}.enc`)
-    }
-  }
-
-  const isValidPath = (path: string) => path.trim() !== ''
-
   const handleUndo = () => {
     reset({
-      backupPath: '',
       bitcoinUnit,
       lspUrl: defaultLspUrl,
       nodeConnectionString,
-      nodePassword: '',
     })
   }
 
@@ -354,11 +198,6 @@ export const Component: React.FC = () => {
                   placeholder="Enter node connection string"
                   type="text"
                 />
-                {formState.errors.nodeConnectionString && (
-                  <p className="mt-1 text-sm text-red-500">
-                    {formState.errors.nodeConnectionString.message}
-                  </p>
-                )}
               </div>
             )}
           />
@@ -376,18 +215,13 @@ export const Component: React.FC = () => {
                   placeholder="Enter default LSP URL"
                   type="text"
                 />
-                {formState.errors.lspUrl && (
-                  <p className="mt-1 text-sm text-red-500">
-                    {formState.errors.lspUrl.message}
-                  </p>
-                )}
               </div>
             )}
           />
           <div className="pt-4 space-y-4">
             <button
               className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition duration-150 ease-in-out"
-              onClick={() => setBackupModal(true)}
+              onClick={() => setShowBackupModal(true)}
               type="button"
             >
               <Shield className="w-5 h-5 mr-2" />
@@ -429,6 +263,18 @@ export const Component: React.FC = () => {
           </div>
         </form>
 
+        <BackupModal
+          backupPath={backupPath}
+          control={backupControl}
+          formState={backupFormState}
+          isBackupInProgress={isBackupInProgress}
+          onClose={() => setShowBackupModal(false)}
+          onSelectFolder={selectBackupFolder}
+          onSubmit={handleBackupSubmit(handleBackup)}
+          setValue={backupControl.setValue}
+          showModal={showBackupModal}
+        />
+
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm">
@@ -438,90 +284,6 @@ export const Component: React.FC = () => {
               <p className="text-gray-600">
                 Your settings have been successfully saved.
               </p>
-            </div>
-          </div>
-        )}
-
-        {backupModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 p-8 rounded-xl shadow-2xl w-full max-w-md">
-              <h2 className="text-2xl font-bold mb-6 text-center text-white">
-                Create Backup
-              </h2>
-              <form className="space-y-4" onSubmit={handleSubmit(handleBackup)}>
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
-                    Backup File Path
-                  </label>
-                  <div className="flex">
-                    <input
-                      {...control.register('backupPath', {
-                        validate: isValidPath,
-                      })}
-                      className="flex-grow px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      onChange={(e) => setValue('backupPath', e.target.value)}
-                      type="text"
-                      value={backupPath}
-                    />
-                    <button
-                      className="px-3 py-2 bg-blue-600 text-white rounded-r-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-                      onClick={selectBackupFolder}
-                      type="button"
-                    >
-                      <Folder className="w-5 h-5" />
-                    </button>
-                  </div>
-                  {formState.errors.backupPath && (
-                    <p className="mt-1 text-sm text-red-500">
-                      Invalid backup path
-                    </p>
-                  )}
-                </div>
-                <Controller
-                  control={control}
-                  name="nodePassword"
-                  render={({ field }) => (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">
-                        Node Password
-                      </label>
-                      <input
-                        {...field}
-                        className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter node password"
-                        type="password"
-                      />
-                    </div>
-                  )}
-                />
-                {isBackupInProgress && (
-                  <div className="mt-4">
-                    <p className="text-white text-center">
-                      Please wait, the backup is in progress...
-                      <br />
-                      The node will be locked until the backup process is
-                      finished.
-                    </p>
-                  </div>
-                )}
-                <div className="flex justify-between space-x-4 pt-6">
-                  <button
-                    className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={isBackupInProgress}
-                    onClick={() => setBackupModal(false)}
-                    type="button"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={isBackupInProgress}
-                    type="submit"
-                  >
-                    Create Backup
-                  </button>
-                </div>
-              </form>
             </div>
           </div>
         )}

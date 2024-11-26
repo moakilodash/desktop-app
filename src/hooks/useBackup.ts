@@ -1,0 +1,188 @@
+import { open } from '@tauri-apps/api/dialog'
+import { exists } from '@tauri-apps/api/fs'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { toast } from 'react-toastify'
+
+import { parseRpcUrl } from '../helpers/utils'
+import { nodeApi } from '../slices/nodeApi/nodeApi.slice'
+import { NodeSettings } from '../slices/nodeSettings/nodeSettings.slice'
+
+interface BackupFormFields {
+  backupPath: string
+  nodePassword: string
+}
+
+interface UseBackupProps {
+  nodeSettings: NodeSettings
+}
+
+export const useBackup = ({ nodeSettings }: UseBackupProps) => {
+  const [showBackupModal, setShowBackupModal] = useState(false)
+  const [isBackupInProgress, setIsBackupInProgress] = useState(false)
+
+  const { control, handleSubmit, formState, reset, watch, setValue } =
+    useForm<BackupFormFields>({
+      defaultValues: {
+        backupPath: '',
+        nodePassword: '',
+      },
+    })
+
+  const [backup, { isLoading: isBackupLoading }] =
+    nodeApi.endpoints.backup.useLazyQuery()
+  const [lock] = nodeApi.endpoints.lock.useLazyQuery()
+  const [unlock] = nodeApi.endpoints.unlock.useLazyQuery()
+
+  const backupPath = watch('backupPath')
+
+  const attemptLock = async () => {
+    try {
+      await lock().unwrap()
+      return { data: {}, status: 200 }
+    } catch (err) {
+      console.log(err)
+      return err as { status: number; data: { error?: string; code?: number } }
+    }
+  }
+
+  const attemptUnlock = async (password: string) => {
+    try {
+      const rpcConfig = parseRpcUrl(nodeSettings.rpc_connection_url)
+      await unlock({
+        bitcoind_rpc_host: rpcConfig.host,
+        bitcoind_rpc_password: rpcConfig.password,
+        bitcoind_rpc_port: rpcConfig.port,
+        bitcoind_rpc_username: rpcConfig.username,
+        indexer_url: nodeSettings.indexer_url,
+        password: password,
+        proxy_endpoint: nodeSettings.proxy_endpoint,
+      }).unwrap()
+      return { data: {}, status: 200 }
+    } catch (err) {
+      return err as { status: number; data: { error?: string; code?: number } }
+    }
+  }
+
+  const attemptBackup = async (backupPath: string, password: string) => {
+    try {
+      await backup({ backup_path: backupPath, password }).unwrap()
+      return { data: {}, status: 200 }
+    } catch (err) {
+      return err as { status: number; data: { error?: string; code?: number } }
+    }
+  }
+
+  const performBackup = async (data: BackupFormFields) => {
+    const { backupPath: pathToBackup, nodePassword: nodePass } = data
+
+    try {
+      const lockResponse = await attemptLock()
+      const rpcConfig = parseRpcUrl(nodeSettings.rpc_connection_url)
+
+      if (lockResponse.status === 200) {
+        const backupResponse = await attemptBackup(pathToBackup, nodePass)
+        if (backupResponse.status === 200) {
+          toast.success('Backup successful')
+          await unlock({
+            bitcoind_rpc_host: rpcConfig.host,
+            bitcoind_rpc_password: rpcConfig.password,
+            bitcoind_rpc_port: rpcConfig.port,
+            bitcoind_rpc_username: rpcConfig.username,
+            indexer_url: nodeSettings.indexer_url,
+            password: nodePass,
+            proxy_endpoint: nodeSettings.proxy_endpoint,
+          }).unwrap()
+        } else if (backupResponse.status === 401) {
+          toast.error('Wrong password')
+        } else {
+          toast.error('Backup error')
+        }
+      } else if (lockResponse.status === 403) {
+        const unlockResponse = await attemptUnlock(nodePass)
+        if (unlockResponse.status === 200) {
+          await lock().unwrap()
+          const backupResponse = await attemptBackup(pathToBackup, nodePass)
+          if (backupResponse.status === 200) {
+            toast.success('Backup successful')
+            await unlock({
+              bitcoind_rpc_host: rpcConfig.host,
+              bitcoind_rpc_password: rpcConfig.password,
+              bitcoind_rpc_port: rpcConfig.port,
+              bitcoind_rpc_username: rpcConfig.username,
+              indexer_url: nodeSettings.indexer_url,
+              password: nodePass,
+              proxy_endpoint: nodeSettings.proxy_endpoint,
+            }).unwrap()
+          }
+        } else if (unlockResponse.status === 401) {
+          toast.error('Wrong password')
+        } else {
+          toast.error('Unlock unsuccessful')
+        }
+      } else {
+        toast.error('Lock unsuccessful')
+      }
+    } catch (err) {
+      toast.error('Backup error')
+    }
+  }
+
+  const handleBackup = async (data: BackupFormFields) => {
+    const pathToBackup = data.backupPath
+
+    if (!isValidPath(pathToBackup)) {
+      toast.error('Invalid backup path')
+      return
+    }
+
+    if (await exists(pathToBackup)) {
+      toast.error('Backup file already exists. Please choose a different path.')
+      return
+    }
+
+    try {
+      setIsBackupInProgress(true)
+      await performBackup(data)
+    } finally {
+      const directoryPath = pathToBackup.substring(
+        0,
+        pathToBackup.lastIndexOf('/')
+      )
+      const timestamp = new Date()
+        .toLocaleString()
+        .replace(/[/, ]/g, '_')
+        .replace(/:/g, '')
+      const newBackupPath = `${directoryPath}/backup_${timestamp}.enc`
+      reset({ ...data, backupPath: newBackupPath, nodePassword: '' })
+      setShowBackupModal(false)
+      setIsBackupInProgress(false)
+    }
+  }
+
+  const selectBackupFolder = async () => {
+    const selected = await open({ directory: true, multiple: false })
+    if (typeof selected === 'string') {
+      const timestamp = new Date()
+        .toLocaleString()
+        .replace(/[/, ]/g, '_')
+        .replace(/:/g, '')
+      setValue('backupPath', `${selected}/backup_${timestamp}.enc`)
+    }
+  }
+
+  const isValidPath = (path: string) => path.trim() !== ''
+
+  return {
+    backupPath,
+    control,
+    formState,
+    handleBackup,
+    handleSubmit,
+    isBackupInProgress,
+    isBackupLoading,
+    selectBackupFolder,
+    setShowBackupModal,
+    showBackupModal,
+  }
+}
