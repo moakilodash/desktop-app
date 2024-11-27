@@ -1,4 +1,4 @@
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::{env, fs};
@@ -139,9 +139,50 @@ pub fn update_account(
     )
 }
 
-pub fn delete_account(name: String) -> Result<usize, rusqlite::Error> {
+pub fn get_account_by_name(name: &str) -> Result<Option<Account>, rusqlite::Error> {
     let conn = Connection::open(get_db_path())?;
-    conn.execute("DELETE FROM Accounts WHERE name = ?1", [name])
+    let mut stmt = conn.prepare("SELECT * FROM Accounts WHERE name = ?")?;
+    let account = stmt.query_row([name], |row| {
+        Ok(Account {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            network: row.get(2)?,
+            datapath: row.get(3)?,
+            rpc_connection_url: row.get(4)?,
+            node_url: row.get(5)?,
+            indexer_url: row.get(6)?,
+            proxy_endpoint: row.get(7)?,
+            default_lsp_url: row.get(8)?,
+        })
+    }).optional()?;
+    
+    Ok(account)
+}
+
+pub fn delete_account(name: String) -> Result<usize, rusqlite::Error> {
+    // First get the account to check its datapath
+    let account = get_account_by_name(&name)?;
+    
+    let conn = Connection::open(get_db_path())?;
+    let result = conn.execute("DELETE FROM Accounts WHERE name = ?1", [name])?;
+    
+    // If account exists and has a datapath, delete the directory
+    if let Some(account) = account {
+        if let Some(datapath) = account.datapath {
+            if !datapath.is_empty() {
+                let full_path = PathBuf::from("../bin").join(datapath);
+                let full_path_str = full_path.to_string_lossy();
+                
+                println!("Attempting to delete account folder at: {}", full_path_str);
+                match std::fs::remove_dir_all(&full_path) {
+                    Ok(_) => println!("Successfully deleted account folder at: {}", full_path_str),
+                    Err(e) => println!("Failed to delete account folder at {}: {}", full_path_str, e),
+                }
+            }
+        }
+    }
+    
+    Ok(result)
 }
 
 pub fn check_account_exists(name: &str) -> Result<bool, rusqlite::Error> {

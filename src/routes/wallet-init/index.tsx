@@ -30,7 +30,6 @@ import {
 interface NodeSetupFields {
   name: string
   network: BitcoinNetwork
-  datapath: string
   rpc_connection_url: string
   indexer_url: string
   proxy_endpoint: string
@@ -58,7 +57,6 @@ export const Component = () => {
   // Separate forms for each step
   const nodeSetupForm = useForm<NodeSetupFields>({
     defaultValues: {
-      datapath: './kaleidoswap-node',
       name: 'Test Account',
       network: 'regtest',
       ...NETWORK_DEFAULTS['regtest'],
@@ -80,6 +78,14 @@ export const Component = () => {
 
   const handleNodeSetup: SubmitHandler<NodeSetupFields> = async (data) => {
     try {
+      const formattedName = data.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-') // Replace non-alphanumeric chars with hyphens
+        .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+        .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+
+      const datapath = `kaleidoswap-${formattedName}`
+
       const accountExists = await invoke('check_account_exists', {
         name: data.name,
       })
@@ -90,7 +96,7 @@ export const Component = () => {
 
       await dispatch(
         setSettingsAsync({
-          datapath: data.datapath,
+          datapath: datapath, // Use formatted name-based datapath
           default_lsp_url: NETWORK_DEFAULTS[data.network].default_lsp_url,
           indexer_url: data.indexer_url,
           name: data.name,
@@ -111,10 +117,20 @@ export const Component = () => {
   const handlePasswordSetup: SubmitHandler<PasswordFields> = async (data) => {
     setIsStartingNode(true)
     try {
+      const formattedName = nodeSetupForm
+        .getValues('name')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+      const datapath = `kaleidoswap-${formattedName}`
+
       await invoke('start_node', {
-        daemonListeningPort: '3001',
-        datapath: nodeSetupForm.getValues('datapath'),
-        ldkPeerListeningPort: '9735',
+        daemonListeningPort: nodeSetupForm.getValues('daemon_listening_port'),
+        datapath: datapath,
+        ldkPeerListeningPort: nodeSetupForm.getValues(
+          'ldk_peer_listening_port'
+        ),
         network: nodeSetupForm.getValues('network'),
       })
       await new Promise((resolve) => setTimeout(resolve, 5000))
@@ -161,7 +177,7 @@ export const Component = () => {
       }
 
       await invoke('insert_account', {
-        datapath: nodeSetupForm.getValues('datapath'),
+        datapath: datapath,
         defaultLspUrl:
           NETWORK_DEFAULTS[nodeSetupForm.getValues('network')].default_lsp_url,
         indexerUrl: nodeSetupForm.getValues('indexer_url'),
@@ -352,23 +368,11 @@ const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
                 {...form.register('name', { required: 'Required' })}
               />
             </div>
+            <div className="text-sm text-gray-400">
+              This name will be used to create your account folder
+            </div>
             <div className="text-sm text-red mt-2">
               {form.formState.errors.name?.message}
-            </div>
-          </div>
-
-          {/* Datapath Field */}
-          <div>
-            <div className="text-xs mb-3">Datapath</div>
-            <div className="relative">
-              <input
-                className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
-                type="text"
-                {...form.register('datapath', { required: 'Required' })}
-              />
-            </div>
-            <div className="text-sm text-red mt-2">
-              {form.formState.errors.datapath?.message}
             </div>
           </div>
 
@@ -473,13 +477,13 @@ const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
                 </div>
               </div>
 
-              {/* Node Port */}
+              {/* Daemon Listening Port */}
               <div>
-                <div className="text-xs mb-3">API Node Port</div>
+                <div className="text-xs mb-3">Daemon Listening Port</div>
                 <div className="relative">
                   <input
                     className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
-                    placeholder="Enter the node port"
+                    placeholder="Enter the daemon listening port"
                     type="text"
                     {...form.register('daemon_listening_port', {
                       pattern: {
@@ -493,6 +497,29 @@ const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
                 <div className="text-sm text-gray-400">Default: 3001</div>
                 <div className="text-sm text-red mt-2">
                   {form.formState.errors.daemon_listening_port?.message}
+                </div>
+              </div>
+
+              {/* LDK Peer Listening Port */}
+              <div>
+                <div className="text-xs mb-3">LDK Peer Listening Port</div>
+                <div className="relative">
+                  <input
+                    className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
+                    placeholder="Enter the LDK peer listening port"
+                    type="text"
+                    {...form.register('ldk_peer_listening_port', {
+                      pattern: {
+                        message: 'Please enter a valid port number',
+                        value: /^\d+$/,
+                      },
+                      required: 'Required',
+                    })}
+                  />
+                </div>
+                <div className="text-sm text-gray-400">Default: 9735</div>
+                <div className="text-sm text-red mt-2">
+                  {form.formState.errors.ldk_peer_listening_port?.message}
                 </div>
               </div>
             </div>

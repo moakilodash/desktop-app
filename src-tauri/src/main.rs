@@ -144,10 +144,28 @@ fn update_account(
 }
 
 #[tauri::command]
-fn delete_account(name: String) -> Result<usize, String> {
-    match db::delete_account(name) {
-        Ok(num_rows) => Ok(num_rows),
-        Err(e) => Err(e.to_string()),
+fn delete_account(
+    node_process: tauri::State<Arc<Mutex<NodeProcess>>>,
+    name: String
+) -> Result<usize, String> {
+    println!("Attempting to delete account: {}", name);
+    
+    // Stop the node if it's running
+    let node_process = node_process.lock().unwrap();
+    if node_process.is_running() {
+        println!("Stopping node for account: {}", name);
+        node_process.stop();
+    }
+    
+    match db::delete_account(name.clone()) {
+        Ok(num_rows) => {
+            println!("Successfully deleted account: {}", name);
+            Ok(num_rows)
+        },
+        Err(e) => {
+            println!("Failed to delete account {}: {}", name, e);
+            Err(e.to_string())
+        }
     }
 }
 
