@@ -366,6 +366,9 @@ export const Toolbar = () => {
                         will permanently lose access to your funds
                       </li>
                       <li>• All local node data will be permanently deleted</li>
+                      <li className="break-all">
+                        • Data path to be deleted: {accountToDelete.datapath}
+                      </li>
                     </>
                   ) : (
                     <>
