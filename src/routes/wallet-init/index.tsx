@@ -1,3 +1,4 @@
+import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import { invoke } from '@tauri-apps/api'
 import { ChevronDown } from 'lucide-react'
 import { useState, useEffect } from 'react'
@@ -209,30 +210,51 @@ export const Component = () => {
   const handleMnemonicVerify: SubmitHandler<MnemonicVerifyFields> = async (
     data
   ) => {
-    if (mnemonic.join(' ') !== data.mnemonic.trim()) {
-      setAdditionalErrors(['Mnemonic does not match'])
-      return
-    }
-
-    const rpcConfig = parseRpcUrl(nodeSetupForm.getValues('rpc_connection_url'))
-    const unlockResponse = await unlock({
-      bitcoind_rpc_host: rpcConfig.host,
-      bitcoind_rpc_password: rpcConfig.password,
-      bitcoind_rpc_port: rpcConfig.port,
-      bitcoind_rpc_username: rpcConfig.username,
-      indexer_url: nodeSetupForm.getValues('indexer_url'),
-      password: nodePassword,
-      proxy_endpoint: nodeSetupForm.getValues('proxy_endpoint'),
-    })
-
-    if (unlockResponse.isSuccess) {
-      const nodeInfoRes = await nodeInfo()
-      if (nodeInfoRes.isSuccess) {
-        navigate(TRADE_PATH)
+    try {
+      if (mnemonic.join(' ') !== data.mnemonic.trim()) {
+        setAdditionalErrors(['Mnemonic does not match'])
+        return
       }
-    } else {
-      console.error('Node unlock failed:', unlockResponse.error)
-      setAdditionalErrors(['Failed to unlock the node'])
+
+      const rpcConfig = parseRpcUrl(
+        nodeSetupForm.getValues('rpc_connection_url')
+      )
+      const unlockResponse = await unlock({
+        bitcoind_rpc_host: rpcConfig.host,
+        bitcoind_rpc_password: rpcConfig.password,
+        bitcoind_rpc_port: rpcConfig.port,
+        bitcoind_rpc_username: rpcConfig.username,
+        indexer_url: nodeSetupForm.getValues('indexer_url'),
+        password: nodePassword,
+        proxy_endpoint: nodeSetupForm.getValues('proxy_endpoint'),
+      })
+
+      if (unlockResponse.isSuccess) {
+        const nodeInfoRes = await nodeInfo()
+        if (nodeInfoRes.isSuccess) {
+          navigate(TRADE_PATH)
+        }
+      } else {
+        if ('error' in unlockResponse && unlockResponse.error) {
+          const errorData = isFetchBaseQueryError(unlockResponse.error)
+            ? (unlockResponse.error.data as { error?: string })?.error ||
+              'Unknown error'
+            : unlockResponse.error.message || 'Unknown error'
+          throw new Error(errorData)
+        }
+        throw new Error('Failed to unlock the node')
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'An unexpected error occurred'
+      toast.error(errorMessage, {
+        autoClose: 5000,
+        closeOnClick: false,
+        draggable: false,
+        hideProgressBar: false,
+        pauseOnHover: false,
+        position: 'top-right',
+      })
     }
   }
 
@@ -548,4 +570,8 @@ const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
       </form>
     </>
   )
+}
+
+function isFetchBaseQueryError(error: unknown): error is FetchBaseQueryError {
+  return typeof error === 'object' && error != null && 'status' in error
 }

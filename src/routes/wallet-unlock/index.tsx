@@ -202,10 +202,26 @@ export const Component = () => {
           navigate(TRADE_PATH)
         }
       } else {
-        toast.error('Failed to unlock the node')
+        if ('error' in unlockResponse && unlockResponse.error) {
+          const errorData = isFetchBaseQueryError(unlockResponse.error)
+            ? (unlockResponse.error.data as { error?: string })?.error ||
+              'Unknown error'
+            : unlockResponse.error.message || 'Unknown error'
+          throw new Error(errorData)
+        }
+        throw new Error('Failed to unlock the node')
       }
     } catch (error) {
-      toast.error('An error occurred during verification')
+      const errorMessage =
+        error instanceof Error ? error.message : 'An unexpected error occurred'
+      toast.error(errorMessage, {
+        autoClose: 5000,
+        closeOnClick: false,
+        draggable: false,
+        hideProgressBar: false,
+        pauseOnHover: false,
+        position: 'top-right',
+      })
     } finally {
       setIsVerifying(false)
     }
