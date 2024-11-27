@@ -1,4 +1,6 @@
+import React from 'react'
 import { SubmitHandler, UseFormReturn } from 'react-hook-form'
+import { toast } from 'react-toastify'
 
 export interface MnemonicVerifyFields {
   mnemonic: string
@@ -17,6 +19,19 @@ export const MnemonicVerifyForm = ({
   onBack,
   errors,
 }: MnemonicVerifyFormProps) => {
+  React.useEffect(() => {
+    errors.forEach((error) => {
+      toast.error(error, {
+        autoClose: 5000,
+        closeOnClick: true,
+        draggable: true,
+        hideProgressBar: false,
+        pauseOnHover: true,
+        position: 'top-right',
+      })
+    })
+  }, [errors])
+
   return (
     <>
       <div>
