@@ -1,5 +1,13 @@
 import { invoke } from '@tauri-apps/api/tauri'
-import { Plus, Trash2, Edit, X, Server, Cloud } from 'lucide-react'
+import {
+  Plus,
+  Trash2,
+  Edit,
+  X,
+  Server,
+  Cloud,
+  AlertTriangle,
+} from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -258,6 +266,16 @@ export const Toolbar = () => {
                   </div>
                 </div>
                 <div className="space-y-3 text-sm">
+                  {selectedAccount.datapath && (
+                    <div>
+                      <label className="text-gray-400 block mb-1">
+                        Data Path
+                      </label>
+                      <div className="text-white break-all">
+                        {selectedAccount.datapath}
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <label className="text-gray-400 block mb-1">Node URL</label>
                     <div className="text-white break-all">
@@ -314,36 +332,75 @@ export const Toolbar = () => {
           </div>
         </div>
       )}
-      {showDeleteModal && (
+      {showDeleteModal && accountToDelete && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50"
           onClick={() => setShowDeleteModal(false)}
         >
           <div
-            className="bg-gray-800 text-white p-6 rounded-lg shadow-lg text-center max-w-md w-full mx-4"
+            className="bg-gray-800 text-white p-8 rounded-xl shadow-xl text-center max-w-md w-full mx-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-2xl font-semibold mb-4">Delete Account</h2>
-            <p className="mb-6">
-              Are you sure you want to delete the account "
-              {accountToDelete?.name}"? This action cannot be undone.
-            </p>
+            <div className="flex flex-col items-center mb-6">
+              <AlertTriangle className="text-yellow-500 w-16 h-16 mb-4" />
+              <h2 className="text-2xl font-bold">Delete Account</h2>
+            </div>
+
+            <div className="space-y-4 mb-8">
+              <p className="text-gray-300">
+                Are you sure you want to delete the account "
+                <span className="font-semibold text-white">
+                  {accountToDelete.name}
+                </span>
+                "?
+              </p>
+
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 text-left">
+                <p className="text-yellow-500 font-medium mb-2">⚠️ Warning</p>
+                <ul className="text-yellow-100/80 space-y-2 text-sm">
+                  <li>• This action cannot be undone</li>
+                  {accountToDelete.datapath ? (
+                    <>
+                      <li>
+                        • If you haven't backed up your mnemonic phrase, you
+                        will permanently lose access to your funds
+                      </li>
+                      <li>• All local node data will be permanently deleted</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>
+                        • This will only delete the stored connection settings
+                      </li>
+                      <li>
+                        • The remote node will remain active and must be managed
+                        directly on the remote machine
+                      </li>
+                      <li>
+                        • Make sure you have access to the remote node's
+                        credentials if you want to reconnect later
+                      </li>
+                    </>
+                  )}
+                </ul>
+              </div>
+            </div>
+
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
               <button
-                className="w-full sm:w-1/2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white text-lg font-bold rounded shadow-md transition duration-200"
+                className="w-full sm:w-1/2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white text-lg font-bold rounded-lg shadow-md transition duration-200"
                 onClick={() => setShowDeleteModal(false)}
                 type="button"
               >
                 Cancel
               </button>
               <button
-                className="w-full sm:w-1/2 px-6 py-3 bg-red-500 hover:bg-red-600 text-white text-lg font-bold rounded shadow-md transition duration-200"
-                onClick={() =>
-                  accountToDelete && handleDeleteAccount(accountToDelete)
-                }
+                className="w-full sm:w-1/2 px-6 py-3 bg-red-500 hover:bg-red-600 text-white text-lg font-bold rounded-lg shadow-md transition duration-200 flex items-center justify-center gap-2"
+                onClick={() => handleDeleteAccount(accountToDelete)}
                 type="button"
               >
-                Delete
+                <Trash2 size={20} />
+                Delete {accountToDelete.datapath ? 'Node' : 'Connection'}
               </button>
             </div>
           </div>
