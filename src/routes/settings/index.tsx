@@ -46,7 +46,7 @@ export const Component: React.FC = () => {
   const [showShutdownConfirmation, setShowShutdownConfirmation] =
     useState(false)
 
-  const { control, handleSubmit, formState, reset } = useForm<FormFields>({
+  const { control, handleSubmit, reset } = useForm<FormFields>({
     defaultValues: {
       bitcoinUnit,
       lspUrl: defaultLspUrl || 'http://localhost:8000',
@@ -111,7 +111,9 @@ export const Component: React.FC = () => {
   const confirmLogout = async () => {
     try {
       const lockResponse = await lock().unwrap()
-      if (lockResponse) {
+      console.log('lockResponse', lockResponse)
+
+      if (lockResponse !== undefined && lockResponse !== null) {
         await invoke('stop_node')
         dispatch(nodeSettingsActions.resetNodeSettings())
         toast.success('Logout successful')
@@ -157,108 +159,124 @@ export const Component: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-gray-800 p-8 rounded-xl shadow-2xl">
-        <h1 className="text-3xl font-bold text-white mb-8 text-center">
+    <div className="flex justify-center items-center h-screen">
+      <div className="w-full max-w-xl bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-gray-700">
+        <h1 className="text-4xl font-bold text-white mb-2 text-center">
           Settings
         </h1>
-        <form className="space-y-6" onSubmit={handleSubmit(handleSave)}>
+        <p className="text-gray-400 text-center mb-8">
+          Manage your node and application preferences
+        </p>
+
+        <form className="space-y-8" onSubmit={handleSubmit(handleSave)}>
           <Controller
             control={control}
             name="bitcoinUnit"
             render={({ field }) => (
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Select Bitcoin Unit
+              <div className="group transition-all duration-300 hover:translate-x-1">
+                <label className="block text-sm font-semibold text-gray-300 mb-2">
+                  Bitcoin Unit
                 </label>
                 <div className="relative">
                   <select
                     {...field}
-                    className="block w-full pl-3 pr-10 py-2 text-white bg-gray-700 border border-gray-600 rounded-md appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="block w-full pl-4 pr-10 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                   >
                     <option value="SAT">Satoshi (SAT)</option>
                     <option value="BTC">Bitcoin (BTC)</option>
                   </select>
-                  <ChevronDown className="absolute right-2 top-2.5 h-5 w-5 text-gray-400 pointer-events-none" />
+                  <ChevronDown className="absolute right-3 top-3.5 h-5 w-5 text-gray-400 pointer-events-none" />
                 </div>
               </div>
             )}
           />
-          <Controller
-            control={control}
-            name="nodeConnectionString"
-            render={({ field }) => (
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Node Connection String
-                </label>
-                <input
-                  {...field}
-                  className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter node connection string"
-                  type="text"
-                />
-              </div>
-            )}
-          />
-          <Controller
-            control={control}
-            name="lspUrl"
-            render={({ field }) => (
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Default LSP URL
-                </label>
-                <input
-                  {...field}
-                  className="w-full px-3 py-2 text-white bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter default LSP URL"
-                  type="text"
-                />
-              </div>
-            )}
-          />
-          <div className="pt-4 space-y-4">
+
+          <div className="space-y-6">
+            <Controller
+              control={control}
+              name="nodeConnectionString"
+              render={({ field }) => (
+                <div className="group transition-all duration-300 hover:translate-x-1">
+                  <label className="block text-sm font-semibold text-gray-300 mb-2">
+                    Node Connection String
+                  </label>
+                  <input
+                    {...field}
+                    className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                    placeholder="e.g., http://localhost:3001"
+                    type="text"
+                  />
+                </div>
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="lspUrl"
+              render={({ field }) => (
+                <div className="group transition-all duration-300 hover:translate-x-1">
+                  <label className="block text-sm font-semibold text-gray-300 mb-2">
+                    Default LSP URL
+                  </label>
+                  <input
+                    {...field}
+                    className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                    placeholder="e.g., http://localhost:8000"
+                    type="text"
+                  />
+                </div>
+              )}
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="space-y-4 pt-6">
             <button
-              className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition duration-150 ease-in-out"
+              className="w-full flex items-center justify-center px-4 py-3 bg-[#4361EE] text-white rounded-xl hover:bg-[#3651DE] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
               onClick={() => setShowBackupModal(true)}
               type="button"
             >
               <Shield className="w-5 h-5 mr-2" />
-              Backup
+              Backup Wallet
             </button>
-            <button
-              className="w-full flex items-center justify-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition duration-150 ease-in-out"
-              onClick={handleLogout}
-              type="button"
-            >
-              <LogOut className="w-5 h-5 mr-2" />
-              Logout
-            </button>
-            <button
-              className="w-full flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition duration-150 ease-in-out"
-              onClick={handleShutdown}
-              type="button"
-            >
-              <Power className="w-5 h-5 mr-2" />
-              Shutdown Node
-            </button>
+
+            <div className="flex space-x-4">
+              <button
+                className="flex-1 flex items-center justify-center px-4 py-3 bg-[#2A2D3A] text-white rounded-xl hover:bg-[#363A4B] focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200"
+                onClick={handleLogout}
+                type="button"
+              >
+                <LogOut className="w-5 h-5 mr-2" />
+                Logout
+              </button>
+
+              <button
+                className="flex-1 flex items-center justify-center px-4 py-3 bg-red text-white rounded-xl hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200"
+                onClick={handleShutdown}
+                type="button"
+              >
+                <Power className="w-5 h-5 mr-2" />
+                Shutdown Node
+              </button>
+            </div>
           </div>
-          <div className="flex justify-between space-x-4 pt-6">
+
+          {/* Save/Undo Buttons */}
+          <div className="grid grid-cols-2 gap-4 pt-8 border-t border-[#2A2D3A] mt-6">
             <button
-              className="flex-1 flex items-center justify-center px-4 py-2 bg-gray-700 text-gray-300 rounded-md hover:bg-gray-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition duration-150 ease-in-out"
+              className="flex items-center justify-center px-6 py-3.5 bg-[#2A2D3A] text-white rounded-xl hover:bg-[#363A4B] focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200"
               onClick={handleUndo}
               type="button"
             >
-              <Undo className="w-5 h-5 mr-2" />
-              Undo
+              <Undo className="w-5 h-5 mr-2.5" />
+              Reset Changes
             </button>
             <button
-              className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition duration-150 ease-in-out"
+              className="flex items-center justify-center px-6 py-3.5 bg-[#4361EE] text-white rounded-xl hover:bg-[#3651DE] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
               type="submit"
             >
-              <Save className="w-5 h-5 mr-2" />
-              Save
+              <Save className="w-5 h-5 mr-2.5" />
+              Save Settings
             </button>
           </div>
         </form>
