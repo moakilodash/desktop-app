@@ -133,10 +133,10 @@ export const Component = () => {
         error instanceof Error ? error.message : 'An unexpected error occurred'
       toast.error(errorMessage, {
         autoClose: 5000,
-        closeOnClick: true,
-        draggable: true,
+        closeOnClick: false,
+        draggable: false,
         hideProgressBar: false,
-        pauseOnHover: true,
+        pauseOnHover: false,
         position: 'top-right',
       })
     } finally {
@@ -162,7 +162,14 @@ export const Component = () => {
       toast.success('Node initialized successfully!')
     } catch (error) {
       console.error('Initialization failed:', error)
-      toast.error('Failed to initialize node. Please try again.')
+      toast.error('Failed to initialize node. Please try again.', {
+        autoClose: 5000,
+        closeOnClick: false,
+        draggable: false,
+        hideProgressBar: false,
+        pauseOnHover: false,
+        position: 'top-right',
+      })
     } finally {
       setIsUnlocking(false)
     }
