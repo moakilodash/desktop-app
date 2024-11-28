@@ -18,11 +18,11 @@ export const NETWORK_DEFAULTS: Record<string, NetworkDefaults> = {
   },
   regtest: {
     daemon_listening_port: '3001',
-    default_lsp_url: 'https://api.regtest.kaleidoswap.com/',
-    indexer_url: 'electrs:50001',
+    default_lsp_url: 'http://localhost:8000/',
+    indexer_url: 'localhost:50001',
     ldk_peer_listening_port: '9735',
-    proxy_endpoint: 'rpc://proxy:3000/json-rpc',
-    rpc_connection_url: 'user:password@bitcoind:18443',
+    proxy_endpoint: 'rpc://localhost:3000/json-rpc',
+    rpc_connection_url: 'user:password@localhost:18443',
   },
   signet: {
     daemon_listening_port: '3001',
