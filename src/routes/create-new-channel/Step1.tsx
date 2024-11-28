@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import axios from 'axios'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
 
 import { useAppDispatch } from '../../app/store/hooks'
@@ -58,6 +58,7 @@ export const Step1 = (props: Props) => {
       const response = await axios.get(`${apiUrl}api/v1/lsps1/get_info`)
       const connectionUrl = response.data.lsp_connection_url
       setLspConnectionUrl(connectionUrl)
+      console.log('lspConnectionUrl', lspConnectionUrl)
       form.setValue('pubKeyAndAddress', connectionUrl)
     } catch (err) {
       console.error('Error fetching LSP info:', err)

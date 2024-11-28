@@ -10,7 +10,7 @@ import {
   AlertTriangle,
   Download,
 } from 'lucide-react'
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
@@ -21,7 +21,6 @@ import { RootState } from '../../app/store'
 import { useAppSelector } from '../../app/store/hooks'
 import { BackupModal } from '../../components/BackupModal'
 import { useBackup } from '../../hooks/useBackup'
-import { useInterval } from '../../hooks/useInterval'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 import { nodeSettingsActions } from '../../slices/nodeSettings/nodeSettings.slice'
 import {
