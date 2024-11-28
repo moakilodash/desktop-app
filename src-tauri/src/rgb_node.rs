@@ -5,12 +5,14 @@ use std::time::Duration;
 use std::thread;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::io::{BufReader, BufRead};
 
 pub struct NodeProcess {
     child_process: Arc<Mutex<Option<Child>>>,
     control_sender: Sender<ControlMessage>,
     control_receiver: Arc<Mutex<Receiver<ControlMessage>>>,
     is_running: Arc<AtomicBool>,
+    logs: Arc<Mutex<Vec<String>>>,
 }
 
 enum ControlMessage {
@@ -25,6 +27,7 @@ impl NodeProcess {
             control_sender: tx,
             control_receiver: Arc::new(Mutex::new(rx)),
             is_running: Arc::new(AtomicBool::new(false)),
+            logs: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -37,6 +40,7 @@ impl NodeProcess {
         let rx = Arc::clone(&self.control_receiver);
         let child_process = Arc::clone(&self.child_process);
         let is_running = Arc::clone(&self.is_running);
+        let logs = Arc::clone(&self.logs);
 
         std::thread::spawn(move || {
             let process = run_rgb_lightning_node(&network, &datapath, &daemon_listening_port, &ldk_peer_listening_port);
@@ -44,6 +48,30 @@ impl NodeProcess {
             if let Some(child) = process {
                 *child_process.lock().unwrap() = Some(child);
                 is_running.store(true, Ordering::SeqCst);
+
+                if let Some(stdout) = child_process.lock().unwrap().as_mut().unwrap().stdout.take() {
+                    let logs_clone = Arc::clone(&logs);
+                    std::thread::spawn(move || {
+                        let reader = BufReader::new(stdout);
+                        for line in reader.lines() {
+                            if let Ok(line) = line {
+                                logs_clone.lock().unwrap().push(line);
+                            }
+                        }
+                    });
+                }
+
+                if let Some(stderr) = child_process.lock().unwrap().as_mut().unwrap().stderr.take() {
+                    let logs_clone = Arc::clone(&logs);
+                    std::thread::spawn(move || {
+                        let reader = BufReader::new(stderr);
+                        for line in reader.lines() {
+                            if let Ok(line) = line {
+                                logs_clone.lock().unwrap().push(line);
+                            }
+                        }
+                    });
+                }
 
                 loop {
                     if let Ok(ControlMessage::Stop) = rx.lock().unwrap().try_recv() {
@@ -66,7 +94,6 @@ impl NodeProcess {
                     }
                 }
 
-                // Stop the process
                 if let Some(mut child) = child_process.lock().unwrap().take() {
                     let _ = child.kill();
                     let _ = child.wait();
@@ -91,6 +118,10 @@ impl NodeProcess {
     pub fn is_running(&self) -> bool {
         self.is_running.load(Ordering::SeqCst)
     }
+
+    pub fn get_logs(&self) -> Vec<String> {
+        self.logs.lock().unwrap().clone()
+    }
 }
 
 fn run_rgb_lightning_node(
@@ -109,6 +140,8 @@ fn run_rgb_lightning_node(
                 .args(&["--daemon-listening-port", daemon_listening_port])
                 .args(&["--ldk-peer-listening-port", ldk_peer_listening_port])
                 .args(&["--network", network])
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::piped())
                 .spawn()
                 .expect("Failed to start rgb-lightning-node process"),
         )

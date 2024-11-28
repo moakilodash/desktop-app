@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api'
+import { save } from '@tauri-apps/api/dialog'
 import {
   ChevronDown,
   LogOut,
@@ -7,8 +8,9 @@ import {
   Shield,
   Power,
   AlertTriangle,
+  Download,
 } from 'lucide-react'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
@@ -19,6 +21,7 @@ import { RootState } from '../../app/store'
 import { useAppSelector } from '../../app/store/hooks'
 import { BackupModal } from '../../components/BackupModal'
 import { useBackup } from '../../hooks/useBackup'
+import { useInterval } from '../../hooks/useInterval'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 import { nodeSettingsActions } from '../../slices/nodeSettings/nodeSettings.slice'
 import {
@@ -70,6 +73,17 @@ export const Component: React.FC = () => {
     handleBackup,
     selectBackupFolder,
   } = useBackup({ nodeSettings })
+
+  const [nodeLogs, setNodeLogs] = useState<string[]>([])
+
+  const fetchNodeLogs = async () => {
+    try {
+      const logs = await invoke<string[]>('get_node_logs')
+      setNodeLogs(logs)
+    } catch (error) {
+      console.error('Failed to fetch node logs:', error)
+    }
+  }
 
   useEffect(() => {
     reset({
@@ -158,9 +172,35 @@ export const Component: React.FC = () => {
     }
   }
 
+  const handleExportLogs = async () => {
+    try {
+      const filePath = await save({
+        defaultPath: `node-logs-${new Date().toISOString().split('T')[0]}.txt`,
+        filters: [
+          {
+            extensions: ['txt'],
+            name: 'Log Files',
+          },
+        ],
+      })
+
+      if (filePath) {
+        const logsText = nodeLogs.join('\n')
+        await invoke('save_logs_to_file', {
+          content: logsText,
+          filePath,
+        })
+        toast.success('Logs exported successfully')
+      }
+    } catch (error) {
+      console.error('Failed to export logs:', error)
+      toast.error('Failed to export logs')
+    }
+  }
+
   return (
-    <div className="flex justify-center items-center h-screen">
-      <div className="w-full max-w-xl bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-gray-700">
+    <div className="flex justify-center items-start min-h-screen py-8 px-4">
+      <div className="w-full max-w-4xl bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-gray-700">
         <h1 className="text-4xl font-bold text-white mb-2 text-center">
           Settings
         </h1>
@@ -366,6 +406,65 @@ export const Component: React.FC = () => {
                 >
                   Confirm Shutdown
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Updated Node Logs Section */}
+        {nodeSettings && (
+          <div className="mt-8 border-t border-gray-700 pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-white">Node Logs</h2>
+              <div className="flex gap-2">
+                <button
+                  className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
+                  disabled={nodeLogs.length === 0}
+                  onClick={handleExportLogs}
+                  type="button"
+                >
+                  <Download className="w-4 h-4" />
+                  Export
+                </button>
+                <button
+                  className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                  onClick={() => fetchNodeLogs()}
+                  type="button"
+                >
+                  Refresh Logs
+                </button>
+                <button
+                  className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                  disabled={nodeLogs.length === 0}
+                  onClick={() => setNodeLogs([])}
+                  type="button"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+            <div className="bg-gray-900 rounded-lg border border-gray-700">
+              <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700">
+                <span className="text-sm text-gray-400">Live Node Logs</span>
+                <span className="text-xs text-gray-500">
+                  {nodeLogs.length} entries
+                </span>
+              </div>
+              <div className="p-4 h-96 overflow-y-auto font-mono text-sm">
+                {nodeLogs.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-gray-500">
+                    No logs available
+                  </div>
+                ) : (
+                  nodeLogs.map((log, index) => (
+                    <div
+                      className="text-gray-300 whitespace-pre-wrap py-1 hover:bg-gray-800/50 rounded px-2 transition-colors"
+                      key={index}
+                    >
+                      {log}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>

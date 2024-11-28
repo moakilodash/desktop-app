@@ -48,7 +48,9 @@ fn main() {
             stop_node,
             check_account_exists,
             set_current_account,
-            get_current_account
+            get_current_account,
+            get_node_logs,
+            save_logs_to_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -195,4 +197,15 @@ fn set_current_account(
 #[tauri::command]
 fn get_current_account(state: tauri::State<CurrentAccount>) -> Option<Account> {
     state.0.read().unwrap().clone()
+}
+
+#[tauri::command]
+fn get_node_logs(node_process: tauri::State<Arc<Mutex<NodeProcess>>>) -> Vec<String> {
+    node_process.lock().unwrap().get_logs()
+}
+
+#[tauri::command]
+async fn save_logs_to_file(file_path: String, content: String) -> Result<(), String> {
+    std::fs::write(file_path, content)
+        .map_err(|e| e.to_string())
 }
