@@ -50,7 +50,7 @@ fn main() {
             set_current_account,
             get_current_account,
             get_node_logs,
-            save_logs_to_file,
+            save_logs_to_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

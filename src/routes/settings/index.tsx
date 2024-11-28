@@ -29,6 +29,8 @@ import {
   setDefaultLspUrl,
 } from '../../slices/settings/settings.slice'
 
+import { TerminalLogDisplay } from './TerminalLogDisplay'
+
 interface FormFields {
   bitcoinUnit: string
   nodeConnectionString: string
@@ -455,14 +457,7 @@ export const Component: React.FC = () => {
                     No logs available
                   </div>
                 ) : (
-                  nodeLogs.map((log, index) => (
-                    <div
-                      className="text-gray-300 whitespace-pre-wrap py-1 hover:bg-gray-800/50 rounded px-2 transition-colors"
-                      key={index}
-                    >
-                      {log}
-                    </div>
-                  ))
+                  <TerminalLogDisplay logs={nodeLogs} />
                 )}
               </div>
             </div>

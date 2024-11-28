@@ -1,10 +1,10 @@
 [package]
 name = "desktop-app"
-version = "0.0.0"
+version = "0.1.0"
 description = "Kaleidoswap App"
 authors = ["Kaleidoswap Team"]
-license = ""
-repository = ""
+license = "MIT"
+repository = "https://github.com/kaleidoswap/desktop-app"
 edition = "2021"
 
 [build-dependencies]
@@ -20,6 +20,12 @@ serde_yaml = "0.8"
 fs_extra = "1.2"
 dotenv = "0.15.0"
 rusqlite = "0.32.1"
+
+futures = "0.3"
+futures-util = "0.3"
+tokio = { version = "1.0", features = ["full"] }
+async-trait = "0.1"
+parking_lot = "0.12"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem
