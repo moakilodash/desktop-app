@@ -48,26 +48,24 @@ export const Step1 = (props: Props) => {
 
   const dispatch = useAppDispatch()
 
-  useEffect(() => {
-    const fetchLspInfo = async () => {
-      setIsLoading(true)
-      setError('')
-      try {
-        const networkInfo = await getNetworkInfo().unwrap()
-        const apiUrl =
-          NETWORK_DEFAULTS[networkInfo.network.toLowerCase()].default_lsp_url
-        const response = await axios.get(`${apiUrl}api/v1/lsps1/get_info`)
-        setLspConnectionUrl(response.data.lsp_connection_url)
-      } catch (err) {
-        console.error('Error fetching LSP info:', err)
-        setError('Failed to fetch LSP connection information')
-      } finally {
-        setIsLoading(false)
-      }
+  const fetchLspInfo = async () => {
+    setIsLoading(true)
+    setError('')
+    try {
+      const networkInfo = await getNetworkInfo().unwrap()
+      const apiUrl =
+        NETWORK_DEFAULTS[networkInfo.network.toLowerCase()].default_lsp_url
+      const response = await axios.get(`${apiUrl}api/v1/lsps1/get_info`)
+      const connectionUrl = response.data.lsp_connection_url
+      setLspConnectionUrl(connectionUrl)
+      form.setValue('pubKeyAndAddress', connectionUrl)
+    } catch (err) {
+      console.error('Error fetching LSP info:', err)
+      setError('Failed to fetch LSP connection information')
+    } finally {
+      setIsLoading(false)
     }
-
-    fetchLspInfo()
-  }, [getNetworkInfo])
+  }
 
   const checkPeerConnection = async (peerInfo: string) => {
     try {
@@ -133,17 +131,16 @@ export const Step1 = (props: Props) => {
         control={form.control}
         name="pubKeyAndAddress"
         render={({ field }) => (
-          <>
-            <input
-              className="px-6 py-4 w-full border border-divider bg-blue-dark outline-none rounded"
+          <div className="space-y-2">
+            <textarea
+              className="px-6 py-4 w-full border border-divider bg-blue-dark outline-none rounded font-mono text-sm break-all resize-none min-h-[6rem]"
               placeholder="Paste the node connection URL here: pubkey@host:port"
-              type="text"
               {...field}
             />
-            <p className="text-sm text-red mt-2">
+            <p className="text-sm text-red">
               {form.formState.errors.pubKeyAndAddress?.message}
             </p>
-          </>
+          </div>
         )}
       />
 
@@ -162,10 +159,8 @@ export const Step1 = (props: Props) => {
         </button>
         <button
           className="flex items-center space-x-2"
-          disabled={isLoading || !lspConnectionUrl}
-          onClick={() =>
-            lspConnectionUrl && handlePeerSelection(lspConnectionUrl)
-          }
+          disabled={isLoading}
+          onClick={fetchLspInfo}
           type="button"
         >
           <KaleidoswapBoxIcon />
