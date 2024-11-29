@@ -74,9 +74,10 @@ export const Layout = (props: Props) => {
         )
 
       if (
-        lastDeposit &&
-        highestBlockDeposit &&
-        highestBlockDeposit?.confirmation_time?.height > lastDeposit
+        (lastDeposit &&
+          highestBlockDeposit &&
+          highestBlockDeposit?.confirmation_time?.height > lastDeposit) ||
+        (!lastDeposit && highestBlockDeposit)
       ) {
         console.log('Deposit received')
         toast.info('Deposit received')
