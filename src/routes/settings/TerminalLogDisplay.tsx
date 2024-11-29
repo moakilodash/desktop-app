@@ -1,4 +1,4 @@
-import { CSSProperties } from 'react'
+import { CSSProperties, useEffect, useRef } from 'react'
 
 const parseAnsi = (log: string) => {
   const segments = []
@@ -79,8 +79,16 @@ const parseAnsi = (log: string) => {
 }
 
 const TerminalLogDisplay = ({ logs }: { logs: string[] }) => {
+  const logsContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (logsContainerRef.current) {
+      logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight
+    }
+  }, [logs]) // Scroll whenever logs update
+
   return (
-    <div className="space-y-1">
+    <div className="space-y-1 h-full overflow-y-auto" ref={logsContainerRef}>
       {logs.map((log, index) => (
         <div
           className="bg-gray-900 text-gray-300 font-mono text-sm whitespace-pre-wrap py-1 px-2 rounded hover:bg-gray-800/50 transition-colors"

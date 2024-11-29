@@ -8,6 +8,9 @@ import {
   Loader,
   Wallet,
   Link as ChainIcon,
+  Copy,
+  Network,
+  Blocks,
 } from 'lucide-react'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -20,10 +23,12 @@ import {
 } from '../../app/router/paths'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { ChannelCard } from '../../components/ChannelCard'
+import { BitcoinNetwork } from '../../constants'
 import { DEFAULT_RGB_ICON } from '../../constants/networks'
 import { formatBitcoinAmount } from '../../helpers/number'
 import { nodeApi, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
 import { uiSliceActions } from '../../slices/ui/ui.slice'
+
 interface AssetRowProps {
   asset: NiaAsset
   onChainBalance: number
@@ -290,6 +295,10 @@ export const Component = () => {
   // const [refreshRgbTransfers] =
   //   nodeApi.endpoints.refreshRgbTransfers.useLazyQuery()
   const [sync] = nodeApi.endpoints.sync.useLazyQuery()
+  const [getNodeInfo, nodeInfoResponse] =
+    nodeApi.endpoints.nodeInfo.useLazyQuery()
+  const [getNetworkInfo, networkInfoResponse] =
+    nodeApi.endpoints.networkInfo.useLazyQuery()
 
   const refreshData = useCallback(async () => {
     setIsRefreshing(true)
@@ -300,11 +309,21 @@ export const Component = () => {
         btcBalance({ skip_sync: false }),
         refreshTransfers({ skip_sync: false }),
         sync(),
+        getNodeInfo(),
+        getNetworkInfo(),
       ])
     } finally {
       setIsRefreshing(false)
     }
-  }, [assets, btcBalance, listChannels, refreshTransfers, sync])
+  }, [
+    assets,
+    btcBalance,
+    listChannels,
+    refreshTransfers,
+    sync,
+    getNodeInfo,
+    getNetworkInfo,
+  ])
 
   useEffect(() => {
     if (assetsResponse.data?.nia) {
@@ -381,70 +400,134 @@ export const Component = () => {
     refreshData()
   }
 
+  const handleCopyPubkey = () => {
+    if (nodeInfoResponse.data?.pubkey) {
+      navigator.clipboard.writeText(nodeInfoResponse.data.pubkey)
+      toast.success('Node public key copied to clipboard')
+    }
+  }
+
   return (
     <div className="w-full bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
-      <div className="flex flex-col items-center mb-8">
-        <Wallet className="w-12 h-12 text-blue-500 mb-4" />
-        <h3 className="text-3xl font-bold text-white mb-2">Wallet Dashboard</h3>
-        <p className="text-slate-400 text-center max-w-md mb-8">
-          Manage your assets and channels from one place
-        </p>
+      {(networkInfoResponse.data?.network as unknown as BitcoinNetwork) !==
+        'mainnet' && (
+        <div className="mb-8 bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-center gap-3">
+          <div className="p-2 bg-amber-500/20 rounded-lg">
+            <Info className="w-5 h-5 text-amber-500" />
+          </div>
+          <div>
+            <h4 className="text-amber-500 font-medium mb-1">
+              Test Network Warning
+            </h4>
+            <p className="text-amber-400/80 text-sm">
+              You are currently on{' '}
+              {networkInfoResponse.data?.network || 'testnet'}. Any tokens on
+              this network have no real value and are for testing purposes only.
+            </p>
+          </div>
+        </div>
+      )}
 
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col items-center mb-8">
+        <div className="flex items-center gap-3 mb-6">
+          <Wallet className="w-10 h-10 text-blue-500" />
+          <h3 className="text-2xl font-bold text-white">Wallet Dashboard</h3>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
           <button
-            className="group px-4 py-2.5 bg-slate-800/50 hover:bg-slate-800 
-                     text-slate-300 hover:text-white rounded-xl 
-                     transition-all duration-200 flex items-center gap-2
-                     border border-slate-700 hover:border-blue-500/50"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 
+                     text-white rounded-xl font-medium transition-colors"
             onClick={() => navigate(CREATE_NEW_CHANNEL_PATH)}
           >
-            <div
-              className="p-1.5 bg-blue-500/10 rounded-lg 
-                          group-hover:bg-blue-500/20 transition-colors"
-            >
-              <Zap className="w-4 h-4 text-blue-500" />
-            </div>
-            <span className="font-medium">Open Channel</span>
+            <Zap className="w-5 h-5" />
+            Open Channel
           </button>
 
           <button
-            className="group px-4 py-2.5 bg-slate-800/50 hover:bg-slate-800 
-                     text-slate-300 hover:text-white rounded-xl 
-                     transition-all duration-200 flex items-center gap-2
-                     border border-slate-700 hover:border-blue-500/50"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 
+                     text-white rounded-xl font-medium transition-colors"
             onClick={() => navigate(CREATEUTXOS_PATH)}
           >
-            <div
-              className="p-1.5 bg-blue-500/10 rounded-lg 
-                          group-hover:bg-blue-500/20 transition-colors"
-            >
-              <Plus className="w-4 h-4 text-blue-500" />
-            </div>
-            <span className="font-medium">Create UTXOs</span>
+            <Plus className="w-5 h-5" />
+            Create UTXOs
           </button>
 
           <button
-            className="group px-4 py-2.5 bg-slate-800/50 hover:bg-slate-800 
-                     text-slate-300 hover:text-white rounded-xl 
-                     transition-all duration-200 flex items-center gap-2
-                     border border-slate-700 hover:border-blue-500/50"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 
+                     text-white rounded-xl font-medium transition-colors"
             disabled={isRefreshing}
             onClick={refreshData}
           >
-            <div
-              className="p-1.5 bg-blue-500/10 rounded-lg 
-                          group-hover:bg-blue-500/20 transition-colors"
-            >
-              {isRefreshing ? (
-                <Loader className="w-4 h-4 text-blue-500 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4 text-blue-500" />
-              )}
-            </div>
-            <span className="font-medium">
-              {isRefreshing ? 'Refreshing...' : 'Refresh'}
-            </span>
+            {isRefreshing ? (
+              <Loader className="w-5 h-5 animate-spin" />
+            ) : (
+              <RefreshCw className="w-5 h-5" />
+            )}
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </button>
+        </div>
+
+        <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-700/50 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <ChainIcon className="w-5 h-5 text-blue-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider block">
+                  Node Public Key
+                </span>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-sm text-slate-300 font-medium truncate">
+                    {nodeInfoResponse.data?.pubkey || '...'}
+                  </span>
+                  <button
+                    className="shrink-0 p-1.5 hover:bg-slate-700/50 rounded-lg transition-colors"
+                    onClick={handleCopyPubkey}
+                    title="Copy public key"
+                  >
+                    <Copy className="w-4 h-4 text-slate-400 hover:text-white" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-700/50 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <Network className="w-5 h-5 text-blue-500" />
+              </div>
+              <div>
+                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider block">
+                  Network
+                </span>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                  <span className="text-sm text-slate-300 font-medium">
+                    {networkInfoResponse.data?.network || 'Unknown'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-700/50 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <Blocks className="w-5 h-5 text-blue-500" />
+              </div>
+              <div>
+                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider block">
+                  Block Height
+                </span>
+                <div className="text-sm text-slate-300 font-medium mt-1">
+                  #{networkInfoResponse.data?.height || '...'}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
