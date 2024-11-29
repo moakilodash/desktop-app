@@ -87,6 +87,10 @@ export const Component: React.FC = () => {
   }
 
   useEffect(() => {
+    fetchNodeLogs()
+  }, [])
+
+  useEffect(() => {
     reset({
       bitcoinUnit,
       lspUrl: nodeSettings.default_lsp_url || 'http://localhost:8000',
