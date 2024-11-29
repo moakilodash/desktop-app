@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Download,
   Activity,
+  Settings,
   CheckCircle2,
   XCircle,
   Server,
@@ -217,7 +218,10 @@ export const Component: React.FC = () => {
       <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Settings Column */}
         <div className="bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-gray-700">
-          <h1 className="text-4xl font-bold text-white mb-2">Settings</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <Settings className="w-8 h-8 text-blue-400" />
+            <h2 className="text-4xl font-bold text-white">Settings</h2>
+          </div>
           <p className="text-gray-400 mb-8">
             Manage your node and application preferences
           </p>
