@@ -248,6 +248,7 @@ export const Component = () => {
               <button
                 className="px-4 py-2 rounded-full border text-sm border-gray-500 hover:bg-gray-700 transition-colors"
                 onClick={() => navigate(WALLET_SETUP_PATH)}
+                type="button"
               >
                 ← Back
               </button>
