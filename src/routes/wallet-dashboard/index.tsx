@@ -23,10 +23,12 @@ import {
 } from '../../app/router/paths'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { ChannelCard } from '../../components/ChannelCard'
+import { BitcoinNetwork } from '../../constants'
 import { DEFAULT_RGB_ICON } from '../../constants/networks'
 import { formatBitcoinAmount } from '../../helpers/number'
 import { nodeApi, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
 import { uiSliceActions } from '../../slices/ui/ui.slice'
+
 interface AssetRowProps {
   asset: NiaAsset
   onChainBalance: number
@@ -407,6 +409,25 @@ export const Component = () => {
 
   return (
     <div className="w-full bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
+      {(networkInfoResponse.data?.network as unknown as BitcoinNetwork) !==
+        'mainnet' && (
+        <div className="mb-8 bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-center gap-3">
+          <div className="p-2 bg-amber-500/20 rounded-lg">
+            <Info className="w-5 h-5 text-amber-500" />
+          </div>
+          <div>
+            <h4 className="text-amber-500 font-medium mb-1">
+              Test Network Warning
+            </h4>
+            <p className="text-amber-400/80 text-sm">
+              You are currently on{' '}
+              {networkInfoResponse.data?.network || 'testnet'}. Any tokens on
+              this network have no real value and are for testing purposes only.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col items-center mb-8">
         <div className="flex items-center gap-3 mb-6">
           <Wallet className="w-10 h-10 text-blue-500" />
