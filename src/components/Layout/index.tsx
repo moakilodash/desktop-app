@@ -43,7 +43,7 @@ export const Layout = (props: Props) => {
   const nodeInfo = nodeApi.endpoints.nodeInfo.useQueryState()
   const shouldPoll = nodeInfo.isSuccess
 
-  const { data, error } = nodeApi.useListTransactionsQuery(
+  const { data, isFetching, error } = nodeApi.useListTransactionsQuery(
     { skip_sync: false },
     {
       pollingInterval: 60_000,
@@ -54,8 +54,7 @@ export const Layout = (props: Props) => {
   useEffect(() => {
     const checkDeposits = async () => {
       if (!shouldPoll) return
-
-      console.log('Checking for deposits')
+      if (isFetching) return
 
       if (error && 'status' in error && error.status === 403) {
         console.log('Node is locked, waiting to retry...')
@@ -65,25 +64,38 @@ export const Layout = (props: Props) => {
         return
       }
 
-      const highestBlockDeposit = data?.transactions
-        .filter((transaction) => transaction.transaction_type === 'User')
-        .reduce((prev, current) =>
-          prev?.confirmation_time?.height > current?.confirmation_time?.height
-            ? prev
-            : current
-        )
+      const filteredTransactions = data?.transactions.filter(
+        (transaction) => transaction.transaction_type === 'User'
+      )
+
+      const highestBlockDeposit =
+        filteredTransactions && filteredTransactions.length > 0
+          ? filteredTransactions?.reduce((prev, current) =>
+              prev?.confirmation_time?.height >
+              current?.confirmation_time?.height
+                ? prev
+                : current
+            )
+          : undefined
+
+      if (lastDeposit === undefined) {
+        if (highestBlockDeposit) {
+          setLastDeposit(highestBlockDeposit?.confirmation_time?.height)
+        } else {
+          setLastDeposit(0)
+        }
+        return
+      }
 
       if (
-        (lastDeposit &&
-          highestBlockDeposit &&
-          highestBlockDeposit?.confirmation_time?.height > lastDeposit) ||
-        (!lastDeposit && highestBlockDeposit)
+        lastDeposit !== undefined &&
+        highestBlockDeposit &&
+        highestBlockDeposit?.confirmation_time?.height > lastDeposit
       ) {
         console.log('Deposit received')
         toast.info('Deposit received')
+        setLastDeposit(highestBlockDeposit?.confirmation_time?.height)
       }
-
-      setLastDeposit(highestBlockDeposit?.confirmation_time?.height)
     }
 
     checkDeposits()
