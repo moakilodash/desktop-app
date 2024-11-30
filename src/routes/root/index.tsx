@@ -51,8 +51,16 @@ export const RootRoute = () => {
       {nodeInfoResponse.isSuccess ? <Outlet /> : null}
 
       {nodeInfoResponse.isError ? (
-        <div className="text-center text-xl">
-          The node is not running. Please try restarting the app.
+        <div className="text-center">
+          <div className="text-xl mb-4">
+            The node is not running. Please try restarting the app.
+          </div>
+          <button
+            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
+            onClick={() => navigate(WALLET_SETUP_PATH)}
+          >
+            Return to Wallet Setup
+          </button>
         </div>
       ) : null}
     </Layout>
