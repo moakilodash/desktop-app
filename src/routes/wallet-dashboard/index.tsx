@@ -274,6 +274,39 @@ const OnChainDetailsOverlay = ({
   </div>
 )
 
+const LiquidityTooltip: React.FC<{ title: string; description: string }> = ({
+  title,
+  description,
+}) => (
+  <div
+    className="absolute inset-0 bg-[#0B101B]/95 backdrop-blur-sm rounded-lg opacity-0 
+                  group-hover:opacity-100 transition-all duration-300 ease-in-out
+                  flex flex-col justify-between p-6 cursor-help z-10"
+  >
+    {/* Header section */}
+    <div>
+      <div className="flex items-center gap-2 mb-6">
+        <div className="p-2 bg-blue-500/20 rounded-lg">
+          <Info className="w-5 h-5 text-blue-500" />
+        </div>
+        <h4 className="text-2xl font-medium text-white bg-[#0B101B]/80 px-3 py-1 rounded-lg">
+          {title}
+        </h4>
+      </div>
+
+      {/* Description with background for better readability */}
+      <div className="bg-[#0B101B]/80 p-4 rounded-xl">
+        <p className="text-xl leading-relaxed text-slate-300">{description}</p>
+      </div>
+    </div>
+
+    {/* Footer with background */}
+    <div className="text-base text-blue-400 mt-6 bg-[#0B101B]/80 px-3 py-1 rounded-lg self-start">
+      Hover away to close
+    </div>
+  </div>
+)
+
 export const Component = () => {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
@@ -623,31 +656,51 @@ export const Component = () => {
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6">
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-sm font-medium text-slate-400">
-                Inbound Liquidity
-              </h2>
-              <ArrowDownRight className="h-4 w-4 text-blue-500" />
+        <div className="space-y-6">
+          <div
+            className="group relative bg-slate-800/50 hover:bg-slate-800/70 rounded-xl 
+                          border border-slate-700 hover:border-slate-600 p-6 
+                          transition-all duration-200"
+          >
+            <div className="relative z-0">
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-base font-medium text-slate-300">
+                  Inbound Liquidity
+                </h2>
+                <ArrowDownRight className="h-5 w-5 text-blue-500" />
+              </div>
+              <div className="text-2xl font-bold text-white mb-1">
+                {formatBitcoinAmount(totalInboundLiquidity, bitcoinUnit)}{' '}
+                {bitcoinUnit}
+              </div>
             </div>
-            <div className="text-xl font-bold text-white">
-              {formatBitcoinAmount(totalInboundLiquidity, bitcoinUnit)}{' '}
-              {bitcoinUnit}
-            </div>
+            <LiquidityTooltip
+              description={`Maximum amount of ${bitcoinUnit} that you can receive through Lightning Network channels. This represents the total amount others can send to you.`}
+              title="Inbound Liquidity"
+            />
           </div>
 
-          <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6">
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-sm font-medium text-slate-400">
-                Outbound Liquidity
-              </h2>
-              <ArrowUpRight className="h-4 w-4 text-blue-500" />
+          <div
+            className="group relative bg-slate-800/50 hover:bg-slate-800/70 rounded-xl 
+                          border border-slate-700 hover:border-slate-600 p-6 
+                          transition-all duration-200"
+          >
+            <div className="relative z-0">
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-base font-medium text-slate-300">
+                  Outbound Liquidity
+                </h2>
+                <ArrowUpRight className="h-5 w-5 text-blue-500" />
+              </div>
+              <div className="text-2xl font-bold text-white mb-1">
+                {formatBitcoinAmount(totalOutboundLiquidity, bitcoinUnit)}{' '}
+                {bitcoinUnit}
+              </div>
             </div>
-            <div className="text-xl font-bold text-white">
-              {formatBitcoinAmount(totalOutboundLiquidity, bitcoinUnit)}{' '}
-              {bitcoinUnit}
-            </div>
+            <LiquidityTooltip
+              description={`Maximum amount of ${bitcoinUnit} that you can send through Lightning Network channels. This represents your available balance for making payments.`}
+              title="Outbound Liquidity"
+            />
           </div>
         </div>
       </div>
