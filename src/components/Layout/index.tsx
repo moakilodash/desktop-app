@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { toast, ToastContainer } from 'react-toastify'
 
 import {
   TRADE_PATH,
   WALLET_HISTORY_DEPOSITS_PATH,
   WALLET_HISTORY_PATH,
+  WALLET_SETUP_PATH,
 } from '../../app/router/paths'
 import logo from '../../assets/logo.svg'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
@@ -39,6 +40,7 @@ export const Layout = (props: Props) => {
   const [lastDeposit, setLastDeposit] = useState<number | undefined>(undefined)
   const [isRetrying, setIsRetrying] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
 
   const nodeInfo = nodeApi.endpoints.nodeInfo.useQueryState()
   const shouldPoll = nodeInfo.isSuccess
@@ -106,7 +108,12 @@ export const Layout = (props: Props) => {
       <div className="min-h-screen flex">
         <div className="px-16 py-14 min-h-screen min-w-full flex flex-col">
           <header className="flex items-center mb-20">
-            <img alt="KaleidoSwap" src={logo} />
+            <img
+              alt="KaleidoSwap"
+              className="cursor-pointer"
+              onClick={() => navigate(WALLET_SETUP_PATH)}
+              src={logo}
+            />
 
             {nodeInfo.isSuccess && (
               <>
