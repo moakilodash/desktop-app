@@ -1,5 +1,5 @@
 import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
-import { Globe, Link, Copy, ArrowRight, CheckCircle, Info } from 'lucide-react'
+import { Globe, Link, Copy, ArrowRight, CheckCircle } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
 import { useSelector, useDispatch } from 'react-redux'
@@ -198,24 +198,123 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
     }
   }
 
+  const getButtonState = () => {
+    if (isLoading) {
+      return {
+        className: 'opacity-50 cursor-not-allowed',
+        disabled: true,
+        text: 'Connecting...',
+      }
+    }
+    if (!connectionUrl) {
+      return {
+        className:
+          'opacity-50 cursor-not-allowed bg-gradient-to-r from-gray-500 to-gray-600',
+        disabled: true,
+        text: 'Waiting for LSP URL...',
+      }
+    }
+    if (isAlreadyConnected) {
+      return {
+        className:
+          'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700',
+        disabled: false,
+        text: 'Continue with Connected LSP',
+      }
+    }
+    return {
+      className:
+        'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700',
+      disabled: false,
+      text: 'Connect to LSP',
+    }
+  }
+
   return (
-    <div className="bg-gray-900 text-white p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
-      <h2 className="text-3xl font-bold mb-6 text-center">
-        Connect to Lightning Service Provider (LSP)
-      </h2>
-      <div className="bg-blue-900 p-4 rounded-lg mb-8">
-        <div className="flex items-start">
-          <Info className="text-blue-300 mr-3 mt-1" size={24} />
-          <p className="text-blue-100">
-            Connecting to an LSP is the first step to request a new channel.{' '}
-            <br />
-            Based on the requested channel options, after a payment, the LSP
-            will open a channel to your node and you will be able to use the
-            channel to swap assets.
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 p-6">
+      <div className="max-w-3xl mx-auto">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
+            Order a New Channel from LSP
+          </h2>
+          <p className="text-gray-400 mt-2">
+            Complete these steps to open your channel
           </p>
         </div>
-      </div>
-      <div className="space-y-8">
+
+        <div className="flex justify-between mb-8">
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+              1
+            </div>
+            <div className="ml-3">
+              <p className="font-medium text-white">Connect LSP</p>
+              <p className="text-sm text-gray-400">Current step</p>
+            </div>
+          </div>
+          <div className="flex-1 mx-4 mt-5">
+            <div className="h-1 bg-gray-700">
+              <div className="h-1 bg-blue-500 w-0"></div>
+            </div>
+          </div>
+          <div className="flex items-center opacity-50">
+            <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center text-white font-bold">
+              2
+            </div>
+            <div className="ml-3">
+              <p className="font-medium text-white">Configure</p>
+              <p className="text-sm text-gray-400">Set parameters</p>
+            </div>
+          </div>
+          <div className="flex-1 mx-4 mt-5">
+            <div className="h-1 bg-gray-700"></div>
+          </div>
+          <div className="flex items-center opacity-50">
+            <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center text-white font-bold">
+              3
+            </div>
+            <div className="ml-3">
+              <p className="font-medium text-white">Payment</p>
+              <p className="text-sm text-gray-400">Complete setup</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-blue-900/50 border border-blue-700/50 p-6 rounded-xl mb-8">
+          <h3 className="text-xl font-semibold text-white mb-4">
+            How Channel Opening Works
+          </h3>
+          <div className="space-y-4">
+            <div className="flex items-start">
+              <div className="w-6 h-6 bg-blue-800 rounded-full flex items-center justify-center text-sm font-bold text-white mr-3 mt-1">
+                1
+              </div>
+              <p className="text-blue-100">
+                Connect to a Lightning Service Provider (LSP) that will help
+                establish your channel
+              </p>
+            </div>
+            <div className="flex items-start">
+              <div className="w-6 h-6 bg-blue-800 rounded-full flex items-center justify-center text-sm font-bold text-white mr-3 mt-1">
+                2
+              </div>
+              <p className="text-blue-100">
+                Configure your channel parameters including capacity and balance
+                distribution
+              </p>
+            </div>
+            <div className="flex items-start">
+              <div className="w-6 h-6 bg-blue-800 rounded-full flex items-center justify-center text-sm font-bold text-white mr-3 mt-1">
+                3
+              </div>
+              <p className="text-blue-100">
+                Make a payment to cover the channel creation costs and initial
+                balance
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="bg-gray-800 p-6 rounded-lg">
           <label className="block text-lg font-medium mb-2">
             Current LSP URL
@@ -282,24 +381,23 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
         <div className="flex justify-center mt-8">
           <button
             className={`
-              px-8 py-4 bg-gradient-to-r from-green-500 to-green-600 
-              text-white rounded-lg hover:from-green-600 hover:to-green-700 
+              px-8 py-4 text-white rounded-lg
               transition-all duration-300 ease-in-out transform hover:scale-105
-              focus:ring-2 focus:ring-green-500 focus:outline-none 
+              focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:outline-none 
               flex items-center justify-center space-x-2 text-lg font-semibold
-              ${isLoading || !connectionUrl ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg'}
+              ${getButtonState().className}
             `}
-            disabled={isLoading || !connectionUrl}
+            disabled={getButtonState().disabled}
             onClick={handleNext}
           >
             {isLoading ? (
               <>
                 <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></span>
-                Connecting...
+                {getButtonState().text}
               </>
             ) : (
               <>
-                <span>Connect to LSP</span>
+                <span>{getButtonState().text}</span>
                 <ArrowRight size={20} />
               </>
             )}

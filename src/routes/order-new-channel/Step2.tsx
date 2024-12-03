@@ -223,184 +223,238 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
   }, [assetId, assetMap])
 
   return (
-    <form
-      className="bg-gray-900 text-white p-8 rounded-lg shadow-lg"
-      onSubmit={handleSubmit(onSubmit)}
-    >
-      <h3 className="text-3xl font-bold mb-6 text-center">
-        Request an RGB Channel from LSP
-      </h3>
-      <h4 className="text-xl font-semibold mb-8 text-center text-gray-300">
-        Select asset and amount for the requested channel
-      </h4>
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 p-6">
+      <div className="max-w-3xl mx-auto">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
+            Configure Your Channel
+          </h2>
+          <p className="text-gray-400 mt-2">Set up your channel parameters</p>
+        </div>
 
-      {isLoading ? (
-        <div className="text-center">Loading...</div>
-      ) : (
-        <div className="space-y-8">
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <label className="block text-sm font-medium mb-2">
-              Channel Capacity (sats)
-            </label>
-            <div className="flex items-center space-x-4">
-              <input
-                {...register('capacitySat')}
-                className="bg-gray-700 text-white px-4 py-2 rounded-md w-full"
-                onChange={(e) => handleAmountChange(e, 'capacitySat')}
-                placeholder="Enter amount"
-                type="text"
-              />
+        <div className="flex justify-between mb-8">
+          <div className="flex items-center opacity-50">
+            <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center text-white font-bold">
+              1
             </div>
-            <input
-              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer mt-4"
-              max={MAX_CHANNEL_CAPACITY}
-              min={MIN_CHANNEL_CAPACITY}
-              onChange={(e) => handleSliderChange(e, 'capacitySat')}
-              step="1000"
-              type="range"
-              value={parseInt(capacitySat.replace(/[^0-9]/g, ''), 10)}
-            />
-            {formState.errors.capacitySat && (
-              <p className="text-red-500 text-sm mt-2">
-                {formState.errors.capacitySat.message}
-              </p>
-            )}
-          </div>
-
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <label className="block text-sm font-medium mb-2">
-              Your Channel Liquidity (sats)
-            </label>
-            <div className="flex items-center space-x-4">
-              <input
-                {...register('clientBalanceSat')}
-                className="bg-gray-700 text-white px-4 py-2 rounded-md w-full"
-                onChange={(e) => handleAmountChange(e, 'clientBalanceSat')}
-                placeholder="Enter amount"
-                type="text"
-              />
+            <div className="ml-3">
+              <p className="font-medium text-white">Connect LSP</p>
+              <p className="text-sm text-gray-400">Completed</p>
             </div>
-            <input
-              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer mt-4"
-              max={parseInt(capacitySat.replace(/[^0-9]/g, ''), 10)}
-              min={0}
-              onChange={(e) => handleSliderChange(e, 'clientBalanceSat')}
-              step="1000"
-              type="range"
-              value={parseInt(clientBalanceSat.replace(/[^0-9]/g, ''), 10)}
-            />
-            {formState.errors.clientBalanceSat && (
-              <p className="text-red-500 text-sm mt-2">
-                {formState.errors.clientBalanceSat.message}
-              </p>
-            )}
           </div>
-
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <label className="block text-sm font-medium mb-2">
-              Channel Lock Duration
-            </label>
-            <Controller
-              control={control}
-              name="channelExpireBlocks"
-              render={({ field }) => (
-                <Select
-                  active={field.value.toString()}
-                  onSelect={(value) => field.onChange(parseInt(value))}
-                  options={[
-                    { label: '1 week', value: (6 * 24 * 7).toString() },
-                    { label: '1 month', value: (6 * 24 * 30).toString() },
-                    { label: '6 months', value: (6 * 24 * 30 * 6).toString() },
-                  ]}
-                  theme="dark"
-                />
-              )}
-            />
+          <div className="flex-1 mx-4 mt-5">
+            <div className="h-1 bg-gray-700">
+              <div className="h-1 bg-blue-500 w-1/2"></div>
+            </div>
           </div>
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+              2
+            </div>
+            <div className="ml-3">
+              <p className="font-medium text-white">Configure</p>
+              <p className="text-sm text-gray-400">Current step</p>
+            </div>
+          </div>
+          <div className="flex-1 mx-4 mt-5">
+            <div className="h-1 bg-gray-700"></div>
+          </div>
+          <div className="flex items-center opacity-50">
+            <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center text-white font-bold">
+              3
+            </div>
+            <div className="ml-3">
+              <p className="font-medium text-white">Payment</p>
+              <p className="text-sm text-gray-400">Next step</p>
+            </div>
+          </div>
+        </div>
 
-          <div className="bg-gray-800 p-6 rounded-lg">
-            <label className="flex items-center space-x-3 mb-4">
-              <input
-                checked={addAsset}
-                className="form-checkbox h-5 w-5 text-purple-500"
-                onChange={(e) => setAddAsset(e.target.checked)}
-                type="checkbox"
-              />
-              <span className="text-lg font-medium">Add Asset</span>
-            </label>
+        <form
+          className="bg-gray-900 text-white p-8 rounded-lg shadow-lg"
+          onSubmit={handleSubmit(onSubmit)}
+        >
+          <h3 className="text-3xl font-bold mb-6 text-center">
+            Request an RGB Channel from LSP
+          </h3>
+          <h4 className="text-xl font-semibold mb-8 text-center text-gray-300">
+            Select asset and amount for the requested channel
+          </h4>
 
-            {addAsset && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Select Asset
-                  </label>
-                  <AssetSelector
-                    assetMap={assetMap}
-                    control={control}
-                    name="assetId"
+          {isLoading ? (
+            <div className="text-center">Loading...</div>
+          ) : (
+            <div className="space-y-8">
+              <div className="bg-gray-800 p-6 rounded-lg">
+                <label className="block text-sm font-medium mb-2">
+                  Channel Capacity (sats)
+                </label>
+                <div className="flex items-center space-x-4">
+                  <input
+                    {...register('capacitySat')}
+                    className="bg-gray-700 text-white px-4 py-2 rounded-md w-full"
+                    onChange={(e) => handleAmountChange(e, 'capacitySat')}
+                    placeholder="Enter amount"
+                    type="text"
                   />
                 </div>
+                <input
+                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer mt-4"
+                  max={MAX_CHANNEL_CAPACITY}
+                  min={MIN_CHANNEL_CAPACITY}
+                  onChange={(e) => handleSliderChange(e, 'capacitySat')}
+                  step="1000"
+                  type="range"
+                  value={parseInt(capacitySat.replace(/[^0-9]/g, ''), 10)}
+                />
+                {formState.errors.capacitySat && (
+                  <p className="text-red-500 text-sm mt-2">
+                    {formState.errors.capacitySat.message}
+                  </p>
+                )}
+              </div>
 
-                {assetId && (
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Asset Amount
-                    </label>
-                    <div className="flex items-center space-x-4">
-                      <input
-                        {...register('assetAmount')}
-                        className="bg-gray-700 text-white px-4 py-2 rounded-md w-full"
-                        onChange={handleAssetAmountChange}
-                        placeholder="Enter amount"
-                        step="0.1"
-                        type="text"
+              <div className="bg-gray-800 p-6 rounded-lg">
+                <label className="block text-sm font-medium mb-2">
+                  Your Channel Liquidity (sats)
+                </label>
+                <div className="flex items-center space-x-4">
+                  <input
+                    {...register('clientBalanceSat')}
+                    className="bg-gray-700 text-white px-4 py-2 rounded-md w-full"
+                    onChange={(e) => handleAmountChange(e, 'clientBalanceSat')}
+                    placeholder="Enter amount"
+                    type="text"
+                  />
+                </div>
+                <input
+                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer mt-4"
+                  max={parseInt(capacitySat.replace(/[^0-9]/g, ''), 10)}
+                  min={0}
+                  onChange={(e) => handleSliderChange(e, 'clientBalanceSat')}
+                  step="1000"
+                  type="range"
+                  value={parseInt(clientBalanceSat.replace(/[^0-9]/g, ''), 10)}
+                />
+                {formState.errors.clientBalanceSat && (
+                  <p className="text-red-500 text-sm mt-2">
+                    {formState.errors.clientBalanceSat.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="bg-gray-800 p-6 rounded-lg">
+                <label className="block text-sm font-medium mb-2">
+                  Channel Lock Duration
+                </label>
+                <Controller
+                  control={control}
+                  name="channelExpireBlocks"
+                  render={({ field }) => (
+                    <Select
+                      active={field.value.toString()}
+                      onSelect={(value) => field.onChange(parseInt(value))}
+                      options={[
+                        { label: '1 week', value: (6 * 24 * 7).toString() },
+                        { label: '1 month', value: (6 * 24 * 30).toString() },
+                        {
+                          label: '6 months',
+                          value: (6 * 24 * 30 * 6).toString(),
+                        },
+                      ]}
+                      theme="dark"
+                    />
+                  )}
+                />
+              </div>
+
+              <div className="bg-gray-800 p-6 rounded-lg">
+                <label className="flex items-center space-x-3 mb-4">
+                  <input
+                    checked={addAsset}
+                    className="form-checkbox h-5 w-5 text-purple-500"
+                    onChange={(e) => setAddAsset(e.target.checked)}
+                    type="checkbox"
+                  />
+                  <span className="text-lg font-medium">Add Asset</span>
+                </label>
+
+                {addAsset && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Select Asset
+                      </label>
+                      <AssetSelector
+                        assetMap={assetMap}
+                        control={control}
+                        name="assetId"
                       />
                     </div>
-                    <input
-                      className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer mt-4"
-                      max={getAssetMaxAmount()}
-                      min={0}
-                      onChange={handleAssetAmountSliderChange}
-                      step={0.1}
-                      type="range"
-                      value={parseFloat(assetAmount)}
-                    />
-                    {formState.errors.assetAmount && (
-                      <p className="text-red-500 text-sm mt-2">
-                        {formState.errors.assetAmount.message}
-                      </p>
+
+                    {assetId && (
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Asset Amount
+                        </label>
+                        <div className="flex items-center space-x-4">
+                          <input
+                            {...register('assetAmount')}
+                            className="bg-gray-700 text-white px-4 py-2 rounded-md w-full"
+                            onChange={handleAssetAmountChange}
+                            placeholder="Enter amount"
+                            step="0.1"
+                            type="text"
+                          />
+                        </div>
+                        <input
+                          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer mt-4"
+                          max={getAssetMaxAmount()}
+                          min={0}
+                          onChange={handleAssetAmountSliderChange}
+                          step={0.1}
+                          type="range"
+                          value={parseFloat(assetAmount)}
+                        />
+                        {formState.errors.assetAmount && (
+                          <p className="text-red-500 text-sm mt-2">
+                            {formState.errors.assetAmount.message}
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
               </div>
-            )}
+            </div>
+          )}
+
+          <div className="flex justify-between space-x-4 mt-10">
+            <button
+              className="px-6 py-3 rounded-lg text-lg font-bold bg-gray-600 hover:bg-gray-700 transition-colors"
+              onClick={onBack}
+              type="button"
+            >
+              Back
+            </button>
+            <button
+              className={`px-6 py-3 rounded-lg text-lg font-bold ${
+                isLoading
+                  ? 'bg-gray-500 cursor-not-allowed'
+                  : 'bg-purple-600 hover:bg-purple-700 transition-colors'
+              }`}
+              disabled={isLoading}
+              type="submit"
+            >
+              Next Step
+            </button>
           </div>
-        </div>
-      )}
 
-      <div className="flex justify-between space-x-4 mt-10">
-        <button
-          className="px-6 py-3 rounded-lg text-lg font-bold bg-gray-600 hover:bg-gray-700 transition-colors"
-          onClick={onBack}
-          type="button"
-        >
-          Back
-        </button>
-        <button
-          className={`px-6 py-3 rounded-lg text-lg font-bold ${
-            isLoading
-              ? 'bg-gray-500 cursor-not-allowed'
-              : 'bg-purple-600 hover:bg-purple-700 transition-colors'
-          }`}
-          disabled={isLoading}
-          type="submit"
-        >
-          Next Step
-        </button>
+          {!formState.isSubmitSuccessful && formState.isSubmitted && (
+            <FormError />
+          )}
+        </form>
       </div>
-
-      {!formState.isSubmitSuccessful && formState.isSubmitted && <FormError />}
-    </form>
+    </div>
   )
 }
