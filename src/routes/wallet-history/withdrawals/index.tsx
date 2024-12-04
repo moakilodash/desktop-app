@@ -96,21 +96,10 @@ export const Component: React.FC = () => {
   )
 
   const { data: listAsstetsData } = nodeApi.endpoints.listAssets.useQuery()
-  const {
-    data: transactionsData,
-    isLoading: transactionsLoading,
-    isError: transactionsError,
-    refetch: refetchTransactions,
-  } = nodeApi.endpoints.listTransactions.useQuery({ skip_sync: false })
-  const {
-    data: paymentsData,
-    isLoading: paymentsLoading,
-    isError: paymentsError,
-    refetch: refetchPayments,
-  } = nodeApi.endpoints.listPayments.useQuery()
-
-  const isLoading = transactionsLoading || paymentsLoading
-  const isError = transactionsError || paymentsError
+  const { data: transactionsData, refetch: refetchTransactions } =
+    nodeApi.endpoints.listTransactions.useQuery({ skip_sync: false })
+  const { data: paymentsData, refetch: refetchPayments } =
+    nodeApi.endpoints.listPayments.useQuery()
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
