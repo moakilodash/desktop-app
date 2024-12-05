@@ -1,5 +1,5 @@
 import Decimal from 'decimal.js'
-import { ArrowDownToLine, Wallet, RefreshCw, Loader } from 'lucide-react'
+import { Link as Chain, Zap, RefreshCw, Loader } from 'lucide-react'
 import React, { useState } from 'react'
 import { useSelector } from 'react-redux'
 import { twJoin } from 'tailwind-merge'
@@ -15,10 +15,29 @@ const formatBitcoinAmount = (
 ): string => {
   const amountDecimal = new Decimal(amount)
   if (bitcoinUnit === 'SAT') {
-    return amountDecimal.toFixed(0) + ' sats'
+    return amountDecimal.toFixed(0)
   } else {
-    return amountDecimal.div(100000000).toFixed(8) + ' BTC'
+    return amountDecimal.div(100000000).toFixed(8)
   }
+}
+
+const formatAssetAmount = (
+  amount: string | number,
+  asset: string,
+  bitcoinUnit: string,
+  assetsList?: any[]
+): string => {
+  if (asset === 'BTC') {
+    return formatBitcoinAmount(amount, bitcoinUnit)
+  }
+
+  // Find asset info to get precision
+  const assetInfo = assetsList?.find((a) => a.ticker === asset)
+  const precision = assetInfo?.precision ?? 8 // Default to 8 if not found
+
+  // Convert to decimal and format with proper precision
+  const amountDecimal = new Decimal(amount)
+  return amountDecimal.div(Math.pow(10, precision)).toFixed(precision)
 }
 
 interface DepositProps {
@@ -27,6 +46,7 @@ interface DepositProps {
   amount: string | number
   txId: string
   bitcoinUnit: string
+  assetsList?: any[]
 }
 
 const Deposit: React.FC<DepositProps> = ({
@@ -35,25 +55,30 @@ const Deposit: React.FC<DepositProps> = ({
   amount,
   txId,
   bitcoinUnit,
+  assetsList,
 }) => {
-  const formattedAmount =
-    asset === 'BTC'
-      ? formatBitcoinAmount(amount, bitcoinUnit)
-      : `${amount} ${asset}`
+  const formattedAmount = formatAssetAmount(
+    amount,
+    asset,
+    bitcoinUnit,
+    assetsList
+  )
+
+  const displayAsset = asset === 'BTC' ? bitcoinUnit : asset
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-8 even:bg-blue-dark rounded items-center text-base sm:text-lg font-medium p-4 sm:p-0">
       <div className={twJoin(COL_CLASS_NAME, 'flex items-center')}>
         {type === 'on-chain' ? (
-          <ArrowDownToLine className="w-5 h-5 mr-2" />
+          <Chain className="w-5 h-5 mr-2" />
         ) : (
-          <Wallet className="w-5 h-5 mr-2" />
+          <Zap className="w-5 h-5 mr-2" />
         )}
         <span className="hidden sm:inline">
           {type === 'on-chain' ? 'On-chain' : 'Off-chain'}
         </span>
       </div>
-      <div className={COL_CLASS_NAME}>{asset}</div>
+      <div className={COL_CLASS_NAME}>{displayAsset}</div>
       <div className={COL_CLASS_NAME}>{formattedAmount}</div>
       <div
         className={twJoin(COL_CLASS_NAME, 'col-span-1 sm:col-span-5 truncate')}
@@ -203,6 +228,7 @@ export const Component: React.FC = () => {
               <Deposit
                 amount={deposit.amount}
                 asset={deposit.asset}
+                assetsList={listAsstetsData?.nia}
                 bitcoinUnit={bitcoinUnit}
                 key={`${deposit.txId}-${index}`}
                 txId={deposit.txId}

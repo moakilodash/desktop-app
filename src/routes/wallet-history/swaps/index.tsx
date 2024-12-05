@@ -71,15 +71,26 @@ const SwapRow: React.FC<{
   const isFromBtc = !swap.from_asset
   const isToBtc = !swap.to_asset
 
-  const statusColor =
-    {
-      completed: 'text-green-500',
-      failed: 'text-red-500',
-      pending: 'text-yellow-500',
-    }[swap.status.toLowerCase()] || 'text-gray-500'
+  const statusConfig = {
+    completed: {
+      bgColor: 'bg-green-500/10',
+      color: 'text-green-500',
+    },
+    failed: {
+      bgColor: 'bg-red-500/10',
+      color: 'text-red-500',
+    },
+    pending: {
+      bgColor: 'bg-yellow-500/10',
+      color: 'text-yellow-500',
+    },
+  }[swap.status.toLowerCase()] || {
+    bgColor: 'bg-gray-500/10',
+    color: 'text-gray-500',
+  }
 
   return (
-    <div className="grid grid-cols-9 even:bg-blue-dark rounded items-center text-lg font-medium">
+    <div className="grid grid-cols-1 sm:grid-cols-12 even:bg-blue-dark rounded items-center text-base sm:text-lg font-medium p-4 sm:p-0">
       <div className={twJoin(COL_CLASS_NAME, 'col-span-2')}>
         {isFromBtc ? bitcoinUnit : fromAsset}
       </div>
@@ -89,12 +100,22 @@ const SwapRow: React.FC<{
       <div className={COL_CLASS_NAME}>
         <ArrowRight className="w-6 h-6" />
       </div>
-      <div className={COL_CLASS_NAME}>{isToBtc ? bitcoinUnit : toAsset}</div>
-      <div className={COL_CLASS_NAME}>
+      <div className={twJoin(COL_CLASS_NAME, 'col-span-2')}>
+        {isToBtc ? bitcoinUnit : toAsset}
+      </div>
+      <div className={twJoin(COL_CLASS_NAME, 'col-span-2')}>
         {formatAmount(swap.qty_to, toPrecision, isToBtc, bitcoinUnit)}
       </div>
-      <div className={twJoin(COL_CLASS_NAME, 'col-span-2', statusColor)}>
-        {swap.status}
+      <div className={twJoin(COL_CLASS_NAME, 'col-span-3 flex justify-center')}>
+        <span
+          className={twJoin(
+            'px-3 py-1 rounded-full text-sm font-medium',
+            statusConfig.color,
+            statusConfig.bgColor
+          )}
+        >
+          {swap.status}
+        </span>
       </div>
     </div>
   )
@@ -163,7 +184,7 @@ export const Component: React.FC = () => {
       : allSwaps.filter((swap) => swap.type === filter)
 
   return (
-    <div className="space-y-6">
+    <div className="bg-blue-dark p-6 rounded-lg">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Swap History</h2>
         <div className="flex space-x-2 items-center">
@@ -214,31 +235,39 @@ export const Component: React.FC = () => {
       {filteredSwaps.length === 0 ? (
         <div className="text-center py-8 text-grey-light">No swaps found.</div>
       ) : (
-        <>
-          <div className="grid grid-cols-9 font-medium text-grey-light">
-            <div className={twJoin(COL_CLASS_NAME, 'col-span-2')}>
-              From Asset
+        <div className="overflow-x-auto">
+          <div className="min-w-max">
+            <div className="grid grid-cols-1 sm:grid-cols-12 font-medium text-grey-light">
+              <div className={twJoin(COL_CLASS_NAME, 'col-span-2')}>
+                From Asset
+              </div>
+              <div className={twJoin(COL_CLASS_NAME, 'col-span-2')}>
+                From Amount
+              </div>
+              <div className={COL_CLASS_NAME}>
+                <ArrowDownUp className="w-6 h-6" />
+              </div>
+              <div className={twJoin(COL_CLASS_NAME, 'col-span-2')}>
+                To Asset
+              </div>
+              <div className={twJoin(COL_CLASS_NAME, 'col-span-2')}>
+                To Amount
+              </div>
+              <div className={twJoin(COL_CLASS_NAME, 'col-span-3 text-center')}>
+                Status
+              </div>
             </div>
-            <div className={twJoin(COL_CLASS_NAME, 'col-span-2')}>
-              From Amount
-            </div>
-            <div className={COL_CLASS_NAME}>
-              <ArrowDownUp className="w-6 h-6" />
-            </div>
-            <div className={COL_CLASS_NAME}>To Asset</div>
-            <div className={COL_CLASS_NAME}>To Amount</div>
-            <div className={twJoin(COL_CLASS_NAME, 'col-span-2')}>Status</div>
-          </div>
 
-          {filteredSwaps.map((swap, index) => (
-            <SwapRow
-              assetInfo={assetInfo}
-              bitcoinUnit={bitcoinUnit}
-              key={`${swap.payment_hash}-${index}`}
-              swap={swap}
-            />
-          ))}
-        </>
+            {filteredSwaps.map((swap, index) => (
+              <SwapRow
+                assetInfo={assetInfo}
+                bitcoinUnit={bitcoinUnit}
+                key={`${swap.payment_hash}-${index}`}
+                swap={swap}
+              />
+            ))}
+          </div>
+        </div>
       )}
     </div>
   )
