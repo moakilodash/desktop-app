@@ -31,7 +31,6 @@ import { nodeSettingsActions } from '../../slices/nodeSettings/nodeSettings.slic
 import {
   setBitcoinUnit,
   setNodeConnectionString,
-  setDefaultLspUrl,
 } from '../../slices/settings/settings.slice'
 
 import { TerminalLogDisplay } from './TerminalLogDisplay'
@@ -45,7 +44,7 @@ interface FormFields {
 export const Component: React.FC = () => {
   const navigate = useNavigate()
   const dispatch = useDispatch()
-  const { bitcoinUnit, nodeConnectionString, defaultLspUrl } = useSelector(
+  const { bitcoinUnit, nodeConnectionString } = useSelector(
     (state: RootState) => state.settings
   )
   const currentAccount = useAppSelector((state) => state.nodeSettings.data)
@@ -58,7 +57,7 @@ export const Component: React.FC = () => {
   const { control, handleSubmit, reset } = useForm<FormFields>({
     defaultValues: {
       bitcoinUnit,
-      lspUrl: defaultLspUrl || 'http://localhost:8000',
+      lspUrl: 'http://localhost:8000',
       nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
     },
   })
@@ -107,7 +106,6 @@ export const Component: React.FC = () => {
     try {
       dispatch(setBitcoinUnit(data.bitcoinUnit))
       dispatch(setNodeConnectionString(data.nodeConnectionString))
-      dispatch(setDefaultLspUrl(data.lspUrl))
 
       await invoke('update_account', {
         datapath: currentAccount.datapath,
@@ -119,6 +117,13 @@ export const Component: React.FC = () => {
         proxyEndpoint: currentAccount.proxy_endpoint,
         rpcConnectionUrl: currentAccount.rpc_connection_url,
       })
+
+      dispatch(
+        nodeSettingsActions.setNodeSettings({
+          ...currentAccount,
+          default_lsp_url: data.lspUrl,
+        })
+      )
 
       setShowModal(true)
       setTimeout(() => setShowModal(false), 2000)
@@ -158,7 +163,7 @@ export const Component: React.FC = () => {
   const handleUndo = () => {
     reset({
       bitcoinUnit,
-      lspUrl: defaultLspUrl,
+      lspUrl: nodeSettings.default_lsp_url || 'http://localhost:8000',
       nodeConnectionString,
     })
   }

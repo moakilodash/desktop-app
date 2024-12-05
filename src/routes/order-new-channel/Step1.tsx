@@ -5,14 +5,11 @@ import { CopyToClipboard } from 'react-copy-to-clipboard'
 import { useSelector, useDispatch } from 'react-redux'
 import { toast } from 'react-toastify'
 
+import { RootState } from '../../app/store'
 import { NETWORK_DEFAULTS } from '../../constants/networks'
 import { KaleidoswapBoxIcon } from '../../icons/KaleidoswapBox'
 import { makerApi } from '../../slices/makerApi/makerApi.slice'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
-import {
-  selectDefaultLspUrl,
-  setDefaultLspUrl,
-} from '../../slices/settings/settings.slice'
 
 interface Props {
   onNext: (data: { connectionUrl: string; success: boolean }) => void
@@ -84,7 +81,9 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
   const [getNetworkInfo] = nodeApi.endpoints.networkInfo.useLazyQuery()
 
   const dispatch = useDispatch()
-  const lspUrl = useSelector(selectDefaultLspUrl)
+  const lspUrl = useSelector(
+    (state: RootState) => state.nodeSettings.data.default_lsp_url
+  )
 
   useEffect(() => {
     console.log('Fetching LSP Info...')
@@ -183,12 +182,12 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
   const handleKaleidoswapSelect = async () => {
     setIsLoading(true)
     try {
-      const networkInfo = await getNetworkInfo().unwrap()
-      dispatch(
-        setDefaultLspUrl(
-          NETWORK_DEFAULTS[networkInfo.network.toLowerCase()].default_lsp_url
-        )
-      )
+      //const networkInfo = await getNetworkInfo().unwrap()
+      //dispatch(
+      //  setDefaultLspUrl(
+      //    NETWORK_DEFAULTS[networkInfo.network.toLowerCase()].default_lsp_url
+      //  )
+      //)
       await fetchLspInfo()
     } catch (error) {
       console.error('Error selecting Kaleidoswap LSP:', error)
@@ -228,7 +227,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
               />
               <input
                 className="w-full bg-gray-700 text-white pl-10 pr-3 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
-                onChange={(e) => dispatch(setDefaultLspUrl(e.target.value))}
+                //onChange={(e) => dispatch(setDefaultLspUrl(e.target.value))}
                 value={lspUrl}
               />
             </div>

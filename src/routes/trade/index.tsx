@@ -67,7 +67,7 @@ export const Component = () => {
 
   // Selectors
   const makerConnectionUrl = useAppSelector(
-    (state) => state.settings.defaultLspUrl
+    (state) => state.nodeSettings.data.default_lsp_url
   )
   const wsConnected = useAppSelector((state) => state.pairs.wsConnected)
   const bitcoinUnit = useAppSelector((state) => state.settings.bitcoinUnit)
