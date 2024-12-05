@@ -214,8 +214,8 @@ export const Component: React.FC = () => {
   const isNodeRunning = nodeInfo.isSuccess
 
   return (
-    <div className="flex justify-center items-start min-h-screen py-8 px-4">
-      <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div className="flex flex-col min-h-screen py-8 px-4">
+      <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         {/* Settings Column */}
         <div className="bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-gray-700">
           <div className="flex items-center gap-3 mb-2">
@@ -410,178 +410,152 @@ export const Component: React.FC = () => {
               </button>
             </div>
           </div>
-
-          {isLocalNode ? (
-            <>
-              <p className="text-gray-400 mb-8">
-                Monitor your local node's activity and logs
-              </p>
-              {/* Existing logs section */}
-              <div className="mt-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-semibold text-white">
-                    Node Logs
-                  </h3>
-                  <div className="flex gap-2">
-                    <button
-                      className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
-                      disabled={nodeLogs.length === 0}
-                      onClick={handleExportLogs}
-                      type="button"
-                    >
-                      <Download className="w-4 h-4" />
-                      Export
-                    </button>
-                    <button
-                      className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-                      onClick={() => fetchNodeLogs()}
-                      type="button"
-                    >
-                      Refresh Logs
-                    </button>
-                    <button
-                      className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-                      disabled={nodeLogs.length === 0}
-                      onClick={() => setNodeLogs([])}
-                      type="button"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
-                <div className="bg-gray-900 rounded-lg border border-gray-700">
-                  <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700">
-                    <span className="text-sm text-gray-400">
-                      Live Node Logs
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {nodeLogs.length} entries
-                    </span>
-                  </div>
-                  <div className="p-4 h-96 overflow-y-auto font-mono text-sm">
-                    {nodeLogs.length === 0 ? (
-                      <div className="flex items-center justify-center h-full text-gray-500">
-                        No logs available
-                      </div>
-                    ) : (
-                      <TerminalLogDisplay logs={nodeLogs} />
-                    )}
-                  </div>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="mt-8 bg-gray-800/40 p-6 rounded-xl border border-gray-700">
-              <div className="flex flex-col gap-2">
-                <h3 className="text-lg font-medium text-gray-200">
-                  Node Connection Details
-                </h3>
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm text-gray-400">
-                    Connected to node at:
-                  </span>
-                  <code className="block bg-gray-900/50 px-3 py-2 rounded text-blue-400 font-mono text-sm">
-                    {nodeConnectionString}
-                  </code>
-                </div>
-                <p className="text-sm text-gray-500 mt-2">
-                  Note: Logs are only available for local node connections
-                </p>
-              </div>
-            </div>
-          )}
         </div>
-
-        <BackupModal
-          backupPath={backupPath}
-          control={backupControl}
-          formState={backupFormState}
-          isBackupInProgress={isBackupInProgress}
-          onClose={() => setShowBackupModal(false)}
-          onSelectFolder={selectBackupFolder}
-          onSubmit={handleBackupSubmit(handleBackup)}
-          setValue={backupControl.setValue}
-          showModal={showBackupModal}
-        />
-
-        {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm">
-              <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-                Settings Saved
-              </h2>
-              <p className="text-gray-600">
-                Your settings have been successfully saved.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {showLogoutConfirmation && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-sm">
-              <div className="flex items-center justify-center text-yellow-500 mb-4">
-                <AlertTriangle size={48} />
-              </div>
-              <h2 className="text-2xl font-bold mb-4 text-center text-white">
-                Confirm Logout
-              </h2>
-              <p className="text-gray-300 text-center mb-6">
-                Are you sure you want to logout? This will lock your node.
-              </p>
-              <div className="flex justify-between space-x-4">
-                <button
-                  className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-                  onClick={() => setShowLogoutConfirmation(false)}
-                  type="button"
-                >
-                  Cancel
-                </button>
-                <button
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-                  onClick={confirmLogout}
-                  type="button"
-                >
-                  Confirm Logout
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showShutdownConfirmation && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-sm">
-              <div className="flex items-center justify-center text-red-500 mb-4">
-                <AlertTriangle size={48} />
-              </div>
-              <h2 className="text-2xl font-bold mb-4 text-center text-white">
-                Confirm Shutdown
-              </h2>
-              <p className="text-gray-300 text-center mb-6">
-                Are you sure you want to shut down the node? This action cannot
-                be undone.
-              </p>
-              <div className="flex justify-between space-x-4">
-                <button
-                  className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-                  onClick={() => setShowShutdownConfirmation(false)}
-                  type="button"
-                >
-                  Cancel
-                </button>
-                <button
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-                  onClick={confirmShutdown}
-                  type="button"
-                >
-                  Confirm Shutdown
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* New full-width logs section */}
+      {isLocalNode && (
+        <div className="w-full max-w-7xl mx-auto">
+          <div className="bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-white">Node Logs</h3>
+              <div className="flex gap-2">
+                <button
+                  className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
+                  disabled={nodeLogs.length === 0}
+                  onClick={handleExportLogs}
+                  type="button"
+                >
+                  <Download className="w-4 h-4" />
+                  Export
+                </button>
+                <button
+                  className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                  onClick={() => fetchNodeLogs()}
+                  type="button"
+                >
+                  Refresh Logs
+                </button>
+                <button
+                  className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                  disabled={nodeLogs.length === 0}
+                  onClick={() => setNodeLogs([])}
+                  type="button"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+            <div className="bg-gray-900 rounded-lg border border-gray-700">
+              <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700">
+                <span className="text-sm text-gray-400">Live Node Logs</span>
+                <span className="text-xs text-gray-500">
+                  {nodeLogs.length} entries
+                </span>
+              </div>
+              <div className="p-4 h-96 overflow-y-auto font-mono text-sm">
+                {nodeLogs.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-gray-500">
+                    No logs available
+                  </div>
+                ) : (
+                  <TerminalLogDisplay logs={nodeLogs} />
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <BackupModal
+        backupPath={backupPath}
+        control={backupControl}
+        formState={backupFormState}
+        isBackupInProgress={isBackupInProgress}
+        onClose={() => setShowBackupModal(false)}
+        onSelectFolder={selectBackupFolder}
+        onSubmit={handleBackupSubmit(handleBackup)}
+        setValue={backupControl.setValue}
+        showModal={showBackupModal}
+      />
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm">
+            <h2 className="text-2xl font-semibold mb-4 text-gray-800">
+              Settings Saved
+            </h2>
+            <p className="text-gray-600">
+              Your settings have been successfully saved.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {showLogoutConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-sm">
+            <div className="flex items-center justify-center text-yellow-500 mb-4">
+              <AlertTriangle size={48} />
+            </div>
+            <h2 className="text-2xl font-bold mb-4 text-center text-white">
+              Confirm Logout
+            </h2>
+            <p className="text-gray-300 text-center mb-6">
+              Are you sure you want to logout? This will lock your node.
+            </p>
+            <div className="flex justify-between space-x-4">
+              <button
+                className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                onClick={() => setShowLogoutConfirmation(false)}
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                onClick={confirmLogout}
+                type="button"
+              >
+                Confirm Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showShutdownConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-sm">
+            <div className="flex items-center justify-center text-red-500 mb-4">
+              <AlertTriangle size={48} />
+            </div>
+            <h2 className="text-2xl font-bold mb-4 text-center text-white">
+              Confirm Shutdown
+            </h2>
+            <p className="text-gray-300 text-center mb-6">
+              Are you sure you want to shut down the node? This action cannot be
+              undone.
+            </p>
+            <div className="flex justify-between space-x-4">
+              <button
+                className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                onClick={() => setShowShutdownConfirmation(false)}
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                onClick={confirmShutdown}
+                type="button"
+              >
+                Confirm Shutdown
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
