@@ -1,5 +1,4 @@
 import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
-//import { invoke } from '@tauri-apps/api'
 import { Globe, Link, Copy, ArrowRight, CheckCircle } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
@@ -144,14 +143,6 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
   }
 
   const handleNext = async () => {
-    console.log('Next button clicked')
-    //try {
-    //await invoke('update_account', currentAccount)
-    //} catch (error) {
-    //  console.error('Error update Default LSP:', error)
-    //  toast.error('Failed to update Default LSP')
-    //}
-
     if (connectionUrl) {
       setShowConnectPopup(true)
     } else {
