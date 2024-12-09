@@ -1,18 +1,17 @@
 import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
+//import { invoke } from '@tauri-apps/api'
 import { Globe, Link, Copy, ArrowRight, CheckCircle } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
-import { useSelector, useDispatch } from 'react-redux'
 import { toast } from 'react-toastify'
 
+import { RootState } from '../../app/store'
+import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { NETWORK_DEFAULTS } from '../../constants/networks'
 import { KaleidoswapBoxIcon } from '../../icons/KaleidoswapBox'
 import { makerApi } from '../../slices/makerApi/makerApi.slice'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
-import {
-  selectDefaultLspUrl,
-  setDefaultLspUrl,
-} from '../../slices/settings/settings.slice'
+import { nodeSettingsActions } from '../../slices/nodeSettings/nodeSettings.slice'
 
 interface Props {
   onNext: (data: { connectionUrl: string; success: boolean }) => void
@@ -83,8 +82,11 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
   const [listPeers] = nodeApi.endpoints.listPeers.useLazyQuery()
   const [getNetworkInfo] = nodeApi.endpoints.networkInfo.useLazyQuery()
 
-  const dispatch = useDispatch()
-  const lspUrl = useSelector(selectDefaultLspUrl)
+  const dispatch = useAppDispatch()
+  const currentAccount = useAppSelector(
+    (state: RootState) => state.nodeSettings.data
+  )
+  const lspUrl = currentAccount.default_lsp_url
 
   useEffect(() => {
     console.log('Fetching LSP Info...')
@@ -141,8 +143,15 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
     }
   }
 
-  const handleNext = () => {
+  const handleNext = async () => {
     console.log('Next button clicked')
+    //try {
+    //await invoke('update_account', currentAccount)
+    //} catch (error) {
+    //  console.error('Error update Default LSP:', error)
+    //  toast.error('Failed to update Default LSP')
+    //}
+
     if (connectionUrl) {
       setShowConnectPopup(true)
     } else {
@@ -181,14 +190,38 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
   }
 
   const handleKaleidoswapSelect = async () => {
+    console.log('buttonClicked')
     setIsLoading(true)
     try {
       const networkInfo = await getNetworkInfo().unwrap()
+
       dispatch(
-        setDefaultLspUrl(
-          NETWORK_DEFAULTS[networkInfo.network.toLowerCase()].default_lsp_url
-        )
+        nodeSettingsActions.setNodeSettings({
+          ...currentAccount,
+          default_lsp_url:
+            NETWORK_DEFAULTS[networkInfo.network.toLowerCase()].default_lsp_url,
+        })
       )
+
+      await fetchLspInfo()
+    } catch (error) {
+      console.error('Error selecting Kaleidoswap LSP:', error)
+      toast.error('Failed to select Kaleidoswap LSP')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleDefaultLspUrlChange = async (e: any) => {
+    setIsLoading(true)
+    try {
+      dispatch(
+        nodeSettingsActions.setNodeSettings({
+          ...currentAccount,
+          default_lsp_url: e.target.value,
+        })
+      )
+
       await fetchLspInfo()
     } catch (error) {
       console.error('Error selecting Kaleidoswap LSP:', error)
@@ -327,7 +360,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
               />
               <input
                 className="w-full bg-gray-700 text-white pl-10 pr-3 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
-                onChange={(e) => dispatch(setDefaultLspUrl(e.target.value))}
+                onChange={handleDefaultLspUrlChange}
                 value={lspUrl}
               />
             </div>
@@ -339,7 +372,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
           <div className="flex flex-col items-center">
             <button
               className="bg-gray-700 hover:bg-gray-600 p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 flex flex-col items-center justify-center"
-              disabled={isLoading}
+              //disabled={isLoading}
               onClick={handleKaleidoswapSelect}
               title="Use default Kaleidoswap LSP"
             >
