@@ -1,4 +1,5 @@
 import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
+import { invoke } from '@tauri-apps/api'
 import { useState, useEffect } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
@@ -290,6 +291,21 @@ export const Component = () => {
     }
   }
 
+  const handleBack = async () => {
+    if (nodeSettings.datapath) {
+      try {
+        await invoke('stop_node')
+        toast.info('Node stopped', {
+          autoClose: 2000,
+          position: 'bottom-right',
+        })
+      } catch (error) {
+        console.error('Failed to stop node:', error)
+      }
+    }
+    navigate(WALLET_SETUP_PATH)
+  }
+
   return (
     <Layout>
       <div className="max-w-md w-full bg-blue-dark py-12 px-8 rounded-lg shadow-lg">
@@ -310,7 +326,7 @@ export const Component = () => {
             <div className="mb-8">
               <button
                 className="px-4 py-2 rounded-full border text-sm border-gray-500 hover:bg-gray-700 transition-colors"
-                onClick={() => navigate(WALLET_SETUP_PATH)}
+                onClick={handleBack}
                 type="button"
               >
                 ← Back
