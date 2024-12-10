@@ -19,13 +19,66 @@ import {
 } from '../../components/PasswordSetupForm'
 import { Spinner } from '../../components/Spinner'
 import { parseRpcUrl } from '../../helpers/utils'
+import { ChevronDownIcon } from '../../icons/ChevronDown'
 import { EyeIcon } from '../../icons/Eye'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
+
 interface Fields {
   password: string
 }
 
 type UnlockStep = 'unlock' | 'init-password' | 'mnemonic' | 'verify'
+
+const ConnectionDetails = ({
+  host,
+  port,
+  indexerUrl,
+  proxyEndpoint,
+}: {
+  host: string
+  port: number
+  indexerUrl: string
+  proxyEndpoint: string
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  return (
+    <div className="mt-4 mb-6">
+      <button
+        className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors rounded-lg border border-gray-600 hover:border-gray-500"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <span>Connection Details</span>
+        <ChevronDownIcon
+          className={`w-4 h-4 transform transition-transform ${
+            isExpanded ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      {isExpanded && (
+        <div className="mt-2 p-4 rounded-lg border border-gray-600 bg-blue-darker space-y-2 text-sm">
+          <div>
+            <span className="text-gray-400">Node Host:</span>
+            <span className="ml-2 text-white">{host}</span>
+          </div>
+          <div>
+            <span className="text-gray-400">Port:</span>
+            <span className="ml-2 text-white">{port}</span>
+          </div>
+          <div>
+            <span className="text-gray-400">Indexer URL:</span>
+            <span className="ml-2 text-white break-all">{indexerUrl}</span>
+          </div>
+          <div>
+            <span className="text-gray-400">Proxy Endpoint:</span>
+            <span className="ml-2 text-white break-all">{proxyEndpoint}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export const Component = () => {
   const [unlock] = nodeApi.endpoints.unlock.useLazyQuery()
@@ -108,23 +161,33 @@ export const Component = () => {
           throw new Error('Failed to get node info after unlock')
         }
       } else {
-        if (
-          'error' in unlockResponse &&
-          unlockResponse.error &&
-          isFetchBaseQueryError(unlockResponse.error) &&
-          unlockResponse.error.status === 403 &&
-          (unlockResponse.error.data as { error?: string })?.error ===
-            'Wallet has not been initialized (hint: call init)'
-        ) {
-          setShowInitModal(true)
-          return
-        }
         if ('error' in unlockResponse && unlockResponse.error) {
-          const errorData = isFetchBaseQueryError(unlockResponse.error)
-            ? (unlockResponse.error.data as { error?: string })?.error ||
-              'Unknown error'
-            : unlockResponse.error.message || 'Unknown error'
-          throw new Error(errorData)
+          if (
+            isFetchBaseQueryError(unlockResponse.error) &&
+            unlockResponse.error.status === 'FETCH_ERROR'
+          ) {
+            throw new Error(
+              `Unable to connect to the node service. 
+              Please ensure the service is running on ${nodeSettings.node_url} and try again.`
+            )
+          }
+
+          if (
+            isFetchBaseQueryError(unlockResponse.error) &&
+            unlockResponse.error.status === 403 &&
+            (unlockResponse.error.data as { error?: string })?.error ===
+              'Wallet has not been initialized (hint: call init)'
+          ) {
+            setShowInitModal(true)
+            return
+          }
+          if ('error' in unlockResponse && unlockResponse.error) {
+            const errorData = isFetchBaseQueryError(unlockResponse.error)
+              ? (unlockResponse.error.data as { error?: string })?.error ||
+                'Unknown error'
+              : unlockResponse.error.message || 'Unknown error'
+            throw new Error(errorData)
+          }
         }
         throw new Error('Failed to unlock the node')
       }
@@ -257,6 +320,13 @@ export const Component = () => {
               <h3 className="text-3xl font-bold mb-2">Unlock your Wallet</h3>
               <p className="text-gray-400">Enter your password to continue</p>
             </div>
+
+            <ConnectionDetails
+              host={parseRpcUrl(nodeSettings.rpc_connection_url).host}
+              indexerUrl={nodeSettings.indexer_url}
+              port={parseRpcUrl(nodeSettings.rpc_connection_url).port}
+              proxyEndpoint={nodeSettings.proxy_endpoint}
+            />
 
             <div>
               <label
