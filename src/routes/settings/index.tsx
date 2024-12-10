@@ -39,6 +39,9 @@ interface FormFields {
   bitcoinUnit: string
   nodeConnectionString: string
   lspUrl: string
+  rpcConnectionUrl: string
+  indexerUrl: string
+  proxyEndpoint: string
 }
 
 export const Component: React.FC = () => {
@@ -48,24 +51,26 @@ export const Component: React.FC = () => {
     (state: RootState) => state.settings
   )
   const currentAccount = useAppSelector((state) => state.nodeSettings.data)
+  const nodeSettings = useAppSelector((state) => state.nodeSettings.data)
 
   const [showModal, setShowModal] = useState(false)
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false)
   const [showShutdownConfirmation, setShowShutdownConfirmation] =
     useState(false)
 
-  const { control, handleSubmit, reset } = useForm<FormFields>({
-    defaultValues: {
-      bitcoinUnit,
-      lspUrl: 'http://localhost:8000',
-      nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
-    },
-  })
-
   const [shutdown] = nodeApi.endpoints.shutdown.useLazyQuery()
   const [lock] = nodeApi.endpoints.lock.useLazyQuery()
 
-  const nodeSettings = useAppSelector((state) => state.nodeSettings.data)
+  const { control, handleSubmit, reset } = useForm<FormFields>({
+    defaultValues: {
+      bitcoinUnit,
+      indexerUrl: nodeSettings.indexer_url || '',
+      lspUrl: nodeSettings.default_lsp_url || 'http://localhost:8000',
+      nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
+      proxyEndpoint: nodeSettings.proxy_endpoint || '',
+      rpcConnectionUrl: nodeSettings.rpc_connection_url || '',
+    },
+  })
 
   const {
     showBackupModal,
@@ -97,10 +102,13 @@ export const Component: React.FC = () => {
   useEffect(() => {
     reset({
       bitcoinUnit,
+      indexerUrl: nodeSettings.indexer_url || '',
       lspUrl: nodeSettings.default_lsp_url || 'http://localhost:8000',
       nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
+      proxyEndpoint: nodeSettings.proxy_endpoint || '',
+      rpcConnectionUrl: nodeSettings.rpc_connection_url || '',
     })
-  }, [bitcoinUnit, nodeConnectionString, nodeSettings.default_lsp_url, reset])
+  }, [bitcoinUnit, nodeConnectionString, nodeSettings, reset])
 
   const handleSave = async (data: FormFields) => {
     try {
@@ -110,18 +118,21 @@ export const Component: React.FC = () => {
       await invoke('update_account', {
         datapath: currentAccount.datapath,
         defaultLspUrl: data.lspUrl,
-        indexerUrl: currentAccount.indexer_url,
+        indexerUrl: data.indexerUrl,
         name: currentAccount.name,
         network: currentAccount.network,
         nodeUrl: currentAccount.node_url,
-        proxyEndpoint: currentAccount.proxy_endpoint,
-        rpcConnectionUrl: currentAccount.rpc_connection_url,
+        proxyEndpoint: data.proxyEndpoint,
+        rpcConnectionUrl: data.rpcConnectionUrl,
       })
 
       dispatch(
         nodeSettingsActions.setNodeSettings({
           ...currentAccount,
           default_lsp_url: data.lspUrl,
+          indexer_url: data.indexerUrl,
+          proxy_endpoint: data.proxyEndpoint,
+          rpc_connection_url: data.rpcConnectionUrl,
         })
       )
 
@@ -163,8 +174,11 @@ export const Component: React.FC = () => {
   const handleUndo = () => {
     reset({
       bitcoinUnit,
+      indexerUrl: nodeSettings.indexer_url || '',
       lspUrl: nodeSettings.default_lsp_url || 'http://localhost:8000',
-      nodeConnectionString,
+      nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
+      proxyEndpoint: nodeSettings.proxy_endpoint || '',
+      rpcConnectionUrl: nodeSettings.rpc_connection_url || '',
     })
   }
 
@@ -267,6 +281,60 @@ export const Component: React.FC = () => {
                       {...field}
                       className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                       placeholder="e.g., http://localhost:3001"
+                      type="text"
+                    />
+                  </div>
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="rpcConnectionUrl"
+                render={({ field }) => (
+                  <div className="group transition-all duration-300 hover:translate-x-1">
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                      RPC Connection URL
+                    </label>
+                    <input
+                      {...field}
+                      className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                      placeholder="Bitcoin RPC URL"
+                      type="text"
+                    />
+                  </div>
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="indexerUrl"
+                render={({ field }) => (
+                  <div className="group transition-all duration-300 hover:translate-x-1">
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                      Indexer URL
+                    </label>
+                    <input
+                      {...field}
+                      className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                      placeholder="Indexer service URL"
+                      type="text"
+                    />
+                  </div>
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="proxyEndpoint"
+                render={({ field }) => (
+                  <div className="group transition-all duration-300 hover:translate-x-1">
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                      Proxy Endpoint
+                    </label>
+                    <input
+                      {...field}
+                      className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                      placeholder="Proxy service endpoint"
                       type="text"
                     />
                   </div>
