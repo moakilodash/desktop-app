@@ -136,6 +136,28 @@ export const Component: React.FC = () => {
         })
       )
 
+      // Check if node connection settings were changed
+      const nodeSettingsChanged =
+        data.nodeConnectionString !== nodeConnectionString ||
+        data.rpcConnectionUrl !== nodeSettings.rpc_connection_url ||
+        data.indexerUrl !== nodeSettings.indexer_url ||
+        data.proxyEndpoint !== nodeSettings.proxy_endpoint
+
+      if (nodeSettingsChanged) {
+        toast.warning(
+          'Node connection settings have changed. Please restart the node for changes to take effect.',
+          {
+            autoClose: 10000, // Keep the message visible longer
+            closeOnClick: true,
+            draggable: true,
+            pauseOnHover: true,
+            position: 'top-right',
+          }
+        )
+      } else {
+        toast.success('Settings saved successfully')
+      }
+
       setShowModal(true)
       setTimeout(() => setShowModal(false), 2000)
     } catch (error) {
@@ -246,97 +268,30 @@ export const Component: React.FC = () => {
           </p>
 
           <form className="space-y-8" onSubmit={handleSubmit(handleSave)}>
-            <Controller
-              control={control}
-              name="bitcoinUnit"
-              render={({ field }) => (
-                <div className="group transition-all duration-300 hover:translate-x-1">
-                  <label className="block text-sm font-semibold text-gray-300 mb-2">
-                    Bitcoin Unit
-                  </label>
-                  <div className="relative">
-                    <select
-                      {...field}
-                      className="block w-full pl-4 pr-10 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
-                    >
-                      <option value="SAT">Satoshi (SAT)</option>
-                      <option value="BTC">Bitcoin (BTC)</option>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-3.5 h-5 w-5 text-gray-400 pointer-events-none" />
-                  </div>
-                </div>
-              )}
-            />
-
+            {/* Application Settings Section */}
             <div className="space-y-6">
-              <Controller
-                control={control}
-                name="nodeConnectionString"
-                render={({ field }) => (
-                  <div className="group transition-all duration-300 hover:translate-x-1">
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
-                      Node Connection String
-                    </label>
-                    <input
-                      {...field}
-                      className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
-                      placeholder="e.g., http://localhost:3001"
-                      type="text"
-                    />
-                  </div>
-                )}
-              />
+              <h3 className="text-xl font-semibold text-white border-b border-gray-700 pb-2">
+                Application Settings
+              </h3>
 
               <Controller
                 control={control}
-                name="rpcConnectionUrl"
+                name="bitcoinUnit"
                 render={({ field }) => (
                   <div className="group transition-all duration-300 hover:translate-x-1">
                     <label className="block text-sm font-semibold text-gray-300 mb-2">
-                      RPC Connection URL
+                      Bitcoin Unit
                     </label>
-                    <input
-                      {...field}
-                      className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
-                      placeholder="Bitcoin RPC URL"
-                      type="text"
-                    />
-                  </div>
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="indexerUrl"
-                render={({ field }) => (
-                  <div className="group transition-all duration-300 hover:translate-x-1">
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
-                      Indexer URL
-                    </label>
-                    <input
-                      {...field}
-                      className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
-                      placeholder="Indexer service URL"
-                      type="text"
-                    />
-                  </div>
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="proxyEndpoint"
-                render={({ field }) => (
-                  <div className="group transition-all duration-300 hover:translate-x-1">
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
-                      Proxy Endpoint
-                    </label>
-                    <input
-                      {...field}
-                      className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
-                      placeholder="Proxy service endpoint"
-                      type="text"
-                    />
+                    <div className="relative">
+                      <select
+                        {...field}
+                        className="block w-full pl-4 pr-10 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                      >
+                        <option value="SAT">Satoshi (SAT)</option>
+                        <option value="BTC">Bitcoin (BTC)</option>
+                      </select>
+                      <ChevronDown className="absolute right-3 top-3.5 h-5 w-5 text-gray-400 pointer-events-none" />
+                    </div>
                   </div>
                 )}
               />
@@ -360,8 +315,101 @@ export const Component: React.FC = () => {
               />
             </div>
 
+            {/* Node Connection Settings Section */}
+            <div className="space-y-6">
+              <div className="border-t border-gray-700 pt-8">
+                <h3 className="text-xl font-semibold text-white pb-2 flex items-center gap-2">
+                  <Server className="w-5 h-5" />
+                  Node Connection Settings
+                </h3>
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-6">
+                  <div className="flex items-center gap-2 text-yellow-500">
+                    <AlertTriangle className="w-5 h-5" />
+                    <p className="text-sm">
+                      Changes to these settings require a node restart to take
+                      effect
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <Controller
+                    control={control}
+                    name="nodeConnectionString"
+                    render={({ field }) => (
+                      <div className="group transition-all duration-300 hover:translate-x-1">
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">
+                          Node Connection String
+                        </label>
+                        <input
+                          {...field}
+                          className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                          placeholder="e.g., http://localhost:3001"
+                          type="text"
+                        />
+                      </div>
+                    )}
+                  />
+
+                  <Controller
+                    control={control}
+                    name="rpcConnectionUrl"
+                    render={({ field }) => (
+                      <div className="group transition-all duration-300 hover:translate-x-1">
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">
+                          RPC Connection URL
+                        </label>
+                        <input
+                          {...field}
+                          className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                          placeholder="Bitcoin RPC URL"
+                          type="text"
+                        />
+                      </div>
+                    )}
+                  />
+
+                  <Controller
+                    control={control}
+                    name="indexerUrl"
+                    render={({ field }) => (
+                      <div className="group transition-all duration-300 hover:translate-x-1">
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">
+                          Indexer URL
+                        </label>
+                        <input
+                          {...field}
+                          className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                          placeholder="Indexer service URL"
+                          type="text"
+                        />
+                      </div>
+                    )}
+                  />
+
+                  <Controller
+                    control={control}
+                    name="proxyEndpoint"
+                    render={({ field }) => (
+                      <div className="group transition-all duration-300 hover:translate-x-1">
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">
+                          Proxy Endpoint
+                        </label>
+                        <input
+                          {...field}
+                          className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                          placeholder="Proxy service endpoint"
+                          type="text"
+                        />
+                      </div>
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* Settings Column - Save/Undo buttons section */}
-            <div className="pt-8 border-t border-[#2A2D3A] mt-6">
+            <div className="pt-8 border-t border-gray-700 mt-6">
               <div className="flex gap-4">
                 <button
                   className="flex-1 flex items-center justify-center px-6 py-3.5 bg-[#2A2D3A] text-white rounded-xl hover:bg-[#363A4B] focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200"
