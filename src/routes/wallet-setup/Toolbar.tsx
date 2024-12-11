@@ -18,6 +18,7 @@ import { useAppDispatch } from '../../app/store/hooks'
 import { MinidenticonImg } from '../../components/MinidenticonImg'
 import { Spinner } from '../../components/Spinner'
 import { BitcoinNetwork } from '../../constants'
+import { NETWORK_DEFAULTS } from '../../constants/networks'
 import {
   nodeSettingsActions,
   setSettingsAsync,
@@ -70,14 +71,11 @@ export const Toolbar = () => {
 
       await dispatch(
         setSettingsAsync({
+          ...account,
           datapath: account.datapath || '',
-          default_lsp_url: account.default_lsp_url,
-          indexer_url: account.indexer_url,
-          name: account.name,
-          network: account.network,
-          node_url: account.node_url,
-          proxy_endpoint: account.proxy_endpoint,
-          rpc_connection_url: account.rpc_connection_url,
+          default_maker_url:
+            NETWORK_DEFAULTS[account.network].default_maker_url,
+          maker_urls: [''],
         })
       )
 

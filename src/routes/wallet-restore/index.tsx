@@ -20,6 +20,9 @@ interface Fields {
   rpc_connection_url: string
   backup_path: string
   password: string
+  indexer_url: string
+  daemon_listening_port: string
+  proxy_endpoint: string
 }
 
 export const Component = () => {

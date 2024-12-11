@@ -66,19 +66,21 @@ export const Component: React.FC = () => {
   const [shutdown] = nodeApi.endpoints.shutdown.useLazyQuery()
   const [lock] = nodeApi.endpoints.lock.useLazyQuery()
 
-  const { control, handleSubmit, reset, watch } = useForm<FormFields>({
-    defaultValues: {
-      bitcoinUnit,
-      defaultMakerUrl:
-        nodeSettings.default_maker_url || nodeSettings.default_lsp_url,
-      indexerUrl: nodeSettings.indexer_url || '',
-      lspUrl: nodeSettings.default_lsp_url || 'http://localhost:8000',
-      makerUrls: nodeSettings.maker_urls || [],
-      nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
-      proxyEndpoint: nodeSettings.proxy_endpoint || '',
-      rpcConnectionUrl: nodeSettings.rpc_connection_url || '',
-    },
-  })
+  const { control, handleSubmit, reset, watch, setValue } = useForm<FormFields>(
+    {
+      defaultValues: {
+        bitcoinUnit,
+        defaultMakerUrl:
+          nodeSettings.default_maker_url || nodeSettings.default_lsp_url,
+        indexerUrl: nodeSettings.indexer_url || '',
+        lspUrl: nodeSettings.default_lsp_url || 'http://localhost:8000',
+        makerUrls: nodeSettings.maker_urls || [],
+        nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
+        proxyEndpoint: nodeSettings.proxy_endpoint || '',
+        rpcConnectionUrl: nodeSettings.rpc_connection_url || '',
+      },
+    }
+  )
 
   const {
     showBackupModal,
@@ -421,8 +423,7 @@ export const Component: React.FC = () => {
                                           : 'bg-gray-600/20 text-gray-400 hover:bg-blue-500/20 hover:text-blue-400'
                                       }`}
                                       onClick={() => {
-                                        const form = control._formControl
-                                        form.setValue('defaultMakerUrl', url)
+                                        setValue('defaultMakerUrl', url)
                                       }}
                                       title={
                                         url === watch('defaultMakerUrl')
@@ -448,8 +449,7 @@ export const Component: React.FC = () => {
                                         field.onChange(newUrls)
                                         // If we're removing the default URL, clear it
                                         if (url === watch('defaultMakerUrl')) {
-                                          const form = control._formControl
-                                          form.setValue('defaultMakerUrl', '')
+                                          setValue('defaultMakerUrl', '')
                                         }
                                       }}
                                       title="Remove URL"

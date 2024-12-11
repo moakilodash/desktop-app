@@ -2,16 +2,17 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 
 import { BitcoinNetwork } from '../../constants'
 
-export type Account = {
-  name: string
+export interface Account {
   datapath: string
-  network: BitcoinNetwork
-  rpc_connection_url: string
-  node_url: string
-  indexer_url: string
-  proxy_endpoint: string
   default_lsp_url: string
+  default_maker_url: string
+  indexer_url: string
   maker_urls: string[]
+  name: string
+  network: BitcoinNetwork
+  node_url: string
+  proxy_endpoint: string
+  rpc_connection_url: string
 }
 
 export interface NodeSettingsState {
@@ -24,6 +25,7 @@ const initialState: NodeSettingsState = {
   data: {
     datapath: '',
     default_lsp_url: '',
+    default_maker_url: '',
     indexer_url: '',
     maker_urls: [],
     name: '',
