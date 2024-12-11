@@ -99,7 +99,9 @@ export const Component = () => {
         setSettingsAsync({
           datapath: datapath, // Use formatted name-based datapath
           default_lsp_url: NETWORK_DEFAULTS[data.network].default_lsp_url,
+          default_maker_url: NETWORK_DEFAULTS[data.network].default_maker_url,
           indexer_url: data.indexer_url,
+          maker_urls: '',
           name: data.name,
           network: data.network,
           node_url: `http://localhost:${data.daemon_listening_port}`,
@@ -125,6 +127,7 @@ export const Component = () => {
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '')
       const datapath = `kaleidoswap-${formattedName}`
+      const network = nodeSetupForm.getValues('network')
 
       await invoke('start_node', {
         daemonListeningPort: nodeSetupForm.getValues('daemon_listening_port'),
@@ -179,11 +182,12 @@ export const Component = () => {
 
       await invoke('insert_account', {
         datapath: datapath,
-        defaultLspUrl:
-          NETWORK_DEFAULTS[nodeSetupForm.getValues('network')].default_lsp_url,
+        defaultLspUrl: NETWORK_DEFAULTS[network].default_lsp_url,
+        defaultMakerUrl: NETWORK_DEFAULTS[network].default_maker_url,
         indexerUrl: nodeSetupForm.getValues('indexer_url'),
+        makerUrls: '',
         name: nodeSetupForm.getValues('name'),
-        network: nodeSetupForm.getValues('network'),
+        network: network,
         nodeUrl: `http://localhost:${nodeSetupForm.getValues('daemon_listening_port')}`,
         proxyEndpoint: nodeSetupForm.getValues('proxy_endpoint'),
         rpcConnectionUrl: nodeSetupForm.getValues('rpc_connection_url'),

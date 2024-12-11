@@ -178,7 +178,7 @@ interface StatusResponse {
 const dynamicBaseQuery = async (args: any, api: any, extraOptions: any) => {
   const state = api.getState()
   const baseUrl =
-    state.nodeSettings.data.default_lsp_url || 'http://localhost:8000'
+    state.nodeSettings.data.default_maker_url || 'http://localhost:8000'
   const rawBaseQuery = fetchBaseQuery({ baseUrl })
   return rawBaseQuery(args, api, extraOptions)
 }

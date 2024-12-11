@@ -27,6 +27,8 @@ import { nodeApi, Channel, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
 import { logger } from '../../utils/logger'
 import { RefreshCw } from 'lucide-react'
 
+import { MakerSelector } from '../../components/Trade/MakerSelector'
+
 interface Fields {
   rfq_id: string
   from: string
@@ -893,228 +895,254 @@ export const Component = () => {
   )
 
   const renderSwapForm = () => (
-    <form
-      className="max-w-xl w-full bg-blue-dark py-8 px-6 rounded space-y-2"
-      onSubmit={form.handleSubmit(onSubmit)}
-    >
-      {/* From amount section */}
-      <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
-        <div className="flex justify-between items-center font-light">
-          <div className="text-xs">You Send</div>
-          <div className="flex items-center space-x-2">
-            <div className="text-xs">
-              Available to send:{' '}
-              {`${formatAmount(maxFromAmount, form.getValues().fromAsset)} ${getDisplayAsset(form.getValues().fromAsset)}`}
-            </div>
-            <button
-              className="p-1 rounded-full hover:bg-blue-dark transition-colors"
-              disabled={isLoading || isSwapInProgress}
-              onClick={refreshAmounts}
-              title="Refresh amounts"
-              type="button"
-            >
-              <RefreshCw
-                className={isLoading ? 'animate-spin' : ''}
-                size={16}
-              />
-            </button>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-white">Trade</h2>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-400">
+              {wsConnected ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                  Connected
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-red-500" />
+                  Disconnected
+                </div>
+              )}
+            </span>
           </div>
-        </div>
-
-        <div className="flex space-x-2">
-          <input
-            className="flex-1 rounded bg-blue-dark px-4 py-2 text-lg"
-            type="text"
-            {...form.register('from')}
-            disabled={!hasChannels || !hasTradablePairs || isSwapInProgress}
-            onChange={handleFromAmountChange}
-          />
-
-          <Controller
-            control={form.control}
-            name="fromAsset"
-            render={({ field }) => (
-              <AssetSelect
-                disabled={!hasChannels || !hasTradablePairs}
-                onChange={(value) => handleAssetChange('fromAsset', value)}
-                options={tradablePairs
-                  .flatMap((pair) => [pair.base_asset, pair.quote_asset])
-                  .filter(
-                    (asset, index, self) =>
-                      self.indexOf(asset) === index &&
-                      asset !== form.getValues().toAsset
-                  )
-                  .map((asset) => ({
-                    label: getDisplayAsset(asset),
-                    value: asset,
-                  }))}
-                value={field.value}
-              />
-            )}
-          />
-        </div>
-        <div className="text-xs text-gray-400">
-          Min: {formatAmount(minFromAmount, form.getValues().fromAsset)}{' '}
-          {getDisplayAsset(form.getValues().fromAsset)}
-        </div>
-        <div className="flex space-x-2">
-          {[25, 50, 75, 100].map((size) => (
-            <div
-              className={`flex-1 px-6 py-3 text-center border border-cyan rounded cursor-pointer ${
-                selectedSize === size ? 'bg-cyan text-blue-dark' : ''
-              } ${!hasChannels || !hasTradablePairs ? 'opacity-50 cursor-not-allowed' : ''}`}
-              key={size}
-              onClick={() =>
-                hasChannels && hasTradablePairs && onSizeClick(size)
-              }
-            >
-              {size}%
-            </div>
-          ))}
+          <MakerSelector />
         </div>
       </div>
 
-      {/* Swap button */}
-      <div className="flex items-center justify-center py-2">
-        <div
-          className={`bg-section-lighter rounded-full h-8 w-8 flex items-center justify-center ${
-            hasChannels && hasTradablePairs && !isSwapInProgress
-              ? 'cursor-pointer'
-              : 'opacity-50 cursor-not-allowed'
-          }`}
-          onClick={() =>
-            hasChannels &&
-            hasTradablePairs &&
-            !isSwapInProgress &&
-            onSwapAssets()
-          }
-        >
-          <SwapIcon />
-        </div>
-      </div>
-
-      {/* To amount section */}
-      <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
-        <div className="flex justify-between items-center font-light">
-          <div className="text-xs">You Receive (Estimated)</div>
-          <div className="text-xs">
-            Can receive up to:{' '}
-            {`${formatAmount(maxToAmount, form.getValues().toAsset)} ${getDisplayAsset(form.getValues().toAsset)}`}
-          </div>
-        </div>
-
-        <div className="flex space-x-2">
-          {isToAmountLoading ? (
-            <div className="flex-1 rounded bg-blue-dark px-4 py-2 text-lg">
-              Estimating...
+      <form
+        className="max-w-xl w-full bg-blue-dark py-8 px-6 rounded space-y-2"
+        onSubmit={form.handleSubmit(onSubmit)}
+      >
+        {/* From amount section */}
+        <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
+          <div className="flex justify-between items-center font-light">
+            <div className="text-xs">You Send</div>
+            <div className="flex items-center space-x-2">
+              <div className="text-xs">
+                Available to send:{' '}
+                {`${formatAmount(maxFromAmount, form.getValues().fromAsset)} ${getDisplayAsset(form.getValues().fromAsset)}`}
+              </div>
+              <button
+                className="p-1 rounded-full hover:bg-blue-dark transition-colors"
+                disabled={isLoading || isSwapInProgress}
+                onClick={refreshAmounts}
+                title="Refresh amounts"
+                type="button"
+              >
+                <RefreshCw
+                  className={isLoading ? 'animate-spin' : ''}
+                  size={16}
+                />
+              </button>
             </div>
-          ) : (
+          </div>
+
+          <div className="flex space-x-2">
             <input
               className="flex-1 rounded bg-blue-dark px-4 py-2 text-lg"
               type="text"
-              {...form.register('to')}
+              {...form.register('from')}
               disabled={!hasChannels || !hasTradablePairs || isSwapInProgress}
-              onChange={handleToAmountChange}
+              onChange={handleFromAmountChange}
             />
-          )}
 
-          <Controller
-            control={form.control}
-            name="toAsset"
-            render={({ field }) => (
-              <AssetSelect
-                disabled={!hasChannels || !hasTradablePairs || isSwapInProgress}
-                onChange={(value) => handleAssetChange('toAsset', value)}
-                options={tradablePairs
-                  .flatMap((pair) => [pair.base_asset, pair.quote_asset])
-                  .filter(
-                    (asset, index, self) =>
-                      self.indexOf(asset) === index &&
-                      asset !== form.getValues().fromAsset
-                  )
-                  .map((asset) => ({
-                    label: getDisplayAsset(asset),
-                    value: asset,
-                  }))}
-                value={field.value}
-              />
-            )}
-          />
-        </div>
-      </div>
-
-      {/* Exchange rate section */}
-      {selectedPair && (
-        <>
-          <div className="text-center py-2 text-xs">1 Route Found</div>
-
-          <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
-            <div className="flex space-x-2 items-center">
-              {isPriceLoading ? (
-                <div className="flex-1 rounded bg-blue-dark px-4 py-3">
-                  Loading exchange rate...
-                </div>
-              ) : (
-                <ExchangeRateDisplay
-                  bitcoinUnit={bitcoinUnit}
-                  formatAmount={formatAmount}
-                  fromAsset={form.getValues().fromAsset}
-                  getAssetPrecision={getAssetPrecision}
-                  price={selectedPairFeed ? selectedPairFeed.price : null}
-                  selectedPair={selectedPair}
-                  toAsset={form.getValues().toAsset}
+            <Controller
+              control={form.control}
+              name="fromAsset"
+              render={({ field }) => (
+                <AssetSelect
+                  disabled={!hasChannels || !hasTradablePairs}
+                  onChange={(value) => handleAssetChange('fromAsset', value)}
+                  options={tradablePairs
+                    .flatMap((pair) => [pair.base_asset, pair.quote_asset])
+                    .filter(
+                      (asset, index, self) =>
+                        self.indexOf(asset) === index &&
+                        asset !== form.getValues().toAsset
+                    )
+                    .map((asset) => ({
+                      label: getDisplayAsset(asset),
+                      value: asset,
+                    }))}
+                  value={field.value}
                 />
               )}
-
-              <div className="w-8 flex justify-center">
-                <SparkIcon color={'#8FD5EA'} />
+            />
+          </div>
+          <div className="text-xs text-gray-400">
+            Min: {formatAmount(minFromAmount, form.getValues().fromAsset)}{' '}
+            {getDisplayAsset(form.getValues().fromAsset)}
+          </div>
+          <div className="flex space-x-2">
+            {[25, 50, 75, 100].map((size) => (
+              <div
+                className={`flex-1 px-6 py-3 text-center border border-cyan rounded cursor-pointer ${
+                  selectedSize === size ? 'bg-cyan text-blue-dark' : ''
+                } ${!hasChannels || !hasTradablePairs ? 'opacity-50 cursor-not-allowed' : ''}`}
+                key={size}
+                onClick={() =>
+                  hasChannels && hasTradablePairs && onSizeClick(size)
+                }
+              >
+                {size}%
               </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Swap button */}
+        <div className="flex items-center justify-center py-2">
+          <div
+            className={`bg-section-lighter rounded-full h-8 w-8 flex items-center justify-center ${
+              hasChannels && hasTradablePairs && !isSwapInProgress
+                ? 'cursor-pointer'
+                : 'opacity-50 cursor-not-allowed'
+            }`}
+            onClick={() =>
+              hasChannels &&
+              hasTradablePairs &&
+              !isSwapInProgress &&
+              onSwapAssets()
+            }
+          >
+            <SwapIcon />
+          </div>
+        </div>
+
+        {/* To amount section */}
+        <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
+          <div className="flex justify-between items-center font-light">
+            <div className="text-xs">You Receive (Estimated)</div>
+            <div className="text-xs">
+              Can receive up to:{' '}
+              {`${formatAmount(maxToAmount, form.getValues().toAsset)} ${getDisplayAsset(form.getValues().toAsset)}`}
             </div>
           </div>
-        </>
-      )}
 
-      {/* Error message */}
-      {errorMessage && (
-        <div
-          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
-          role="alert"
-        >
-          <span className="block sm:inline">{errorMessage}</span>
+          <div className="flex space-x-2">
+            {isToAmountLoading ? (
+              <div className="flex-1 rounded bg-blue-dark px-4 py-2 text-lg">
+                Estimating...
+              </div>
+            ) : (
+              <input
+                className="flex-1 rounded bg-blue-dark px-4 py-2 text-lg"
+                type="text"
+                {...form.register('to')}
+                disabled={!hasChannels || !hasTradablePairs || isSwapInProgress}
+                onChange={handleToAmountChange}
+              />
+            )}
+
+            <Controller
+              control={form.control}
+              name="toAsset"
+              render={({ field }) => (
+                <AssetSelect
+                  disabled={
+                    !hasChannels || !hasTradablePairs || isSwapInProgress
+                  }
+                  onChange={(value) => handleAssetChange('toAsset', value)}
+                  options={tradablePairs
+                    .flatMap((pair) => [pair.base_asset, pair.quote_asset])
+                    .filter(
+                      (asset, index, self) =>
+                        self.indexOf(asset) === index &&
+                        asset !== form.getValues().fromAsset
+                    )
+                    .map((asset) => ({
+                      label: getDisplayAsset(asset),
+                      value: asset,
+                    }))}
+                  value={field.value}
+                />
+              )}
+            />
+          </div>
         </div>
-      )}
 
-      {/* Submit button */}
-      <div className="py-2">
-        <button
-          className="block w-full px-6 py-3 border border-cyan rounded text-lg font-bold hover:bg-cyan hover:text-blue-dark transition"
-          disabled={
-            !wsConnected ||
-            isToAmountLoading ||
-            isPriceLoading ||
-            !!errorMessage ||
-            !hasChannels ||
-            !hasTradablePairs ||
-            isSwapInProgress
-          }
-          type="submit"
-        >
-          {!wsConnected
-            ? 'Connecting...'
-            : isToAmountLoading || isPriceLoading
-              ? 'Preparing Swap...'
-              : !hasChannels
-                ? 'No Channels Available'
-                : !hasTradablePairs
-                  ? 'No Tradable Pairs'
-                  : errorMessage
-                    ? 'Invalid Amount'
-                    : isSwapInProgress
-                      ? 'Swap in Progress...'
-                      : 'Swap Now'}
-        </button>
-      </div>
-    </form>
+        {/* Exchange rate section */}
+        {selectedPair && (
+          <>
+            <div className="text-center py-2 text-xs">1 Route Found</div>
+
+            <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
+              <div className="flex space-x-2 items-center">
+                {isPriceLoading ? (
+                  <div className="flex-1 rounded bg-blue-dark px-4 py-3">
+                    Loading exchange rate...
+                  </div>
+                ) : (
+                  <ExchangeRateDisplay
+                    bitcoinUnit={bitcoinUnit}
+                    formatAmount={formatAmount}
+                    fromAsset={form.getValues().fromAsset}
+                    getAssetPrecision={getAssetPrecision}
+                    price={selectedPairFeed ? selectedPairFeed.price : null}
+                    selectedPair={selectedPair}
+                    toAsset={form.getValues().toAsset}
+                  />
+                )}
+
+                <div className="w-8 flex justify-center">
+                  <SparkIcon color={'#8FD5EA'} />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Error message */}
+        {errorMessage && (
+          <div
+            className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+            role="alert"
+          >
+            <span className="block sm:inline">{errorMessage}</span>
+          </div>
+        )}
+
+        {/* Submit button */}
+        <div className="py-2">
+          <button
+            className="block w-full px-6 py-3 border border-cyan rounded text-lg font-bold hover:bg-cyan hover:text-blue-dark transition"
+            disabled={
+              !wsConnected ||
+              isToAmountLoading ||
+              isPriceLoading ||
+              !!errorMessage ||
+              !hasChannels ||
+              !hasTradablePairs ||
+              isSwapInProgress
+            }
+            type="submit"
+          >
+            {!wsConnected
+              ? 'Connecting...'
+              : isToAmountLoading || isPriceLoading
+                ? 'Preparing Swap...'
+                : !hasChannels
+                  ? 'No Channels Available'
+                  : !hasTradablePairs
+                    ? 'No Tradable Pairs'
+                    : errorMessage
+                      ? 'Invalid Amount'
+                      : isSwapInProgress
+                        ? 'Swap in Progress...'
+                        : 'Swap Now'}
+          </button>
+        </div>
+      </form>
+    </div>
   )
 
   const refreshData = useCallback(async () => {

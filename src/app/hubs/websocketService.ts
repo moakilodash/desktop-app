@@ -29,17 +29,42 @@ class WebSocketService {
   }
 
   public init(url: string, clientId: string, dispatch: Dispatch) {
-    this.url = url
+    const cleanUrl = url.replace(/\/+$/, '')
+    if (this.url !== cleanUrl && this.socket) {
+      this.close()
+    }
+
+    this.url = cleanUrl
     this.clientId = clientId
     this.dispatch = dispatch
     this.connect()
   }
 
+  public updateUrl(url: string) {
+    const cleanUrl = url.replace(/\/+$/, '')
+    if (this.url !== cleanUrl) {
+      console.log('Updating WebSocket URL:', cleanUrl)
+      this.url = cleanUrl
+      this.reconnectAttempts = 0
+      if (this.socket) {
+        this.close()
+        this.connect()
+      }
+    }
+  }
+
   private connect() {
-    this.socket = new WebSocket(`${this.url}api/v1/market/ws/${this.clientId}`)
+    if (!this.url) {
+      console.error('WebSocket URL not set')
+      return
+    }
+
+    const baseUrl = this.url.replace(/\/+$/, '')
+    const wsUrl = baseUrl.replace(/^http/, 'ws')
+    this.socket = new WebSocket(`${wsUrl}/api/v1/market/ws/${this.clientId}`)
 
     this.socket.onopen = () => {
-      console.log('WebSocket connected')
+      console.log('WebSocket connected to:', wsUrl)
       this.dispatch && this.dispatch(setWsConnected(true))
       toast.success('Connected to maker websocket')
       this.reconnectAttempts = 0

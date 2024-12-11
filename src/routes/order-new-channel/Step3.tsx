@@ -1,4 +1,12 @@
-import { AlertTriangle, Clock, Rocket, Settings, Zap, Info , Link as ChainIcon } from 'lucide-react'
+import {
+  AlertTriangle,
+  Clock,
+  Rocket,
+  Settings,
+  Zap,
+  Info,
+  Link as ChainIcon,
+} from 'lucide-react'
 import QRCode from 'qrcode.react'
 import React, { useState, useCallback, useEffect } from 'react'
 import { CopyToClipboard } from 'react-copy-to-clipboard'
@@ -107,8 +115,14 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
   useEffect(() => {
     // refresh data every 10 seconds
     const interval = setInterval(refreshData, 10000)
+
+    // Clear interval when payment process starts
+    if (isProcessingWalletPayment) {
+      clearInterval(interval)
+    }
+
     return () => clearInterval(interval)
-  }, [refreshData])
+  }, [refreshData, isProcessingWalletPayment])
 
   useEffect(() => {
     const fetchAssetInfo = async () => {

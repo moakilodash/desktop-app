@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   XCircle,
   Server,
+  Trash2,
+  Star,
 } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
@@ -21,6 +23,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
+import { webSocketService } from '../../app/hubs/websocketService'
 import { WALLET_SETUP_PATH } from '../../app/router/paths'
 import { RootState } from '../../app/store'
 import { useAppSelector } from '../../app/store/hooks'
@@ -42,6 +45,8 @@ interface FormFields {
   rpcConnectionUrl: string
   indexerUrl: string
   proxyEndpoint: string
+  makerUrls: string[]
+  defaultMakerUrl: string
 }
 
 export const Component: React.FC = () => {
@@ -61,11 +66,14 @@ export const Component: React.FC = () => {
   const [shutdown] = nodeApi.endpoints.shutdown.useLazyQuery()
   const [lock] = nodeApi.endpoints.lock.useLazyQuery()
 
-  const { control, handleSubmit, reset } = useForm<FormFields>({
+  const { control, handleSubmit, reset, watch } = useForm<FormFields>({
     defaultValues: {
       bitcoinUnit,
+      defaultMakerUrl:
+        nodeSettings.default_maker_url || nodeSettings.default_lsp_url,
       indexerUrl: nodeSettings.indexer_url || '',
       lspUrl: nodeSettings.default_lsp_url || 'http://localhost:8000',
+      makerUrls: nodeSettings.maker_urls || [],
       nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
       proxyEndpoint: nodeSettings.proxy_endpoint || '',
       rpcConnectionUrl: nodeSettings.rpc_connection_url || '',
@@ -102,8 +110,11 @@ export const Component: React.FC = () => {
   useEffect(() => {
     reset({
       bitcoinUnit,
+      defaultMakerUrl:
+        nodeSettings.default_maker_url || nodeSettings.default_lsp_url,
       indexerUrl: nodeSettings.indexer_url || '',
       lspUrl: nodeSettings.default_lsp_url || 'http://localhost:8000',
+      makerUrls: nodeSettings.maker_urls || [],
       nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
       proxyEndpoint: nodeSettings.proxy_endpoint || '',
       rpcConnectionUrl: nodeSettings.rpc_connection_url || '',
@@ -119,6 +130,7 @@ export const Component: React.FC = () => {
         datapath: currentAccount.datapath,
         defaultLspUrl: data.lspUrl,
         indexerUrl: data.indexerUrl,
+        makerUrls: data.makerUrls.join(','),
         name: currentAccount.name,
         network: currentAccount.network,
         nodeUrl: currentAccount.node_url,
@@ -130,11 +142,18 @@ export const Component: React.FC = () => {
         nodeSettingsActions.setNodeSettings({
           ...currentAccount,
           default_lsp_url: data.lspUrl,
+          default_maker_url: data.defaultMakerUrl,
           indexer_url: data.indexerUrl,
+          maker_urls: data.makerUrls,
           proxy_endpoint: data.proxyEndpoint,
           rpc_connection_url: data.rpcConnectionUrl,
         })
       )
+
+      // Update websocket connection if maker URL changed
+      if (data.defaultMakerUrl !== nodeSettings.default_maker_url) {
+        webSocketService.updateUrl(data.defaultMakerUrl)
+      }
 
       // Check if node connection settings were changed
       const nodeSettingsChanged =
@@ -196,8 +215,11 @@ export const Component: React.FC = () => {
   const handleUndo = () => {
     reset({
       bitcoinUnit,
+      defaultMakerUrl:
+        nodeSettings.default_maker_url || nodeSettings.default_lsp_url,
       indexerUrl: nodeSettings.indexer_url || '',
       lspUrl: nodeSettings.default_lsp_url || 'http://localhost:8000',
+      makerUrls: nodeSettings.maker_urls || [],
       nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
       proxyEndpoint: nodeSettings.proxy_endpoint || '',
       rpcConnectionUrl: nodeSettings.rpc_connection_url || '',
@@ -277,7 +299,7 @@ export const Component: React.FC = () => {
           <div className="lg:col-span-2 space-y-6">
             <form onSubmit={handleSubmit(handleSave)}>
               {/* Application Settings Card */}
-              <div className="bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-gray-700 mb-6">
+              <div className="bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-gray-700">
                 <div className="flex items-center gap-2 mb-6">
                   <Settings className="w-5 h-5 text-blue-400" />
                   <h3 className="text-xl font-semibold text-white">
@@ -285,46 +307,174 @@ export const Component: React.FC = () => {
                   </h3>
                 </div>
 
-                <div className="space-y-6">
-                  <Controller
-                    control={control}
-                    name="bitcoinUnit"
-                    render={({ field }) => (
-                      <div className="group transition-all duration-300 hover:translate-x-1">
-                        <label className="block text-sm font-semibold text-gray-300 mb-2">
-                          Bitcoin Unit
-                        </label>
-                        <div className="relative">
-                          <select
-                            {...field}
-                            className="block w-full pl-4 pr-10 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
-                          >
-                            <option value="SAT">Satoshi (SAT)</option>
-                            <option value="BTC">Bitcoin (BTC)</option>
-                          </select>
-                          <ChevronDown className="absolute right-3 top-3.5 h-5 w-5 text-gray-400 pointer-events-none" />
-                        </div>
-                      </div>
-                    )}
-                  />
+                <div className="space-y-8">
+                  {/* General Settings */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-400 mb-4">
+                      General Settings
+                    </h4>
+                    <div className="space-y-6">
+                      {/* Bitcoin Unit */}
+                      <Controller
+                        control={control}
+                        name="bitcoinUnit"
+                        render={({ field }) => (
+                          <div className="group transition-all duration-300 hover:translate-x-1">
+                            <label className="block text-sm font-semibold text-gray-300 mb-2">
+                              Bitcoin Unit
+                            </label>
+                            <div className="relative">
+                              <select
+                                {...field}
+                                className="block w-full pl-4 pr-10 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                              >
+                                <option value="SAT">Satoshi (SAT)</option>
+                                <option value="BTC">Bitcoin (BTC)</option>
+                              </select>
+                              <ChevronDown className="absolute right-3 top-3.5 h-5 w-5 text-gray-400 pointer-events-none" />
+                            </div>
+                          </div>
+                        )}
+                      />
 
-                  <Controller
-                    control={control}
-                    name="lspUrl"
-                    render={({ field }) => (
-                      <div className="group transition-all duration-300 hover:translate-x-1">
-                        <label className="block text-sm font-semibold text-gray-300 mb-2">
-                          Default LSP URL
+                      {/* LSP URL */}
+                      <Controller
+                        control={control}
+                        name="lspUrl"
+                        render={({ field }) => (
+                          <div className="group transition-all duration-300 hover:translate-x-1">
+                            <label className="block text-sm font-semibold text-gray-300 mb-2">
+                              LSP URL
+                            </label>
+                            <input
+                              {...field}
+                              className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                              placeholder="e.g., http://localhost:8000"
+                              type="text"
+                            />
+                          </div>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Maker Settings */}
+                  <div className="pt-6 border-t border-gray-700">
+                    <h4 className="text-sm font-semibold text-gray-400 mb-4">
+                      Maker Settings
+                    </h4>
+                    <div className="space-y-6">
+                      {/* Default Maker URL */}
+                      <Controller
+                        control={control}
+                        name="defaultMakerUrl"
+                        render={({ field }) => (
+                          <div className="group transition-all duration-300 hover:translate-x-1">
+                            <label className="block text-sm font-semibold text-gray-300 mb-2">
+                              Default Maker URL
+                            </label>
+                            <input
+                              {...field}
+                              className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                              placeholder="Default maker service URL"
+                              type="text"
+                            />
+                          </div>
+                        )}
+                      />
+
+                      {/* Additional Maker URLs */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-300 mb-4">
+                          Additional Maker URLs
                         </label>
-                        <input
-                          {...field}
-                          className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
-                          placeholder="e.g., http://localhost:8000"
-                          type="text"
+                        <Controller
+                          control={control}
+                          name="makerUrls"
+                          render={({ field }) => (
+                            <div className="space-y-4">
+                              {field.value.map((url, index) => (
+                                <div className="flex gap-2" key={index}>
+                                  <div className="flex-1 relative group">
+                                    <input
+                                      className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                                      onChange={(e) => {
+                                        const newUrls = [...field.value]
+                                        newUrls[index] = e.target.value
+                                        field.onChange(newUrls)
+                                      }}
+                                      placeholder="Maker URL"
+                                      type="text"
+                                      value={url}
+                                    />
+                                    {url === watch('defaultMakerUrl') && (
+                                      <span className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-1 text-xs bg-blue-500/20 text-blue-400 rounded-md">
+                                        Default
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      className={`p-3 rounded-lg transition-colors ${
+                                        url === watch('defaultMakerUrl')
+                                          ? 'bg-blue-500/20 text-blue-400'
+                                          : 'bg-gray-600/20 text-gray-400 hover:bg-blue-500/20 hover:text-blue-400'
+                                      }`}
+                                      onClick={() => {
+                                        const form = control._formControl
+                                        form.setValue('defaultMakerUrl', url)
+                                      }}
+                                      title={
+                                        url === watch('defaultMakerUrl')
+                                          ? 'Current default'
+                                          : 'Set as default'
+                                      }
+                                      type="button"
+                                    >
+                                      <Star
+                                        className={`w-5 h-5 ${
+                                          url === watch('defaultMakerUrl')
+                                            ? 'fill-current'
+                                            : ''
+                                        }`}
+                                      />
+                                    </button>
+                                    <button
+                                      className="p-3 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition-colors"
+                                      onClick={() => {
+                                        const newUrls = field.value.filter(
+                                          (_, i) => i !== index
+                                        )
+                                        field.onChange(newUrls)
+                                        // If we're removing the default URL, clear it
+                                        if (url === watch('defaultMakerUrl')) {
+                                          const form = control._formControl
+                                          form.setValue('defaultMakerUrl', '')
+                                        }
+                                      }}
+                                      title="Remove URL"
+                                      type="button"
+                                    >
+                                      <Trash2 className="w-5 h-5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                              <button
+                                className="w-full px-4 py-3 border border-blue-500/20 text-blue-500 rounded-lg hover:bg-blue-500/10 transition-colors"
+                                onClick={() =>
+                                  field.onChange([...field.value, ''])
+                                }
+                                type="button"
+                              >
+                                Add Maker URL
+                              </button>
+                            </div>
+                          )}
                         />
                       </div>
-                    )}
-                  />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -346,6 +496,7 @@ export const Component: React.FC = () => {
                 </div>
 
                 <div className="space-y-6">
+                  {/* Node Connection String */}
                   <Controller
                     control={control}
                     name="nodeConnectionString"
@@ -364,6 +515,7 @@ export const Component: React.FC = () => {
                     )}
                   />
 
+                  {/* RPC Connection URL */}
                   <Controller
                     control={control}
                     name="rpcConnectionUrl"
@@ -382,6 +534,7 @@ export const Component: React.FC = () => {
                     )}
                   />
 
+                  {/* Indexer URL */}
                   <Controller
                     control={control}
                     name="indexerUrl"
@@ -400,6 +553,7 @@ export const Component: React.FC = () => {
                     )}
                   />
 
+                  {/* Proxy Endpoint */}
                   <Controller
                     control={control}
                     name="proxyEndpoint"

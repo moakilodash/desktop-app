@@ -94,7 +94,9 @@ export const Component = () => {
       setSettingsAsync({
         datapath: '',
         default_lsp_url: NETWORK_DEFAULTS[data.network].default_lsp_url,
+        default_maker_url: NETWORK_DEFAULTS[data.network].default_maker_url,
         indexer_url: data.indexer_url,
+        maker_urls: '',
         name: data.name,
         network: data.network,
         node_url: data.node_url,
@@ -107,7 +109,9 @@ export const Component = () => {
     await invoke('insert_account', {
       datapath: '',
       defaultLspUrl: NETWORK_DEFAULTS[data.network].default_lsp_url,
+      defaultMakerUrl: NETWORK_DEFAULTS[data.network].default_maker_url,
       indexerUrl: data.indexer_url,
+      makerUrls: '',
       name: data.name,
       network: data.network,
       nodeUrl: data.node_url,
