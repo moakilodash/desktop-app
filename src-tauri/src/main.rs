@@ -125,8 +125,21 @@ fn insert_account(
     indexer_url: String,
     proxy_endpoint: String,
     default_lsp_url: String,
+    maker_urls: String,
+    default_maker_url: String,
 ) -> Result<usize, String> {
-    match db::insert_account(name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint, default_lsp_url) {
+    match db::insert_account(
+        name,
+        network,
+        datapath,
+        rpc_connection_url,
+        node_url,
+        indexer_url,
+        proxy_endpoint,
+        default_lsp_url,
+        maker_urls,
+        default_maker_url,
+    ) {
         Ok(num_rows) => Ok(num_rows),
         Err(e) => Err(e.to_string()),
     }
@@ -142,8 +155,21 @@ fn update_account(
     indexer_url: String,
     proxy_endpoint: String,
     default_lsp_url: String,
+    maker_urls: String,
+    default_maker_url: String,
 ) -> Result<usize, String> {
-    match db::update_account(name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint, default_lsp_url) {
+    match db::update_account(
+        name,
+        network,
+        datapath,
+        rpc_connection_url,
+        node_url,
+        indexer_url,
+        proxy_endpoint,
+        default_lsp_url,
+        maker_urls,
+        default_maker_url,
+    ) {
         Ok(num_rows) => Ok(num_rows),
         Err(e) => Err(e.to_string()),
     }
