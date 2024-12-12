@@ -31,7 +31,6 @@ import { nodeSettingsActions } from '../../slices/nodeSettings/nodeSettings.slic
 import {
   setBitcoinUnit,
   setNodeConnectionString,
-  setDefaultLspUrl,
 } from '../../slices/settings/settings.slice'
 
 import { TerminalLogDisplay } from './TerminalLogDisplay'
@@ -40,33 +39,38 @@ interface FormFields {
   bitcoinUnit: string
   nodeConnectionString: string
   lspUrl: string
+  rpcConnectionUrl: string
+  indexerUrl: string
+  proxyEndpoint: string
 }
 
 export const Component: React.FC = () => {
   const navigate = useNavigate()
   const dispatch = useDispatch()
-  const { bitcoinUnit, nodeConnectionString, defaultLspUrl } = useSelector(
+  const { bitcoinUnit, nodeConnectionString } = useSelector(
     (state: RootState) => state.settings
   )
   const currentAccount = useAppSelector((state) => state.nodeSettings.data)
+  const nodeSettings = useAppSelector((state) => state.nodeSettings.data)
 
   const [showModal, setShowModal] = useState(false)
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false)
   const [showShutdownConfirmation, setShowShutdownConfirmation] =
     useState(false)
 
-  const { control, handleSubmit, reset } = useForm<FormFields>({
-    defaultValues: {
-      bitcoinUnit,
-      lspUrl: defaultLspUrl || 'http://localhost:8000',
-      nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
-    },
-  })
-
   const [shutdown] = nodeApi.endpoints.shutdown.useLazyQuery()
   const [lock] = nodeApi.endpoints.lock.useLazyQuery()
 
-  const nodeSettings = useAppSelector((state) => state.nodeSettings.data)
+  const { control, handleSubmit, reset } = useForm<FormFields>({
+    defaultValues: {
+      bitcoinUnit,
+      indexerUrl: nodeSettings.indexer_url || '',
+      lspUrl: nodeSettings.default_lsp_url || 'http://localhost:8000',
+      nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
+      proxyEndpoint: nodeSettings.proxy_endpoint || '',
+      rpcConnectionUrl: nodeSettings.rpc_connection_url || '',
+    },
+  })
 
   const {
     showBackupModal,
@@ -98,27 +102,61 @@ export const Component: React.FC = () => {
   useEffect(() => {
     reset({
       bitcoinUnit,
+      indexerUrl: nodeSettings.indexer_url || '',
       lspUrl: nodeSettings.default_lsp_url || 'http://localhost:8000',
       nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
+      proxyEndpoint: nodeSettings.proxy_endpoint || '',
+      rpcConnectionUrl: nodeSettings.rpc_connection_url || '',
     })
-  }, [bitcoinUnit, nodeConnectionString, nodeSettings.default_lsp_url, reset])
+  }, [bitcoinUnit, nodeConnectionString, nodeSettings, reset])
 
   const handleSave = async (data: FormFields) => {
     try {
       dispatch(setBitcoinUnit(data.bitcoinUnit))
       dispatch(setNodeConnectionString(data.nodeConnectionString))
-      dispatch(setDefaultLspUrl(data.lspUrl))
 
       await invoke('update_account', {
         datapath: currentAccount.datapath,
         defaultLspUrl: data.lspUrl,
-        indexerUrl: currentAccount.indexer_url,
+        indexerUrl: data.indexerUrl,
         name: currentAccount.name,
         network: currentAccount.network,
         nodeUrl: currentAccount.node_url,
-        proxyEndpoint: currentAccount.proxy_endpoint,
-        rpcConnectionUrl: currentAccount.rpc_connection_url,
+        proxyEndpoint: data.proxyEndpoint,
+        rpcConnectionUrl: data.rpcConnectionUrl,
       })
+
+      dispatch(
+        nodeSettingsActions.setNodeSettings({
+          ...currentAccount,
+          default_lsp_url: data.lspUrl,
+          indexer_url: data.indexerUrl,
+          proxy_endpoint: data.proxyEndpoint,
+          rpc_connection_url: data.rpcConnectionUrl,
+        })
+      )
+
+      // Check if node connection settings were changed
+      const nodeSettingsChanged =
+        data.nodeConnectionString !== nodeConnectionString ||
+        data.rpcConnectionUrl !== nodeSettings.rpc_connection_url ||
+        data.indexerUrl !== nodeSettings.indexer_url ||
+        data.proxyEndpoint !== nodeSettings.proxy_endpoint
+
+      if (nodeSettingsChanged) {
+        toast.warning(
+          'Node connection settings have changed. Please restart the node for changes to take effect.',
+          {
+            autoClose: 10000, // Keep the message visible longer
+            closeOnClick: true,
+            draggable: true,
+            pauseOnHover: true,
+            position: 'top-right',
+          }
+        )
+      } else {
+        toast.success('Settings saved successfully')
+      }
 
       setShowModal(true)
       setTimeout(() => setShowModal(false), 2000)
@@ -158,8 +196,11 @@ export const Component: React.FC = () => {
   const handleUndo = () => {
     reset({
       bitcoinUnit,
-      lspUrl: defaultLspUrl,
-      nodeConnectionString,
+      indexerUrl: nodeSettings.indexer_url || '',
+      lspUrl: nodeSettings.default_lsp_url || 'http://localhost:8000',
+      nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
+      proxyEndpoint: nodeSettings.proxy_endpoint || '',
+      rpcConnectionUrl: nodeSettings.rpc_connection_url || '',
     })
   }
 
@@ -215,258 +256,340 @@ export const Component: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen py-8 px-4">
-      <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        {/* Settings Column */}
-        <div className="bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-gray-700">
-          <div className="flex items-center gap-3 mb-2">
-            <Settings className="w-8 h-8 text-blue-400" />
-            <h2 className="text-4xl font-bold text-white">Settings</h2>
-          </div>
-          <p className="text-gray-400 mb-8">
-            Manage your node and application preferences
-          </p>
-
-          <form className="space-y-8" onSubmit={handleSubmit(handleSave)}>
-            <Controller
-              control={control}
-              name="bitcoinUnit"
-              render={({ field }) => (
-                <div className="group transition-all duration-300 hover:translate-x-1">
-                  <label className="block text-sm font-semibold text-gray-300 mb-2">
-                    Bitcoin Unit
-                  </label>
-                  <div className="relative">
-                    <select
-                      {...field}
-                      className="block w-full pl-4 pr-10 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
-                    >
-                      <option value="SAT">Satoshi (SAT)</option>
-                      <option value="BTC">Bitcoin (BTC)</option>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-3.5 h-5 w-5 text-gray-400 pointer-events-none" />
-                  </div>
-                </div>
-              )}
-            />
-
-            <div className="space-y-6">
-              <Controller
-                control={control}
-                name="nodeConnectionString"
-                render={({ field }) => (
-                  <div className="group transition-all duration-300 hover:translate-x-1">
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
-                      Node Connection String
-                    </label>
-                    <input
-                      {...field}
-                      className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
-                      placeholder="e.g., http://localhost:3001"
-                      type="text"
-                    />
-                  </div>
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="lspUrl"
-                render={({ field }) => (
-                  <div className="group transition-all duration-300 hover:translate-x-1">
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
-                      Default LSP URL
-                    </label>
-                    <input
-                      {...field}
-                      className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
-                      placeholder="e.g., http://localhost:8000"
-                      type="text"
-                    />
-                  </div>
-                )}
-              />
-            </div>
-
-            {/* Settings Column - Save/Undo buttons section */}
-            <div className="pt-8 border-t border-[#2A2D3A] mt-6">
-              <div className="flex gap-4">
-                <button
-                  className="flex-1 flex items-center justify-center px-6 py-3.5 bg-[#2A2D3A] text-white rounded-xl hover:bg-[#363A4B] focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200"
-                  onClick={handleUndo}
-                  type="button"
-                >
-                  <Undo className="w-5 h-5 mr-2.5" />
-                  Reset Changes
-                </button>
-                <button
-                  className="flex-1 flex items-center justify-center px-6 py-3.5 bg-[#4361EE] text-white rounded-xl hover:bg-[#3651DE] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
-                  type="submit"
-                >
-                  <Save className="w-5 h-5 mr-2.5" />
-                  Save Settings
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-
-        {/* Node Status Column */}
-        <div className="bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-gray-700">
-          <div className="flex items-center gap-3 mb-2">
-            <Server className="w-8 h-8 text-blue-400" />
-            <h2 className="text-4xl font-bold text-white">Node Status</h2>
-          </div>
-
-          <div className="flex items-center gap-2 mb-8">
-            <Activity className="w-4 h-4 text-gray-400" />
+      {/* Page Header */}
+      <div className="w-full max-w-7xl mx-auto mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <Settings className="w-10 h-10 text-blue-400" />
+          <div>
+            <h1 className="text-4xl font-bold text-white">Settings</h1>
             <p className="text-gray-400">
-              Monitor your node's activity and logs
+              Manage your node and application preferences
             </p>
-          </div>
-
-          {/* Node Status Indicator - Replace the previous status indicator */}
-          <div className="mb-8">
-            <div className="flex flex-col gap-4">
-              {/* Main Status Card */}
-              <div
-                className={`p-4 rounded-xl border ${
-                  isNodeRunning
-                    ? 'bg-green-500/10 border-green-500/20'
-                    : 'bg-red-500/10 border-red-500/20'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  {isNodeRunning ? (
-                    <div className="relative">
-                      <CheckCircle2 className="w-6 h-6 text-green-400" />
-                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse" />
-                    </div>
-                  ) : (
-                    <div className="relative">
-                      <XCircle className="w-6 h-6 text-red-400" />
-                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-400 rounded-full" />
-                    </div>
-                  )}
-                  <span
-                    className={`text-lg font-medium ${
-                      isNodeRunning ? 'text-green-400' : 'text-red-400'
-                    }`}
-                  >
-                    Node is {isNodeRunning ? 'Running' : 'Offline'}
-                  </span>
-                </div>
-                <p
-                  className={`mt-2 text-sm ml-9 ${
-                    isNodeRunning ? 'text-green-300/70' : 'text-red-300/70'
-                  }`}
-                >
-                  {isNodeRunning
-                    ? 'Your node is operational and processing transactions'
-                    : 'Node is currently offline or experiencing issues'}
-                </p>
-              </div>
-
-              {/* Connection Type */}
-              <div className="p-4 bg-gray-700/30 rounded-xl border border-gray-700">
-                <div className="flex items-center gap-2 text-gray-400 mb-1">
-                  <Server className="w-4 h-4" />
-                  <span className="text-sm font-medium">Connection Type</span>
-                </div>
-                <p className="text-white font-medium ml-6">
-                  {isLocalNode ? 'Local Node' : 'Remote Node'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Move node control buttons here, after the status indicators */}
-          <div className="space-y-4 mb-8">
-            <button
-              className="w-full flex items-center justify-center px-4 py-3 bg-[#4361EE] text-white rounded-xl hover:bg-[#3651DE] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
-              onClick={() => setShowBackupModal(true)}
-              type="button"
-            >
-              <Shield className="w-5 h-5 mr-2" />
-              Backup Wallet
-            </button>
-
-            <div className="flex space-x-4">
-              <button
-                className="flex-1 flex items-center justify-center px-4 py-3 bg-[#2A2D3A] text-white rounded-xl hover:bg-[#363A4B] focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200"
-                onClick={handleLogout}
-                type="button"
-              >
-                <LogOut className="w-5 h-5 mr-2" />
-                Logout
-              </button>
-
-              <button
-                className="flex-1 flex items-center justify-center px-4 py-3 bg-red text-white rounded-xl hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200"
-                onClick={handleShutdown}
-                type="button"
-              >
-                <Power className="w-5 h-5 mr-2" />
-                Shutdown Node
-              </button>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* New full-width logs section */}
-      {isLocalNode && (
-        <div className="w-full max-w-7xl mx-auto">
-          <div className="bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-white">Node Logs</h3>
-              <div className="flex gap-2">
-                <button
-                  className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
-                  disabled={nodeLogs.length === 0}
-                  onClick={handleExportLogs}
-                  type="button"
-                >
-                  <Download className="w-4 h-4" />
-                  Export
-                </button>
-                <button
-                  className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-                  onClick={() => fetchNodeLogs()}
-                  type="button"
-                >
-                  Refresh Logs
-                </button>
-                <button
-                  className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-                  disabled={nodeLogs.length === 0}
-                  onClick={() => setNodeLogs([])}
-                  type="button"
-                >
-                  Clear
-                </button>
+      {/* Main Content Grid */}
+      <div className="w-full max-w-7xl mx-auto space-y-8">
+        {/* Settings Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Application Settings */}
+          <div className="lg:col-span-2 space-y-6">
+            <form onSubmit={handleSubmit(handleSave)}>
+              {/* Application Settings Card */}
+              <div className="bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-gray-700 mb-6">
+                <div className="flex items-center gap-2 mb-6">
+                  <Settings className="w-5 h-5 text-blue-400" />
+                  <h3 className="text-xl font-semibold text-white">
+                    Application Settings
+                  </h3>
+                </div>
+
+                <div className="space-y-6">
+                  <Controller
+                    control={control}
+                    name="bitcoinUnit"
+                    render={({ field }) => (
+                      <div className="group transition-all duration-300 hover:translate-x-1">
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">
+                          Bitcoin Unit
+                        </label>
+                        <div className="relative">
+                          <select
+                            {...field}
+                            className="block w-full pl-4 pr-10 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                          >
+                            <option value="SAT">Satoshi (SAT)</option>
+                            <option value="BTC">Bitcoin (BTC)</option>
+                          </select>
+                          <ChevronDown className="absolute right-3 top-3.5 h-5 w-5 text-gray-400 pointer-events-none" />
+                        </div>
+                      </div>
+                    )}
+                  />
+
+                  <Controller
+                    control={control}
+                    name="lspUrl"
+                    render={({ field }) => (
+                      <div className="group transition-all duration-300 hover:translate-x-1">
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">
+                          Default LSP URL
+                        </label>
+                        <input
+                          {...field}
+                          className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                          placeholder="e.g., http://localhost:8000"
+                          type="text"
+                        />
+                      </div>
+                    )}
+                  />
+                </div>
               </div>
-            </div>
-            <div className="bg-gray-900 rounded-lg border border-gray-700">
-              <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700">
-                <span className="text-sm text-gray-400">Live Node Logs</span>
-                <span className="text-xs text-gray-500">
-                  {nodeLogs.length} entries
-                </span>
-              </div>
-              <div className="p-4 h-96 overflow-y-auto font-mono text-sm">
-                {nodeLogs.length === 0 ? (
-                  <div className="flex items-center justify-center h-full text-gray-500">
-                    No logs available
+
+              {/* Node Connection Settings Card */}
+              <div className="bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-gray-700">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                    <Server className="w-5 h-5 text-blue-400" />
+                    <h3 className="text-xl font-semibold text-white">
+                      Node Connection Settings
+                    </h3>
                   </div>
-                ) : (
-                  <TerminalLogDisplay logs={nodeLogs} />
-                )}
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                    <span className="text-xs text-yellow-500">
+                      Requires restart
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <Controller
+                    control={control}
+                    name="nodeConnectionString"
+                    render={({ field }) => (
+                      <div className="group transition-all duration-300 hover:translate-x-1">
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">
+                          Node Connection String
+                        </label>
+                        <input
+                          {...field}
+                          className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                          placeholder="e.g., http://localhost:3001"
+                          type="text"
+                        />
+                      </div>
+                    )}
+                  />
+
+                  <Controller
+                    control={control}
+                    name="rpcConnectionUrl"
+                    render={({ field }) => (
+                      <div className="group transition-all duration-300 hover:translate-x-1">
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">
+                          RPC Connection URL
+                        </label>
+                        <input
+                          {...field}
+                          className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                          placeholder="Bitcoin RPC URL"
+                          type="text"
+                        />
+                      </div>
+                    )}
+                  />
+
+                  <Controller
+                    control={control}
+                    name="indexerUrl"
+                    render={({ field }) => (
+                      <div className="group transition-all duration-300 hover:translate-x-1">
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">
+                          Indexer URL
+                        </label>
+                        <input
+                          {...field}
+                          className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                          placeholder="Indexer service URL"
+                          type="text"
+                        />
+                      </div>
+                    )}
+                  />
+
+                  <Controller
+                    control={control}
+                    name="proxyEndpoint"
+                    render={({ field }) => (
+                      <div className="group transition-all duration-300 hover:translate-x-1">
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">
+                          Proxy Endpoint
+                        </label>
+                        <input
+                          {...field}
+                          className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                          placeholder="Proxy service endpoint"
+                          type="text"
+                        />
+                      </div>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Form Actions */}
+              <div className="sticky bottom-6 mt-6">
+                <div className="bg-gray-800/95 backdrop-blur-sm p-4 rounded-xl border border-gray-700 shadow-lg">
+                  <div className="flex gap-4">
+                    <button
+                      className="flex-1 flex items-center justify-center px-6 py-3.5 bg-[#2A2D3A] text-white rounded-xl hover:bg-[#363A4B] focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200"
+                      onClick={handleUndo}
+                      type="button"
+                    >
+                      <Undo className="w-5 h-5 mr-2.5" />
+                      Reset Changes
+                    </button>
+                    <button
+                      className="flex-1 flex items-center justify-center px-6 py-3.5 bg-[#4361EE] text-white rounded-xl hover:bg-[#3651DE] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                      type="submit"
+                    >
+                      <Save className="w-5 h-5 mr-2.5" />
+                      Save Settings
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          {/* Right Column - Node Status and Actions */}
+          <div className="space-y-6">
+            {/* Node Status Card */}
+            <div className="bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-gray-700">
+              <div className="flex items-center gap-2 mb-6">
+                <Activity className="w-5 h-5 text-blue-400" />
+                <h3 className="text-xl font-semibold text-white">
+                  Node Status
+                </h3>
+              </div>
+
+              <div className="space-y-4">
+                {/* Status Indicator */}
+                <div
+                  className={`p-4 rounded-xl border ${
+                    isNodeRunning
+                      ? 'bg-green-500/10 border-green-500/20'
+                      : 'bg-red-500/10 border-red-500/20'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    {isNodeRunning ? (
+                      <div className="relative">
+                        <CheckCircle2 className="w-6 h-6 text-green-400" />
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse" />
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <XCircle className="w-6 h-6 text-red-400" />
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-400 rounded-full" />
+                      </div>
+                    )}
+                    <span
+                      className={`text-lg font-medium ${
+                        isNodeRunning ? 'text-green-400' : 'text-red-400'
+                      }`}
+                    >
+                      Node is {isNodeRunning ? 'Running' : 'Offline'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Connection Type */}
+                <div className="p-4 bg-gray-700/30 rounded-xl border border-gray-700">
+                  <div className="flex items-center gap-2 text-gray-400 mb-1">
+                    <Server className="w-4 h-4" />
+                    <span className="text-sm font-medium">Connection Type</span>
+                  </div>
+                  <p className="text-white font-medium ml-6">
+                    {isLocalNode ? 'Local Node' : 'Remote Node'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Node Actions */}
+              <div className="space-y-4 mt-6">
+                <button
+                  className="w-full flex items-center justify-center px-4 py-3 bg-[#4361EE] text-white rounded-xl hover:bg-[#3651DE] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                  onClick={() => setShowBackupModal(true)}
+                >
+                  <Shield className="w-5 h-5 mr-2" />
+                  Backup Wallet
+                </button>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    className="flex items-center justify-center px-4 py-3 bg-[#2A2D3A] text-white rounded-xl hover:bg-[#363A4B] focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="w-5 h-5 mr-2" />
+                    Logout
+                  </button>
+
+                  <button
+                    className="flex items-center justify-center px-4 py-3 bg-red-500/20 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-500/30 focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all duration-200"
+                    onClick={handleShutdown}
+                  >
+                    <Power className="w-5 h-5 mr-2" />
+                    Shutdown
+                  </button>
+                </div>
               </div>
             </div>
+
+            {/* Logs Section - Full Width */}
+            {isLocalNode && (
+              <div className="bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-gray-700">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-5 h-5 text-blue-400" />
+                    <h3 className="text-xl font-semibold text-white">
+                      Node Logs
+                    </h3>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={nodeLogs.length === 0}
+                      onClick={handleExportLogs}
+                    >
+                      <Download className="w-4 h-4" />
+                      Export
+                    </button>
+                    <button
+                      className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                      onClick={fetchNodeLogs}
+                    >
+                      Refresh
+                    </button>
+                    <button
+                      className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={nodeLogs.length === 0}
+                      onClick={() => setNodeLogs([])}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-gray-900 rounded-lg border border-gray-700">
+                  <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700">
+                    <span className="text-sm text-gray-400">
+                      Live Node Logs
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {nodeLogs.length} entries
+                    </span>
+                  </div>
+                  <div className="p-4 h-[400px] overflow-y-auto font-mono text-sm">
+                    {nodeLogs.length === 0 ? (
+                      <div className="flex items-center justify-center h-full text-gray-500">
+                        No logs available
+                      </div>
+                    ) : (
+                      <TerminalLogDisplay logs={nodeLogs} />
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
+      {/* Keep existing modals */}
       <BackupModal
         backupPath={backupPath}
         control={backupControl}

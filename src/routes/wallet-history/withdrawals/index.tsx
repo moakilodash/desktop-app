@@ -113,8 +113,12 @@ export const Component: React.FC = () => {
         (tx) => tx.transaction_type === 'User' && new Decimal(tx.sent).gt(0)
       )
       .map((tx) => ({
-        amount: tx.sent,
+        amount: new Decimal(tx.sent)
+          .minus(tx.received)
+          .minus(tx.fee)
+          .toString(),
         asset: 'BTC',
+        fee: tx.fee,
         txId: tx.txid,
         type: 'on-chain' as const,
       })) || []

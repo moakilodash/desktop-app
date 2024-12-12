@@ -1,3 +1,4 @@
+import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/tauri'
 import {
   Plus,
@@ -45,6 +46,24 @@ export const Toolbar = () => {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
 
+  useEffect(() => {
+    // Listen for node started event
+    const unlisten = listen('node-started', () => {
+      toast.success('Local node started successfully', {
+        autoClose: 3000,
+        closeOnClick: true,
+        draggable: true,
+        hideProgressBar: false,
+        pauseOnHover: true,
+        position: 'bottom-right',
+      })
+    })
+
+    return () => {
+      unlisten.then((unlistenFn) => unlistenFn())
+    }
+  }, [])
+
   const handleAccountChange = async (account: Account) => {
     try {
       await invoke('set_current_account', { accountName: account.name })
@@ -67,6 +86,11 @@ export const Toolbar = () => {
         account.node_url === 'http://localhost:3001' &&
         account.datapath !== ''
       ) {
+        toast.info('Starting local node...', {
+          autoClose: 2000,
+          position: 'bottom-right',
+        })
+        await new Promise((resolve) => setTimeout(resolve, 1000))
         await invoke('start_node', {
           daemonListeningPort: '3001',
           datapath: account.datapath,
@@ -74,7 +98,7 @@ export const Toolbar = () => {
           network: account.network,
         })
       }
-      await new Promise((resolve) => setTimeout(resolve, 5000))
+      await new Promise((resolve) => setTimeout(resolve, 1000))
       navigate(ROOT_PATH)
     } catch (error) {
       console.error(error)

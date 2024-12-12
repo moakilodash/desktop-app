@@ -6,6 +6,7 @@ use std::thread;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::io::{BufReader, BufRead};
+use tauri::Window;
 
 pub struct NodeProcess {
     child_process: Arc<Mutex<Option<Child>>>,
@@ -13,6 +14,7 @@ pub struct NodeProcess {
     control_receiver: Arc<Mutex<Receiver<ControlMessage>>>,
     is_running: Arc<AtomicBool>,
     logs: Arc<Mutex<Vec<String>>>,
+    window: Arc<Mutex<Option<Window>>>,
 }
 
 enum ControlMessage {
@@ -28,7 +30,12 @@ impl NodeProcess {
             control_receiver: Arc::new(Mutex::new(rx)),
             is_running: Arc::new(AtomicBool::new(false)),
             logs: Arc::new(Mutex::new(Vec::new())),
+            window: Arc::new(Mutex::new(None)),
         }
+    }
+
+    pub fn set_window(&self, window: Window) {
+        *self.window.lock().unwrap() = Some(window);
     }
 
     pub fn start(&self, network: String, datapath: String, daemon_listening_port: String, ldk_peer_listening_port: String) {
@@ -41,6 +48,7 @@ impl NodeProcess {
         let child_process = Arc::clone(&self.child_process);
         let is_running = Arc::clone(&self.is_running);
         let logs = Arc::clone(&self.logs);
+        let window = Arc::clone(&self.window);
 
         std::thread::spawn(move || {
             let process = run_rgb_lightning_node(&network, &datapath, &daemon_listening_port, &ldk_peer_listening_port);
@@ -48,6 +56,10 @@ impl NodeProcess {
             if let Some(child) = process {
                 *child_process.lock().unwrap() = Some(child);
                 is_running.store(true, Ordering::SeqCst);
+                
+                if let Some(window) = &*window.lock().unwrap() {
+                    let _ = window.emit("node-started", ());
+                }
 
                 if let Some(stdout) = child_process.lock().unwrap().as_mut().unwrap().stdout.take() {
                     let logs_clone = Arc::clone(&logs);

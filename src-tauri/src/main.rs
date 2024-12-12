@@ -33,7 +33,11 @@ fn main() {
             }
         })
         .setup({
-            |_app| {
+            let node_process = Arc::clone(&node_process);
+            move |app| {
+                if let Some(main_window) = app.get_window("main") {
+                    node_process.lock().unwrap().set_window(main_window);
+                }
                 db::init();
                 Ok(())
             }
