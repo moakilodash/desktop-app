@@ -531,32 +531,44 @@ export const Component = () => {
 
   // Initialize WebSocket connection
   useEffect(() => {
-    if (makerConnectionUrl && hasValidChannelsForTrading) {
-      const clientId = uuidv4()
-      const baseUrl = makerConnectionUrl.endsWith('/')
-        ? makerConnectionUrl
-        : `${makerConnectionUrl}/`
-      try {
-        webSocketService.init(baseUrl, clientId, dispatch)
-        logger.info('WebSocket connection initialized')
-      } catch (error) {
-        logger.error('WebSocket initialization failed', error)
-        toast.error('WebSocket initialization failed')
+    if (makerConnectionUrl && channels.length > 0) {
+      const hasValidChannels = channels.some(
+        (channel) =>
+          // Check for BTC channels or channels with asset_id
+          channel.asset_id &&
+          (channel.outbound_balance_msat > 0 ||
+            channel.inbound_balance_msat > 0)
+      )
+
+      if (hasValidChannels) {
+        const clientId = uuidv4()
+        const baseUrl = makerConnectionUrl.endsWith('/')
+          ? makerConnectionUrl
+          : `${makerConnectionUrl}/`
+        try {
+          webSocketService.init(baseUrl, clientId, dispatch)
+          logger.info('WebSocket connection initialized')
+        } catch (error) {
+          logger.error('WebSocket initialization failed', error)
+          toast.error('WebSocket initialization failed')
+        }
+      } else {
+        logger.info(
+          'No valid channels with assets found, not connecting to maker'
+        )
       }
-    } else if (!hasValidChannelsForTrading) {
-      logger.info('No valid channels for trading, not connecting to maker')
+    } else if (channels.length === 0) {
+      logger.info('No channels available, not connecting to maker')
     } else {
       logger.error('No maker connection URL provided')
       toast.error('No maker connection URL provided')
     }
 
     return () => {
-      if (hasValidChannelsForTrading) {
-        webSocketService.close()
-        logger.info('WebSocket connection closed')
-      }
+      webSocketService.close()
+      logger.info('WebSocket connection closed')
     }
-  }, [dispatch, makerConnectionUrl, hasValidChannelsForTrading])
+  }, [dispatch, makerConnectionUrl, channels])
 
   // Fetch initial data
   useEffect(() => {
