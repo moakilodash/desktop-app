@@ -4,7 +4,7 @@
 
 To access your wallet features, you'll need to unlock it each time you open the app.
 
-1. **Enter Password**: Input the password you set during wallet creation.
+1. **Enter Password**: Input the password you set during wallet creation. ![unlock wallet](img/2_init_with_account_unlock.png)
 2. **Select Network**: Choose the appropriate network (e.g., Mainnet, Testnet).
 
 ## Understanding Unlock Parameters

@@ -2,7 +2,7 @@
 
 [← Back to Documentation](README.md)
 
-The Settings section, which can be reached from the drop-down menu that appears by clicking on the button in the upper right corner, allows you to customize various aspects of the KaleidoSwap Desktop application.
+The Settings section, which can be reached from the drop-down menu that appears by clicking on the button in the upper right corner, allows you to customize various aspects of the KaleidoSwap Desktop application. ![wallet settings](img/9_settings.png) ![wallet settings modal](img/10_settings_details.png)
 
 ## Configuring the LSP URL
 
