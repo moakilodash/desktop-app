@@ -144,8 +144,29 @@ pub fn update_account(
 ) -> Result<usize, rusqlite::Error> {
     let conn = Connection::open(get_db_path())?;
     conn.execute(
-        "UPDATE Accounts SET name = ?1, network = ?2, datapath = ?3, rpc_connection_url = ?4, node_url = ?5, indexer_url = ?6, proxy_endpoint = ?7, default_lsp_url = ?8, maker_urls = ?9, default_maker_url = ?10 WHERE name = ?11",
-        rusqlite::params![name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint, default_lsp_url, maker_urls, default_maker_url, name],
+        "UPDATE Accounts SET 
+            network = ?1, 
+            datapath = ?2, 
+            rpc_connection_url = ?3, 
+            node_url = ?4, 
+            indexer_url = ?5, 
+            proxy_endpoint = ?6, 
+            default_lsp_url = ?7,
+            maker_urls = ?8,
+            default_maker_url = ?9
+         WHERE name = ?10",
+        rusqlite::params![
+            network,
+            datapath,
+            rpc_connection_url,
+            node_url,
+            indexer_url,
+            proxy_endpoint,
+            default_lsp_url,
+            maker_urls,
+            default_maker_url,
+            name
+        ],
     )
 }
 

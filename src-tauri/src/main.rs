@@ -53,6 +53,7 @@ fn main() {
             check_account_exists,
             set_current_account,
             get_current_account,
+            get_account_by_name,
             get_node_logs,
             save_logs_to_file
         ])
@@ -227,6 +228,14 @@ fn set_current_account(
 #[tauri::command]
 fn get_current_account(state: tauri::State<CurrentAccount>) -> Option<Account> {
     state.0.read().unwrap().clone()
+}
+
+#[tauri::command]
+fn get_account_by_name(name: String) -> Result<Option<Account>, String> {
+    match db::get_account_by_name(&name) {
+        Ok(account) => Ok(account),
+        Err(e) => Err(e.to_string()),
+    }
 }
 
 #[tauri::command]

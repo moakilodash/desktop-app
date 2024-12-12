@@ -131,6 +131,7 @@ export const Component: React.FC = () => {
       await invoke('update_account', {
         datapath: currentAccount.datapath,
         defaultLspUrl: data.lspUrl,
+        defaultMakerUrl: data.defaultMakerUrl,
         indexerUrl: data.indexerUrl,
         makerUrls: data.makerUrls.join(','),
         name: currentAccount.name,
