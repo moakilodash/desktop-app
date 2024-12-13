@@ -94,14 +94,14 @@ export const Component = () => {
         setAdditionalErrors(['An account with this name already exists'])
         return
       }
-
+      const defaultMakerUrl = NETWORK_DEFAULTS[data.network].default_maker_url
       await dispatch(
         setSettingsAsync({
           datapath: datapath, // Use formatted name-based datapath
           default_lsp_url: NETWORK_DEFAULTS[data.network].default_lsp_url,
-          default_maker_url: NETWORK_DEFAULTS[data.network].default_maker_url,
+          default_maker_url: defaultMakerUrl,
           indexer_url: data.indexer_url,
-          maker_urls: [''],
+          maker_urls: [defaultMakerUrl],
           name: data.name,
           network: data.network,
           node_url: `http://localhost:${data.daemon_listening_port}`,
@@ -179,13 +179,14 @@ export const Component = () => {
             : 'Initialization failed'
         )
       }
+      const defaultMakerUrl = NETWORK_DEFAULTS[network].default_maker_url
 
       await invoke('insert_account', {
         datapath: datapath,
         defaultLspUrl: NETWORK_DEFAULTS[network].default_lsp_url,
-        defaultMakerUrl: NETWORK_DEFAULTS[network].default_maker_url,
+        defaultMakerUrl,
         indexerUrl: nodeSetupForm.getValues('indexer_url'),
-        makerUrls: [''],
+        makerUrls: defaultMakerUrl,
         name: nodeSetupForm.getValues('name'),
         network: network,
         nodeUrl: `http://localhost:${nodeSetupForm.getValues('daemon_listening_port')}`,
