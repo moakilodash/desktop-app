@@ -1,76 +1,201 @@
-<!doctype html>
-<html lang="us">
-  <head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
-      body,
-      html {
-        height: 100%;
-        margin: 0;
-        font-family: Arial, sans-serif;
-      }
+        @import url('https://cdnjs.cloudflare.com/ajax/libs/inter/3.19.3/inter.css');
 
-      body {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        background: linear-gradient(135deg, rgb(32, 32, 38), rgb(61, 59, 107));
-        color: white;
-        text-align: center;
-      }
+        body, html {
+            height: 600px;
+            width: 500px;
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
 
-      .container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at center, #2D3748, #1A202C);
+            color: white;
+            text-align: center;
+            position: relative;
+        }
 
-      .logo {
-        width: 150px;
-        height: auto;
-        animation: pulse 2s infinite ease-in-out;
-      }
+        .background-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            animation: gridMove 20s linear infinite;
+            opacity: 0.5;
+        }
 
-      @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-        100% { transform: scale(1); }
-      }
+        @keyframes gridMove {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(20px); }
+        }
 
-      .text {
-        margin-top: 20px;
-        margin-bottom: 20px;
-        font-size: 24px;
-      }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2.5rem;
+            margin: 1.5rem;
+            width: calc(100% - 3rem);
+            height: calc(100% - 3rem);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 1s ease-out;
+            justify-content: space-between;
+        }
 
-      .spinner {
-        width: 40px;
-        height: 40px;
-        border: 4px solid rgba(255, 255, 255, 0.3);
-        border-radius: 50%;
-        border-top: 4px solid #ffffff;
-        animation: spin 1s linear infinite;
-        margin-bottom: 10px;
-      }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
+        .logo-section {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
 
-      .loading-text {
-        font-size: 16px;
-        opacity: 0.8;
-      }
+        .logo {
+            width: 160px;
+            height: auto;
+            margin-bottom: 2rem;
+            filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.2));
+            animation: floatAndGlow 3s infinite ease-in-out;
+        }
+
+        @keyframes floatAndGlow {
+            0% { transform: translateY(0); filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.2)); }
+            50% { transform: translateY(-10px); filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.4)); }
+            100% { transform: translateY(0); filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.2)); }
+        }
+
+        .text {
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            line-height: 1.4;
+            max-width: 400px;
+            background: linear-gradient(135deg, #fff 0%, #a8b2d1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0 0 2rem 0;
+        }
+
+        .product-name {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #7928CA, #FF0080);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .loading-container {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid #ffffff;
+            position: relative;
+            animation: spin 1s linear infinite;
+        }
+
+        .spinner::after {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            right: -3px;
+            bottom: -3px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top: 3px solid rgba(255, 255, 255, 0.2);
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.8);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.5; }
+        }
+
+        .loading-dots {
+            display: flex;
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .dot {
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 50%;
+            animation: dotPulse 1.4s infinite;
+        }
+
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes dotPulse {
+            0%, 100% { transform: scale(0.6); opacity: 0.4; }
+            50% { transform: scale(1); opacity: 1; }
+        }
     </style>
-  </head>
-  <body>
+</head>
+<body>
+    <div class="background-grid"></div>
     <div class="container">
-        <img src="logo.svg" alt="Logo" class="logo">
-        <div class="text">Trustless trading on Lightning Network</div>
-        <div class="spinner"></div>
-        <div class="loading-text">Loading...</div>
+        <div class="logo-section">
+            <div class="product-name">KaleidoSwap</div>
+            <img src="/logo.svg" alt="KaleidoSwap Logo" class="logo">
+            <div class="text">Trustless trading on Lightning Network</div>
+        </div>
+        <div class="loading-container">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading</div>
+            <div class="loading-dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+        </div>
     </div>
-  </body>
+</body>
 </html>
