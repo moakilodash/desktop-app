@@ -7,7 +7,8 @@ use rgb_node::NodeProcess;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
 use tauri::{Manager, Window};
-
+use std::env;
+use tauri_plugin_log::{Builder as LogBuilder, LogTarget};
 
 mod db;
 mod rgb_node;
@@ -19,6 +20,14 @@ fn main() {
     dotenv().ok();
     
     let node_process = Arc::new(Mutex::new(NodeProcess::new()));
+
+    // Get the executable directory
+    let exe_dir = env::current_exe()
+        .map(|path| path.parent().unwrap_or_else(|| path.as_path()).to_path_buf())
+        .unwrap_or_else(|_| PathBuf::from("."));
+    
+    // Configure the log directory next to the executable
+    let log_dir = exe_dir.join("logs");
 
     tauri::Builder::default()
         .manage(Arc::clone(&node_process))
@@ -32,10 +41,23 @@ fn main() {
                 }
             }
         })
+        .plugin(
+            LogBuilder::default()
+                .targets([
+                    LogTarget::Folder(log_dir), // Save the logs in the “logs” directory next to the executable
+                    LogTarget::Stdout,          // Also show logs in the terminal
+                ])
+                .build()
+        )
         .setup({
             let node_process = Arc::clone(&node_process);
             move |app| {
                 if let Some(main_window) = app.get_window("main") {
+                    // Configure DevTools for debugging
+                    #[cfg(debug_assertions)] // Only in debug mode
+                    {
+                        main_window.open_devtools();
+                    }
                     node_process.lock().unwrap().set_window(main_window);
                 }
                 db::init();
