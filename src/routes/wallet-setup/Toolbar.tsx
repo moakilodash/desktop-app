@@ -18,7 +18,6 @@ import { useAppDispatch } from '../../app/store/hooks'
 import { MinidenticonImg } from '../../components/MinidenticonImg'
 import { Spinner } from '../../components/Spinner'
 import { BitcoinNetwork } from '../../constants'
-import { NETWORK_DEFAULTS } from '../../constants/networks'
 import {
   nodeSettingsActions,
   setSettingsAsync,
