@@ -30,6 +30,7 @@
     "react-spinners": "^0.13.8",
     "react-toastify": "^10.0.6",
     "tailwind-merge": "^1.14.0",
+    "tauri-plugin-log-api": "github:tauri-apps/tauri-plugin-log#v1",
     "uuid": "^10.0.0",
     "uuidv4": "^6.2.13",
     "webfontloader": "^1.6.28",
