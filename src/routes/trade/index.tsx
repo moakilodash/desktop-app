@@ -69,7 +69,7 @@ export const Component = () => {
 
   // Selectors
   const makerConnectionUrl = useAppSelector(
-    (state) => state.nodeSettings.data.default_lsp_url
+    (state) => state.nodeSettings.data.default_maker_url
   )
   const wsConnected = useAppSelector((state) => state.pairs.wsConnected)
   const bitcoinUnit = useAppSelector((state) => state.settings.bitcoinUnit)
@@ -575,55 +575,33 @@ export const Component = () => {
     const setup = async () => {
       setIsLoading(true)
       try {
-        const [
-          nodeInfoResponse,
-          listChannelsResponse,
-          listAssetsResponse,
-          getPairsResponse,
-        ] = await Promise.all([
-          nodeInfo(),
-          listChannels(),
-          listAssets(),
-          getPairs(),
-        ])
+        const [nodeInfoResponse, listChannelsResponse, listAssetsResponse] =
+          await Promise.all([nodeInfo(), listChannels(), listAssets()])
 
         if ('data' in nodeInfoResponse && nodeInfoResponse.data) {
           setPubKey(nodeInfoResponse.data.pubkey)
         }
 
         if ('data' in listChannelsResponse && listChannelsResponse.data) {
-          setChannels(listChannelsResponse.data.channels)
+          const channelsList = listChannelsResponse.data.channels
+          setChannels(channelsList)
+
+          // Check if there's at least one channel with an asset
+          const hasValidChannels = channelsList.some(
+            (channel) =>
+              channel.asset_id !== null &&
+              (channel.outbound_balance_msat > 0 ||
+                channel.inbound_balance_msat > 0)
+          )
+          setHasValidChannelsForTrading(hasValidChannels)
         }
 
         if ('data' in listAssetsResponse && listAssetsResponse.data) {
           setAssets(listAssetsResponse.data.nia)
         }
 
-        if ('data' in getPairsResponse && getPairsResponse.data) {
-          dispatch(setTradingPairs(getPairsResponse.data.pairs))
-          const tradableAssets = new Set([
-            ...channels.map((c) => c.asset_id).filter((id) => id !== null),
-          ])
-          const filteredPairs = getPairsResponse.data.pairs.filter(
-            (pair) =>
-              tradableAssets.has(pair.base_asset_id) ||
-              tradableAssets.has(pair.quote_asset_id)
-          )
-          setTradablePairs(filteredPairs)
-          setHasValidChannelsForTrading(filteredPairs.length > 0)
-
-          if (filteredPairs.length > 0) {
-            setSelectedPair(filteredPairs[0])
-            form.setValue('fromAsset', filteredPairs[0].base_asset)
-            form.setValue('toAsset', filteredPairs[0].quote_asset)
-            // Set default minimum value for from amount
-            const defaultMinAmount = filteredPairs[0].min_order_size
-            form.setValue(
-              'from',
-              formatAmount(defaultMinAmount, filteredPairs[0].base_asset)
-            )
-          }
-        }
+        // Move pairs fetching to a separate function
+        await fetchAndSetPairs()
 
         logger.info('Initial data fetched successfully')
       } catch (error) {
@@ -637,16 +615,40 @@ export const Component = () => {
     }
 
     setup()
-  }, [
-    nodeInfo,
-    listChannels,
-    listAssets,
-    getPairs,
-    dispatch,
-    form,
-    channels,
-    formatAmount,
-  ])
+  }, [nodeInfo, listChannels, listAssets, dispatch, form, formatAmount])
+
+  // Add a new function to fetch and set pairs
+  const fetchAndSetPairs = async () => {
+    try {
+      const getPairsResponse = await getPairs()
+      if ('data' in getPairsResponse && getPairsResponse.data) {
+        dispatch(setTradingPairs(getPairsResponse.data.pairs))
+        const tradableAssets = new Set([
+          ...channels.map((c) => c.asset_id).filter((id) => id !== null),
+        ])
+        const filteredPairs = getPairsResponse.data.pairs.filter(
+          (pair) =>
+            tradableAssets.has(pair.base_asset_id) ||
+            tradableAssets.has(pair.quote_asset_id)
+        )
+        setTradablePairs(filteredPairs)
+
+        if (filteredPairs.length > 0) {
+          setSelectedPair(filteredPairs[0])
+          form.setValue('fromAsset', filteredPairs[0].base_asset)
+          form.setValue('toAsset', filteredPairs[0].quote_asset)
+          const defaultMinAmount = filteredPairs[0].min_order_size
+          form.setValue(
+            'from',
+            formatAmount(defaultMinAmount, filteredPairs[0].base_asset)
+          )
+        }
+      }
+    } catch (error) {
+      logger.error('Error fetching pairs:', error)
+      toast.error('Failed to fetch trading pairs')
+    }
+  }
 
   // Subscribe to selected pair feed
   useEffect(() => {
@@ -900,7 +902,7 @@ export const Component = () => {
             navigate(ORDER_CHANNEL_PATH)
           }}
         >
-          Order from LSP
+          Buy from LSP
         </button>
       </div>
     </div>
@@ -926,8 +928,8 @@ export const Component = () => {
               )}
             </span>
           </div>
-          <MakerSelector />
         </div>
+        <MakerSelector hasNoPairs={false} onMakerChange={refreshData} />
       </div>
 
       <form
@@ -1182,13 +1184,11 @@ export const Component = () => {
             tradableAssets.has(pair.quote_asset_id)
         )
         setTradablePairs(filteredPairs)
-        setHasValidChannelsForTrading(filteredPairs.length > 0)
 
         if (filteredPairs.length > 0) {
           setSelectedPair(filteredPairs[0])
           form.setValue('fromAsset', filteredPairs[0].base_asset)
           form.setValue('toAsset', filteredPairs[0].quote_asset)
-          // Set default minimum value for from amount
           const defaultMinAmount = filteredPairs[0].min_order_size
           form.setValue(
             'from',
@@ -1219,6 +1219,18 @@ export const Component = () => {
     refreshAmounts,
   ])
 
+  // Common header with MakerSelector
+  const renderHeader = (showWarning = false) => (
+    <div className="flex justify-between items-center mb-4">
+      <h2 className="text-xl font-semibold text-white">Trade</h2>
+      <MakerSelector
+        hasNoPairs={showWarning}
+        onMakerChange={refreshData}
+        show={hasValidChannelsForTrading}
+      />
+    </div>
+  )
+
   return (
     <>
       {isLoading ? (
@@ -1227,6 +1239,22 @@ export const Component = () => {
         </div>
       ) : !hasValidChannelsForTrading ? (
         renderNoChannelsMessage()
+      ) : !wsConnected || tradablePairs.length === 0 ? (
+        <div className="max-w-xl w-full bg-blue-dark py-8 px-6 rounded space-y-6">
+          {renderHeader(true)}
+          <div className="text-center space-y-4">
+            <h3 className="text-lg font-semibold">
+              {!wsConnected
+                ? 'Maker Not Connected'
+                : 'No Trading Pairs Available'}
+            </h3>
+            <p className="text-gray-400">
+              {!wsConnected
+                ? 'Unable to connect to the selected maker. Please select a different maker from the dropdown above.'
+                : "The current maker doesn't offer any trading pairs for your assets. Please select a different maker from the dropdown above."}
+            </p>
+          </div>
+        </div>
       ) : (
         renderSwapForm()
       )}
@@ -1239,7 +1267,7 @@ export const Component = () => {
           isOpen={showRecap}
           onClose={() => {
             setShowRecap(false)
-            refreshData() // Refresh data when closing the recap modal
+            refreshData()
           }}
           swapDetails={swapRecapDetails}
         />

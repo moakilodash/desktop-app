@@ -16,6 +16,7 @@ import {
   Server,
   Trash2,
   Star,
+  RefreshCw,
 } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
@@ -95,6 +96,7 @@ export const Component: React.FC = () => {
   } = useBackup({ nodeSettings })
 
   const [nodeLogs, setNodeLogs] = useState<string[]>([])
+  const [maxLogEntries, setMaxLogEntries] = useState(200)
 
   const fetchNodeLogs = async () => {
     try {
@@ -276,8 +278,23 @@ export const Component: React.FC = () => {
 
   const isLocalNode = !!currentAccount.datapath
 
-  const nodeInfo = nodeApi.endpoints.nodeInfo.useQueryState()
-  const isNodeRunning = nodeInfo.isSuccess
+  const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
+  const nodeInfoState = nodeApi.endpoints.nodeInfo.useQueryState()
+  const isNodeRunning = nodeInfoState.isSuccess
+
+  // Add useEffect for polling
+  useEffect(() => {
+    // Initial check
+    nodeInfo()
+
+    // Set up polling interval
+    const interval = setInterval(() => {
+      nodeInfo()
+    }, 10000) // 10 seconds
+
+    // Cleanup on unmount
+    return () => clearInterval(interval)
+  }, [nodeInfo])
 
   return (
     <div className="flex flex-col min-h-screen py-8 px-4">
@@ -523,7 +540,7 @@ export const Component: React.FC = () => {
                     render={({ field }) => (
                       <div className="group transition-all duration-300 hover:translate-x-1">
                         <label className="block text-sm font-semibold text-gray-300 mb-2">
-                          RPC Connection URL
+                          Bitcoind RPC Connection URL
                         </label>
                         <input
                           {...field}
@@ -561,7 +578,7 @@ export const Component: React.FC = () => {
                     render={({ field }) => (
                       <div className="group transition-all duration-300 hover:translate-x-1">
                         <label className="block text-sm font-semibold text-gray-300 mb-2">
-                          Proxy Endpoint
+                          RGB Proxy Endpoint
                         </label>
                         <input
                           {...field}
@@ -684,57 +701,94 @@ export const Component: React.FC = () => {
               </div>
             </div>
 
-            {/* Logs Section - Full Width */}
+            {/* Logs Section */}
             {isLocalNode && (
-              <div className="bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-gray-700">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-blue-400" />
-                    <h3 className="text-xl font-semibold text-white">
-                      Node Logs
-                    </h3>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={nodeLogs.length === 0}
-                      onClick={handleExportLogs}
-                    >
-                      <Download className="w-4 h-4" />
-                      Export
-                    </button>
-                    <button
-                      className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-                      onClick={fetchNodeLogs}
-                    >
-                      Refresh
-                    </button>
-                    <button
-                      className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={nodeLogs.length === 0}
-                      onClick={() => setNodeLogs([])}
-                    >
-                      Clear
-                    </button>
+              <div className="bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-700 overflow-hidden">
+                {/* Header with controls */}
+                <div className="p-4 border-b border-gray-700/50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Activity className="w-5 h-5 text-blue-400" />
+                      <h3 className="text-xl font-semibold text-white">
+                        Node Logs
+                      </h3>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      {/* Entry selector */}
+                      <div className="flex items-center gap-2 bg-gray-700/30 px-2 py-1 rounded-lg border border-gray-600">
+                        <span className="text-sm text-gray-400">Show</span>
+                        <select
+                          className="bg-transparent text-white text-sm focus:outline-none focus:ring-0 border-0"
+                          onChange={(e) =>
+                            setMaxLogEntries(Number(e.target.value))
+                          }
+                          value={maxLogEntries}
+                        >
+                          <option value="100">100</option>
+                          <option value="200">200</option>
+                          <option value="500">500</option>
+                          <option value="1000">1000</option>
+                          <option value="5000">5000</option>
+                        </select>
+                        <span className="text-sm text-gray-400">entries</span>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex gap-1.5">
+                        <button
+                          className="p-2 text-sm bg-gray-700/30 hover:bg-gray-600/50 text-white rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-600"
+                          disabled={nodeLogs.length === 0}
+                          onClick={handleExportLogs}
+                          title="Export logs"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button
+                          className="p-2 text-sm bg-gray-700/30 hover:bg-gray-600/50 text-white rounded-lg transition-colors border border-gray-600"
+                          onClick={fetchNodeLogs}
+                          title="Refresh logs"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                        </button>
+                        <button
+                          className="p-2 text-sm bg-gray-700/30 hover:bg-gray-600/50 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-gray-600"
+                          disabled={nodeLogs.length === 0}
+                          onClick={() => setNodeLogs([])}
+                          title="Clear logs"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="bg-gray-900 rounded-lg border border-gray-700">
-                  <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700">
-                    <span className="text-sm text-gray-400">
+                {/* Logs display area */}
+                <div className="bg-gray-900/95">
+                  <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700/50 bg-gray-800/50">
+                    <span className="text-sm font-medium text-gray-300">
                       Live Node Logs
                     </span>
                     <span className="text-xs text-gray-500">
+                      Showing {Math.min(maxLogEntries, nodeLogs.length)} of{' '}
                       {nodeLogs.length} entries
                     </span>
                   </div>
-                  <div className="p-4 h-[400px] overflow-y-auto font-mono text-sm">
+
+                  <div className="h-[350px]">
                     {nodeLogs.length === 0 ? (
                       <div className="flex items-center justify-center h-full text-gray-500">
-                        No logs available
+                        <span className="flex items-center gap-2">
+                          <Activity className="w-4 h-4" />
+                          No logs available
+                        </span>
                       </div>
                     ) : (
-                      <TerminalLogDisplay logs={nodeLogs} />
+                      <TerminalLogDisplay
+                        logs={nodeLogs}
+                        maxEntries={maxLogEntries}
+                      />
                     )}
                   </div>
                 </div>

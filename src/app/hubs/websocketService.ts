@@ -15,9 +15,11 @@ class WebSocketService {
   private clientId: string = ''
   private dispatch: Dispatch | null = null
   private reconnectAttempts: number = 0
-  private maxReconnectAttempts: number = 5
-  private reconnectInterval: number = 5000
+  private maxReconnectAttempts: number = 1
+  private reconnectInterval: number = 3000
   private subscribedPairs: Set<string> = new Set()
+  private currentUrl: string = ''
+  private isReconnecting: boolean = false
 
   private constructor() {}
 
@@ -35,6 +37,7 @@ class WebSocketService {
     }
 
     this.url = cleanUrl
+    this.currentUrl = cleanUrl
     this.clientId = clientId
     this.dispatch = dispatch
     this.connect()
@@ -56,6 +59,11 @@ class WebSocketService {
   private connect() {
     if (!this.url) {
       console.error('WebSocket URL not set')
+      return
+    }
+
+    if (this.socket?.readyState === WebSocket.CONNECTING) {
+      console.log('Connection already in progress')
       return
     }
 
@@ -91,20 +99,25 @@ class WebSocketService {
 
     this.socket.onerror = (error) => {
       console.error('WebSocket error:', error)
-      toast.error('WebSocket connection error')
     }
   }
 
   private handleReconnect() {
+    if (this.isReconnecting) {
+      console.log('Reconnection already in progress')
+      return
+    }
+
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      this.isReconnecting = true
       this.reconnectAttempts++
-      toast.info(
-        `Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`
-      )
-      setTimeout(() => this.connect(), this.reconnectInterval)
+      setTimeout(() => {
+        this.connect()
+        this.isReconnecting = false
+      }, this.reconnectInterval)
     } else {
       toast.error(
-        'Failed to reconnect after multiple attempts. Please refresh the page.'
+        'Failed to connect to maker websocket. Please check your connection and refresh the page.'
       )
     }
   }
@@ -140,6 +153,26 @@ class WebSocketService {
   public close() {
     if (this.socket) {
       this.socket.close()
+      this.socket = null
+      this.subscribedPairs.clear()
+      this.currentUrl = ''
+    }
+  }
+
+  public isConnected(): boolean {
+    return this.socket?.readyState === WebSocket.OPEN
+  }
+
+  public getCurrentUrl(): string {
+    return this.currentUrl
+  }
+
+  public reconnect() {
+    if (this.url && this.clientId && this.dispatch) {
+      this.reconnectAttempts = 0
+      this.isReconnecting = false
+      this.close()
+      this.connect()
     }
   }
 }

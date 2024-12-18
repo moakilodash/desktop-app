@@ -24,7 +24,7 @@ export const NETWORK_DEFAULTS: Record<string, NetworkDefaults> = {
     default_maker_url: 'http://localhost:8000/',
     indexer_url: 'localhost:50001',
     ldk_peer_listening_port: '9735',
-    proxy_endpoint: 'rpc://localhost:3000/json-rpc',
+    proxy_endpoint: 'rpc://myproxy.local:3000/json-rpc',
     rpc_connection_url: 'user:password@localhost:18443',
   },
   signet: {

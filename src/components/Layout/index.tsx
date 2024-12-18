@@ -48,7 +48,7 @@ export const Layout = (props: Props) => {
   const { data, isFetching, error } = nodeApi.useListTransactionsQuery(
     { skip_sync: false },
     {
-      pollingInterval: 60_000,
+      pollingInterval: 30_000,
       skip: isRetrying || !shouldPoll,
     }
   )

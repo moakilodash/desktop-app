@@ -78,27 +78,42 @@ const parseAnsi = (log: string) => {
   return segments
 }
 
-const TerminalLogDisplay = ({ logs }: { logs: string[] }) => {
+interface TerminalLogDisplayProps {
+  logs: string[]
+  maxEntries: number
+}
+
+const TerminalLogDisplay = ({ logs, maxEntries }: TerminalLogDisplayProps) => {
   const logsContainerRef = useRef<HTMLDivElement>(null)
+
+  // Get only the last N entries
+  const displayedLogs = logs.slice(-maxEntries)
 
   useEffect(() => {
     if (logsContainerRef.current) {
       logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight
     }
-  }, [logs]) // Scroll whenever logs update
+  }, [displayedLogs])
 
   return (
-    <div className="space-y-1 h-full overflow-y-auto" ref={logsContainerRef}>
-      {logs.map((log, index) => (
+    <div
+      className="h-full overflow-y-auto px-3 py-2"
+      ref={logsContainerRef}
+      style={{
+        scrollbarColor: '#4B5563 transparent',
+        scrollbarWidth: 'thin',
+      }}
+    >
+      {displayedLogs.map((log, index) => (
         <div
-          className="bg-gray-900 text-gray-300 font-mono text-sm whitespace-pre-wrap py-1 px-2 rounded hover:bg-gray-800/50 transition-colors"
+          className="font-mono text-sm leading-5 whitespace-pre-wrap py-1"
           key={index}
         >
           {parseAnsi(log).map((segment, segIndex) => (
             <span
               key={segIndex}
               style={{
-                color: segment.color || 'inherit',
+                color: segment.color || '#94A3B8',
                 fontStyle: segment.fontStyle || 'normal',
                 fontWeight: segment.fontWeight || 'normal',
                 textDecoration: segment.textDecoration || 'none',

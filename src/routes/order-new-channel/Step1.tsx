@@ -259,7 +259,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
-            Order a New Channel from LSP
+            Buy a New Channel from LSP
           </h2>
           <p className="text-gray-400 mt-2">
             Complete these steps to open your channel
