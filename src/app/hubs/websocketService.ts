@@ -15,9 +15,11 @@ class WebSocketService {
   private clientId: string = ''
   private dispatch: Dispatch | null = null
   private reconnectAttempts: number = 0
-  private maxReconnectAttempts: number = 5
-  private reconnectInterval: number = 5000
+  private maxReconnectAttempts: number = 1
+  private reconnectInterval: number = 3000
   private subscribedPairs: Set<string> = new Set()
+  private currentUrl: string = ''
+  private isReconnecting: boolean = false
 
   private constructor() {}
 
@@ -29,17 +31,48 @@ class WebSocketService {
   }
 
   public init(url: string, clientId: string, dispatch: Dispatch) {
-    this.url = url
+    const cleanUrl = url.replace(/\/+$/, '')
+    if (this.url !== cleanUrl && this.socket) {
+      this.close()
+    }
+
+    this.url = cleanUrl
+    this.currentUrl = cleanUrl
     this.clientId = clientId
     this.dispatch = dispatch
     this.connect()
   }
 
+  public updateUrl(url: string) {
+    const cleanUrl = url.replace(/\/+$/, '')
+    if (this.url !== cleanUrl) {
+      console.log('Updating WebSocket URL:', cleanUrl)
+      this.url = cleanUrl
+      this.reconnectAttempts = 0
+      if (this.socket) {
+        this.close()
+        this.connect()
+      }
+    }
+  }
+
   private connect() {
-    this.socket = new WebSocket(`${this.url}api/v1/market/ws/${this.clientId}`)
+    if (!this.url) {
+      console.error('WebSocket URL not set')
+      return
+    }
+
+    if (this.socket?.readyState === WebSocket.CONNECTING) {
+      console.log('Connection already in progress')
+      return
+    }
+
+    const baseUrl = this.url.replace(/\/+$/, '')
+    const wsUrl = baseUrl.replace(/^http/, 'ws')
+    this.socket = new WebSocket(`${wsUrl}/api/v1/market/ws/${this.clientId}`)
 
     this.socket.onopen = () => {
-      console.log('WebSocket connected')
+      console.log('WebSocket connected to:', wsUrl)
       this.dispatch && this.dispatch(setWsConnected(true))
       toast.success('Connected to maker websocket')
       this.reconnectAttempts = 0
@@ -66,20 +99,25 @@ class WebSocketService {
 
     this.socket.onerror = (error) => {
       console.error('WebSocket error:', error)
-      toast.error('WebSocket connection error')
     }
   }
 
   private handleReconnect() {
+    if (this.isReconnecting) {
+      console.log('Reconnection already in progress')
+      return
+    }
+
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      this.isReconnecting = true
       this.reconnectAttempts++
-      toast.info(
-        `Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`
-      )
-      setTimeout(() => this.connect(), this.reconnectInterval)
+      setTimeout(() => {
+        this.connect()
+        this.isReconnecting = false
+      }, this.reconnectInterval)
     } else {
       toast.error(
-        'Failed to reconnect after multiple attempts. Please refresh the page.'
+        'Failed to connect to maker websocket. Please check your connection and refresh the page.'
       )
     }
   }
@@ -115,6 +153,26 @@ class WebSocketService {
   public close() {
     if (this.socket) {
       this.socket.close()
+      this.socket = null
+      this.subscribedPairs.clear()
+      this.currentUrl = ''
+    }
+  }
+
+  public isConnected(): boolean {
+    return this.socket?.readyState === WebSocket.OPEN
+  }
+
+  public getCurrentUrl(): string {
+    return this.currentUrl
+  }
+
+  public reconnect() {
+    if (this.url && this.clientId && this.dispatch) {
+      this.reconnectAttempts = 0
+      this.isReconnecting = false
+      this.close()
+      this.connect()
     }
   }
 }

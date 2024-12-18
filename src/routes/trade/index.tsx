@@ -27,6 +27,8 @@ import { nodeApi, Channel, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
 import { logger } from '../../utils/logger'
 import { RefreshCw } from 'lucide-react'
 
+import { MakerSelector } from '../../components/Trade/MakerSelector'
+
 interface Fields {
   rfq_id: string
   from: string
@@ -67,7 +69,7 @@ export const Component = () => {
 
   // Selectors
   const makerConnectionUrl = useAppSelector(
-    (state) => state.nodeSettings.data.default_lsp_url
+    (state) => state.nodeSettings.data.default_maker_url
   )
   const wsConnected = useAppSelector((state) => state.pairs.wsConnected)
   const bitcoinUnit = useAppSelector((state) => state.settings.bitcoinUnit)
@@ -529,87 +531,77 @@ export const Component = () => {
 
   // Initialize WebSocket connection
   useEffect(() => {
-    if (makerConnectionUrl && hasValidChannelsForTrading) {
-      const clientId = uuidv4()
-      const baseUrl = makerConnectionUrl.endsWith('/')
-        ? makerConnectionUrl
-        : `${makerConnectionUrl}/`
-      try {
-        webSocketService.init(baseUrl, clientId, dispatch)
-        logger.info('WebSocket connection initialized')
-      } catch (error) {
-        logger.error('WebSocket initialization failed', error)
-        toast.error('WebSocket initialization failed')
+    if (makerConnectionUrl && channels.length > 0) {
+      const hasValidChannels = channels.some(
+        (channel) =>
+          // Check for BTC channels or channels with asset_id
+          channel.asset_id &&
+          (channel.outbound_balance_msat > 0 ||
+            channel.inbound_balance_msat > 0)
+      )
+
+      if (hasValidChannels) {
+        const clientId = uuidv4()
+        const baseUrl = makerConnectionUrl.endsWith('/')
+          ? makerConnectionUrl
+          : `${makerConnectionUrl}/`
+        try {
+          webSocketService.init(baseUrl, clientId, dispatch)
+          logger.info('WebSocket connection initialized')
+        } catch (error) {
+          logger.error('WebSocket initialization failed', error)
+          toast.error('WebSocket initialization failed')
+        }
+      } else {
+        logger.info(
+          'No valid channels with assets found, not connecting to maker'
+        )
       }
-    } else if (!hasValidChannelsForTrading) {
-      logger.info('No valid channels for trading, not connecting to maker')
+    } else if (channels.length === 0) {
+      logger.info('No channels available, not connecting to maker')
     } else {
       logger.error('No maker connection URL provided')
       toast.error('No maker connection URL provided')
     }
 
     return () => {
-      if (hasValidChannelsForTrading) {
-        webSocketService.close()
-        logger.info('WebSocket connection closed')
-      }
+      webSocketService.close()
+      logger.info('WebSocket connection closed')
     }
-  }, [dispatch, makerConnectionUrl, hasValidChannelsForTrading])
+  }, [dispatch, makerConnectionUrl, channels])
 
   // Fetch initial data
   useEffect(() => {
     const setup = async () => {
       setIsLoading(true)
       try {
-        const [
-          nodeInfoResponse,
-          listChannelsResponse,
-          listAssetsResponse,
-          getPairsResponse,
-        ] = await Promise.all([
-          nodeInfo(),
-          listChannels(),
-          listAssets(),
-          getPairs(),
-        ])
+        const [nodeInfoResponse, listChannelsResponse, listAssetsResponse] =
+          await Promise.all([nodeInfo(), listChannels(), listAssets()])
 
         if ('data' in nodeInfoResponse && nodeInfoResponse.data) {
           setPubKey(nodeInfoResponse.data.pubkey)
         }
 
         if ('data' in listChannelsResponse && listChannelsResponse.data) {
-          setChannels(listChannelsResponse.data.channels)
+          const channelsList = listChannelsResponse.data.channels
+          setChannels(channelsList)
+
+          // Check if there's at least one channel with an asset
+          const hasValidChannels = channelsList.some(
+            (channel) =>
+              channel.asset_id !== null &&
+              (channel.outbound_balance_msat > 0 ||
+                channel.inbound_balance_msat > 0)
+          )
+          setHasValidChannelsForTrading(hasValidChannels)
         }
 
         if ('data' in listAssetsResponse && listAssetsResponse.data) {
           setAssets(listAssetsResponse.data.nia)
         }
 
-        if ('data' in getPairsResponse && getPairsResponse.data) {
-          dispatch(setTradingPairs(getPairsResponse.data.pairs))
-          const tradableAssets = new Set([
-            ...channels.map((c) => c.asset_id).filter((id) => id !== null),
-          ])
-          const filteredPairs = getPairsResponse.data.pairs.filter(
-            (pair) =>
-              tradableAssets.has(pair.base_asset_id) ||
-              tradableAssets.has(pair.quote_asset_id)
-          )
-          setTradablePairs(filteredPairs)
-          setHasValidChannelsForTrading(filteredPairs.length > 0)
-
-          if (filteredPairs.length > 0) {
-            setSelectedPair(filteredPairs[0])
-            form.setValue('fromAsset', filteredPairs[0].base_asset)
-            form.setValue('toAsset', filteredPairs[0].quote_asset)
-            // Set default minimum value for from amount
-            const defaultMinAmount = filteredPairs[0].min_order_size
-            form.setValue(
-              'from',
-              formatAmount(defaultMinAmount, filteredPairs[0].base_asset)
-            )
-          }
-        }
+        // Move pairs fetching to a separate function
+        await fetchAndSetPairs()
 
         logger.info('Initial data fetched successfully')
       } catch (error) {
@@ -623,16 +615,40 @@ export const Component = () => {
     }
 
     setup()
-  }, [
-    nodeInfo,
-    listChannels,
-    listAssets,
-    getPairs,
-    dispatch,
-    form,
-    channels,
-    formatAmount,
-  ])
+  }, [nodeInfo, listChannels, listAssets, dispatch, form, formatAmount])
+
+  // Add a new function to fetch and set pairs
+  const fetchAndSetPairs = async () => {
+    try {
+      const getPairsResponse = await getPairs()
+      if ('data' in getPairsResponse && getPairsResponse.data) {
+        dispatch(setTradingPairs(getPairsResponse.data.pairs))
+        const tradableAssets = new Set([
+          ...channels.map((c) => c.asset_id).filter((id) => id !== null),
+        ])
+        const filteredPairs = getPairsResponse.data.pairs.filter(
+          (pair) =>
+            tradableAssets.has(pair.base_asset_id) ||
+            tradableAssets.has(pair.quote_asset_id)
+        )
+        setTradablePairs(filteredPairs)
+
+        if (filteredPairs.length > 0) {
+          setSelectedPair(filteredPairs[0])
+          form.setValue('fromAsset', filteredPairs[0].base_asset)
+          form.setValue('toAsset', filteredPairs[0].quote_asset)
+          const defaultMinAmount = filteredPairs[0].min_order_size
+          form.setValue(
+            'from',
+            formatAmount(defaultMinAmount, filteredPairs[0].base_asset)
+          )
+        }
+      }
+    } catch (error) {
+      logger.error('Error fetching pairs:', error)
+      toast.error('Failed to fetch trading pairs')
+    }
+  }
 
   // Subscribe to selected pair feed
   useEffect(() => {
@@ -886,235 +902,261 @@ export const Component = () => {
             navigate(ORDER_CHANNEL_PATH)
           }}
         >
-          Order from LSP
+          Buy from LSP
         </button>
       </div>
     </div>
   )
 
   const renderSwapForm = () => (
-    <form
-      className="max-w-xl w-full bg-blue-dark py-8 px-6 rounded space-y-2"
-      onSubmit={form.handleSubmit(onSubmit)}
-    >
-      {/* From amount section */}
-      <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
-        <div className="flex justify-between items-center font-light">
-          <div className="text-xs">You Send</div>
-          <div className="flex items-center space-x-2">
-            <div className="text-xs">
-              Available to send:{' '}
-              {`${formatAmount(maxFromAmount, form.getValues().fromAsset)} ${getDisplayAsset(form.getValues().fromAsset)}`}
-            </div>
-            <button
-              className="p-1 rounded-full hover:bg-blue-dark transition-colors"
-              disabled={isLoading || isSwapInProgress}
-              onClick={refreshAmounts}
-              title="Refresh amounts"
-              type="button"
-            >
-              <RefreshCw
-                className={isLoading ? 'animate-spin' : ''}
-                size={16}
-              />
-            </button>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-white">Trade</h2>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-400">
+              {wsConnected ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                  Connected
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-red-500" />
+                  Disconnected
+                </div>
+              )}
+            </span>
           </div>
         </div>
+        <MakerSelector hasNoPairs={false} onMakerChange={refreshData} />
+      </div>
 
-        <div className="flex space-x-2">
-          <input
-            className="flex-1 rounded bg-blue-dark px-4 py-2 text-lg"
-            type="text"
-            {...form.register('from')}
-            disabled={!hasChannels || !hasTradablePairs || isSwapInProgress}
-            onChange={handleFromAmountChange}
-          />
-
-          <Controller
-            control={form.control}
-            name="fromAsset"
-            render={({ field }) => (
-              <AssetSelect
-                disabled={!hasChannels || !hasTradablePairs}
-                onChange={(value) => handleAssetChange('fromAsset', value)}
-                options={tradablePairs
-                  .flatMap((pair) => [pair.base_asset, pair.quote_asset])
-                  .filter(
-                    (asset, index, self) =>
-                      self.indexOf(asset) === index &&
-                      asset !== form.getValues().toAsset
-                  )
-                  .map((asset) => ({
-                    label: getDisplayAsset(asset),
-                    value: asset,
-                  }))}
-                value={field.value}
-              />
-            )}
-          />
-        </div>
-        <div className="text-xs text-gray-400">
-          Min: {formatAmount(minFromAmount, form.getValues().fromAsset)}{' '}
-          {getDisplayAsset(form.getValues().fromAsset)}
-        </div>
-        <div className="flex space-x-2">
-          {[25, 50, 75, 100].map((size) => (
-            <div
-              className={`flex-1 px-6 py-3 text-center border border-cyan rounded cursor-pointer ${
-                selectedSize === size ? 'bg-cyan text-blue-dark' : ''
-              } ${!hasChannels || !hasTradablePairs ? 'opacity-50 cursor-not-allowed' : ''}`}
-              key={size}
-              onClick={() =>
-                hasChannels && hasTradablePairs && onSizeClick(size)
-              }
-            >
-              {size}%
+      <form
+        className="max-w-xl w-full bg-blue-dark py-8 px-6 rounded space-y-2"
+        onSubmit={form.handleSubmit(onSubmit)}
+      >
+        {/* From amount section */}
+        <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
+          <div className="flex justify-between items-center font-light">
+            <div className="text-xs">You Send</div>
+            <div className="flex items-center space-x-2">
+              <div className="text-xs">
+                Available to send:{' '}
+                {`${formatAmount(maxFromAmount, form.getValues().fromAsset)} ${getDisplayAsset(form.getValues().fromAsset)}`}
+              </div>
+              <button
+                className="p-1 rounded-full hover:bg-blue-dark transition-colors"
+                disabled={isLoading || isSwapInProgress}
+                onClick={refreshAmounts}
+                title="Refresh amounts"
+                type="button"
+              >
+                <RefreshCw
+                  className={isLoading ? 'animate-spin' : ''}
+                  size={16}
+                />
+              </button>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Swap button */}
-      <div className="flex items-center justify-center py-2">
-        <div
-          className={`bg-section-lighter rounded-full h-8 w-8 flex items-center justify-center ${
-            hasChannels && hasTradablePairs && !isSwapInProgress
-              ? 'cursor-pointer'
-              : 'opacity-50 cursor-not-allowed'
-          }`}
-          onClick={() =>
-            hasChannels &&
-            hasTradablePairs &&
-            !isSwapInProgress &&
-            onSwapAssets()
-          }
-        >
-          <SwapIcon />
-        </div>
-      </div>
-
-      {/* To amount section */}
-      <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
-        <div className="flex justify-between items-center font-light">
-          <div className="text-xs">You Receive (Estimated)</div>
-          <div className="text-xs">
-            Can receive up to:{' '}
-            {`${formatAmount(maxToAmount, form.getValues().toAsset)} ${getDisplayAsset(form.getValues().toAsset)}`}
           </div>
-        </div>
 
-        <div className="flex space-x-2">
-          {isToAmountLoading ? (
-            <div className="flex-1 rounded bg-blue-dark px-4 py-2 text-lg">
-              Estimating...
-            </div>
-          ) : (
+          <div className="flex space-x-2">
             <input
               className="flex-1 rounded bg-blue-dark px-4 py-2 text-lg"
               type="text"
-              {...form.register('to')}
+              {...form.register('from')}
               disabled={!hasChannels || !hasTradablePairs || isSwapInProgress}
-              onChange={handleToAmountChange}
+              onChange={handleFromAmountChange}
             />
-          )}
 
-          <Controller
-            control={form.control}
-            name="toAsset"
-            render={({ field }) => (
-              <AssetSelect
-                disabled={!hasChannels || !hasTradablePairs || isSwapInProgress}
-                onChange={(value) => handleAssetChange('toAsset', value)}
-                options={tradablePairs
-                  .flatMap((pair) => [pair.base_asset, pair.quote_asset])
-                  .filter(
-                    (asset, index, self) =>
-                      self.indexOf(asset) === index &&
-                      asset !== form.getValues().fromAsset
-                  )
-                  .map((asset) => ({
-                    label: getDisplayAsset(asset),
-                    value: asset,
-                  }))}
-                value={field.value}
-              />
-            )}
-          />
-        </div>
-      </div>
-
-      {/* Exchange rate section */}
-      {selectedPair && (
-        <>
-          <div className="text-center py-2 text-xs">1 Route Found</div>
-
-          <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
-            <div className="flex space-x-2 items-center">
-              {isPriceLoading ? (
-                <div className="flex-1 rounded bg-blue-dark px-4 py-3">
-                  Loading exchange rate...
-                </div>
-              ) : (
-                <ExchangeRateDisplay
-                  bitcoinUnit={bitcoinUnit}
-                  formatAmount={formatAmount}
-                  fromAsset={form.getValues().fromAsset}
-                  getAssetPrecision={getAssetPrecision}
-                  price={selectedPairFeed ? selectedPairFeed.price : null}
-                  selectedPair={selectedPair}
-                  toAsset={form.getValues().toAsset}
+            <Controller
+              control={form.control}
+              name="fromAsset"
+              render={({ field }) => (
+                <AssetSelect
+                  disabled={!hasChannels || !hasTradablePairs}
+                  onChange={(value) => handleAssetChange('fromAsset', value)}
+                  options={tradablePairs
+                    .flatMap((pair) => [pair.base_asset, pair.quote_asset])
+                    .filter(
+                      (asset, index, self) =>
+                        self.indexOf(asset) === index &&
+                        asset !== form.getValues().toAsset
+                    )
+                    .map((asset) => ({
+                      label: getDisplayAsset(asset),
+                      value: asset,
+                    }))}
+                  value={field.value}
                 />
               )}
-
-              <div className="w-8 flex justify-center">
-                <SparkIcon color={'#8FD5EA'} />
+            />
+          </div>
+          <div className="text-xs text-gray-400">
+            Min: {formatAmount(minFromAmount, form.getValues().fromAsset)}{' '}
+            {getDisplayAsset(form.getValues().fromAsset)}
+          </div>
+          <div className="flex space-x-2">
+            {[25, 50, 75, 100].map((size) => (
+              <div
+                className={`flex-1 px-6 py-3 text-center border border-cyan rounded cursor-pointer ${
+                  selectedSize === size ? 'bg-cyan text-blue-dark' : ''
+                } ${!hasChannels || !hasTradablePairs ? 'opacity-50 cursor-not-allowed' : ''}`}
+                key={size}
+                onClick={() =>
+                  hasChannels && hasTradablePairs && onSizeClick(size)
+                }
+              >
+                {size}%
               </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Swap button */}
+        <div className="flex items-center justify-center py-2">
+          <div
+            className={`bg-section-lighter rounded-full h-8 w-8 flex items-center justify-center ${
+              hasChannels && hasTradablePairs && !isSwapInProgress
+                ? 'cursor-pointer'
+                : 'opacity-50 cursor-not-allowed'
+            }`}
+            onClick={() =>
+              hasChannels &&
+              hasTradablePairs &&
+              !isSwapInProgress &&
+              onSwapAssets()
+            }
+          >
+            <SwapIcon />
+          </div>
+        </div>
+
+        {/* To amount section */}
+        <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
+          <div className="flex justify-between items-center font-light">
+            <div className="text-xs">You Receive (Estimated)</div>
+            <div className="text-xs">
+              Can receive up to:{' '}
+              {`${formatAmount(maxToAmount, form.getValues().toAsset)} ${getDisplayAsset(form.getValues().toAsset)}`}
             </div>
           </div>
-        </>
-      )}
 
-      {/* Error message */}
-      {errorMessage && (
-        <div
-          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
-          role="alert"
-        >
-          <span className="block sm:inline">{errorMessage}</span>
+          <div className="flex space-x-2">
+            {isToAmountLoading ? (
+              <div className="flex-1 rounded bg-blue-dark px-4 py-2 text-lg">
+                Estimating...
+              </div>
+            ) : (
+              <input
+                className="flex-1 rounded bg-blue-dark px-4 py-2 text-lg"
+                type="text"
+                {...form.register('to')}
+                disabled={!hasChannels || !hasTradablePairs || isSwapInProgress}
+                onChange={handleToAmountChange}
+              />
+            )}
+
+            <Controller
+              control={form.control}
+              name="toAsset"
+              render={({ field }) => (
+                <AssetSelect
+                  disabled={
+                    !hasChannels || !hasTradablePairs || isSwapInProgress
+                  }
+                  onChange={(value) => handleAssetChange('toAsset', value)}
+                  options={tradablePairs
+                    .flatMap((pair) => [pair.base_asset, pair.quote_asset])
+                    .filter(
+                      (asset, index, self) =>
+                        self.indexOf(asset) === index &&
+                        asset !== form.getValues().fromAsset
+                    )
+                    .map((asset) => ({
+                      label: getDisplayAsset(asset),
+                      value: asset,
+                    }))}
+                  value={field.value}
+                />
+              )}
+            />
+          </div>
         </div>
-      )}
 
-      {/* Submit button */}
-      <div className="py-2">
-        <button
-          className="block w-full px-6 py-3 border border-cyan rounded text-lg font-bold hover:bg-cyan hover:text-blue-dark transition"
-          disabled={
-            !wsConnected ||
-            isToAmountLoading ||
-            isPriceLoading ||
-            !!errorMessage ||
-            !hasChannels ||
-            !hasTradablePairs ||
-            isSwapInProgress
-          }
-          type="submit"
-        >
-          {!wsConnected
-            ? 'Connecting...'
-            : isToAmountLoading || isPriceLoading
-              ? 'Preparing Swap...'
-              : !hasChannels
-                ? 'No Channels Available'
-                : !hasTradablePairs
-                  ? 'No Tradable Pairs'
-                  : errorMessage
-                    ? 'Invalid Amount'
-                    : isSwapInProgress
-                      ? 'Swap in Progress...'
-                      : 'Swap Now'}
-        </button>
-      </div>
-    </form>
+        {/* Exchange rate section */}
+        {selectedPair && (
+          <>
+            <div className="text-center py-2 text-xs">1 Route Found</div>
+
+            <div className="space-y-2 bg-section-lighter py-3 px-4 rounded">
+              <div className="flex space-x-2 items-center">
+                {isPriceLoading ? (
+                  <div className="flex-1 rounded bg-blue-dark px-4 py-3">
+                    Loading exchange rate...
+                  </div>
+                ) : (
+                  <ExchangeRateDisplay
+                    bitcoinUnit={bitcoinUnit}
+                    formatAmount={formatAmount}
+                    fromAsset={form.getValues().fromAsset}
+                    getAssetPrecision={getAssetPrecision}
+                    price={selectedPairFeed ? selectedPairFeed.price : null}
+                    selectedPair={selectedPair}
+                    toAsset={form.getValues().toAsset}
+                  />
+                )}
+
+                <div className="w-8 flex justify-center">
+                  <SparkIcon color={'#8FD5EA'} />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Error message */}
+        {errorMessage && (
+          <div
+            className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+            role="alert"
+          >
+            <span className="block sm:inline">{errorMessage}</span>
+          </div>
+        )}
+
+        {/* Submit button */}
+        <div className="py-2">
+          <button
+            className="block w-full px-6 py-3 border border-cyan rounded text-lg font-bold hover:bg-cyan hover:text-blue-dark transition"
+            disabled={
+              !wsConnected ||
+              isToAmountLoading ||
+              isPriceLoading ||
+              !!errorMessage ||
+              !hasChannels ||
+              !hasTradablePairs ||
+              isSwapInProgress
+            }
+            type="submit"
+          >
+            {!wsConnected
+              ? 'Connecting...'
+              : isToAmountLoading || isPriceLoading
+                ? 'Preparing Swap...'
+                : !hasChannels
+                  ? 'No Channels Available'
+                  : !hasTradablePairs
+                    ? 'No Tradable Pairs'
+                    : errorMessage
+                      ? 'Invalid Amount'
+                      : isSwapInProgress
+                        ? 'Swap in Progress...'
+                        : 'Swap Now'}
+          </button>
+        </div>
+      </form>
+    </div>
   )
 
   const refreshData = useCallback(async () => {
@@ -1142,13 +1184,11 @@ export const Component = () => {
             tradableAssets.has(pair.quote_asset_id)
         )
         setTradablePairs(filteredPairs)
-        setHasValidChannelsForTrading(filteredPairs.length > 0)
 
         if (filteredPairs.length > 0) {
           setSelectedPair(filteredPairs[0])
           form.setValue('fromAsset', filteredPairs[0].base_asset)
           form.setValue('toAsset', filteredPairs[0].quote_asset)
-          // Set default minimum value for from amount
           const defaultMinAmount = filteredPairs[0].min_order_size
           form.setValue(
             'from',
@@ -1179,6 +1219,18 @@ export const Component = () => {
     refreshAmounts,
   ])
 
+  // Common header with MakerSelector
+  const renderHeader = (showWarning = false) => (
+    <div className="flex justify-between items-center mb-4">
+      <h2 className="text-xl font-semibold text-white">Trade</h2>
+      <MakerSelector
+        hasNoPairs={showWarning}
+        onMakerChange={refreshData}
+        show={hasValidChannelsForTrading}
+      />
+    </div>
+  )
+
   return (
     <>
       {isLoading ? (
@@ -1187,6 +1239,22 @@ export const Component = () => {
         </div>
       ) : !hasValidChannelsForTrading ? (
         renderNoChannelsMessage()
+      ) : !wsConnected || tradablePairs.length === 0 ? (
+        <div className="max-w-xl w-full bg-blue-dark py-8 px-6 rounded space-y-6">
+          {renderHeader(true)}
+          <div className="text-center space-y-4">
+            <h3 className="text-lg font-semibold">
+              {!wsConnected
+                ? 'Maker Not Connected'
+                : 'No Trading Pairs Available'}
+            </h3>
+            <p className="text-gray-400">
+              {!wsConnected
+                ? 'Unable to connect to the selected maker. Please select a different maker from the dropdown above.'
+                : "The current maker doesn't offer any trading pairs for your assets. Please select a different maker from the dropdown above."}
+            </p>
+          </div>
+        </div>
       ) : (
         renderSwapForm()
       )}
@@ -1199,7 +1267,7 @@ export const Component = () => {
           isOpen={showRecap}
           onClose={() => {
             setShowRecap(false)
-            refreshData() // Refresh data when closing the recap modal
+            refreshData()
           }}
           swapDetails={swapRecapDetails}
         />

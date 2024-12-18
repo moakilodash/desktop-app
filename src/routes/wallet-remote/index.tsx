@@ -46,12 +46,14 @@ export const Component = () => {
 
   const form = useForm<Fields>({
     defaultValues: {
+      authToken: '',
+      indexer_url: 'electrs:50001',
       name: 'Test Account',
       network: 'regtest',
       node_url: `http://localhost:${NETWORK_DEFAULTS.regtest.daemon_listening_port}`,
       password: 'password',
-      ...NETWORK_DEFAULTS.regtest,
-      authToken: '',
+      proxy_endpoint: 'rpc://proxy:3000/json-rpc',
+      rpc_connection_url: 'user:password@bitcoind:18443',
       useAuth: false,
     },
   })
@@ -61,9 +63,15 @@ export const Component = () => {
     const subscription = form.watch((value, { name }) => {
       if (name === 'network' && value.network) {
         const defaults = NETWORK_DEFAULTS[value.network]
-        form.setValue('rpc_connection_url', defaults.rpc_connection_url)
-        form.setValue('indexer_url', defaults.indexer_url)
-        form.setValue('proxy_endpoint', defaults.proxy_endpoint)
+        if (value.network === 'regtest') {
+          form.setValue('rpc_connection_url', 'http://bitcoind:18443')
+          form.setValue('indexer_url', 'electrs:50001')
+          form.setValue('proxy_endpoint', 'http://proxy:3000/json-rpc')
+        } else {
+          form.setValue('rpc_connection_url', defaults.rpc_connection_url)
+          form.setValue('indexer_url', defaults.indexer_url)
+          form.setValue('proxy_endpoint', defaults.proxy_endpoint)
+        }
         form.setValue(
           'node_url',
           `http://localhost:${defaults.daemon_listening_port}`
@@ -90,11 +98,15 @@ export const Component = () => {
     }
 
     // Save node settings
+    const defaultMakerUrl = NETWORK_DEFAULTS[data.network].default_maker_url
+
     await dispatch(
       setSettingsAsync({
         datapath: '',
         default_lsp_url: NETWORK_DEFAULTS[data.network].default_lsp_url,
+        default_maker_url: defaultMakerUrl,
         indexer_url: data.indexer_url,
+        maker_urls: [defaultMakerUrl],
         name: data.name,
         network: data.network,
         node_url: data.node_url,
@@ -107,7 +119,9 @@ export const Component = () => {
     await invoke('insert_account', {
       datapath: '',
       defaultLspUrl: NETWORK_DEFAULTS[data.network].default_lsp_url,
+      defaultMakerUrl,
       indexerUrl: data.indexer_url,
+      makerUrls: defaultMakerUrl,
       name: data.name,
       network: data.network,
       nodeUrl: data.node_url,

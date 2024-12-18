@@ -23,15 +23,17 @@ import {
   setSettingsAsync,
 } from '../../slices/nodeSettings/nodeSettings.slice'
 
-type Account = {
-  name: string
-  datapath: string | null
-  network: BitcoinNetwork
-  rpc_connection_url: string
-  node_url: string
-  indexer_url: string
-  proxy_endpoint: string
+export interface Account {
+  datapath: string
   default_lsp_url: string
+  default_maker_url: string
+  indexer_url: string
+  maker_urls: string[] | string // Allow both array and string
+  name: string
+  network: BitcoinNetwork
+  node_url: string
+  proxy_endpoint: string
+  rpc_connection_url: string
 }
 
 export const Toolbar = () => {
@@ -66,20 +68,29 @@ export const Toolbar = () => {
 
   const handleAccountChange = async (account: Account) => {
     try {
+      // First set the current account in the database
       await invoke('set_current_account', { accountName: account.name })
 
-      await dispatch(
-        setSettingsAsync({
-          datapath: account.datapath || '',
-          default_lsp_url: account.default_lsp_url,
-          indexer_url: account.indexer_url,
-          name: account.name,
-          network: account.network,
-          node_url: account.node_url,
-          proxy_endpoint: account.proxy_endpoint,
-          rpc_connection_url: account.rpc_connection_url,
-        })
-      )
+      // Load the account data from the database to ensure we have the latest data
+      const dbAccount = await invoke<Account>('get_account_by_name', {
+        name: account.name,
+      })
+
+      if (!dbAccount) {
+        throw new Error('Account not found in database')
+      }
+      // Transform the maker_urls from string to array if needed
+      const formattedAccount = {
+        ...dbAccount,
+        maker_urls: Array.isArray(dbAccount.maker_urls)
+          ? dbAccount.maker_urls
+          : dbAccount.maker_urls
+              ?.split(',')
+              .filter((url) => url.trim() !== '') || [],
+      }
+
+      // Update Redux state with the database data
+      await dispatch(setSettingsAsync(formattedAccount))
 
       setIsLoading(true)
       if (

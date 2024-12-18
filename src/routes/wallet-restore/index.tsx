@@ -20,6 +20,9 @@ interface Fields {
   rpc_connection_url: string
   backup_path: string
   password: string
+  indexer_url: string
+  daemon_listening_port: string
+  proxy_endpoint: string
 }
 
 export const Component = () => {
@@ -77,8 +80,13 @@ export const Component = () => {
         await invoke('insert_account', {
           datapath: data.datapath,
           defaultLspUrl: NETWORK_DEFAULTS[data.network].default_lsp_url,
+          defaultMakerUrl: NETWORK_DEFAULTS[data.network].default_maker_url,
+          indexerUrl: data.indexer_url,
+          makerUrls: '',
           name: data.name,
           network: data.network,
+          nodeUrl: `http://localhost:${data.daemon_listening_port}`,
+          proxyEndpoint: data.proxy_endpoint,
           rpcConnectionUrl: data.rpc_connection_url,
         })
       } catch (error) {

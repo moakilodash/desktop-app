@@ -77,9 +77,10 @@ export const Step2 = (props: Props) => {
     const fetchBtcBalance = async () => {
       try {
         const balance = await btcBalance({ skip_sync: false })
-        const maxSpendable =
-          balance.data?.vanilla.spendable || MAX_CHANNEL_CAPACITY
-        const newMaxCapacity = Math.min(MAX_CHANNEL_CAPACITY, maxSpendable)
+        const totalSpendable =
+          (balance.data?.vanilla.spendable || 0) +
+          (balance.data?.colored.spendable || 0)
+        const newMaxCapacity = Math.min(MAX_CHANNEL_CAPACITY, totalSpendable)
         setMaxCapacity(newMaxCapacity)
 
         // Set initial capacity if not already set

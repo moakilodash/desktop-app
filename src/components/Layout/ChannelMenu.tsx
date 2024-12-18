@@ -2,7 +2,11 @@ import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { twJoin } from 'tailwind-merge'
 
-import { CHANNELS_PATH, CREATE_NEW_CHANNEL_PATH, ORDER_CHANNEL_PATH } from '../../app/router/paths'
+import {
+  CHANNELS_PATH,
+  CREATE_NEW_CHANNEL_PATH,
+  ORDER_CHANNEL_PATH,
+} from '../../app/router/paths'
 import { useAppDispatch } from '../../app/store/hooks'
 import { useOnClickOutside } from '../../hooks/useOnClickOutside'
 import { ArrowDownIcon } from '../../icons/ArrowDown'
@@ -19,7 +23,7 @@ export const ChannelMenu = () => {
       onClick: () => navigate(CREATE_NEW_CHANNEL_PATH),
     },
     {
-      label: 'Order new Channel',
+      label: 'Buy a New Channel',
       onClick: () => navigate(ORDER_CHANNEL_PATH),
     },
     {
