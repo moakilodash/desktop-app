@@ -138,10 +138,12 @@ export const Component: React.FC = () => {
   const onChainDeposits =
     transactionsData?.transactions
       .filter(
-        (tx) => tx.transaction_type === 'User' && new Decimal(tx.received).gt(0)
+        (tx) =>
+          tx.transaction_type === 'User' &&
+          new Decimal(tx.received).minus(tx.sent).gt(0)
       )
       .map((tx) => ({
-        amount: tx.received,
+        amount: new Decimal(tx.received).minus(tx.sent).toString(),
         asset: 'BTC',
         txId: tx.txid,
         type: 'on-chain' as const,
