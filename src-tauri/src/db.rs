@@ -69,8 +69,36 @@ pub fn db_file_exists() -> bool {
 
 // Get the path where the database file should be located.
 pub fn get_db_path() -> String {
-    let mut db_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    db_path.push("./db/database.sqlite");
+    let app_data_dir = if cfg!(debug_assertions) {
+        // During development, use the manifest directory
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    } else {
+        // In production, use the local app data directory
+        let local_app_data = if cfg!(target_os = "macos") {
+            let home = env::var("HOME").expect("Failed to get HOME directory");
+            PathBuf::from(home).join("Library/Application Support/com.kaleidoswap.dev")
+        } else if cfg!(target_os = "windows") {
+            let local_app_data = env::var("LOCALAPPDATA")
+                .expect("Failed to get LOCALAPPDATA directory");
+            PathBuf::from(local_app_data).join("com.kaleidoswap.dev")
+        } else {
+            // Linux
+            let home = env::var("HOME").expect("Failed to get HOME directory");
+            PathBuf::from(home).join(".local/share/com.kaleidoswap.dev")
+        };
+        
+        // Create the directory if it doesn't exist
+        fs::create_dir_all(&local_app_data).expect("Failed to create app data directory");
+        local_app_data
+    };
+
+    let db_path = app_data_dir.join("db/database.sqlite");
+    
+    // Ensure the parent directory exists
+    if let Some(parent) = db_path.parent() {
+        fs::create_dir_all(parent).expect("Failed to create database directory");
+    }
+
     db_path.to_str().unwrap().to_string()
 }
 
