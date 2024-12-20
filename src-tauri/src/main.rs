@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use tauri::{Manager, Window};
 use std::env;
 use tauri_plugin_log::{Builder as LogBuilder, LogTarget};
+use std::fs;
 
 mod db;
 mod rgb_node;
@@ -35,9 +36,23 @@ fn main() {
         .on_window_event({
             let node_process = Arc::clone(&node_process);
             move |event| {
-                if let tauri::WindowEvent::CloseRequested { .. } = event.event() {
-                    let node_process = node_process.lock().unwrap();
-                    node_process.stop();
+                match event.event() {
+                    tauri::WindowEvent::CloseRequested { .. } => {
+                        println!("Window close requested, shutting down node...");
+                        let node_process = node_process.lock().unwrap();
+                        // First try graceful shutdown
+                        node_process.shutdown();
+                        
+                        // Wait a bit to ensure the process has time to shut down
+                        std::thread::sleep(std::time::Duration::from_secs(5));
+                        
+                        // Force kill if still running
+                        if node_process.is_running() {
+                            println!("Node still running after shutdown, forcing kill...");
+                            node_process.force_kill();
+                        }
+                    }
+                    _ => {}
                 }
             }
         })
@@ -101,11 +116,28 @@ fn start_node(
     daemon_listening_port: String,
     ldk_peer_listening_port: String,
 ) -> Result<(), String> {
-    let mut executable_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    executable_dir.push("../bin");
+    let app_data_dir = if cfg!(debug_assertions) {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../bin")
+    } else {
+        if cfg!(target_os = "macos") {
+            let home = env::var("HOME").expect("Failed to get HOME directory");
+            PathBuf::from(home).join("Library/Application Support/com.kaleidoswap.dev/data")
+        } else if cfg!(target_os = "windows") {
+            let local_app_data = env::var("LOCALAPPDATA")
+                .expect("Failed to get LOCALAPPDATA directory");
+            PathBuf::from(local_app_data).join("com.kaleidoswap.dev/data")
+        } else {
+            // Linux
+            let home = env::var("HOME").expect("Failed to get HOME directory");
+            PathBuf::from(home).join(".local/share/com.kaleidoswap.dev/data")
+        }
+    };
+
+    // Create the data directory if it doesn't exist
+    fs::create_dir_all(&app_data_dir).expect("Failed to create data directory");
 
     let datapath = datapath
-        .map(|path| executable_dir.join(path).to_str().unwrap().to_string())
+        .map(|path| app_data_dir.join(path).to_str().unwrap().to_string())
         .unwrap_or_else(|| "".to_string());
 
     let node_process = node_process.lock().unwrap();
