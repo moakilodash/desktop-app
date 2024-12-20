@@ -279,17 +279,6 @@ fn run_rgb_lightning_node(
     }
 }
 
-
-#[cfg(target_os = "windows")]
-fn get_process_creation_flags() -> u32 {
-    0x08000000 // CREATE_NO_WINDOW
-}
-
-#[cfg(not(target_os = "windows"))]
-fn get_process_creation_flags() -> u32 {
-    0
-}
-
 impl Drop for NodeProcess {
     fn drop(&mut self) {
         self.shutdown();
