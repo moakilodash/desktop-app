@@ -182,23 +182,27 @@ export const Step2 = (props: Props) => {
   return (
     <form className="max-w-3xl mx-auto" onSubmit={handleSubmit(onSubmit)}>
       <div className="text-center mb-10">
-        <h3 className="text-3xl font-bold mb-4">Open a Channel - Step 2</h3>
-        <h4 className="text-xl">Configure your channel capacity and assets</h4>
+        <h3 className="text-3xl font-bold text-white mb-4">
+          Open a Channel - Step 2
+        </h3>
+        <h4 className="text-xl text-gray-400">
+          Configure your channel capacity and assets
+        </h4>
       </div>
 
-      <div className="bg-section-lighter p-8 rounded-lg mb-10">
-        {/* Add PubKey display section */}
+      <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-8">
+        {/* PubKey display section */}
         <div className="mb-8">
-          <label className="block text-sm mb-2">
+          <label className="block text-sm font-medium text-gray-400 mb-2">
             Opening Channel with Node:
           </label>
-          <div className="bg-blue-dark px-4 py-3 rounded break-all font-mono text-sm">
+          <div className="bg-gray-900/50 px-4 py-3 rounded-lg break-all font-mono text-sm text-white">
             {newChannelForm.pubKeyAndAddress}
           </div>
         </div>
 
         <div className="mb-8">
-          <label className="block text-sm mb-2">
+          <label className="block text-sm font-medium text-gray-400 mb-2">
             Channel Capacity (satoshis)
             <span className="text-xs text-gray-500 ml-2">
               (The amount of BTC you want to allocate to this channel)
@@ -230,15 +234,17 @@ export const Step2 = (props: Props) => {
         </div>
 
         {/* Asset section */}
-        <div className="border-t border-divider my-8"></div>
+        <div className="border-t border-gray-700/50 my-8"></div>
 
         {hasAvailableAssets ? (
           <div className="mb-8">
-            <h5 className="text-lg font-semibold mb-4">RGB Assets</h5>
-            <label className="flex items-center text-sm mb-4">
+            <h5 className="text-lg font-semibold text-white mb-4">
+              RGB Assets
+            </h5>
+            <label className="flex items-center text-sm mb-4 text-gray-400">
               <input
                 checked={addAsset}
-                className="mr-2"
+                className="mr-2 rounded border-gray-600 bg-gray-700 text-purple-500 focus:ring-purple-500"
                 onChange={(e) => setAddAsset(e.target.checked)}
                 type="checkbox"
               />
@@ -306,16 +312,21 @@ export const Step2 = (props: Props) => {
         )}
 
         {/* Fee selection section */}
-        <div className="border-t border-divider my-8"></div>
+        <div className="border-t border-gray-700/50 my-8"></div>
 
         <div>
-          <label className="block text-sm mb-2">Transaction Fee</label>
+          <label className="block text-sm font-medium text-gray-400 mb-2">
+            Transaction Fee
+          </label>
           <div className="flex space-x-4">
             {['slow', 'medium', 'fast'].map((speed) => (
               <button
-                className={`flex-1 py-2 px-4 bg-blue-dark border border-divider rounded text-center hover:bg-opacity-80 transition-colors ${
-                  selectedFee === speed ? 'bg-purple bg-opacity-20' : ''
-                }`}
+                className={`flex-1 py-2 px-4 rounded-lg text-center transition-colors
+                  ${
+                    selectedFee === speed
+                      ? 'bg-purple-600/20 border border-purple-500 text-white'
+                      : 'bg-gray-900/50 border border-gray-700 text-gray-400 hover:border-gray-600'
+                  }`}
                 key={speed}
                 onClick={() =>
                   handleFeeChange(speed as 'slow' | 'medium' | 'fast')
@@ -324,7 +335,7 @@ export const Step2 = (props: Props) => {
               >
                 {speed.charAt(0).toUpperCase() + speed.slice(1)}
                 <span className="text-xs text-gray-500 ml-2">
-                  ({`${props.feeRates[speed] / 1000} sat/Bv`})
+                  ({`${props.feeRates[speed] / 1000} sat/vB`})
                 </span>
               </button>
             ))}
@@ -332,20 +343,56 @@ export const Step2 = (props: Props) => {
         </div>
       </div>
 
-      {/* Navigation buttons */}
-      <div className="flex justify-between">
+      <div className="flex justify-between mt-8">
         <button
-          className="px-6 py-3 rounded text-lg font-medium text-grey-light hover:bg-blue-dark transition-colors"
+          className="px-8 py-3 rounded-lg text-lg font-bold
+            bg-gray-700 hover:bg-gray-600 text-gray-300
+            transform transition-all duration-200
+            focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50
+            shadow-md hover:shadow-lg
+            flex items-center"
           onClick={props.onBack}
           type="button"
         >
+          <svg
+            className="w-5 h-5 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M15 19l-7-7 7-7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+            />
+          </svg>
           Back
         </button>
+
         <button
-          className="px-6 py-3 rounded border text-lg font-bold border-purple hover:bg-purple hover:bg-opacity-20 transition-colors"
+          className="px-8 py-3 rounded-lg text-lg font-bold text-white
+            bg-blue-600 hover:bg-blue-700
+            transform transition-all duration-200
+            focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
+            shadow-lg hover:shadow-xl
+            flex items-center"
           type="submit"
         >
           Next
+          <svg
+            className="w-5 h-5 ml-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M9 5l7 7-7 7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+            />
+          </svg>
         </button>
       </div>
 

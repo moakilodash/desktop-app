@@ -1,5 +1,4 @@
 import { useAppSelector } from '../../app/store/hooks'
-import { ArrowRightIcon } from '../../icons/ArrowRight'
 import {
   channelSliceSelectors,
   TNewChannelForm,
@@ -9,6 +8,7 @@ interface Props {
   error?: string
   onBack: VoidFunction
   onNext: VoidFunction
+  feeRates: Record<string, number>
 }
 
 const formatNumber = (num: number) => {
@@ -22,56 +22,132 @@ export const Step3 = (props: Props) => {
   const [pubKey, address] = newChannelForm.pubKeyAndAddress?.split('@') ?? []
 
   return (
-    <div className="max-w-lg mx-auto p-6 bg-gray-800 text-white rounded-lg shadow-md">
+    <div className="max-w-lg mx-auto">
       <div className="text-center mb-10">
-        <h3 className="text-3xl font-semibold mb-4">
-          Confirm Channel - Step 3
+        <h3 className="text-3xl font-bold text-white mb-4">
+          Open a Channel - Step 3
         </h3>
-        <p className="text-lg text-gray-400">
-          Last confirmation before the channel is opened.
-        </p>
+        <p className="text-gray-400">Review and confirm your channel details</p>
       </div>
 
-      <div className="bg-gray-900 p-6 rounded-lg shadow-inner text-center space-y-4">
-        <div className="text-3xl font-bold text-cyan-400">
-          {formatNumber(newChannelForm.capacitySat)} SAT
-        </div>
-        {newChannelForm.assetAmount > 0 && (
-          <div className="text-lg text-gray-400">
-            {newChannelForm.assetAmount} {newChannelForm.assetTicker}
+      <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-8 space-y-8">
+        {/* Channel Capacity Section */}
+        <div>
+          <h4 className="text-sm font-medium text-gray-400 mb-3">
+            Channel Capacity
+          </h4>
+          <div className="bg-gray-900/50 p-6 rounded-lg text-center">
+            <div className="text-3xl font-bold text-blue-400">
+              {formatNumber(newChannelForm.capacitySat)} SAT
+            </div>
+            {newChannelForm.assetAmount > 0 && (
+              <div className="mt-2 text-lg text-gray-400">
+                {newChannelForm.assetAmount} {newChannelForm.assetTicker}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
 
-      <div className="flex justify-center my-6">
-        <ArrowRightIcon />
-      </div>
+        {/* Node Connection Details */}
+        <div>
+          <h4 className="text-sm font-medium text-gray-400 mb-3">
+            Connected Node
+          </h4>
+          <div className="bg-gray-900/50 p-6 rounded-lg">
+            <div className="font-mono text-sm break-all">
+              <span className="text-gray-400">Node ID: </span>
+              <span className="text-white">{pubKey}</span>
+            </div>
+            <div className="mt-3 font-mono text-sm break-all">
+              <span className="text-gray-400">Host: </span>
+              <span className="text-white">{address}</span>
+            </div>
+          </div>
+        </div>
 
-      <div className="bg-gray-900 p-6 rounded-lg shadow-inner text-center space-y-4">
-        <div className="text-2xl font-bold text-cyan-400">{address}</div>
-        <div className="text-lg text-gray-400">
-          {pubKey.slice(0, 10)}...{pubKey.slice(-10)}
+        {/* Fee Rate Info */}
+        <div>
+          <h4 className="text-sm font-medium text-gray-400 mb-3">
+            Transaction Fee Rate
+          </h4>
+          <div className="bg-gray-900/50 p-6 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-gray-400">Selected Rate:</div>
+                <div className="text-lg font-medium text-white mt-1">
+                  {newChannelForm.fee.charAt(0).toUpperCase() +
+                    newChannelForm.fee.slice(1)}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-gray-400">Fee Rate:</div>
+                <div className="text-lg font-medium text-white mt-1">
+                  {props.feeRates && props.feeRates[newChannelForm.fee]
+                    ? `${props.feeRates[newChannelForm.fee] / 1000} sat/vB`
+                    : 'Loading...'}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="flex justify-between mt-10">
+      <div className="flex justify-between mt-8">
         <button
-          className="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white text-lg font-bold rounded shadow-md transition duration-200"
+          className="px-8 py-3 rounded-lg text-lg font-bold
+            bg-gray-700 hover:bg-gray-600 text-gray-300
+            transform transition-all duration-200
+            focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50
+            shadow-md hover:shadow-lg
+            flex items-center"
           onClick={props.onBack}
         >
-          Go Back
+          <svg
+            className="w-5 h-5 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M15 19l-7-7 7-7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+            />
+          </svg>
+          Back
         </button>
 
         <button
-          className="px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white text-lg font-bold rounded shadow-md transition duration-200"
+          className="px-8 py-3 rounded-lg text-lg font-bold text-white
+            bg-blue-600 hover:bg-blue-700
+            transform transition-all duration-200
+            focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
+            shadow-lg hover:shadow-xl
+            flex items-center"
           onClick={props.onNext}
         >
-          Next Step
+          Confirm
+          <svg
+            className="w-5 h-5 ml-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M5 13l4 4L19 7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+            />
+          </svg>
         </button>
       </div>
 
       {props.error && (
-        <div className="flex justify-end text-red-500 mt-4">{props.error}</div>
+        <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500">
+          {props.error}
+        </div>
       )}
     </div>
   )

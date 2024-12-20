@@ -121,101 +121,135 @@ export const Step1 = (props: Props) => {
   return (
     <form onSubmit={form.handleSubmit(onSubmit)}>
       <div className="text-center mb-10">
-        <h3 className="text-2xl font-semibold mb-4">Open a Channel - Step 1</h3>
-        <p>
+        <h3 className="text-3xl font-bold text-white mb-4">
+          Open a Channel - Step 1
+        </h3>
+        <p className="text-gray-400">
           Open channels to other nodes on the network to start using the
           Lightning Network.
         </p>
       </div>
 
-      <Controller
-        control={form.control}
-        name="pubKeyAndAddress"
-        render={({ field }) => (
-          <div className="space-y-2">
-            <textarea
-              className="px-6 py-4 w-full border border-divider bg-blue-dark outline-none rounded font-mono text-sm break-all resize-none min-h-[6rem]"
-              placeholder="Paste the node connection URL here: pubkey@host:port"
-              {...field}
-            />
-            <p className="text-sm text-red">
-              {form.formState.errors.pubKeyAndAddress?.message}
-            </p>
+      <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-8">
+        <Controller
+          control={form.control}
+          name="pubKeyAndAddress"
+          render={({ field }) => (
+            <div className="space-y-2">
+              <textarea
+                className="w-full px-4 py-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono text-sm min-h-[6rem] resize-none"
+                placeholder="Paste the node connection URL here: pubkey@host:port"
+                {...field}
+              />
+              <p className="text-red-500 text-sm">
+                {form.formState.errors.pubKeyAndAddress?.message}
+              </p>
+            </div>
+          )}
+        />
+
+        <div className="text-center py-6 font-medium text-gray-400">or</div>
+
+        <div className="mb-6 text-center font-medium text-white">
+          Select from Suggested Nodes
+        </div>
+
+        <div className="flex justify-center space-x-6">
+          <button
+            className="flex items-center space-x-2 p-4 rounded-lg border border-gray-700 hover:border-gray-600 transition-colors opacity-50 cursor-not-allowed"
+            disabled
+          >
+            <BitFinexBoxIcon />
+          </button>
+          <button
+            className="flex items-center space-x-2 p-4 rounded-lg border border-gray-700 hover:border-blue-500 transition-colors"
+            disabled={isLoading}
+            onClick={fetchLspInfo}
+            type="button"
+          >
+            <KaleidoswapBoxIcon />
+          </button>
+        </div>
+
+        {isLoading && (
+          <div className="flex justify-center items-center mt-4">
+            <Spinner color="#3B82F6" size={24} />
+            <span className="ml-2 text-gray-400">
+              Loading LSP information...
+            </span>
           </div>
         )}
-      />
 
-      <div className="text-center py-6 font-medium text-grey-light">or</div>
-
-      <div className="mb-6 text-center font-medium">
-        Select from Suggested Nodes
+        {error && (
+          <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500">
+            {error}
+          </div>
+        )}
       </div>
 
-      <div className="flex justify-center space-x-6">
+      <div className="flex justify-end mt-8">
         <button
-          className="flex items-center space-x-2 opacity-50 cursor-not-allowed"
-          disabled
-        >
-          <BitFinexBoxIcon />
-        </button>
-        <button
-          className="flex items-center space-x-2"
-          disabled={isLoading}
-          onClick={fetchLspInfo}
-          type="button"
-        >
-          <KaleidoswapBoxIcon />
-        </button>
-      </div>
-
-      {isLoading && (
-        <div className="flex justify-center items-center mt-4">
-          <Spinner size={24} />
-          <span className="ml-2">Loading LSP information...</span>
-        </div>
-      )}
-
-      {error && (
-        <div className="bg-red-500 bg-opacity-10 border border-red-500 text-red-500 px-4 py-3 rounded mt-4">
-          {error}
-        </div>
-      )}
-
-      <div className="flex justify-end mt-20">
-        <button
-          className="px-6 py-3 rounded border text-lg font-bold border-cyan"
+          className="px-8 py-3 rounded-lg text-lg font-bold text-white
+            bg-blue-600 hover:bg-blue-700
+            transform transition-all duration-200
+            focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
+            shadow-lg hover:shadow-xl
+            flex items-center"
           type="submit"
         >
           Next
+          <svg
+            className="w-5 h-5 ml-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M9 5l7 7-7 7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+            />
+          </svg>
         </button>
       </div>
 
       {/* Connection Dialog */}
       {showConnectionDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-blue-dark border border-divider rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-semibold mb-4">Connect to Peer</h3>
-            <p className="mb-6">
+          <div className="bg-gray-800/50 backdrop-blur-sm p-8 rounded-xl border border-gray-700/50 max-w-md w-full mx-4">
+            <h3 className="text-2xl font-bold text-white mb-4">
+              Connect to Peer
+            </h3>
+            <p className="text-gray-400 mb-6">
               Would you like to connect to this peer before opening a channel?
             </p>
 
             {isConnecting && (
               <div className="flex items-center justify-center mb-4">
-                <Spinner size={24} />
-                <span className="ml-2">Connecting to peer...</span>
+                <Spinner color="#3B82F6" size={24} />
+                <span className="ml-2 text-gray-400">
+                  Connecting to peer...
+                </span>
               </div>
             )}
 
             <div className="flex justify-end space-x-4">
               <button
-                className="px-4 py-2 rounded border border-divider hover:bg-opacity-80"
+                className="px-6 py-2 rounded-lg font-medium
+                  bg-gray-700 hover:bg-gray-600 text-gray-300
+                  transform transition-all duration-200
+                  focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
                 onClick={() => setShowConnectionDialog(false)}
                 type="button"
               >
                 Cancel
               </button>
               <button
-                className="px-4 py-2 rounded bg-purple text-white hover:bg-opacity-80"
+                className="px-6 py-2 rounded-lg font-medium text-white
+                  bg-blue-600 hover:bg-blue-700
+                  transform transition-all duration-200
+                  focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
                 disabled={isConnecting}
                 onClick={handleConnect}
                 type="button"

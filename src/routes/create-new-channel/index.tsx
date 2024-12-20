@@ -198,6 +198,7 @@ export const Component = () => {
                 (openChannelResponse.error as { data: { error: string } })?.data
                   .error
               }
+              feeRates={feeRates}
               onBack={() => setStep(2)}
               onNext={onSubmit}
             />
