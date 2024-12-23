@@ -92,9 +92,6 @@ class WebSocketService {
       if (!event.wasClean) {
         this.handleReconnect()
       }
-      // else {
-      //   toast.warning('Disconnected from market data')
-      // }
     }
 
     this.socket.onerror = (error) => {

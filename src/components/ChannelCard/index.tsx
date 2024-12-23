@@ -113,15 +113,11 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
   }
 
   const handleCloseChannel = async () => {
-    // setIsClosing(true)
     onClose(channel.channel_id, channel.peer_pubkey)
-    // setIsClosing(false)
     setIsModalOpen(false)
   }
 
-  // const assetTicker = asset?.ticker || 'BTC'
   const assetPrecision = asset?.precision || 8
-  // const peerName = channel.peer_alias || channel.peer_pubkey.slice(0, 8)
 
   const formatAssetAmount = (amount: number) => {
     const factor = Math.pow(10, assetPrecision)
@@ -130,12 +126,6 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
       minimumFractionDigits: assetPrecision,
     })
   }
-
-  // const localBitcoin = channel.outbound_balance_msat / 1000
-  // const remoteBitcoin = channel.inbound_balance_msat / 1000
-
-  // const localAsset = parseFloat(formatAssetAmount(channel.asset_local_amount))
-  // const remoteAsset = parseFloat(formatAssetAmount(channel.asset_remote_amount))
 
   return (
     <div className="bg-gray-900 text-white rounded-lg shadow-lg p-6">

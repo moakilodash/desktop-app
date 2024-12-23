@@ -326,14 +326,6 @@ export const Component = () => {
   return (
     <Layout>
       <div className="max-w-2xl w-full bg-blue-dark py-8 px-6 rounded">
-        {/* <div> */}
-        {/* <button
-            className="px-3 py-1 rounded border text-sm border-gray-500"
-            onClick={() => navigate(WALLET_SETUP_PATH)}
-          >
-            Go Back
-          </button> */}
-        {/* </div> */}
         {renderCurrentStep()}
       </div>
     </Layout>
