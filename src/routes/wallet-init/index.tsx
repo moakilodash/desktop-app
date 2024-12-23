@@ -66,8 +66,8 @@ export const Component = () => {
 
   const passwordForm = useForm<PasswordFields>({
     defaultValues: {
-      confirmPassword: 'password',
-      password: 'password',
+      confirmPassword: '',
+      password: '',
     },
   })
 
