@@ -47,6 +47,3 @@ export const NETWORK_DEFAULTS: Record<string, NetworkDefaults> = {
     rpc_connection_url: 'user:password@electrum.iriswallet.com:18332',
   },
 }
-
-export const DEFAULT_RGB_ICON =
-  'https://raw.githubusercontent.com/RGB-WG/rgb.tech/refs/heads/master/static/logo/rgb-symbol-color.svg'

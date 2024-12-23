@@ -1,19 +1,16 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react'
 import { twJoin } from 'tailwind-merge'
 
+import { DEFAULT_RGB_ICON } from '../../constants'
 import { useOnClickOutside } from '../../hooks/useOnClickOutside'
 import { ArrowDownIcon } from '../../icons/ArrowDown'
 import { TradingPair } from '../../slices/makerApi/makerApi.slice'
-
 const SATOSHIS_PER_BTC = 100000000
 
 interface AssetOptionProps {
   value: string
   label: string
 }
-
-const DEFAULT_RGB_ICON =
-  'https://raw.githubusercontent.com/RGB-WG/rgb.tech/refs/heads/master/static/logo/rgb-symbol-color.svg'
 
 const AssetOption = React.memo(({ value, label }: AssetOptionProps) => {
   const [imgSrc, setImgSrc] = useState<string>('')

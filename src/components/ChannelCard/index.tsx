@@ -2,6 +2,7 @@ import { ArrowUpRight, ArrowDownRight, X, Lock, Unlock } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
 
 import { useAppSelector } from '../../app/store/hooks'
+import { DEFAULT_RGB_ICON } from '../../constants'
 import { formatBitcoinAmount } from '../../helpers/number'
 import { LiquidityBar } from '../LiquidityBar' // Import LiquidityBar
 
@@ -60,8 +61,6 @@ const AssetIcon: React.FC<{ ticker: string; className?: string }> = ({
   className = 'h-6 w-6 mr-2',
 }) => {
   const [imgSrc, setImgSrc] = useState<string>('')
-  const DEFAULT_RGB_ICON =
-    'https://raw.githubusercontent.com/RGB-WG/rgb.tech/refs/heads/master/static/logo/rgb-symbol-color.svg'
 
   useEffect(() => {
     const loadIcon = async () => {
