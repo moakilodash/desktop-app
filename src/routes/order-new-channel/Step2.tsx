@@ -441,7 +441,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
               className={`px-6 py-3 rounded-lg text-lg font-bold ${
                 isLoading
                   ? 'bg-gray-500 cursor-not-allowed'
-                  : 'bg-purple-600 hover:bg-purple-700 transition-colors'
+                  : 'bg-blue-600 hover:bg-blue-700 transition-colors'
               }`}
               disabled={isLoading}
               type="submit"

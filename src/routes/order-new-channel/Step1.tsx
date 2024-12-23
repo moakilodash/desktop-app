@@ -45,7 +45,7 @@ const ConnectPopup: React.FC<{
       <div className="flex justify-end space-x-4">
         {isAlreadyConnected ? (
           <button
-            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
             onClick={onConfirm}
           >
             OK
@@ -90,7 +90,6 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
   useEffect(() => {
     console.log('Fetching LSP Info...')
     fetchLspInfo()
-    checkNetwork()
   }, [lspUrl])
 
   const fetchLspInfo = async () => {
@@ -111,17 +110,6 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
       } finally {
         setIsLoading(false)
       }
-    }
-  }
-
-  const checkNetwork = async () => {
-    try {
-      const networkInfo = await getNetworkInfo().unwrap()
-      setConnectionUrl(
-        NETWORK_DEFAULTS[networkInfo.network.toLowerCase()].default_lsp_url
-      )
-    } catch (error) {
-      console.error('Error checking network:', error)
     }
   }
 
@@ -376,7 +364,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
 
         <div className="bg-gray-800 p-6 rounded-lg mt-6">
           <label className="block text-lg font-medium mb-2">
-            LSP Connection URL
+            LSP Connection String
           </label>
           <div className="relative">
             <Link className="absolute left-3 top-3 text-gray-400" size={20} />
@@ -386,7 +374,9 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
               value={connectionUrl}
             />
             <CopyToClipboard
-              onCopy={() => toast.success('Connection URL copied to clipboard')}
+              onCopy={() =>
+                toast.success('LSP connection string copied to clipboard')
+              }
               text={connectionUrl}
             >
               <button className="absolute right-3 top-3" type="button">
