@@ -15,16 +15,18 @@ export const RootRoute = () => {
   const [nodeInfo, nodeInfoResponse] = nodeApi.endpoints.nodeInfo.useLazyQuery()
 
   useEffect(() => {
-    const onPageLoad = () => {
-      invoke('close_splashscreen')
+    const closeSplashscreen = async () => {
+      try {
+        // Wait for DOM to be fully ready
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+        await invoke('close_splashscreen')
+      } catch (error) {
+        console.error('Failed to close splashscreen:', error)
+      }
     }
 
-    if (document.readyState === 'complete') {
-      onPageLoad()
-    } else {
-      window.addEventListener('load', onPageLoad)
-      return () => window.removeEventListener('load', onPageLoad)
-    }
+    // Call it when component mounts
+    closeSplashscreen()
   }, [])
 
   useEffect(() => {

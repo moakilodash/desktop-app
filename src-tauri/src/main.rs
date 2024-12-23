@@ -100,12 +100,19 @@ fn main() {
 
 #[tauri::command]
 async fn close_splashscreen(window: Window) {
-    if let Some(splashscreen) = window.get_window("splashscreen") {
-        splashscreen.close().unwrap();
-    };
+    // First ensure the main window is ready
     if let Some(main_window) = window.get_window("main") {
+        // Show main window first
         main_window.show().unwrap();
-    };
+        
+        // Give the main window a moment to render
+        std::thread::sleep(std::time::Duration::from_millis(1000));
+        
+        // Then close splashscreen
+        if let Some(splashscreen) = window.get_window("splashscreen") {
+            splashscreen.close().unwrap();
+        }
+    }
 }
 
 #[tauri::command]
