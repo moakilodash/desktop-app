@@ -23,7 +23,7 @@ const ConnectPopup: React.FC<{
   isAlreadyConnected: boolean
 }> = ({ onClose, onConfirm, connectionUrl, isAlreadyConnected }) => (
   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div className="bg-gray-800 p-8 rounded-lg max-w-md w-full">
+    <div className="bg-blue-dark p-8 rounded-lg max-w-md w-full">
       <h3 className="text-2xl font-semibold mb-4">Connect to LSP</h3>
       {isAlreadyConnected ? (
         <>
@@ -236,7 +236,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
     }
     return {
       className:
-        'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700',
+        'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700',
       disabled: false,
       text: 'Connect to LSP',
     }
