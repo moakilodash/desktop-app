@@ -103,25 +103,59 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
   // Add loading state for data fetching
   const [isLoadingData, setIsLoadingData] = useState(false)
 
+  // Memoize the refresh function
   const refreshData = useCallback(async () => {
-    setIsLoadingData(true)
+    // Only set loading if we don't have data yet
+    if (!btcBalanceResponse.data || !listChannelsResponse.data) {
+      setIsLoadingData(true)
+    }
+
     try {
-      await Promise.all([btcBalance({ skip_sync: false }), listChannels()])
+      const [balanceResult, channelsResult] = await Promise.all([
+        btcBalance({ skip_sync: false }),
+        listChannels(),
+      ])
+
+      // Only update state if values have changed
+      if (
+        JSON.stringify(balanceResult.data) !==
+          JSON.stringify(btcBalanceResponse.data) ||
+        JSON.stringify(channelsResult.data) !==
+          JSON.stringify(listChannelsResponse.data)
+      ) {
+        // Data has changed, allow re-render
+        return
+      }
     } finally {
       setIsLoadingData(false)
     }
-  }, [btcBalance, listChannels])
+  }, [
+    btcBalance,
+    listChannels,
+    btcBalanceResponse.data,
+    listChannelsResponse.data,
+  ])
 
+  // Optimize the refresh interval
   useEffect(() => {
-    // refresh data every 10 seconds
-    const interval = setInterval(refreshData, 10000)
+    // Only start interval if we're not processing payment
+    if (isProcessingWalletPayment) return
 
-    // Clear interval when payment process starts
-    if (isProcessingWalletPayment) {
+    // Initial fetch
+    refreshData()
+
+    // Use RAF for smoother updates
+    let rafId: number
+    const interval = setInterval(() => {
+      rafId = requestAnimationFrame(() => {
+        refreshData()
+      })
+    }, 10000)
+
+    return () => {
       clearInterval(interval)
+      cancelAnimationFrame(rafId)
     }
-
-    return () => clearInterval(interval)
   }, [refreshData, isProcessingWalletPayment])
 
   useEffect(() => {
