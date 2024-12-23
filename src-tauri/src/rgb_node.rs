@@ -44,8 +44,10 @@ impl NodeProcess {
 
     pub fn start(&self, network: String, datapath: String, daemon_listening_port: String, ldk_peer_listening_port: String) {
         if self.is_running.load(Ordering::SeqCst) {
-            println!("RGB Lightning Node is already running.");
-            return;
+            println!("RGB Lightning Node is already running. Stopping before restart...");
+            self.stop();
+            // Give it a moment to stop
+            std::thread::sleep(Duration::from_secs(2));
         }
 
         let rx = Arc::clone(&self.control_receiver);
