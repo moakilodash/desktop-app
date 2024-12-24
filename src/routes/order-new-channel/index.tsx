@@ -22,6 +22,7 @@ export const Component = () => {
   const [showBackConfirmation, setShowBackConfirmation] = useState(false)
 
   const [nodeInfoRequest] = nodeApi.endpoints.nodeInfo.useLazyQuery()
+  const [addressRequest] = nodeApi.endpoints.address.useLazyQuery()
   const [createOrderRequest, createOrderResponse] =
     makerApi.endpoints.create_order.useLazyQuery()
   const [getOrderRequest, getOrderResponse] =
@@ -106,8 +107,15 @@ export const Component = () => {
     async (data: any) => {
       setLoading(true)
       const clientPubKey = (await nodeInfoRequest()).data?.pubkey
+      const addressRefund = (await addressRequest()).data?.address
+
       if (!clientPubKey) {
         console.error('Could not get client pubkey')
+        setLoading(false)
+        return
+      }
+      if (!addressRefund) {
+        console.error('Could not get refund address')
         setLoading(false)
         return
       }
@@ -138,6 +146,7 @@ export const Component = () => {
         client_pubkey: clientPubKey,
         funding_confirms_within_blocks: 1,
         lsp_balance_sat: capacitySat - clientBalanceSat,
+        refund_onchain_address: addressRefund,
         required_channel_confirmations: 3,
       }
       if (assetId && assetAmount) {
