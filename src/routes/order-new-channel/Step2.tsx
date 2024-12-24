@@ -46,6 +46,146 @@ const FormFieldsSchema = z.object({
 
 type FormFields = z.infer<typeof FormFieldsSchema>
 
+const formatNumberWithCommas = (value: string | number): string => {
+  const parts = value.toString().split('.')
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  return parts.join('.')
+}
+
+const parseFormattedNumber = (value: string): string => {
+  return value.replace(/[^\d.]/g, '')
+}
+
+interface NumberInputProps {
+  value: string
+  onChange: (value: string) => void
+  min?: number
+  max?: number
+  precision?: number
+  label: string
+  placeholder?: string
+  className?: string
+  error?: string
+  showSlider?: boolean
+  onSliderChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
+  sliderStep?: number
+  sliderValue?: number
+}
+
+const formatSliderValue = (value: number, precision: number = 0): string => {
+  const formattedValue = new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: precision,
+    minimumFractionDigits: precision,
+  }).format(value)
+  return formattedValue
+}
+
+const NumberInput: React.FC<NumberInputProps> = ({
+  value,
+  onChange,
+  min = 0,
+  max,
+  precision = 0,
+  label,
+  placeholder,
+  className = '',
+  error,
+  showSlider = false,
+  onSliderChange,
+  sliderStep,
+  sliderValue,
+}) => {
+  const [displayValue, setDisplayValue] = useState(
+    formatNumberWithCommas(value)
+  )
+  const [isFocused, setIsFocused] = useState(false)
+
+  useEffect(() => {
+    if (!isFocused) {
+      setDisplayValue(formatNumberWithCommas(value))
+    }
+  }, [value, isFocused])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = parseFormattedNumber(e.target.value)
+
+    if (rawValue === '' || rawValue === '.') {
+      setDisplayValue(rawValue)
+      onChange(rawValue)
+      return
+    }
+
+    const parsedValue = parseFloat(rawValue)
+    if (isNaN(parsedValue)) return
+
+    // Handle precision
+    const [whole, decimal] = rawValue.split('.')
+    let formattedValue = rawValue
+    if (decimal && decimal.length > precision) {
+      formattedValue = `${whole}.${decimal.slice(0, precision)}`
+    }
+
+    // Handle min/max
+    if (min !== undefined && parsedValue < min) {
+      formattedValue = min.toString()
+    }
+    if (max !== undefined && parsedValue > max) {
+      formattedValue = max.toString()
+    }
+
+    setDisplayValue(formattedValue)
+    onChange(formattedValue)
+  }
+
+  return (
+    <div className={className}>
+      <div className="flex justify-between items-center mb-2">
+        <label className="block text-sm font-medium text-gray-300">
+          {label}
+        </label>
+        <span className="text-sm text-gray-400">
+          {formatSliderValue(parseFloat(value || '0'), precision)}
+        </span>
+      </div>
+      <div className="relative">
+        <input
+          className={`w-full px-4 py-3 bg-gray-700/50 border ${
+            error ? 'border-red-500' : 'border-gray-600'
+          } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200 text-white`}
+          onBlur={() => {
+            setIsFocused(false)
+            if (value) {
+              setDisplayValue(formatNumberWithCommas(value))
+            }
+          }}
+          onChange={handleChange}
+          onFocus={() => {
+            setIsFocused(true)
+            setDisplayValue(parseFormattedNumber(value))
+          }}
+          placeholder={placeholder}
+          type="text"
+          value={
+            isFocused ? displayValue : formatNumberWithCommas(displayValue)
+          }
+        />
+        {error && <p className="absolute text-sm text-red-500 mt-1">{error}</p>}
+      </div>
+      {showSlider && (
+        <input
+          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer mt-4 accent-blue-500"
+          max={max}
+          min={min}
+          onChange={onSliderChange}
+          step={sliderStep}
+          type="range"
+          value={sliderValue}
+        />
+      )}
+    </div>
+  )
+}
+
 export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
   const dispatch = useAppDispatch()
   const [assetMap, setAssetMap] = useState<Record<string, AssetInfo>>({})
@@ -107,20 +247,6 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
     [assetMap]
   )
 
-  const handleAssetAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/[^0-9.]/g, '')
-    let parsedValue = parseFloat(value)
-
-    if (isNaN(parsedValue)) {
-      parsedValue = 0
-    }
-
-    const maxAmount = getAssetMaxAmount()
-    parsedValue = Math.max(0, Math.min(maxAmount, parsedValue))
-
-    setValue('assetAmount', parsedValue.toFixed(getAssetPrecision(assetId)))
-  }
-
   const parseAssetAmount = useCallback(
     (amount: string, assetId: string): number => {
       const precision = getAssetPrecision(assetId)
@@ -133,36 +259,6 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
     },
     [getAssetPrecision]
   )
-
-  const handleAmountChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    field: 'capacitySat' | 'clientBalanceSat'
-  ) => {
-    const value = e.target.value.replace(/[^0-9]/g, '')
-    let parsedValue = parseInt(value, 10)
-
-    if (field === 'capacitySat') {
-      parsedValue = Math.max(
-        MIN_CHANNEL_CAPACITY,
-        Math.min(MAX_CHANNEL_CAPACITY, parsedValue)
-      )
-    } else if (field === 'clientBalanceSat') {
-      const maxClientBalance = parseInt(capacitySat.replace(/[^0-9]/g, ''), 10)
-      parsedValue = Math.max(0, Math.min(maxClientBalance, parsedValue))
-    }
-
-    const formattedValue = new Intl.NumberFormat('en-US').format(parsedValue)
-    setValue(field, formattedValue)
-  }
-
-  const handleSliderChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    field: 'capacitySat' | 'clientBalanceSat' | 'assetAmount'
-  ) => {
-    const value = parseInt(e.target.value, 10)
-    const formattedValue = new Intl.NumberFormat('en-US').format(value)
-    setValue(field, formattedValue)
-  }
 
   const onSubmit = useCallback(
     (data: FormFields) => {
@@ -286,61 +382,50 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
           ) : (
             <div className="space-y-8">
               <div className="bg-gray-800 p-6 rounded-lg">
-                <label className="block text-sm font-medium mb-2">
-                  Channel Capacity (sats)
-                </label>
-                <div className="flex items-center space-x-4">
-                  <input
-                    {...register('capacitySat')}
-                    className="bg-gray-700 text-white px-4 py-2 rounded-md w-full"
-                    onChange={(e) => handleAmountChange(e, 'capacitySat')}
-                    placeholder="Enter amount"
-                    type="text"
-                  />
-                </div>
-                <input
-                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer mt-4"
+                <NumberInput
+                  className="group transition-all duration-300 hover:translate-x-1"
+                  error={formState.errors.capacitySat?.message}
+                  label="Channel Capacity (sats)"
                   max={MAX_CHANNEL_CAPACITY}
                   min={MIN_CHANNEL_CAPACITY}
-                  onChange={(e) => handleSliderChange(e, 'capacitySat')}
-                  step="1000"
-                  type="range"
-                  value={parseInt(capacitySat.replace(/[^0-9]/g, ''), 10)}
+                  onChange={(value) => setValue('capacitySat', value)}
+                  onSliderChange={(e) =>
+                    setValue('capacitySat', e.target.value)
+                  }
+                  placeholder="Enter amount"
+                  showSlider
+                  sliderStep={1000}
+                  sliderValue={parseInt(
+                    parseFormattedNumber(watch('capacitySat')) || '0',
+                    10
+                  )}
+                  value={watch('capacitySat')}
                 />
-                {formState.errors.capacitySat && (
-                  <p className="text-red-500 text-sm mt-2">
-                    {formState.errors.capacitySat.message}
-                  </p>
-                )}
               </div>
 
               <div className="bg-gray-800 p-6 rounded-lg">
-                <label className="block text-sm font-medium mb-2">
-                  Your Channel Liquidity (sats)
-                </label>
-                <div className="flex items-center space-x-4">
-                  <input
-                    {...register('clientBalanceSat')}
-                    className="bg-gray-700 text-white px-4 py-2 rounded-md w-full"
-                    onChange={(e) => handleAmountChange(e, 'clientBalanceSat')}
-                    placeholder="Enter amount"
-                    type="text"
-                  />
-                </div>
-                <input
-                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer mt-4"
-                  max={parseInt(capacitySat.replace(/[^0-9]/g, ''), 10)}
+                <NumberInput
+                  className="group transition-all duration-300 hover:translate-x-1"
+                  error={formState.errors.clientBalanceSat?.message}
+                  label="Your Channel Liquidity (sats)"
+                  max={parseInt(
+                    parseFormattedNumber(watch('capacitySat')) || '0',
+                    10
+                  )}
                   min={0}
-                  onChange={(e) => handleSliderChange(e, 'clientBalanceSat')}
-                  step="1000"
-                  type="range"
-                  value={parseInt(clientBalanceSat.replace(/[^0-9]/g, ''), 10)}
+                  onChange={(value) => setValue('clientBalanceSat', value)}
+                  onSliderChange={(e) =>
+                    setValue('clientBalanceSat', e.target.value)
+                  }
+                  placeholder="Enter amount"
+                  showSlider
+                  sliderStep={1000}
+                  sliderValue={parseInt(
+                    parseFormattedNumber(watch('clientBalanceSat')) || '0',
+                    10
+                  )}
+                  value={watch('clientBalanceSat')}
                 />
-                {formState.errors.clientBalanceSat && (
-                  <p className="text-red-500 text-sm mt-2">
-                    {formState.errors.clientBalanceSat.message}
-                  </p>
-                )}
               </div>
 
               <div className="bg-gray-800 p-6 rounded-lg">
@@ -394,33 +479,27 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
 
                     {assetId && (
                       <div>
-                        <label className="block text-sm font-medium mb-2">
-                          Asset Amount
-                        </label>
-                        <div className="flex items-center space-x-4">
-                          <input
-                            {...register('assetAmount')}
-                            className="bg-gray-700 text-white px-4 py-2 rounded-md w-full"
-                            onChange={handleAssetAmountChange}
-                            placeholder="Enter amount"
-                            step="0.1"
-                            type="text"
-                          />
-                        </div>
-                        <input
-                          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer mt-4"
+                        <NumberInput
+                          className="group transition-all duration-300 hover:translate-x-1"
+                          error={formState.errors.assetAmount?.message}
+                          label={`Asset Amount (${assetMap[assetId]?.ticker || ''})`}
                           max={getAssetMaxAmount()}
                           min={0}
-                          onChange={handleAssetAmountSliderChange}
-                          step={0.1}
-                          type="range"
-                          value={parseFloat(assetAmount)}
+                          onChange={(value) => setValue('assetAmount', value)}
+                          onSliderChange={(e) =>
+                            setValue('assetAmount', e.target.value)
+                          }
+                          placeholder="Enter amount"
+                          precision={getAssetPrecision(assetId)}
+                          showSlider
+                          sliderStep={
+                            1 / Math.pow(10, getAssetPrecision(assetId))
+                          }
+                          sliderValue={parseFloat(
+                            parseFormattedNumber(watch('assetAmount')) || '0'
+                          )}
+                          value={watch('assetAmount')}
                         />
-                        {formState.errors.assetAmount && (
-                          <p className="text-red-500 text-sm mt-2">
-                            {formState.errors.assetAmount.message}
-                          </p>
-                        )}
                       </div>
                     )}
                   </div>
