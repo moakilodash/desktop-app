@@ -39,9 +39,19 @@ fn main() {
             build_manager.build_rgb_lightning_node();
         }
 
-        config.add_resource("../bin/rgb-lightning-node");
+        let resource_name = if cfg!(target_os = "windows") {
+            "../bin/rgb-lightning-node.exe"
+        } else {
+            "../bin/rgb-lightning-node"
+        };
+        config.add_resource(resource_name);
     } else {
-        config.remove_resource("../bin/rgb-lightning-node");
+        let resource_name = if cfg!(target_os = "windows") {
+            "../bin/rgb-lightning-node.exe"
+        } else {
+            "../bin/rgb-lightning-node"
+        };
+        config.remove_resource(resource_name);
     }
 
     // Save any changes to the Tauri configuration
@@ -370,17 +380,30 @@ impl ProjectBuilder {
 
     fn copy_executable(&self, target_dir: &PathBuf, bin_dir: &PathBuf, release: bool) {
         fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
-        let executable_path = if release {
-            target_dir.join("release/rgb-lightning-node")
+    
+        let executable_name = if cfg!(target_os = "windows") {
+            "rgb-lightning-node.exe"
         } else {
-            target_dir.join("debug/rgb-lightning-node")
+            "rgb-lightning-node"
         };
-
-        if let Err(e) = fs::copy(&executable_path, bin_dir.join("rgb-lightning-node")) {
+    
+        let executable_path = if release {
+            target_dir.join("release").join(executable_name)
+        } else {
+            target_dir.join("debug").join(executable_name)
+        };
+    
+        println!("Debug: Looking for executable at: {}", executable_path.display());
+    
+        if !executable_path.exists() {
+            panic!("Executable not found at: {}", executable_path.display());
+        }
+    
+        if let Err(e) = fs::copy(&executable_path, bin_dir.join(executable_name)) {
             panic!("Failed to copy binary to bin directory: {}", e);
         }
-
-        println!("cargo:rerun-if-changed={}", bin_dir.join("rgb-lightning-node").display());
+    
+        println!("cargo:rerun-if-changed={}", bin_dir.join(executable_name).display());
     }
 
     fn find_project_root(&self) -> PathBuf {
