@@ -433,7 +433,7 @@ export const Toolbar = () => {
                 Cancel
               </button>
               <button
-                className="w-full sm:w-1/2 px-6 py-3 bg-red-500 hover:bg-red-600 text-white text-lg font-bold rounded-lg shadow-md transition duration-200 flex items-center justify-center gap-2"
+                className="w-full sm:w-1/2 px-6 py-3 bg-blue-500/10 hover:bg-blue-500/20 text-white text-lg font-bold rounded-lg shadow-md transition duration-200 flex items-center justify-center gap-2"
                 onClick={() => handleDeleteAccount(accountToDelete)}
                 type="button"
               >
