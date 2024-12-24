@@ -39,7 +39,7 @@ const Modal: React.FC<ModalProps> = ({
             Cancel
           </button>
           <button
-            className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+            className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
             onClick={onConfirm}
           >
             Confirm

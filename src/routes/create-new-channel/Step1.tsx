@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import axios from 'axios'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
 
 import { useAppDispatch } from '../../app/store/hooks'
@@ -37,14 +37,21 @@ export const Step1 = (props: Props) => {
   const [connectPeer] = nodeApi.endpoints.connectPeer.useMutation()
   const [listPeers] = nodeApi.endpoints.listPeers.useLazyQuery()
 
-  const form = useForm<FormFields>({
-    defaultValues: {
-      pubKeyAndAddress: '',
-    },
-    resolver: zodResolver(
-      NewChannelFormSchema.pick({ pubKeyAndAddress: true })
-    ),
-  })
+  const { handleSubmit, control, formState, clearErrors, setValue, watch } =
+    useForm<FormFields>({
+      defaultValues: {
+        pubKeyAndAddress: '',
+      },
+      resolver: zodResolver(
+        NewChannelFormSchema.pick({ pubKeyAndAddress: true })
+      ),
+    })
+
+  useEffect(() => {
+    if (formState.isSubmitted) {
+      clearErrors()
+    }
+  }, [watch('pubKeyAndAddress'), clearErrors])
 
   const dispatch = useAppDispatch()
 
@@ -59,7 +66,7 @@ export const Step1 = (props: Props) => {
       const connectionUrl = response.data.lsp_connection_url
       setLspConnectionUrl(connectionUrl)
       console.log('lspConnectionUrl', lspConnectionUrl)
-      form.setValue('pubKeyAndAddress', connectionUrl)
+      setValue('pubKeyAndAddress', connectionUrl)
     } catch (err) {
       console.error('Error fetching LSP info:', err)
       setError('Failed to fetch LSP connection information')
@@ -119,7 +126,7 @@ export const Step1 = (props: Props) => {
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)}>
+    <form onSubmit={handleSubmit(onSubmit)}>
       <div className="text-center mb-10">
         <h3 className="text-3xl font-bold text-white mb-4">
           Open a Channel - Step 1
@@ -132,7 +139,7 @@ export const Step1 = (props: Props) => {
 
       <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-8">
         <Controller
-          control={form.control}
+          control={control}
           name="pubKeyAndAddress"
           render={({ field }) => (
             <div className="space-y-2">
@@ -142,7 +149,7 @@ export const Step1 = (props: Props) => {
                 {...field}
               />
               <p className="text-red-500 text-sm">
-                {form.formState.errors.pubKeyAndAddress?.message}
+                {formState.errors.pubKeyAndAddress?.message}
               </p>
             </div>
           )}
@@ -261,9 +268,20 @@ export const Step1 = (props: Props) => {
         </div>
       )}
 
-      {!form.formState.isSubmitSuccessful && form.formState.isSubmitted ? (
-        <FormError />
-      ) : null}
+      {!formState.isSubmitSuccessful && formState.isSubmitted && (
+        <FormError
+          errors={Object.entries(formState.errors).reduce(
+            (acc, [key, error]) => {
+              if (error?.message) {
+                acc[key] = [error.message]
+              }
+              return acc
+            },
+            {} as Record<string, string[]>
+          )}
+          message="Please check the form for errors"
+        />
+      )}
     </form>
   )
 }

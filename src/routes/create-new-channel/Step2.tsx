@@ -55,7 +55,7 @@ export const Step2 = (props: Props) => {
     nodeApi.endpoints.listAssets.useLazyQuery()
   const [btcBalance] = nodeApi.endpoints.btcBalance.useLazyQuery()
 
-  const { handleSubmit, setValue, control, watch, formState } =
+  const { handleSubmit, setValue, control, watch, formState, clearErrors } =
     useForm<FormFields>({
       criteriaMode: 'all',
       defaultValues: {
@@ -123,6 +123,12 @@ export const Step2 = (props: Props) => {
       setAddAsset(false)
     }
   }, [takerAssetsResponse])
+
+  useEffect(() => {
+    if (formState.isSubmitted) {
+      clearErrors()
+    }
+  }, [capacitySat, watch('assetAmount'), watch('assetId'), clearErrors])
 
   const formatNumber = (num: number): string => {
     return num.toLocaleString('en-US')
@@ -396,7 +402,20 @@ export const Step2 = (props: Props) => {
         </button>
       </div>
 
-      {!formState.isSubmitSuccessful && formState.isSubmitted && <FormError />}
+      {!formState.isSubmitSuccessful && formState.isSubmitted && (
+        <FormError
+          errors={Object.entries(formState.errors).reduce(
+            (acc, [key, error]) => {
+              if (error?.message) {
+                acc[key] = [error.message]
+              }
+              return acc
+            },
+            {} as Record<string, string[]>
+          )}
+          message="Please check the form for errors"
+        />
+      )}
     </form>
   )
 }
