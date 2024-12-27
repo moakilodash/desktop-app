@@ -20,31 +20,32 @@ pub struct Account {
 
 // Check if a database file exists, and create one if it does not.
 pub fn init() {
+    // Create database file if it doesn't exist
     if !db_file_exists() {
         create_db_file();
-
-        // Create the tables.
-        let path = get_db_path();
-        let conn = Connection::open(path).unwrap();
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS 'Accounts' (
-                'id'	INTEGER NOT NULL UNIQUE,
-                'name'	TEXT NOT NULL,
-                'network'	TEXT NOT NULL,
-                'datapath'	TEXT NOT NULL,
-                'rpc_connection_url'	TEXT NOT NULL,
-                'node_url'  TEXT NOT NULL,
-                'indexer_url'  TEXT NOT NULL,
-                'proxy_endpoint'  TEXT NOT NULL,
-                'default_lsp_url'  TEXT NOT NULL,
-                'maker_urls'  TEXT NOT NULL DEFAULT '',
-                'default_maker_url'  TEXT NOT NULL DEFAULT '',
-                PRIMARY KEY('id' AUTOINCREMENT)
-            );",
-            (),
-        )
-        .unwrap();
     }
+
+    // Create/verify tables regardless of whether the file existed
+    let path = get_db_path();
+    let conn = Connection::open(path).unwrap();
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS 'Accounts' (
+            'id'	INTEGER NOT NULL UNIQUE,
+            'name'	TEXT NOT NULL,
+            'network'	TEXT NOT NULL,
+            'datapath'	TEXT NOT NULL,
+            'rpc_connection_url'	TEXT NOT NULL,
+            'node_url'  TEXT NOT NULL,
+            'indexer_url'  TEXT NOT NULL,
+            'proxy_endpoint'  TEXT NOT NULL,
+            'default_lsp_url'  TEXT NOT NULL,
+            'maker_urls'  TEXT NOT NULL DEFAULT '',
+            'default_maker_url'  TEXT NOT NULL DEFAULT '',
+            PRIMARY KEY('id' AUTOINCREMENT)
+        );",
+        (),
+    )
+    .unwrap();
 }
 
 // Create the database file.
