@@ -1,14 +1,15 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use tauri::{Manager, Window};
+use tauri_plugin_log::{Builder as LogBuilder, LogTarget};
+
+use crate::rgb_node::{NodeProcess, NodeConfig};
 use db::Account;
 use dotenv::dotenv;
-use rgb_node::NodeProcess;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
-use tauri::{Manager, Window};
 use std::env;
-use tauri_plugin_log::{Builder as LogBuilder, LogTarget};
 use std::fs;
 
 mod db;
@@ -59,8 +60,8 @@ fn main() {
         .plugin(
             LogBuilder::default()
                 .targets([
-                    LogTarget::Folder(log_dir), // Save the logs in the “logs” directory next to the executable
-                    LogTarget::Stdout,          // Also show logs in the terminal
+                    LogTarget::Folder(log_dir),
+                    LogTarget::Stdout,
                 ])
                 .build()
         )
@@ -68,8 +69,7 @@ fn main() {
             let node_process = Arc::clone(&node_process);
             move |app| {
                 if let Some(main_window) = app.get_window("main") {
-                    // Configure DevTools for debugging
-                    #[cfg(debug_assertions)] // Only in debug mode
+                    #[cfg(debug_assertions)]
                     {
                         main_window.open_devtools();
                     }
@@ -134,7 +134,6 @@ fn start_node(
                 .expect("Failed to get LOCALAPPDATA directory");
             PathBuf::from(local_app_data).join("com.kaleidoswap.dev/data")
         } else {
-            // Linux
             let home = env::var("HOME").expect("Failed to get HOME directory");
             PathBuf::from(home).join(".local/share/com.kaleidoswap.dev/data")
         }
@@ -143,17 +142,32 @@ fn start_node(
     // Create the data directory if it doesn't exist
     fs::create_dir_all(&app_data_dir).expect("Failed to create data directory");
 
-    let datapath = datapath
-        .map(|path| app_data_dir.join(path).to_str().unwrap().to_string())
-        .unwrap_or_else(|| "".to_string());
+    let config = NodeConfig {
+        executable_path: get_node_executable_path(),
+        network,
+        datapath: datapath
+            .map(|path| app_data_dir.join(path).to_str().unwrap().to_string())
+            .unwrap_or_else(|| "".to_string()),
+        daemon_listening_port,
+        ldk_peer_listening_port,
+    };
 
     let node_process = node_process.lock().unwrap();
-    if node_process.is_running() {
-        node_process.stop();
-    }
-    
-    node_process.start(network, datapath, daemon_listening_port, ldk_peer_listening_port);
+    node_process.start(config);
     Ok(())
+}
+
+fn get_node_executable_path() -> PathBuf {
+    let executable_name = env::var("RGB_LIGHTNING_NODE_EXECUTABLE")
+        .unwrap_or_else(|_| {
+            if cfg!(target_os = "windows") {
+                "rgb-lightning-node.exe".to_string()
+            } else {
+                "rgb-lightning-node".to_string()
+            }
+        });
+
+    PathBuf::from("bin").join(executable_name)
 }
 
 #[tauri::command]

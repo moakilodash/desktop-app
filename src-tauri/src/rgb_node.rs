@@ -1,12 +1,26 @@
+use std::process::{Command, Child, Stdio};
 use std::path::PathBuf;
-use std::process::{Child, Command};
-use std::sync::mpsc::{channel, Sender, Receiver};
+use std::sync::mpsc::{Sender, Receiver, channel};
+use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
 use std::time::Duration;
 use std::thread;
-use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::io::{BufReader, BufRead};
 use tauri::Window;
+
+#[derive(Debug)]
+pub struct NodeConfig {
+    pub executable_path: PathBuf,
+    pub network: String,
+    pub datapath: String,
+    pub daemon_listening_port: String,
+    pub ldk_peer_listening_port: String,
+}
+
+#[derive(Debug)]
+pub enum ControlMessage {
+    Stop,
+    Shutdown,
+}
 
 pub struct NodeProcess {
     child_process: Arc<Mutex<Option<Child>>>,
@@ -18,10 +32,33 @@ pub struct NodeProcess {
     shutdown_timeout: Duration,
 }
 
-#[derive(Debug)]
-enum ControlMessage {
-    Stop,
-    Shutdown,
+fn run_rgb_lightning_node_with_config(config: &NodeConfig) -> Option<Child> {
+    let mut command = Command::new(&config.executable_path);
+    command
+        .arg("--network")
+        .arg(&config.network);
+
+    if !config.datapath.is_empty() {
+        command.arg("--datadir").arg(&config.datapath);
+    }
+
+    command
+        .arg("--daemon-listening-port")
+        .arg(&config.daemon_listening_port)
+        .arg("--ldk-peer-listening-port")
+        .arg(&config.ldk_peer_listening_port)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    println!("Starting node with command: {:?}", command);
+
+    match command.spawn() {
+        Ok(child) => Some(child),
+        Err(e) => {
+            println!("Failed to start rgb-lightning-node: {:?}", e);
+            None
+        }
+    }
 }
 
 impl NodeProcess {
@@ -34,7 +71,7 @@ impl NodeProcess {
             is_running: Arc::new(AtomicBool::new(false)),
             logs: Arc::new(Mutex::new(Vec::new())),
             window: Arc::new(Mutex::new(None)),
-            shutdown_timeout: Duration::from_secs(5), // Configurable shutdown timeout
+            shutdown_timeout: Duration::from_secs(5),
         }
     }
 
@@ -42,11 +79,10 @@ impl NodeProcess {
         *self.window.lock().unwrap() = Some(window);
     }
 
-    pub fn start(&self, network: String, datapath: String, daemon_listening_port: String, ldk_peer_listening_port: String) {
+    pub fn start(&self, config: NodeConfig) {
         if self.is_running.load(Ordering::SeqCst) {
             println!("RGB Lightning Node is already running. Stopping before restart...");
             self.stop();
-            // Give it a moment to stop
             std::thread::sleep(Duration::from_secs(2));
         }
 
@@ -56,9 +92,10 @@ impl NodeProcess {
         let logs = Arc::clone(&self.logs);
         let window = Arc::clone(&self.window);
         let shutdown_timeout = self.shutdown_timeout;
+        let config = config.clone();
 
         std::thread::spawn(move || {
-            let process = run_rgb_lightning_node(&network, &datapath, &daemon_listening_port, &ldk_peer_listening_port);
+            let process = run_rgb_lightning_node_with_config(&config);
             
             if let Some(child) = process {
                 *child_process.lock().unwrap() = Some(child);
@@ -118,7 +155,6 @@ impl NodeProcess {
                             break;
                         }
                         Err(_) => {
-                            // Check if process is still alive
                             match child_process.lock().unwrap().as_mut().unwrap().try_wait() {
                                 Ok(Some(status)) => {
                                     println!("Process finished with status: {:?}", status);
@@ -140,10 +176,8 @@ impl NodeProcess {
                 if let Some(mut child) = child_process.lock().unwrap().take() {
                     println!("Attempting graceful shutdown...");
                     
-                    // Send SIGTERM
                     let _ = child.kill();
                     
-                    // Wait for process to exit
                     let start = std::time::Instant::now();
                     while start.elapsed() < shutdown_timeout {
                         match child.try_wait() {
@@ -159,7 +193,6 @@ impl NodeProcess {
                         }
                     }
 
-                    // Force kill if still running
                     if child.try_wait().map(|s| s.is_none()).unwrap_or(false) {
                         println!("Force killing process");
                         let _ = child.kill();
@@ -173,10 +206,9 @@ impl NodeProcess {
                     let _ = window.emit("node-stopped", ());
                 }
 
-                // Restart if needed
                 if should_restart {
                     thread::sleep(Duration::from_secs(1));
-                    let new_process = run_rgb_lightning_node(&network, &datapath, &daemon_listening_port, &ldk_peer_listening_port);
+                    let new_process = run_rgb_lightning_node_with_config(&config);
                     if let Some(child) = new_process {
                         *child_process.lock().unwrap() = Some(child);
                         is_running.store(true, Ordering::SeqCst);
@@ -193,45 +225,13 @@ impl NodeProcess {
 
     pub fn stop(&self) {
         if self.is_running.load(Ordering::SeqCst) {
-            if let Err(e) = self.control_sender.send(ControlMessage::Stop) {
-                println!("Failed to send stop signal: {:?}", e);
-            }
-        } else {
-            println!("RGB Lightning Node is not running.");
+            let _ = self.control_sender.send(ControlMessage::Stop);
         }
-    }
-
-    pub fn force_kill(&self) {
-        println!("Force killing node process...");
-        if let Some(mut child) = self.child_process.lock().unwrap().take() {
-            let _ = child.kill();
-            let _ = child.wait();
-        }
-        self.is_running.store(false, Ordering::SeqCst);
     }
 
     pub fn shutdown(&self) {
         if self.is_running.load(Ordering::SeqCst) {
-            println!("Initiating node shutdown...");
-            
-            // Send shutdown signal
-            if let Err(e) = self.control_sender.send(ControlMessage::Shutdown) {
-                println!("Failed to send shutdown signal: {:?}", e);
-                // If we failed to send the signal, force kill
-                self.force_kill();
-                return;
-            }
-            
-            // Wait for the process to actually stop
-            let start = std::time::Instant::now();
-            while self.is_running.load(Ordering::SeqCst) {
-                if start.elapsed() > self.shutdown_timeout {
-                    println!("Shutdown timeout reached, forcing kill...");
-                    self.force_kill();
-                    break;
-                }
-                std::thread::sleep(Duration::from_millis(100));
-            }
+            let _ = self.control_sender.send(ControlMessage::Shutdown);
         }
     }
 
@@ -242,47 +242,25 @@ impl NodeProcess {
     pub fn get_logs(&self) -> Vec<String> {
         self.logs.lock().unwrap().clone()
     }
-}
 
-fn run_rgb_lightning_node(
-    network: &str,
-    datapath: &str,
-    daemon_listening_port: &str,
-    ldk_peer_listening_port: &str,
-) -> Option<Child> {
-    let mut executable_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    executable_path.push("../bin/rgb-lightning-node");
-
-    if executable_path.exists() {
-        println!("Starting RGB Lightning Node with:");
-        println!("Network: {}", network);
-        println!("Data path: {}", datapath);
-        println!("Daemon port: {}", daemon_listening_port);
-        println!("LDK peer port: {}", ldk_peer_listening_port);
-
-        Some(
-            Command::new(&executable_path)
-                .args(&[datapath])
-                .args(&["--daemon-listening-port", daemon_listening_port])
-                .args(&["--ldk-peer-listening-port", ldk_peer_listening_port])
-                .args(&["--network", network])
-                .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::piped())
-                .spawn()
-                .map_err(|e| {
-                    println!("Failed to start RGB Lightning Node: {:?}", e);
-                    e
-                })
-                .expect("Failed to start rgb-lightning-node process"),
-        )
-    } else {
-        println!("rgb-lightning-node executable not found at {:?}", executable_path);
-        None
+    pub fn force_kill(&self) {
+        println!("Force killing node process...");
+        if let Some(mut child) = self.child_process.lock().unwrap().take() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+        self.is_running.store(false, Ordering::SeqCst);
     }
 }
 
-impl Drop for NodeProcess {
-    fn drop(&mut self) {
-        self.shutdown();
+impl Clone for NodeConfig {
+    fn clone(&self) -> Self {
+        NodeConfig {
+            executable_path: self.executable_path.clone(),
+            network: self.network.clone(),
+            datapath: self.datapath.clone(),
+            daemon_listening_port: self.daemon_listening_port.clone(),
+            ldk_peer_listening_port: self.ldk_peer_listening_port.clone(),
+        }
     }
 }
