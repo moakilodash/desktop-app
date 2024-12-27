@@ -161,7 +161,6 @@ const ExchangeRateDisplay: React.FC<ExchangeRateDisplayProps> = ({
       let displayFromAsset = fromAsset
       let displayToAsset = toAsset
 
-      // Determine if the current trading direction is inverted compared to the selected pair
       const isInverted =
         fromAsset === selectedPair.quote_asset &&
         toAsset === selectedPair.base_asset
@@ -204,7 +203,19 @@ const ExchangeRateDisplay: React.FC<ExchangeRateDisplayProps> = ({
             )
           )
 
-      return `1 ${fromUnit} = ${formattedRate} ${toUnit}`
+      return (
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-white font-medium">1</span>
+            <AssetOption label={fromUnit} value={fromAsset} />
+          </div>
+          <span className="text-slate-400">=</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-white font-medium">{formattedRate}</span>
+            <AssetOption label={toUnit} value={toAsset} />
+          </div>
+        </div>
+      )
     },
     [bitcoinUnit, formatAmount]
   )
@@ -216,14 +227,7 @@ const ExchangeRateDisplay: React.FC<ExchangeRateDisplayProps> = ({
     selectedPair
   )
 
-  return (
-    <input
-      className="flex-1 rounded bg-blue-dark px-4 py-3"
-      readOnly={true}
-      type="text"
-      value={displayRate}
-    />
-  )
+  return <div className="flex-1 text-base">{displayRate}</div>
 }
 
 export { AssetOption, AssetSelect, ExchangeRateDisplay }
