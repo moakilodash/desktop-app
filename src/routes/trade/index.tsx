@@ -1093,7 +1093,7 @@ export const Component = () => {
               }
               type="button"
             >
-              <SwapIcon className="w-5 h-5" />
+              <SwapIcon />
             </button>
           </div>
 
@@ -1182,7 +1182,7 @@ export const Component = () => {
                         toAsset={form.getValues().toAsset}
                       />
                       <div className="flex items-center gap-2">
-                        <SparkIcon className="text-cyan w-5 h-5" />
+                        <SparkIcon color="#fff" />
                       </div>
                     </div>
                   )}
@@ -1192,23 +1192,8 @@ export const Component = () => {
           )}
 
           {errorMessage && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg overflow-hidden">
-              <div className="px-4 py-2 bg-red-500/5 border-b border-red-500/20 flex items-center justify-between">
-                <span className="text-red-500 text-sm font-medium">Error</span>
-                <button
-                  className="p-1 hover:bg-red-500/10 rounded transition-colors"
-                  onClick={() => copyToClipboard(errorMessage)}
-                  title="Copy error message"
-                  type="button"
-                >
-                  <Copy className="w-4 h-4 text-red-500/70" />
-                </button>
-              </div>
-              <div className="px-4 py-3">
-                <pre className="text-red-500 text-sm whitespace-pre-wrap break-words font-mono">
-                  {errorMessage}
-                </pre>
-              </div>
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 flex items-center justify-between">
+              <span className="text-red-500 text-sm">{errorMessage}</span>
             </div>
           )}
 

@@ -1,4 +1,4 @@
-import { Folder } from 'lucide-react'
+import { Folder, Loader2 } from 'lucide-react'
 import React from 'react'
 import { Controller } from 'react-hook-form'
 
@@ -76,6 +76,9 @@ export const BackupModal: React.FC<BackupModalProps> = ({
           />
           {isBackupInProgress && (
             <div className="mt-4">
+              <div className="flex items-center justify-center mb-2">
+                <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+              </div>
               <p className="text-white text-center">
                 Please wait, the backup is in progress...
                 <br />

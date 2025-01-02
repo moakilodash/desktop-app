@@ -397,8 +397,8 @@ export const Toolbar = () => {
                   {accountToDelete.datapath ? (
                     <>
                       <li>
-                        • If you haven't backed up your mnemonic phrase, you
-                        will permanently lose access to your funds
+                        • If you haven't backed up your node, you will
+                        permanently lose access to your funds
                       </li>
                       <li>• All local node data will be permanently deleted</li>
                       <li className="break-all">

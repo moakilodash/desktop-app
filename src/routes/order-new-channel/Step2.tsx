@@ -192,7 +192,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
   const [addAsset, setAddAsset] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
-  const { register, handleSubmit, setValue, control, watch, formState } =
+  const { handleSubmit, setValue, control, watch, formState } =
     useForm<FormFields>({
       defaultValues: {
         assetAmount: '0',
@@ -206,9 +206,6 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
 
   const [getInfoRequest] = makerApi.endpoints.get_info.useLazyQuery()
 
-  const assetAmount = watch('assetAmount')
-  const capacitySat = watch('capacitySat')
-  const clientBalanceSat = watch('clientBalanceSat')
   const assetId = watch('assetId')
 
   useEffect(() => {
@@ -304,13 +301,6 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
     },
     [addAsset, onNext, parseAssetAmount, dispatch]
   )
-
-  const handleAssetAmountSliderChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const value = parseFloat(e.target.value)
-    setValue('assetAmount', value.toFixed(getAssetPrecision(assetId)))
-  }
 
   const getAssetMaxAmount = useCallback(() => {
     if (!assetId || !assetMap[assetId]) return 0
@@ -431,6 +421,18 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
               <div className="bg-gray-800 p-6 rounded-lg">
                 <label className="block text-sm font-medium mb-2">
                   Channel Lock Duration
+                  <span className="ml-2 text-gray-400 hover:text-gray-300 cursor-help relative group">
+                    ⓘ
+                    <span
+                      className="invisible group-hover:visible absolute left-0 
+                      bg-gray-900 text-white text-sm rounded py-1 px-2 w-64 
+                      shadow-lg z-50 top-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    >
+                      The minimum amount of time the LSP guarantees to keep your
+                      channel open. Longer durations may provide more stability
+                      for your lightning network operations.
+                    </span>
+                  </span>
                 </label>
                 <Controller
                   control={control}
