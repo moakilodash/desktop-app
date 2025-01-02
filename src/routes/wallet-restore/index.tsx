@@ -7,12 +7,14 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
 import { TRADE_PATH, WALLET_SETUP_PATH } from '../../app/router/paths'
+import { useAppDispatch } from '../../app/store/hooks'
 import { Layout } from '../../components/Layout'
 import { Spinner } from '../../components/Spinner'
 import { BitcoinNetwork } from '../../constants'
 import { NETWORK_DEFAULTS } from '../../constants/networks'
 import { EyeIcon } from '../../icons/Eye'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
+import { setSettingsAsync } from '../../slices/nodeSettings/nodeSettings.slice'
 
 interface Fields {
   name: string
@@ -29,7 +31,7 @@ interface Fields {
 export const Component = () => {
   const [isStartingNode, setIsStartingNode] = useState<boolean>(false)
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
-  const [additionalErrors, setAdditionalErrors] = useState<Array<string>>([])
+  const [additionalErrors] = useState<Array<string>>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [showErrorModal, setShowErrorModal] = useState(false)
@@ -40,6 +42,7 @@ export const Component = () => {
   const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
 
   const navigate = useNavigate()
+  const dispatch = useAppDispatch()
 
   const form = useForm<Fields>({
     defaultValues: {
@@ -63,6 +66,8 @@ export const Component = () => {
   }, [network, form])
 
   const onSubmit: SubmitHandler<Fields> = async (data) => {
+    if (isStartingNode) return
+
     let nodeInfoRes = await nodeInfo()
     if (nodeInfoRes.isSuccess) {
       navigate(TRADE_PATH)
@@ -91,7 +96,25 @@ export const Component = () => {
       }
 
       setIsStartingNode(true)
+      console.log('Starting node...')
+
       try {
+        const defaultMakerUrl = NETWORK_DEFAULTS[data.network].default_maker_url
+        await dispatch(
+          setSettingsAsync({
+            datapath: datapath,
+            default_lsp_url: NETWORK_DEFAULTS[data.network].default_lsp_url,
+            default_maker_url: defaultMakerUrl,
+            indexer_url: data.indexer_url,
+            maker_urls: [defaultMakerUrl],
+            name: data.name,
+            network: data.network,
+            node_url: `http://localhost:${data.daemon_listening_port}`,
+            proxy_endpoint: data.proxy_endpoint,
+            rpc_connection_url: data.rpc_connection_url,
+          })
+        )
+
         await invoke('start_node', {
           daemonListeningPort: data.daemon_listening_port,
           datapath: datapath,
@@ -100,6 +123,7 @@ export const Component = () => {
         })
 
         // Wait for node to be ready
+        // TODO: Check if the node is ready
         await new Promise((resolve) => setTimeout(resolve, 5000))
 
         const restoreResponse = await restore({
@@ -108,41 +132,28 @@ export const Component = () => {
         })
 
         if (restoreResponse.isSuccess) {
-          const defaultMakerUrl =
-            NETWORK_DEFAULTS[data.network].default_maker_url
-          try {
-            await invoke('insert_account', {
-              datapath: datapath,
-              defaultLspUrl: NETWORK_DEFAULTS[data.network].default_lsp_url,
-              defaultMakerUrl,
-              indexerUrl: data.indexer_url,
-              makerUrls: [defaultMakerUrl],
-              name: data.name,
-              network: data.network,
-              nodeUrl: `http://localhost:${data.daemon_listening_port}`,
-              proxyEndpoint: data.proxy_endpoint,
-              rpcConnectionUrl: data.rpc_connection_url,
-            })
+          await invoke('insert_account', {
+            datapath: datapath,
+            defaultLspUrl: NETWORK_DEFAULTS[data.network].default_lsp_url,
+            defaultMakerUrl,
+            indexerUrl: data.indexer_url,
+            makerUrls: defaultMakerUrl,
+            name: data.name,
+            network: data.network,
+            nodeUrl: `http://localhost:${data.daemon_listening_port}`,
+            proxyEndpoint: data.proxy_endpoint,
+            rpcConnectionUrl: data.rpc_connection_url,
+          })
 
-            await invoke('set_current_account', {
-              accountName: data.name,
-            })
+          await invoke('set_current_account', {
+            accountName: data.name,
+          })
 
-            setShowSuccessModal(true)
-            setTimeout(() => {
-              setShowSuccessModal(false)
-              navigate(TRADE_PATH)
-            }, 3000)
-          } catch (error) {
-            console.error('Failed to insert account:', error)
-            await invoke('stop_node')
-            setErrorMessage('Account Creation Failed')
-            setErrorDetails(
-              `Failed to create the account: ${error instanceof Error ? error.message : String(error)}`
-            )
-            setShowErrorModal(true)
-            return
-          }
+          setShowSuccessModal(true)
+          setTimeout(() => {
+            setShowSuccessModal(false)
+            navigate(TRADE_PATH)
+          }, 3000)
         } else {
           setErrorMessage('Wallet Restore Failed')
           setErrorDetails(
@@ -213,8 +224,12 @@ export const Component = () => {
         {restoreResponse.isLoading || isStartingNode ? (
           <div className="py-20 flex flex-col items-center space-y-4">
             <Spinner size={30} />
-
-            <div className="text-center">Restoring the node...</div>
+            <div className="text-center">
+              <div className="mb-2">Restoring your wallet...</div>
+              <div className="text-sm text-gray-400">
+                This process may take a few moments
+              </div>
+            </div>
           </div>
         ) : (
           <>
@@ -510,10 +525,22 @@ export const Component = () => {
 
               <div className="flex self-end justify-end mt-8">
                 <button
-                  className="px-6 py-3 rounded border text-lg font-bold border-cyan"
+                  className={`px-6 py-3 rounded border text-lg font-bold ${
+                    isStartingNode
+                      ? 'border-gray-600 text-gray-400 cursor-not-allowed'
+                      : 'border-cyan hover:bg-cyan/10'
+                  }`}
+                  disabled={isStartingNode}
                   type="submit"
                 >
-                  Proceed
+                  {isStartingNode ? (
+                    <div className="flex items-center space-x-2">
+                      <Spinner size={20} />
+                      <span>Processing...</span>
+                    </div>
+                  ) : (
+                    'Proceed'
+                  )}
                 </button>
               </div>
             </form>
