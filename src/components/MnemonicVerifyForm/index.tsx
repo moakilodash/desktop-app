@@ -1,5 +1,5 @@
-import { ArrowLeft, AlertCircle, Check } from 'lucide-react'
-import React from 'react'
+import { ArrowLeft, AlertCircle, Check, Loader2 } from 'lucide-react'
+import React, { useState } from 'react'
 import { SubmitHandler, UseFormReturn } from 'react-hook-form'
 import { toast } from 'react-toastify'
 
@@ -20,6 +20,19 @@ export const MnemonicVerifyForm = ({
   onBack,
   errors,
 }: MnemonicVerifyFormProps) => {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Wrap the onSubmit handler to manage loading state
+  const handleSubmit: SubmitHandler<MnemonicVerifyFields> = async (data) => {
+    if (isSubmitting) return
+    setIsSubmitting(true)
+    try {
+      await onSubmit(data)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   // Helper function to split and display words
   const displayWords = (text: string) => {
     return text
@@ -83,7 +96,7 @@ export const MnemonicVerifyForm = ({
       <form
         className="max-w-md mx-auto bg-slate-900/50 p-8 rounded-2xl 
                    border border-slate-800/50 backdrop-blur-sm"
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(handleSubmit)}
       >
         <div className="space-y-6">
           <div>
@@ -160,11 +173,17 @@ export const MnemonicVerifyForm = ({
             className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-cyan to-purple 
                      text-white font-semibold hover:opacity-90 transition-all duration-200
                      focus:ring-2 focus:ring-cyan/20 focus:outline-none
-                     flex items-center justify-center gap-2"
+                     flex items-center justify-center gap-2 disabled:opacity-50 
+                     disabled:cursor-not-allowed"
+            disabled={isSubmitting}
             type="submit"
           >
             <span>Complete Setup</span>
-            <Check className="w-5 h-5" />
+            {isSubmitting ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Check className="w-5 h-5" />
+            )}
           </button>
         </div>
       </form>

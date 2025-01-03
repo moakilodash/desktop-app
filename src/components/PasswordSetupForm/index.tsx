@@ -1,4 +1,12 @@
-import { ArrowLeft, Eye, EyeOff, AlertCircle, Lock } from 'lucide-react'
+import {
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  Lock,
+  Loader2,
+} from 'lucide-react'
+import { useState } from 'react'
 import { UseFormReturn, SubmitHandler } from 'react-hook-form'
 
 export interface PasswordFields {
@@ -23,6 +31,18 @@ export const PasswordSetupForm = ({
   errors,
   onBack,
 }: PasswordSetupFormProps) => {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleSubmit: SubmitHandler<PasswordFields> = async (data) => {
+    if (isSubmitting) return
+    setIsSubmitting(true)
+    try {
+      await onSubmit(data)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       {/* Back Button */}
@@ -57,7 +77,7 @@ export const PasswordSetupForm = ({
       <form
         className="max-w-md mx-auto bg-slate-900/50 p-8 rounded-2xl 
                    border border-slate-800/50 backdrop-blur-sm"
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(handleSubmit)}
       >
         <div className="space-y-6">
           {/* Password Field */}
@@ -171,10 +191,16 @@ export const PasswordSetupForm = ({
             className="w-full mt-6 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan to-purple 
                      text-white font-semibold hover:opacity-90 transition-all duration-200
                      focus:ring-2 focus:ring-cyan/20 focus:outline-none
-                     flex items-center justify-center gap-2"
+                     flex items-center justify-center gap-2 disabled:opacity-50 
+                     disabled:cursor-not-allowed"
+            disabled={isSubmitting}
             type="submit"
           >
-            <Lock className="w-5 h-5" />
+            {isSubmitting ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Lock className="w-5 h-5" />
+            )}
             <span>Initialize Node</span>
           </button>
         </div>

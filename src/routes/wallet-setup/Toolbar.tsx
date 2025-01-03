@@ -172,8 +172,8 @@ export const Toolbar = () => {
 
   return (
     <>
-      <aside className="fixed h-full w-72 bg-gray-900 shadow-lg flex flex-col justify-between py-6 px-4 z-10">
-        <div className="flex flex-col items-start space-y-4">
+      <aside className="fixed left-0 top-0 h-screen w-72 bg-gray-900 shadow-lg flex flex-col py-6 px-4 z-50">
+        <div className="flex flex-col flex-grow overflow-hidden">
           <div className="flex justify-between items-center w-full mb-4">
             <h2 className="text-2xl font-bold text-white">Your Accounts</h2>
             <button
@@ -183,69 +183,73 @@ export const Toolbar = () => {
               {isEditing ? <X size={20} /> : <Edit size={20} />}
             </button>
           </div>
-          {accounts?.map((account, index) => (
-            <div
-              className="w-full bg-gray-800 rounded-lg transition-colors duration-200 p-3 hover:bg-gray-700"
-              key={index}
-            >
-              <button
-                className="w-full flex items-center justify-between"
-                onClick={() => {
-                  setSelectedAccount(account)
-                  setShowModal(true)
-                }}
+
+          <div className="flex-grow overflow-y-auto pr-2 -mr-2 space-y-2 hover:scrollbar-thin hover:scrollbar-track-gray-800 hover:scrollbar-thumb-gray-600">
+            {accounts?.map((account, index) => (
+              <div
+                className="group w-full bg-gray-800 rounded-lg transition-all duration-200 p-3 hover:bg-gray-700 hover:shadow-lg"
+                key={index}
               >
-                <div className="flex items-center">
-                  <MinidenticonImg
-                    className="rounded-md mr-3"
-                    height="40"
-                    saturation="90"
-                    username={account.name}
-                    width="40"
-                  />
-                  <div className="text-left">
-                    <div className="text-white font-medium text-lg">
-                      {account.name.length > 15
-                        ? `${account.name.slice(0, 13)}...`
-                        : account.name}
-                    </div>
-                    <div className="flex items-center text-gray-400 text-sm mt-1">
-                      <span className="mr-2 bg-gray-700 px-2 py-0.5 rounded-full">
-                        {account.network}
-                      </span>
-                      {account.datapath !== '' ? (
-                        <span className="flex items-center text-green-400">
-                          <Server className="mr-1" size={14} />
-                          Local
+                <button
+                  className="w-full flex items-center justify-between group-hover:transform group-hover:scale-[1.01] transition-transform duration-200"
+                  onClick={() => {
+                    setSelectedAccount(account)
+                    setShowModal(true)
+                  }}
+                >
+                  <div className="flex items-center">
+                    <MinidenticonImg
+                      className="rounded-md mr-3"
+                      height="40"
+                      saturation="90"
+                      username={account.name}
+                      width="40"
+                    />
+                    <div className="text-left">
+                      <div className="text-white font-medium text-lg group-hover:text-cyan-400 transition-colors duration-200">
+                        {account.name.length > 15
+                          ? `${account.name.slice(0, 13)}...`
+                          : account.name}
+                      </div>
+                      <div className="flex items-center text-gray-400 text-sm mt-1 space-x-2">
+                        <span className="bg-gray-700 px-2 py-0.5 rounded-full">
+                          {account.network}
                         </span>
-                      ) : (
-                        <span className="flex items-center text-blue-400">
-                          <Cloud className="mr-1" size={14} />
-                          Remote
-                        </span>
-                      )}
+                        {account.datapath !== '' ? (
+                          <span className="flex items-center text-green-400">
+                            <Server className="mr-1" size={14} />
+                            Local
+                          </span>
+                        ) : (
+                          <span className="flex items-center text-blue-400">
+                            <Cloud className="mr-1" size={14} />
+                            Remote
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-                {isEditing && (
-                  <button
-                    className="text-gray-400 hover:text-red-500 transition-colors duration-200"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setAccountToDelete(account)
-                      setShowDeleteModal(true)
-                    }}
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                )}
-              </button>
-            </div>
-          ))}
+                  {isEditing && (
+                    <button
+                      className="text-gray-400 hover:text-red-500 transition-colors duration-200 opacity-0 group-hover:opacity-100"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setAccountToDelete(account)
+                        setShowDeleteModal(true)
+                      }}
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-col space-y-2">
+
+        <div className="pt-4 mt-2 border-t border-gray-800">
           <button
-            className="flex items-center justify-center w-full py-2 px-4 bg-cyan-400 text-gray-900 rounded-md hover:bg-cyan-300 transition-colors duration-200"
+            className="flex items-center justify-center w-full py-2.5 px-4 bg-cyan-400 text-gray-900 rounded-md hover:bg-cyan-300 transition-all duration-200 hover:shadow-lg font-medium"
             onClick={() => navigate(WALLET_CONFIG_PATH)}
           >
             <Plus className="mr-2" size={18} />

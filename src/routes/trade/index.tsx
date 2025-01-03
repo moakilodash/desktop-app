@@ -706,7 +706,7 @@ export const Component = () => {
       form.setValue('rfq_id', selectedPairFeed.rfq_id)
       setIsToAmountLoading(false)
     } else {
-      console.error('No selected pair feed')
+      console.warn('No selected pair feed')
       setIsPriceLoading(true)
     }
   }, [form, selectedPairFeed, updateToAmount])
