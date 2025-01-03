@@ -7,26 +7,37 @@ use std::time::Duration;
 use dotenv::dotenv;
 use serde_json::Value;
 
+// --------------------------------------------------
+// Main entrypoint of the build script
+// --------------------------------------------------
 fn main() {
     dotenv().ok();
 
+    // Read the ENV that decides whether to build/run rgb-lightning-node
     let build_rgb_lightning_node = env::var("BUILD_AND_RUN_RGB_LIGHTNING_NODE")
         .unwrap_or_else(|_| "true".to_string()) == "true";
 
-    // Load the Tauri configuration
-    let config_path = PathBuf::from("./tauri.conf.json");
-    let mut config = TauriConfig::load(&config_path);
+    // Path assoluto verso la cartella del Cargo.toml attuale
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
 
-    // Manage the build process for rgb-lightning-node
+    // Load the Tauri configuration template
+    let template_path = PathBuf::from(manifest_dir).join("tauri.conf.json");
+    let mut config = TauriConfig::load(&template_path);
+
+    // If we need to build rgb-lightning-node
     if build_rgb_lightning_node {
         let build_manager = BuildManager::new();
 
-        // Determine the path of the binary
+        // Determine the project paths
         let project_root = build_manager.project_builder.find_project_root();
         let bin_dir = project_root.join("bin");
-        let executable_path = bin_dir.join("rgb-lightning-node");
+        let executable_path = if cfg!(target_os = "windows") {
+            bin_dir.join("rgb-lightning-node.exe")
+        } else {
+            bin_dir.join("rgb-lightning-node")
+        };
 
-        // Recursively add directives to monitor source files
+        // Monitor the sources of rgb-lightning-node
         let src_dir = project_root.join("src-tauri").join("rgb-lightning-node");
         visit_dirs(&src_dir, &|path: &Path| {
             if path.is_file() && path.extension().unwrap_or_default() != "toml" {
@@ -34,18 +45,21 @@ fn main() {
             }
         });
 
-        // Rebuild only if the binary does not exist or if the sources have changed
+        // If the executable does not already exist, build the project
         if !executable_path.exists() {
             build_manager.build_rgb_lightning_node();
         }
 
+        // Add the resource (executable) dynamically to the config
         let resource_name = if cfg!(target_os = "windows") {
             "../bin/rgb-lightning-node.exe"
         } else {
             "../bin/rgb-lightning-node"
         };
         config.add_resource(resource_name);
+
     } else {
+        //  In case we do NOT want to build/run the executable, we remove it from the config
         let resource_name = if cfg!(target_os = "windows") {
             "../bin/rgb-lightning-node.exe"
         } else {
@@ -54,14 +68,17 @@ fn main() {
         config.remove_resource(resource_name);
     }
 
-    // Save any changes to the Tauri configuration
-    config.save(&config_path);
+    // Use the TAURI_CONFIG environment variable
+    let final_config_str = config.to_pretty_json();
+    env::set_var("TAURI_CONFIG", &final_config_str);
 
-    // Trigger the Tauri build
+    // launch the Tauri build
     tauri_build::build();
 }
 
-// Recursively visits directories and applies the given function to each file
+// --------------------------------------------------
+// Recursive function to monitor rgb-lightning-node files
+// --------------------------------------------------
 fn visit_dirs(dir: &Path, cb: &dyn Fn(&Path)) {
     if dir.is_dir() {
         for entry in fs::read_dir(dir).expect("read_dir failed") {
@@ -76,18 +93,24 @@ fn visit_dirs(dir: &Path, cb: &dyn Fn(&Path)) {
     }
 }
 
-// Responsible for handling the Tauri configuration
+// --------------------------------------------------
+// Tauri configuration management
+// --------------------------------------------------
 struct TauriConfig {
     config: Value,
 }
 
 impl TauriConfig {
+    // Load the template file (tauri.conf.template.json)
     fn load(path: &Path) -> Self {
-        let config_str = fs::read_to_string(path).expect("Failed to read tauri.conf.json");
-        let config: Value = serde_json::from_str(&config_str).expect("Failed to parse tauri.conf.json");
+        let config_str = fs::read_to_string(path)
+            .expect("Failed to read tauri.conf.template.json");
+        let config: Value = serde_json::from_str(&config_str)
+            .expect("Failed to parse tauri.conf.template.json");
         TauriConfig { config }
     }
 
+    // Adds a resource (path to a file) to the `tauri.bundle.resources` array
     fn add_resource(&mut self, resource: &str) {
         if let Some(resources) = self.config["tauri"]["bundle"]["resources"].as_array_mut() {
             if !resources.contains(&Value::String(resource.to_string())) {
@@ -96,24 +119,23 @@ impl TauriConfig {
         }
     }
 
+    // Removes a resource (path) from the `tauri.bundle.resources` array
     fn remove_resource(&mut self, resource: &str) {
         if let Some(resources) = self.config["tauri"]["bundle"]["resources"].as_array_mut() {
             resources.retain(|r| r != resource);
         }
     }
 
-    fn save(&self, path: &Path) {
-        let current_config_str = fs::read_to_string(path).unwrap_or_default();
-        let new_config_str = serde_json::to_string_pretty(&self.config)
-            .expect("Failed to serialize tauri.conf.json");
-
-        if current_config_str != new_config_str {
-            fs::write(path, new_config_str).expect("Failed to write tauri.conf.json");
-        }
+    // Returns the entire config as a JSON string “pretty”
+    fn to_pretty_json(&self) -> String {
+        serde_json::to_string_pretty(&self.config)
+            .expect("Failed to serialize tauri.conf.json in memory")
     }
 }
 
-// Manages the overall build process
+// --------------------------------------------------
+// Management of the entire build process for rgb-lightning-node
+// --------------------------------------------------
 struct BuildManager {
     dependency_checker: DependencyChecker,
     project_builder: ProjectBuilder,
@@ -132,32 +154,38 @@ impl BuildManager {
     fn build_rgb_lightning_node(&self) {
         let project_root = self.project_builder.find_project_root();
         let bin_dir = project_root.join("bin");
-        let executable_path = bin_dir.join("rgb-lightning-node");
-    
-        // Checks if the executable already exists
+        let executable_path = if cfg!(target_os = "windows") {
+            bin_dir.join("rgb-lightning-node.exe")
+        } else {
+            bin_dir.join("rgb-lightning-node")
+        };
+
+        // If the binary already exists, do not recompile it
         if executable_path.exists() {
             println!("Executable already exists at: {}", executable_path.display());
-            return; // Exit the function to avoid redoing the build
+            return;
         }
-    
-        // Check all required dependencies
+
+        // Check the dependencies
         self.dependency_checker.check_all();
-    
-        // Clone the rgb-lightning-node repository
+
+        // Clone the rgb-lightning-node repo
         self.project_builder.clone_repo();
-    
-        // Determine if the build is a release build
+
+        // Check whether it is a “release” or “debug” build
         let is_release = env::var("PROFILE").unwrap_or_else(|_| "debug".to_string()) == "release";
-        
+
         // Build the project
         self.project_builder.build(is_release);
-    
-        // Clean up after the build
+
+        // Clean up after the build (remove the cloned folder)
         self.cleaner.clean_project();
     }
 }
 
-// Responsible for checking dependencies
+// --------------------------------------------------
+// Checking dependencies (Cargo, curl, openssl, etc.)
+// --------------------------------------------------
 struct DependencyChecker;
 
 impl DependencyChecker {
@@ -174,9 +202,7 @@ impl DependencyChecker {
 
     fn check_cargo(&self) {
         if !self.command_exists("cargo") {
-            panic!("Cargo is not installed. Please install Cargo by following these steps:\n\
-                    1. Download and install rustup: https://rustup.rs/\n\
-                    2. After installation, run 'source $HOME/.cargo/env' to configure your shell.");
+            panic!("Cargo is not installed. Please install Cargo via Rustup.");
         }
     }
 
@@ -188,70 +214,52 @@ impl DependencyChecker {
 
     fn check_openssl(&self) {
         let (openssl_include_dir, openssl_lib_dir) = if cfg!(target_os = "macos") {
-            // Default path on macOS when OpenSSL is installed via Homebrew
-            (
-                "/opt/homebrew/opt/openssl@3/include".to_string(),
-                "/opt/homebrew/opt/openssl@3/lib".to_string()
-            )
+            ("/opt/homebrew/opt/openssl@3/include".to_string(), "/opt/homebrew/opt/openssl@3/lib".to_string())
         } else if cfg!(target_os = "linux") {
-            // Default path on Linux
-            (
-                "/usr/include/openssl".to_string(),
-                "/usr/lib".to_string() // Standard path for libraries on Linux
-            )
+            ("/usr/include/openssl".to_string(), "/usr/lib".to_string())
         } else if cfg!(target_os = "windows") {
-            // Path on Windows, based on the default installation by Chocolatey
             let include_dir = env::var("OPENSSL_INCLUDE_DIR")
                 .unwrap_or_else(|_| "C:\\Program Files\\OpenSSL\\include".to_string());
             let lib_dir = env::var("OPENSSL_LIB_DIR")
                 .unwrap_or_else(|_| "C:\\Program Files\\OpenSSL\\lib".to_string());
             (include_dir, lib_dir)
         } else {
-            panic!("Unsupported operating system");
+            panic!("Unsupported operating system for OpenSSL checks");
         };
-    
-        // Check if the include path exists
+
         let include_path = PathBuf::from(&openssl_include_dir);
         if !include_path.exists() {
             panic!("OpenSSL include directory does not exist: {:?}", include_path);
         }
-    
-        // Check if lib path exists
         let lib_path = PathBuf::from(&openssl_lib_dir);
         if !lib_path.exists() {
             panic!("OpenSSL lib directory does not exist: {:?}", lib_path);
         }
-    
-        // Additional checks for Windows
+
+        // On Windows check vcpkg, elsewhere pkg-config
         if cfg!(target_os = "windows") {
             if !self.command_exists("vcpkg") {
-                panic!("vcpkg is not installed. Please install vcpkg and OpenSSL via vcpkg:\n\
-                        1. Install vcpkg: https://github.com/microsoft/vcpkg\n\
-                        2. Install OpenSSL: `vcpkg install openssl:x64-windows`");
+                panic!("vcpkg is not installed. Please install vcpkg and OpenSSL via vcpkg.");
             }
         } else {
             if !self.command_exists("pkg-config") {
-                panic!("pkg-config is not installed. Please install pkg-config by running:\n\
-                        sudo apt-get install -y pkg-config");
+                panic!("pkg-config is not installed. (e.g. sudo apt-get install -y pkg-config)");
             }
-    
+
             let openssl_check = Command::new("pkg-config")
                 .args(&["--exists", "openssl"])
                 .status()
                 .expect("Failed to run pkg-config");
-    
             if !openssl_check.success() {
-                panic!("OpenSSL development libraries are not installed. Please install OpenSSL development libraries by running:\n\
-                        sudo apt-get install -y libssl-dev");
+                panic!("OpenSSL dev libraries not installed (sudo apt-get install -y libssl-dev).");
             }
         }
-    }    
+    }
 
     fn check_compiler(&self) {
         if cfg!(target_os = "macos") {
             if !self.command_exists("cc") {
-                panic!("Compiler 'cc' not found. Please install Xcode command line tools by running:\n\
-                        xcode-select --install");
+                panic!("Compiler 'cc' not found. Install Xcode CLI tools: xcode-select --install.");
             }
         } else if cfg!(target_os = "linux") {
             if !self.command_exists("cc") {
@@ -260,8 +268,8 @@ impl DependencyChecker {
                     .args(&["apt-get", "update", "-y"])
                     .status()
                     .and_then(|_| Command::new("sudo")
-                    .args(&["apt-get", "install", "-y", "build-essential"])
-                    .status())
+                        .args(&["apt-get", "install", "-y", "build-essential"])
+                        .status())
                     .expect("Failed to install gcc");
                 if !install_gcc.success() {
                     panic!("Failed to install gcc. Please install it manually.");
@@ -272,7 +280,7 @@ impl DependencyChecker {
                 panic!("MSVC compiler not found. Please install Visual Studio with C++ build tools.");
             }
         } else {
-            panic!("Unsupported OS. Please install the appropriate compiler manually.");
+            panic!("Unsupported OS for compiler checks.");
         }
     }
 
@@ -291,7 +299,9 @@ impl DependencyChecker {
     }
 }
 
-// Handles the project building process
+// --------------------------------------------------
+// Clone the repo, build it and copy the executable
+// --------------------------------------------------
 struct ProjectBuilder;
 
 impl ProjectBuilder {
@@ -303,21 +313,25 @@ impl ProjectBuilder {
         let project_root = self.find_project_root();
         let project_dir = project_root.join("rgb-lightning-node");
 
-        // Remove existing directory, if any
+        // Remove the folder if it already exists
         if project_dir.exists() {
-            println!("Directory already exists. Removing...");
+            println!("Directory rgb-lightning-node already exists. Removing...");
             if let Err(e) = self.retry_remove_dir_all(&project_dir) {
                 panic!("Failed to remove existing directory: {:?}", e);
             }
         }
 
-        // Clone the repository into the project root
+        // Clone
         let clone_status = Command::new("git")
-            .args(&["clone", "https://github.com/kaleidoswap/rgb-lightning-node", "--recurse-submodules", "--shallow-submodules"])
-            .current_dir(&project_root) // Ensure the working directory is set to the project root
+            .args(&[
+                "clone",
+                "https://github.com/kaleidoswap/rgb-lightning-node",
+                "--recurse-submodules",
+                "--shallow-submodules",
+            ])
+            .current_dir(&project_root)
             .status()
             .expect("Failed to clone the repository");
-
         if !clone_status.success() {
             panic!("Failed to clone repository");
         }
@@ -333,7 +347,7 @@ impl ProjectBuilder {
                 }
             }
         }
-        fs::remove_dir_all(path) // Final attempt without retrying
+        fs::remove_dir_all(path)
     }
 
     fn build(&self, release: bool) {
@@ -342,27 +356,26 @@ impl ProjectBuilder {
         let bin_dir = project_root.join("bin");
         let target_dir = project_dir.join("target");
 
-        // Clean the target directory before building
+        // Cleaning target folder
         if target_dir.exists() {
             println!("Cleaning target directory...");
             if let Err(e) = self.retry_remove_dir_all(&target_dir) {
                 panic!("Failed to clean target directory: {:?}", e);
             }
         }
-
-        // Ensure target directory exists
         fs::create_dir_all(&target_dir).expect("Failed to create target directory");
 
+        // Launch cargo build
         let status = if release {
             self.run_cargo_build(&project_dir, true)
         } else {
             self.run_cargo_build(&project_dir, false)
         };
-
         if !status.success() {
             panic!("Failed to build rgb-lightning-node");
         }
 
+        // Copy the executable from target/... to bin/
         self.copy_executable(&target_dir, &bin_dir, release);
     }
 
@@ -380,48 +393,45 @@ impl ProjectBuilder {
 
     fn copy_executable(&self, target_dir: &PathBuf, bin_dir: &PathBuf, release: bool) {
         fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
-    
+
         let executable_name = if cfg!(target_os = "windows") {
             "rgb-lightning-node.exe"
         } else {
             "rgb-lightning-node"
         };
-    
+
         let executable_path = if release {
             target_dir.join("release").join(executable_name)
         } else {
             target_dir.join("debug").join(executable_name)
         };
-    
+
         println!("Debug: Looking for executable at: {}", executable_path.display());
-    
         if !executable_path.exists() {
             panic!("Executable not found at: {}", executable_path.display());
         }
-    
+
         if let Err(e) = fs::copy(&executable_path, bin_dir.join(executable_name)) {
             panic!("Failed to copy binary to bin directory: {}", e);
         }
-    
+
         println!("cargo:rerun-if-changed={}", bin_dir.join(executable_name).display());
     }
 
     fn find_project_root(&self) -> PathBuf {
         let current_dir = env::current_dir().expect("Failed to get current directory");
-
-        // Traverse up the directory tree to find the project root
         let project_root = current_dir
             .ancestors()
             .find(|dir| dir.join("src-tauri").exists())
             .expect("Failed to find project root");
-
         println!("Project root found at: {}", project_root.display());
-
         project_root.to_path_buf()
     }
 }
 
-// Handles project cleanup
+// --------------------------------------------------
+// Final cleanup (remove cloned rgb-lightning-node folder, etc.)
+// --------------------------------------------------
 struct Cleaner;
 
 impl Cleaner {
