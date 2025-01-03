@@ -25,7 +25,7 @@ import {
 import './index.css'
 import { nodeApi, Channel, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
 import { logger } from '../../utils/logger'
-import { RefreshCw, Link, Plus, ShoppingCart, Copy } from 'lucide-react'
+import { RefreshCw, Link, Plus, ShoppingCart } from 'lucide-react'
 
 import { MakerSelector } from '../../components/Trade/MakerSelector'
 
@@ -937,15 +937,6 @@ export const Component = () => {
     },
     [tradablePairs, getAvailableAssets, getDisplayAsset]
   )
-
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast.success('Error message copied to clipboard')
-    } catch (err) {
-      toast.error('Failed to copy error message')
-    }
-  }
 
   const renderNoChannelsMessage = () => (
     <div className="max-w-xl w-full bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
