@@ -8,6 +8,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::io::{BufReader, BufRead};
 use tauri::Window;
 
+const SHUTDOWN_TIMEOUT_SECS: u64 = 5;
+
 pub struct NodeProcess {
     child_process: Arc<Mutex<Option<Child>>>,
     control_sender: Sender<ControlMessage>,
@@ -34,7 +36,7 @@ impl NodeProcess {
             is_running: Arc::new(AtomicBool::new(false)),
             logs: Arc::new(Mutex::new(Vec::new())),
             window: Arc::new(Mutex::new(None)),
-            shutdown_timeout: Duration::from_secs(5), // Configurable shutdown timeout
+            shutdown_timeout: Duration::from_secs(SHUTDOWN_TIMEOUT_SECS),
         }
     }
 
@@ -46,8 +48,17 @@ impl NodeProcess {
         if self.is_running.load(Ordering::SeqCst) {
             println!("RGB Lightning Node is already running. Stopping before restart...");
             self.stop();
-            // Give it a moment to stop
-            std::thread::sleep(Duration::from_secs(2));
+            
+            // Wait for the process to actually stop
+            let start = std::time::Instant::now();
+            while self.is_running.load(Ordering::SeqCst) {
+                if start.elapsed() > self.shutdown_timeout {
+                    println!("Force killing process after timeout...");
+                    self.force_kill();
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(100));
+            }
         }
 
         let rx = Arc::clone(&self.control_receiver);
