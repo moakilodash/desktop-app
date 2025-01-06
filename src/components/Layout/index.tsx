@@ -15,6 +15,7 @@ import { ChannelMenu } from './ChannelMenu'
 import { LayoutModal } from './Modal'
 import { WalletMenu } from './WalletMenu'
 import 'react-toastify/dist/ReactToastify.min.css'
+import Decimal from 'decimal.js'
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -66,9 +67,20 @@ export const Layout = (props: Props) => {
         return
       }
 
-      const filteredTransactions = data?.transactions.filter(
-        (transaction) => transaction.transaction_type === 'User'
-      )
+      const filteredTransactions =
+        data?.transactions
+          .filter(
+            (tx) =>
+              tx.transaction_type === 'User' &&
+              new Decimal(tx.received).minus(tx.sent).gt(0)
+          )
+          .map((tx) => ({
+            amount: new Decimal(tx.received).minus(tx.sent).toString(),
+            asset: 'BTC',
+            confirmation_time: tx.confirmation_time,
+            txId: tx.txid,
+            type: 'on-chain' as const,
+          })) || []
 
       const highestBlockDeposit =
         filteredTransactions && filteredTransactions.length > 0
