@@ -42,16 +42,20 @@ export const Step1 = (props: Props) => {
       defaultValues: {
         pubKeyAndAddress: '',
       },
+      mode: 'onChange',
       resolver: zodResolver(
         NewChannelFormSchema.pick({ pubKeyAndAddress: true })
       ),
     })
 
   useEffect(() => {
-    if (formState.isSubmitted) {
-      clearErrors()
-    }
-  }, [watch('pubKeyAndAddress'), clearErrors])
+    const subscription = watch((_, { name }) => {
+      if (name && formState.errors[name]) {
+        clearErrors(name)
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [watch, clearErrors, formState.errors])
 
   const dispatch = useAppDispatch()
 
@@ -141,15 +145,35 @@ export const Step1 = (props: Props) => {
         <Controller
           control={control}
           name="pubKeyAndAddress"
-          render={({ field }) => (
+          render={({ field, fieldState }) => (
             <div className="space-y-2">
               <textarea
-                className="w-full px-4 py-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono text-sm min-h-[6rem] resize-none"
-                placeholder="Paste the node connection URL here: pubkey@host:port"
+                className={`w-full px-4 py-3 bg-gray-700 text-white rounded-lg border 
+                  ${
+                    fieldState.error
+                      ? 'border-red-500 focus:border-red-500'
+                      : 'border-gray-600 focus:border-blue-500'
+                  } 
+                  focus:ring-1 focus:ring-blue-500 font-mono text-sm min-h-[6rem] resize-none`}
+                placeholder="Format: <66-char-hex-pubkey>@<host>:<port>
+Example: 039257e0669aa5dea5df7c971048699a39f9023333d550a90800b9412f231ee8e7@lsp.signet.kaleidoswap.com:9735"
                 {...field}
+                onChange={(e) => {
+                  field.onChange(e)
+                  if (formState.errors.pubKeyAndAddress) {
+                    clearErrors('pubKeyAndAddress')
+                  }
+                }}
               />
-              <p className="text-red-500 text-sm">
-                {formState.errors.pubKeyAndAddress?.message}
+              {fieldState.error && (
+                <p className="text-red-500 text-sm">
+                  {fieldState.error.message}
+                </p>
+              )}
+              <p className="text-gray-400 text-xs">
+                The connection string should be a 66-character hex public key,
+                followed by @ symbol, then the host address, and port number
+                (e.g. :9735)
               </p>
             </div>
           )}

@@ -17,7 +17,12 @@ export const NewChannelFormSchema = z.object({
     .min(MIN_CHANNEL_CAPACITY, 'Minimum amount is 50000 satoshis')
     .max(100000000, 'Maximum amount is 100000000 satoshis'),
   fee: z.enum(['slow', 'medium', 'fast']),
-  pubKeyAndAddress: z.string().regex(/^([a-zA-Z0-9]{66})@.+/),
+  pubKeyAndAddress: z
+    .string()
+    .regex(
+      /^([0-9a-fA-F]{66})@([^\s]+):(\d+)$/,
+      'Invalid format. Expected format: <66-char-hex-pubkey>@<host>:<port>'
+    ),
 })
 
 export type TNewChannelForm = z.infer<typeof NewChannelFormSchema>

@@ -59,8 +59,8 @@ export const Component = () => {
   const nodeSetupForm = useForm<NodeSetupFields>({
     defaultValues: {
       name: 'Test Account',
-      network: 'regtest',
-      ...NETWORK_DEFAULTS['regtest'],
+      network: 'Regtest',
+      ...NETWORK_DEFAULTS['Regtest'],
     },
   })
 

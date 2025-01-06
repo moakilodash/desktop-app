@@ -31,9 +31,12 @@ interface FormFields {
   fee: 'slow' | 'medium' | 'fast'
 }
 
-const Step2Schema = NewChannelFormSchema.extend({
+const Step2Schema = NewChannelFormSchema.omit({
+  pubKeyAndAddress: true,
+}).extend({
   assetId: z.string().optional(),
   assetTicker: z.string().optional(),
+  pubKeyAndAddress: z.string(),
 })
 
 export const Step2 = (props: Props) => {
@@ -62,9 +65,20 @@ export const Step2 = (props: Props) => {
         ...newChannelForm,
         capacitySat: newChannelForm.capacitySat || MIN_CHANNEL_CAPACITY,
         fee: newChannelForm.fee || 'medium',
+        pubKeyAndAddress: newChannelForm.pubKeyAndAddress,
       },
+      mode: 'onChange',
       resolver: zodResolver(Step2Schema),
     })
+
+  useEffect(() => {
+    const subscription = watch((_, { name }) => {
+      if (name && formState.errors[name]) {
+        clearErrors(name)
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [watch, clearErrors, formState.errors])
 
   const capacitySat = watch('capacitySat')
   const selectedFee = watch('fee')
@@ -145,7 +159,13 @@ export const Step2 = (props: Props) => {
       Math.max(numericValue, MIN_CHANNEL_CAPACITY),
       maxCapacity
     )
-    setValue('capacitySat', clampedValue, { shouldValidate: true })
+    setValue('capacitySat', clampedValue, {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
+    if (formState.errors.capacitySat) {
+      clearErrors('capacitySat')
+    }
   }
 
   const handleAssetAmountChange = (value: string) => {

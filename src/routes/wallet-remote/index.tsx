@@ -49,8 +49,8 @@ export const Component = () => {
       authToken: '',
       indexer_url: 'electrs:50001',
       name: 'Test Account',
-      network: 'regtest',
-      node_url: `http://localhost:${NETWORK_DEFAULTS.regtest.daemon_listening_port}`,
+      network: 'Regtest',
+      node_url: `http://localhost:${NETWORK_DEFAULTS.Regtest.daemon_listening_port}`,
       password: 'password',
       proxy_endpoint: 'rpc://proxy:3000/json-rpc',
       rpc_connection_url: 'user:password@bitcoind:18443',
@@ -63,7 +63,7 @@ export const Component = () => {
     const subscription = form.watch((value, { name }) => {
       if (name === 'network' && value.network) {
         const defaults = NETWORK_DEFAULTS[value.network]
-        if (value.network === 'regtest') {
+        if (value.network === 'Regtest') {
           form.setValue('rpc_connection_url', 'http://bitcoind:18443')
           form.setValue('indexer_url', 'electrs:50001')
           form.setValue('proxy_endpoint', 'http://proxy:3000/json-rpc')

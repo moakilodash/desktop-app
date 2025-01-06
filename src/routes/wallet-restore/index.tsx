@@ -48,9 +48,9 @@ export const Component = () => {
     defaultValues: {
       backup_path: '',
       name: 'Restored Account',
-      network: 'regtest',
+      network: 'Regtest',
       password: '',
-      ...NETWORK_DEFAULTS['regtest'],
+      ...NETWORK_DEFAULTS['Regtest'],
     },
   })
 

@@ -15,6 +15,11 @@ const formatNumber = (num: number) => {
   return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
 
+const formatPubKey = (pubKey: string) => {
+  if (!pubKey) return ''
+  return `${pubKey.slice(0, 8)}...${pubKey.slice(-8)}`
+}
+
 export const Step3 = (props: Props) => {
   const newChannelForm = useAppSelector(
     (state) => channelSliceSelectors.form(state, 'new') as TNewChannelForm
@@ -53,14 +58,26 @@ export const Step3 = (props: Props) => {
           <h4 className="text-sm font-medium text-gray-400 mb-3">
             Connected Node
           </h4>
-          <div className="bg-gray-900/50 p-6 rounded-lg">
-            <div className="font-mono text-sm break-all">
-              <span className="text-gray-400">Node ID: </span>
-              <span className="text-white">{pubKey}</span>
+          <div className="bg-gray-900/50 p-6 rounded-lg space-y-4">
+            <div>
+              <span className="text-gray-400 text-sm">Node ID:</span>
+              <div className="font-mono text-sm break-all mt-1">
+                <span className="text-white">{pubKey}</span>
+                <button
+                  className="ml-2 text-blue-400 hover:text-blue-300 text-xs"
+                  onClick={() => navigator.clipboard.writeText(pubKey)}
+                  title="Copy full pubkey"
+                  type="button"
+                >
+                  {formatPubKey(pubKey)} (click to copy)
+                </button>
+              </div>
             </div>
-            <div className="mt-3 font-mono text-sm break-all">
-              <span className="text-gray-400">Host: </span>
-              <span className="text-white">{address}</span>
+            <div>
+              <span className="text-gray-400 text-sm">Host:</span>
+              <div className="font-mono text-sm break-all mt-1">
+                <span className="text-white">{address}</span>
+              </div>
             </div>
           </div>
         </div>

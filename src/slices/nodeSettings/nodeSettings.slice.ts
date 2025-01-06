@@ -29,7 +29,7 @@ const initialState: NodeSettingsState = {
     indexer_url: '',
     maker_urls: [],
     name: '',
-    network: 'regtest',
+    network: 'Regtest',
     node_url: '',
     proxy_endpoint: '',
     rpc_connection_url: '',
