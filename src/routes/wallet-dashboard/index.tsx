@@ -23,7 +23,7 @@ import {
 } from '../../app/router/paths'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { ChannelCard } from '../../components/ChannelCard'
-import { BitcoinNetwork , DEFAULT_RGB_ICON } from '../../constants'
+import { BitcoinNetwork, DEFAULT_RGB_ICON } from '../../constants'
 import { formatBitcoinAmount } from '../../helpers/number'
 import { nodeApi, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
 import { uiSliceActions } from '../../slices/ui/ui.slice'
@@ -32,6 +32,7 @@ interface AssetRowProps {
   asset: NiaAsset
   onChainBalance: number
   offChainBalance: number
+  isLoading?: boolean
 }
 
 interface AssetIconProps {
@@ -74,10 +75,15 @@ const AssetIcon: React.FC<AssetIconProps> = ({
   )
 }
 
+const LoadingPlaceholder = ({ width = 'w-20' }: { width?: string }) => (
+  <div className={`${width} h-6 bg-slate-700/50 animate-pulse rounded`}></div>
+)
+
 const AssetRow: React.FC<AssetRowProps> = ({
   asset,
   onChainBalance,
   offChainBalance,
+  isLoading,
 }) => {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
@@ -114,11 +120,21 @@ const AssetRow: React.FC<AssetRowProps> = ({
       </div>
 
       <div className="text-sm py-3 px-4">
-        <div className="font-bold">{formatAmount(asset, offChainBalance)}</div>
+        {isLoading ? (
+          <LoadingPlaceholder />
+        ) : (
+          <div className="font-bold">
+            {formatAmount(asset, offChainBalance)}
+          </div>
+        )}
       </div>
 
       <div className="text-sm py-3 px-4">
-        <div className="font-bold">{formatAmount(asset, onChainBalance)}</div>
+        {isLoading ? (
+          <LoadingPlaceholder />
+        ) : (
+          <div className="font-bold">{formatAmount(asset, onChainBalance)}</div>
+        )}
       </div>
 
       <div className="text-sm py-3 pl-4 pr-6 flex justify-between">
@@ -279,12 +295,14 @@ const LiquidityCard = ({
   bitcoinUnit,
   icon,
   tooltipDescription,
+  isLoading,
 }: {
   title: string
   amount: number
   bitcoinUnit: string
   icon: React.ReactNode
   tooltipDescription: string
+  isLoading?: boolean
 }) => {
   const [showTooltip, setShowTooltip] = useState(false)
 
@@ -302,7 +320,11 @@ const LiquidityCard = ({
           {icon}
         </div>
         <div className="text-2xl font-bold text-white mb-1">
-          {formatBitcoinAmount(amount, bitcoinUnit)} {bitcoinUnit}
+          {isLoading ? (
+            <LoadingPlaceholder width="w-28" />
+          ) : (
+            `${formatBitcoinAmount(amount, bitcoinUnit)} ${bitcoinUnit}`
+          )}
         </div>
       </div>
 
@@ -475,10 +497,13 @@ export const Component = () => {
     }
   }
 
+  const isLoading =
+    btcBalanceResponse.isLoading || listChannelsResponse.isLoading
+
   return (
     <div className="w-full bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
       {(networkInfoResponse.data?.network as unknown as BitcoinNetwork) !==
-        'mainnet' && (
+        'Mainnet' && (
         <div className="mb-8 bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-center gap-3">
           <div className="p-2 bg-amber-500/20 rounded-lg">
             <Info className="w-5 h-5 text-amber-500" />
@@ -489,8 +514,25 @@ export const Component = () => {
             </h4>
             <p className="text-amber-400/80 text-sm">
               You are currently on{' '}
-              {networkInfoResponse.data?.network || 'testnet'}. Any tokens on
+              {networkInfoResponse.data?.network || 'Testnet'}. Any tokens on
               this network have no real value and are for testing purposes only.
+              {(networkInfoResponse.data
+                ?.network as unknown as BitcoinNetwork) === 'Signet' && (
+                <>
+                  {' '}
+                  <br />
+                  You can request test coins from the{' '}
+                  <a
+                    className="text-blue-400 hover:text-blue-300 underline"
+                    href="https://faucet.mutinynet.com/"
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    Mutinynet Faucet
+                  </a>
+                  .
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -644,7 +686,11 @@ export const Component = () => {
           </div>
 
           <div className="text-2xl font-bold text-white mb-4">
-            {formatBitcoinAmount(totalBalance, bitcoinUnit)} {bitcoinUnit}
+            {isLoading ? (
+              <LoadingPlaceholder width="w-32" />
+            ) : (
+              `${formatBitcoinAmount(totalBalance, bitcoinUnit)} ${bitcoinUnit}`
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -658,11 +704,14 @@ export const Component = () => {
                   On-chain
                 </span>
                 <div className="text-lg sm:text-2xl font-medium text-white">
-                  {formatBitcoinAmount(
-                    onChainBalance + onChainColoredBalance,
-                    bitcoinUnit
-                  )}{' '}
-                  {bitcoinUnit}
+                  {isLoading ? (
+                    <LoadingPlaceholder />
+                  ) : (
+                    `${formatBitcoinAmount(
+                      onChainBalance + onChainColoredBalance,
+                      bitcoinUnit
+                    )} ${bitcoinUnit}`
+                  )}
                 </div>
               </div>
 
@@ -684,8 +733,11 @@ export const Component = () => {
                 Off-chain
               </span>
               <div className="text-lg text-white font-medium">
-                {formatBitcoinAmount(offChainBalance, bitcoinUnit)}{' '}
-                {bitcoinUnit}
+                {isLoading ? (
+                  <LoadingPlaceholder />
+                ) : (
+                  `${formatBitcoinAmount(offChainBalance, bitcoinUnit)} ${bitcoinUnit}`
+                )}
               </div>
             </div>
           </div>
@@ -696,6 +748,7 @@ export const Component = () => {
             amount={totalInboundLiquidity}
             bitcoinUnit={bitcoinUnit}
             icon={<ArrowDownRight className="h-5 w-5 text-blue-500" />}
+            isLoading={isLoading}
             title="Inbound Liquidity"
             tooltipDescription={`Maximum amount of ${bitcoinUnit} that you can receive through Lightning Network channels. This represents the total amount others can send to you.`}
           />
@@ -704,6 +757,7 @@ export const Component = () => {
             amount={totalOutboundLiquidity}
             bitcoinUnit={bitcoinUnit}
             icon={<ArrowUpRight className="h-5 w-5 text-blue-500" />}
+            isLoading={isLoading}
             title="Outbound Liquidity"
             tooltipDescription={`Maximum amount of ${bitcoinUnit} that you can send through Lightning Network channels. This represents your available balance for making payments.`}
           />
@@ -740,6 +794,7 @@ export const Component = () => {
           {assetsResponse.data?.nia.map((asset) => (
             <AssetRow
               asset={asset}
+              isLoading={!assetBalances[asset.asset_id]}
               key={asset.asset_id}
               offChainBalance={assetBalances[asset.asset_id]?.offChain || 0}
               onChainBalance={assetBalances[asset.asset_id]?.onChain || 0}

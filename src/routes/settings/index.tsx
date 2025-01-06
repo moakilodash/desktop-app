@@ -240,7 +240,6 @@ export const Component: React.FC = () => {
     try {
       setIsShuttingDown(true)
       await shutdown().unwrap()
-      await invoke('stop_node')
       dispatch(nodeSettingsActions.resetNodeSettings())
       navigate(WALLET_SETUP_PATH)
       toast.success('Node shut down successfully')
