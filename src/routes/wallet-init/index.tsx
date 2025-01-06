@@ -403,7 +403,6 @@ const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
                 className="block w-full pl-3 pr-10 py-2 text-white bg-gray-700 border border-gray-600 rounded-md appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                 {...form.register('network', { required: 'Required' })}
               >
-                <option value="mainnet">Mainnet</option>
                 <option value="testnet">Testnet</option>
                 <option value="signet">Signet</option>
                 <option value="regtest">Regtest</option>
