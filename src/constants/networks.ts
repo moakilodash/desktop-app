@@ -9,7 +9,7 @@ export interface NetworkDefaults {
 }
 
 export const NETWORK_DEFAULTS: Record<string, NetworkDefaults> = {
-  mainnet: {
+  Mainnet: {
     daemon_listening_port: '3001',
     default_lsp_url: 'https://api.kaleidoswap.com/',
     default_maker_url: 'https://api.kaleidoswap.com/',
@@ -18,7 +18,7 @@ export const NETWORK_DEFAULTS: Record<string, NetworkDefaults> = {
     proxy_endpoint: 'rpc://127.0.0.1:3000/json-rpc',
     rpc_connection_url: 'user:password@127.0.0.1:8332',
   },
-  regtest: {
+  Regtest: {
     daemon_listening_port: '3001',
     default_lsp_url: 'http://localhost:8000/',
     default_maker_url: 'http://localhost:8000/',
@@ -27,7 +27,7 @@ export const NETWORK_DEFAULTS: Record<string, NetworkDefaults> = {
     proxy_endpoint: 'rpc://myproxy.local:3000/json-rpc',
     rpc_connection_url: 'user:password@localhost:18443',
   },
-  signet: {
+  Signet: {
     daemon_listening_port: '3001',
     default_lsp_url: 'https://api.signet.kaleidoswap.com/',
     default_maker_url: 'https://api.signet.kaleidoswap.com/',
@@ -37,7 +37,7 @@ export const NETWORK_DEFAULTS: Record<string, NetworkDefaults> = {
     rpc_connection_url:
       'user:default_password@bitcoind.signet.kaleidoswap.com:38332',
   },
-  testnet: {
+  Testnet: {
     daemon_listening_port: '3001',
     default_lsp_url: 'https://api.testnet.kaleidoswap.com/',
     default_maker_url: 'https://api.testnet.kaleidoswap.com/',

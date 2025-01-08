@@ -701,9 +701,24 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
 
         {/* Order Summary Card */}
         <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6 mb-6">
-          <h3 className="text-xl font-semibold text-white mb-6 flex items-center">
-            <span className="bg-blue-500 w-2 h-2 rounded-full mr-2"></span>
-            Order Summary
+          <h3 className="text-xl font-semibold text-white mb-6 flex items-center justify-between">
+            <div className="flex items-center">
+              <span className="bg-blue-500 w-2 h-2 rounded-full mr-2"></span>
+              Order Summary
+            </div>
+            {order.order_id && (
+              <div className="text-sm text-gray-400 flex items-center gap-2">
+                Order ID:
+                <CopyToClipboard
+                  onCopy={() => toast.success('Order ID copied to clipboard!')}
+                  text={order.order_id}
+                >
+                  <button className="font-mono bg-gray-900/50 px-2 py-1 rounded hover:bg-gray-900/80 transition-colors cursor-pointer">
+                    {order.order_id}
+                  </button>
+                </CopyToClipboard>
+              </div>
+            )}
           </h3>
 
           <div className="space-y-4">

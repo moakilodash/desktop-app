@@ -278,9 +278,9 @@ export const Component = () => {
                       className="block w-full pl-3 pr-10 py-2 text-white bg-gray-700 border border-gray-600 rounded-md appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                       {...form.register('network', { required: 'Required' })}
                     >
-                      <option value="testnet">Testnet</option>
-                      <option value="signet">Signet</option>
-                      <option value="regtest">Regtest</option>
+                      <option value="Testnet">Testnet</option>
+                      <option value="Signet">Signet</option>
+                      <option value="Regtest">Regtest</option>
                     </select>
                     <ChevronDown className="absolute right-2 top-2.5 h-5 w-5 text-gray-400 pointer-events-none" />
                   </div>

@@ -29,19 +29,23 @@ const initialState: NodeSettingsState = {
     indexer_url: '',
     maker_urls: [],
     name: '',
-    network: 'Regtest',
+    network: 'Regtest' as BitcoinNetwork,
     node_url: '',
     proxy_endpoint: '',
     rpc_connection_url: '',
   },
 }
 
-export const setSettingsAsync = createAsyncThunk(
+export const setSettingsAsync = createAsyncThunk<Account, Account>(
   'nodeSettings/setSettingsAsync',
   async (settings: Account) => {
-    return settings
+    return {
+      ...initialState.data,
+      ...settings,
+    }
   }
 )
+
 export const nodeSettingsSlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(setSettingsAsync.fulfilled, (state, action) => {
@@ -55,7 +59,10 @@ export const nodeSettingsSlice = createSlice({
       state.data = initialState.data
     },
     setNodeSettings: (state, action) => {
-      state.data = action.payload
+      state.data = {
+        ...initialState.data,
+        ...action.payload,
+      }
     },
   },
 })
