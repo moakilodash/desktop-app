@@ -164,7 +164,18 @@ export const Layout = (props: Props) => {
         </div>
       </div>
       <LayoutModal />
-      <ToastContainer />
+      <ToastContainer
+        autoClose={5000}
+        closeOnClick={false}
+        draggable={false}
+        hideProgressBar={false}
+        newestOnTop={false}
+        pauseOnFocusLoss={false}
+        pauseOnHover={true}
+        position="bottom-right"
+        rtl={false}
+        theme="dark"
+      />
     </div>
   )
 }

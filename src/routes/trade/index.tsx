@@ -25,9 +25,10 @@ import {
 import './index.css'
 import { nodeApi, Channel, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
 import { logger } from '../../utils/logger'
-import { RefreshCw, Link, Plus, ShoppingCart } from 'lucide-react'
+import { RefreshCw, Link, Plus, ShoppingCart, Copy } from 'lucide-react'
 
 import { MakerSelector } from '../../components/Trade/MakerSelector'
+import { SwapConfirmation } from '../../components/SwapConfirmation'
 
 interface Fields {
   rfq_id: string
@@ -66,6 +67,8 @@ export const Component = () => {
   const [swapRecapDetails, setSwapRecapDetails] = useState<SwapDetails | null>(
     null
   )
+
+  const [showConfirmation, setShowConfirmation] = useState(false)
 
   // Selectors
   const makerConnectionUrl = useAppSelector(
@@ -145,14 +148,29 @@ export const Component = () => {
   )
 
   const parseAssetAmount = useCallback(
-    (amount: string, asset: string): number => {
+    (amount: string | undefined | null, asset: string): number => {
       const precision = getAssetPrecision(asset)
       const multiplier = Math.pow(10, precision)
-      if (amount === '') {
+
+      // Handle undefined, null or empty string
+      if (!amount) {
         return 0
       }
-      const cleanAmount = amount.replace(/[^\d.-]/g, '')
-      return Math.round(parseFloat(cleanAmount) * multiplier)
+
+      try {
+        const cleanAmount = amount.replace(/[^\d.-]/g, '')
+        const parsedAmount = parseFloat(cleanAmount)
+
+        // Handle NaN or invalid numbers
+        if (isNaN(parsedAmount)) {
+          return 0
+        }
+
+        return Math.round(parsedAmount * multiplier)
+      } catch (error) {
+        logger.error('Error parsing amount:', error)
+        return 0
+      }
     },
     [getAssetPrecision]
   )
@@ -280,59 +298,75 @@ export const Component = () => {
 
   // Handle "from" amount change
   const handleFromAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
+    const value = e.target?.value
     if (value === undefined || value === null) {
-      console.error('Invalid input value:', value)
+      logger.warn('Invalid input value:', value)
       return
     }
-    const cleanedValue = value.replace(/[^0-9.]/g, '')
-    const fromAsset = form.getValues().fromAsset
-    const numValue = parseAssetAmount(cleanedValue, fromAsset)
-    if (isNaN(numValue)) {
+
+    try {
+      const cleanedValue = value.replace(/[^0-9.]/g, '')
+      const fromAsset = form.getValues().fromAsset
+      const numValue = parseAssetAmount(cleanedValue, fromAsset)
+
+      if (numValue === 0) {
+        form.setValue('from', '')
+        form.setValue('to', '')
+      } else if (numValue < minFromAmount) {
+        form.setValue('from', formatAmount(minFromAmount, fromAsset))
+        updateToAmount(formatAmount(minFromAmount, fromAsset))
+      } else if (numValue > maxFromAmount) {
+        form.setValue('from', formatAmount(maxFromAmount, fromAsset))
+        updateToAmount(formatAmount(maxFromAmount, fromAsset))
+      } else {
+        form.setValue('from', formatAmount(numValue, fromAsset))
+        updateToAmount(formatAmount(numValue, fromAsset))
+      }
+      logger.debug('Updated "from" amount:', form.getValues().from)
+    } catch (error) {
+      logger.error('Error handling amount change:', error)
       form.setValue('from', '')
       form.setValue('to', '')
-    } else if (numValue < minFromAmount) {
-      form.setValue('from', formatAmount(minFromAmount, fromAsset))
-      updateToAmount(formatAmount(minFromAmount, fromAsset))
-    } else if (numValue > maxFromAmount) {
-      form.setValue('from', formatAmount(maxFromAmount, fromAsset))
-      updateToAmount(formatAmount(maxFromAmount, fromAsset))
-    } else {
-      form.setValue('from', formatAmount(numValue, fromAsset))
-      updateToAmount(formatAmount(numValue, fromAsset))
     }
-    logger.debug('Updated "from" amount:', form.getValues().from)
   }
 
   // Handle "to" amount change
   const handleToAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
+    const value = e.target?.value
     if (value === undefined || value === null) {
-      console.error('Invalid input value:', value)
+      logger.warn('Invalid input value:', value)
       return
     }
-    const cleanedValue = value.replace(/[^0-9.]/g, '')
-    const toAsset = form.getValues().toAsset
-    const numValue = parseAssetAmount(cleanedValue, toAsset)
-    if (isNaN(numValue)) {
+
+    try {
+      const cleanedValue = value.replace(/[^0-9.]/g, '')
+      const toAsset = form.getValues().toAsset
+      const numValue = parseAssetAmount(cleanedValue, toAsset)
+
+      if (numValue === 0) {
+        form.setValue('to', '')
+        form.setValue('from', '')
+      } else if (numValue > maxToAmount) {
+        form.setValue('to', formatAmount(maxToAmount, toAsset))
+        const fromAmount = maxToAmount / calculateRate()
+        form.setValue(
+          'from',
+          formatAmount(fromAmount, form.getValues().fromAsset)
+        )
+      } else {
+        form.setValue('to', formatAmount(numValue, toAsset))
+        const fromAmount = numValue / calculateRate()
+        form.setValue(
+          'from',
+          formatAmount(fromAmount, form.getValues().fromAsset)
+        )
+      }
+      logger.debug('To amount changed:', value)
+    } catch (error) {
+      logger.error('Error handling amount change:', error)
       form.setValue('to', '')
       form.setValue('from', '')
-    } else if (numValue > maxToAmount) {
-      form.setValue('to', formatAmount(maxToAmount, toAsset))
-      const fromAmount = maxToAmount / calculateRate()
-      form.setValue(
-        'from',
-        formatAmount(fromAmount, form.getValues().fromAsset)
-      )
-    } else {
-      form.setValue('to', formatAmount(numValue, toAsset))
-      const fromAmount = numValue / calculateRate()
-      form.setValue(
-        'from',
-        formatAmount(fromAmount, form.getValues().fromAsset)
-      )
     }
-    logger.debug('To amount changed:', value)
   }
   // Swap assets
   const onSwapAssets = useCallback(async () => {
@@ -719,7 +753,11 @@ export const Component = () => {
       )
       return
     }
+    setShowConfirmation(true)
+  }
 
+  // Add the executeSwap function
+  const executeSwap = async (data: Fields) => {
     let toastId: string | number | null = null
     let timeoutId: any | null = null
 
@@ -887,22 +925,61 @@ export const Component = () => {
       setShowRecap(true)
     } catch (error) {
       logger.error('Error executing swap', error)
-      if (toastId !== null) {
-        toast.update(toastId, {
-          autoClose: 5000,
-          isLoading: false,
-          render: 'Swap failed',
-          type: 'error',
-        })
-      }
-      // Improve error message formatting
-      const errorMessage =
+      const errorDetails =
         error instanceof Error
           ? `${error.name}: ${error.message}`
           : 'An unknown error occurred during the swap'
-      setErrorMessage(errorMessage)
+
+      // Clear any existing toasts first
+      toast.dismiss()
+
+      // Create a new persistent error toast
+      toast.error(
+        <div
+          className="flex flex-col gap-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between">
+            <span className="font-medium text-red-500">Swap Failed</span>
+            <button
+              className="p-1 hover:bg-slate-700/50 rounded transition-colors"
+              onClick={(e) => {
+                e.stopPropagation()
+                copyToClipboard(errorDetails)
+              }}
+              title="Copy error details"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
+          </div>
+          <p className="text-sm text-slate-300 break-all">{errorDetails}</p>
+        </div>,
+        {
+          autoClose: false,
+          closeButton: true,
+          closeOnClick: false,
+          draggable: false,
+          isLoading: false,
+          onClick: (e) => e.stopPropagation(),
+          pauseOnFocusLoss: false,
+          pauseOnHover: true,
+        }
+      )
+
+      setErrorMessage(errorDetails)
+      setIsSwapInProgress(false) // Reset swap progress state
+
+      // Don't call clearToastAndTimeout() for errors
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId)
+        timeoutId = null
+      }
+      return // Exit early to prevent clearToastAndTimeout from running
     } finally {
-      clearToastAndTimeout()
+      setShowConfirmation(false)
+      if (!errorMessage) {
+        clearToastAndTimeout()
+      }
     }
   }
 
@@ -1183,8 +1260,17 @@ export const Component = () => {
           )}
 
           {errorMessage && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 flex items-center justify-between">
-              <span className="text-red-500 text-sm">{errorMessage}</span>
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-red-500 text-sm">{errorMessage}</span>
+                <button
+                  className="p-1 hover:bg-red-500/10 rounded transition-colors"
+                  onClick={() => copyToClipboard(errorMessage)}
+                  title="Copy error message"
+                >
+                  <Copy className="w-4 h-4 text-red-500" />
+                </button>
+              </div>
             </div>
           )}
 
@@ -1294,6 +1380,15 @@ export const Component = () => {
     </div>
   )
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.write([
+      new ClipboardItem({
+        'text/plain': new Blob([text], { type: 'text/plain' }),
+      }),
+    ])
+    toast.success('Error details copied to clipboard')
+  }
+
   return (
     <>
       {isLoading ? (
@@ -1321,6 +1416,22 @@ export const Component = () => {
       ) : (
         renderSwapForm()
       )}
+
+      <SwapConfirmation
+        bitcoinUnit={bitcoinUnit}
+        exchangeRate={calculateRate()}
+        formatAmount={formatAmount}
+        fromAmount={form.getValues().from}
+        fromAsset={form.getValues().fromAsset}
+        getAssetPrecision={getAssetPrecision}
+        isLoading={isSwapInProgress}
+        isOpen={showConfirmation}
+        onClose={() => setShowConfirmation(false)}
+        onConfirm={() => executeSwap(form.getValues())}
+        selectedPair={selectedPair}
+        toAmount={form.getValues().to}
+        toAsset={form.getValues().toAsset}
+      />
 
       {swapRecapDetails && (
         <SwapRecap
