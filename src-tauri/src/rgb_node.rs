@@ -45,22 +45,26 @@ impl NodeProcess {
     }
 
     pub fn start(&self, network: String, datapath: String, daemon_listening_port: String, ldk_peer_listening_port: String) {
+        // If already running, stop it and wait for complete shutdown
         if self.is_running.load(Ordering::SeqCst) {
-            println!("RGB Lightning Node is already running. Stopping before restart...");
-            self.stop();
+            println!("RGB Lightning Node is already running. Stopping existing process...");
+            self.shutdown(); // Use shutdown instead of stop to ensure complete termination
             
-            // Wait for the process to actually stop
+            // Wait for the process to fully stop
             let start = std::time::Instant::now();
             while self.is_running.load(Ordering::SeqCst) {
                 if start.elapsed() > self.shutdown_timeout {
                     println!("Force killing process after timeout...");
                     self.force_kill();
+                    // Add additional wait to ensure process is fully killed
+                    std::thread::sleep(Duration::from_secs(1));
                     break;
                 }
                 std::thread::sleep(Duration::from_millis(100));
             }
         }
 
+        // Now we can safely start the new process
         let rx = Arc::clone(&self.control_receiver);
         let child_process = Arc::clone(&self.child_process);
         let is_running = Arc::clone(&self.is_running);
