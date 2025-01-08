@@ -295,13 +295,25 @@ interface RefreshTransfersRequest {
   skip_sync: boolean
 }
 
+export enum SwapStatus {
+  Waiting = 'Waiting',
+  Pending = 'Pending',
+  Succeeded = 'Succeeded',
+  Expired = 'Expired',
+  Failed = 'Failed',
+}
+
 export interface SwapDetails {
   qty_from: number
   qty_to: number
   from_asset: string | null
   to_asset: string | null
   payment_hash: string
-  status: string
+  status: SwapStatus | null
+  requested_at: number | null
+  initiated_at: number | null
+  expires_at: number | null
+  completed_at: number | null
 }
 
 interface ListSwapsResponse {
