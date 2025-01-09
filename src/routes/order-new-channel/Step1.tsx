@@ -174,18 +174,36 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
     try {
       const networkInfo = await getNetworkInfo().unwrap()
 
+      if (!networkInfo?.network) {
+        throw new Error('Network information not available')
+      }
+
+      const network = networkInfo.network
+        .toLowerCase()
+        .replace(/^\w/, (c) => c.toUpperCase())
+
+      if (!NETWORK_DEFAULTS[network]) {
+        throw new Error(`Unsupported network: ${networkInfo.network}`)
+      }
+
+      const defaultLspUrl = NETWORK_DEFAULTS[network].default_lsp_url
+      if (!defaultLspUrl) {
+        throw new Error(
+          `No default LSP URL configured for network: ${networkInfo.network}`
+        )
+      }
+
       dispatch(
         nodeSettingsActions.setNodeSettings({
           ...currentAccount,
-          default_lsp_url:
-            NETWORK_DEFAULTS[networkInfo.network.toLowerCase()].default_lsp_url,
+          default_lsp_url: defaultLspUrl,
         })
       )
 
       await fetchLspInfo()
     } catch (error) {
       console.error('Error selecting Kaleidoswap LSP:', error)
-      toast.error('Failed to select Kaleidoswap LSP')
+      toast.error(`Failed to select Kaleidoswap LSP: ${error.message}`)
     } finally {
       setIsLoading(false)
     }
