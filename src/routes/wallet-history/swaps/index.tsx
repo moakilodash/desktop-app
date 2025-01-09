@@ -15,11 +15,7 @@ import { toast } from 'react-toastify'
 import { twJoin } from 'tailwind-merge'
 
 import { RootState } from '../../../app/store'
-import {
-  nodeApi,
-  SwapDetails,
-  SwapStatus,
-} from '../../../slices/nodeApi/nodeApi.slice'
+import { nodeApi, SwapDetails } from '../../../slices/nodeApi/nodeApi.slice'
 
 const COL_CLASS_NAME = 'py-3 px-2'
 const ASSET_COL_CLASS = twJoin(COL_CLASS_NAME, 'col-span-1')

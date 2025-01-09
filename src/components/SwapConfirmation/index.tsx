@@ -29,10 +29,8 @@ export const SwapConfirmation: React.FC<SwapConfirmationProps> = ({
   toAmount,
   toAsset,
   exchangeRate,
-  selectedPair,
   bitcoinUnit,
   formatAmount,
-  getAssetPrecision,
   isLoading = false,
 }) => {
   if (!isOpen) return null
@@ -111,13 +109,6 @@ export const SwapConfirmation: React.FC<SwapConfirmationProps> = ({
                   />
                 </div>
               </div>
-            </div>
-
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-slate-400">Maker</span>
-              <span className="text-white">
-                {selectedPair?.maker_name || 'Unknown'}
-              </span>
             </div>
           </div>
         </div>

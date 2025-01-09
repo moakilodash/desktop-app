@@ -746,7 +746,7 @@ export const Component = () => {
   }, [form, selectedPairFeed, updateToAmount])
 
   // Submit handler
-  const onSubmit: SubmitHandler<Fields> = async (data) => {
+  const onSubmit: SubmitHandler<Fields> = async () => {
     if (isSwapInProgress) {
       toast.error(
         'A swap is already in progress. Please wait for it to complete.'
