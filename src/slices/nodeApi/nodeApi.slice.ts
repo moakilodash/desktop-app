@@ -296,24 +296,24 @@ interface RefreshTransfersRequest {
 }
 
 export enum SwapStatus {
-  Waiting = 'Waiting',
-  Pending = 'Pending',
-  Succeeded = 'Succeeded',
   Expired = 'Expired',
   Failed = 'Failed',
+  Pending = 'Pending',
+  Succeeded = 'Succeeded',
+  Waiting = 'Waiting',
 }
 
 export interface SwapDetails {
+  payment_hash: string
   qty_from: number
   qty_to: number
   from_asset: string | null
   to_asset: string | null
-  payment_hash: string
-  status: SwapStatus | null
+  status: SwapStatus
   requested_at: number | null
   initiated_at: number | null
-  expires_at: number | null
   completed_at: number | null
+  type?: 'maker' | 'taker'
 }
 
 interface ListSwapsResponse {
@@ -523,7 +523,23 @@ export const nodeApi = createApi({
       query: () => '/listpeers',
     }),
     listSwaps: builder.query<ListSwapsResponse, void>({
-      query: () => '/listswaps',
+      query: () => ({
+        method: 'GET',
+        url: '/listswaps',
+      }),
+      transformResponse: (response: ListSwapsResponse) => {
+        const transformSwaps = (swaps: SwapDetails[]) =>
+          swaps.map((swap) => ({
+            ...swap,
+            status:
+              swap.status in SwapStatus ? swap.status : SwapStatus.Pending,
+          }))
+
+        return {
+          maker: transformSwaps(response.maker || []),
+          taker: transformSwaps(response.taker || []),
+        }
+      },
     }),
     listTransactions: builder.query<
       ListTransactionsResponse,
