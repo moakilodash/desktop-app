@@ -178,7 +178,7 @@ export const MnemonicVerifyForm = ({
             disabled={isSubmitting}
             type="submit"
           >
-            <span>Complete Setup</span>
+            <span>Confirm Recovery Phrase</span>
             {isSubmitting ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (

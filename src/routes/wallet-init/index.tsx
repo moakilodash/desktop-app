@@ -1,4 +1,3 @@
-import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import { invoke } from '@tauri-apps/api'
 import { ChevronDown } from 'lucide-react'
 import { useState, useEffect } from 'react'
@@ -19,6 +18,7 @@ import {
   PasswordFields,
 } from '../../components/PasswordSetupForm'
 import { Spinner } from '../../components/Spinner'
+import { UnlockProgress } from '../../components/UnlockProgress'
 import { BitcoinNetwork } from '../../constants'
 import { NETWORK_DEFAULTS } from '../../constants/networks'
 import { parseRpcUrl } from '../../helpers/utils'
@@ -38,7 +38,7 @@ interface NodeSetupFields {
   ldk_peer_listening_port: string
 }
 
-type SetupStep = 'setup' | 'password' | 'mnemonic' | 'verify'
+type SetupStep = 'setup' | 'password' | 'mnemonic' | 'verify' | 'unlock'
 
 export const Component = () => {
   const [currentStep, setCurrentStep] = useState<SetupStep>('setup')
@@ -220,46 +220,11 @@ export const Component = () => {
         setAdditionalErrors(['Mnemonic does not match'])
         return
       }
-
-      const rpcConfig = parseRpcUrl(
-        nodeSetupForm.getValues('rpc_connection_url')
-      )
-      const unlockResponse = await unlock({
-        bitcoind_rpc_host: rpcConfig.host,
-        bitcoind_rpc_password: rpcConfig.password,
-        bitcoind_rpc_port: rpcConfig.port,
-        bitcoind_rpc_username: rpcConfig.username,
-        indexer_url: nodeSetupForm.getValues('indexer_url'),
-        password: nodePassword,
-        proxy_endpoint: nodeSetupForm.getValues('proxy_endpoint'),
-      })
-
-      if (unlockResponse.isSuccess) {
-        const nodeInfoRes = await nodeInfo()
-        if (nodeInfoRes.isSuccess) {
-          navigate(TRADE_PATH)
-        }
-      } else {
-        if ('error' in unlockResponse && unlockResponse.error) {
-          const errorData = isFetchBaseQueryError(unlockResponse.error)
-            ? (unlockResponse.error.data as { error?: string })?.error ||
-              'Unknown error'
-            : unlockResponse.error.message || 'Unknown error'
-          throw new Error(errorData)
-        }
-        throw new Error('Failed to unlock the node')
-      }
+      setCurrentStep('unlock')
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'An unexpected error occurred'
-      toast.error(errorMessage, {
-        autoClose: 5000,
-        closeOnClick: false,
-        draggable: false,
-        hideProgressBar: false,
-        pauseOnHover: false,
-        position: 'top-right',
-      })
+      toast.error(errorMessage)
     }
   }
 
@@ -280,6 +245,18 @@ export const Component = () => {
           </div>
         </div>
       )
+    }
+
+    // Move variable declarations outside the switch
+    const rpcConfig = parseRpcUrl(nodeSetupForm.getValues('rpc_connection_url'))
+    const unlockParams = {
+      bitcoind_rpc_host: rpcConfig.host,
+      bitcoind_rpc_password: rpcConfig.password,
+      bitcoind_rpc_port: rpcConfig.port,
+      bitcoind_rpc_username: rpcConfig.username,
+      indexer_url: nodeSetupForm.getValues('indexer_url'),
+      password: nodePassword,
+      proxy_endpoint: nodeSetupForm.getValues('proxy_endpoint'),
     }
 
     switch (currentStep) {
@@ -318,6 +295,34 @@ export const Component = () => {
             form={mnemonicForm}
             onBack={() => setCurrentStep('mnemonic')}
             onSubmit={handleMnemonicVerify}
+          />
+        )
+      case 'unlock':
+        return (
+          <UnlockProgress
+            onBack={() => setCurrentStep('verify')}
+            onUnlockComplete={async () => {
+              try {
+                const unlockResponse = await unlock(unlockParams)
+
+                if (unlockResponse.isSuccess) {
+                  const nodeInfoRes = await nodeInfo()
+                  if (nodeInfoRes.isSuccess) {
+                    navigate(TRADE_PATH)
+                  }
+                } else {
+                  throw new Error('Failed to unlock the node')
+                }
+              } catch (error) {
+                throw error instanceof Error
+                  ? error
+                  : new Error('Failed to unlock wallet')
+              }
+            }}
+            onUnlockError={(error) => {
+              toast.error(error.message)
+            }}
+            unlockParams={unlockParams}
           />
         )
     }
@@ -566,8 +571,4 @@ const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
       </form>
     </>
   )
-}
-
-function isFetchBaseQueryError(error: unknown): error is FetchBaseQueryError {
-  return typeof error === 'object' && error != null && 'status' in error
 }

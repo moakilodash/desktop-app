@@ -15,11 +15,6 @@ interface InitRequest {
 interface InitResponse {
   mnemonic: string
 }
-
-interface UnlockRequest {
-  password: string
-}
-
 interface RestoreRequest {
   backup_path: string
   password: string
@@ -349,7 +344,7 @@ export interface DecodeInvoiceResponse {
   network: string
 }
 
-interface UnlockRequest {
+export interface UnlockRequest {
   password: string
   bitcoind_rpc_username: string
   bitcoind_rpc_password: string
