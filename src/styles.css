@@ -2,77 +2,82 @@
 @tailwind components;
 @tailwind utilities;
 
-html,
-body {
-  font-family: Mulish, sans-serif;
-}
-
-body {
-  background: theme('colors.background');
-  color: theme('colors.white');
-}
-
-#root {
-  position: relative;
-  z-index: 0;
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+@layer base {
+  html {
+    @apply antialiased;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  body {
+    @apply bg-background text-white font-sans;
   }
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+@layer components {
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-gray-400 
+           hover:text-white hover:bg-blue-darker transition-all duration-200;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .sidebar-link.active {
+    @apply text-cyan bg-blue-darker;
+  }
+
+  .btn-primary {
+    @apply px-4 py-2 bg-cyan text-blue-darkest font-semibold rounded-lg
+           hover:bg-cyan-600 transition-all duration-200;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 bg-blue-darker text-white font-semibold rounded-lg
+           hover:bg-blue-dark transition-all duration-200;
   }
 }
 
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out;
-}
-
-.modal-backdrop {
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
-}
-
-/* Smooth transitions */
-.transition-all {
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 200ms;
-}
-
+/* Custom Scrollbar */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  scrollbar-color: rgba(143, 213, 234, 0.2) transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+  @apply bg-transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+  @apply bg-cyan/20 rounded-full hover:bg-cyan/30 transition-colors;
+}
+
+/* Animations */
+.fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
