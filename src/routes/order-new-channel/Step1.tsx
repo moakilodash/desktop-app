@@ -90,7 +90,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
   useEffect(() => {
     console.log('Fetching LSP Info...')
     fetchLspInfo()
-  }, [lspUrl])
+  }, [lspUrl, getInfo])
 
   const fetchLspInfo = async () => {
     if (lspUrl) {
@@ -116,10 +116,10 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
   const checkPeerConnection = async (connectionUrl: string) => {
     try {
       const pubkey = connectionUrl.split('@')[0]
-      const peersResponse = await listPeers()
+      const peersResponse = await listPeers().unwrap()
       console.log('Peers response:', peersResponse)
-      if (peersResponse.data?.peers) {
-        const isConnected = peersResponse.data.peers.some(
+      if (peersResponse?.peers) {
+        const isConnected = peersResponse.peers.some(
           (peer) => peer.pubkey === pubkey
         )
         setIsAlreadyConnected(isConnected)
@@ -127,6 +127,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
       }
     } catch (error) {
       console.error('Error checking peer connection:', error)
+      toast.error('Failed to check peer connection status')
     }
   }
 
@@ -203,13 +204,15 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
       await fetchLspInfo()
     } catch (error) {
       console.error('Error selecting Kaleidoswap LSP:', error)
-      toast.error(`Failed to select Kaleidoswap LSP: ${error.message}`)
+      toast.error(`Failed to select Kaleidoswap LSP`)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleDefaultLspUrlChange = async (e: any) => {
+  const handleDefaultLspUrlChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     setIsLoading(true)
     try {
       dispatch(
@@ -368,8 +371,10 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
           </p>
           <div className="flex flex-col items-center">
             <button
-              className="bg-gray-700 hover:bg-gray-600 p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 flex flex-col items-center justify-center"
-              //disabled={isLoading}
+              className={`bg-gray-700 hover:bg-gray-600 p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 flex flex-col items-center justify-center ${
+                isLoading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              disabled={isLoading}
               onClick={handleKaleidoswapSelect}
               title="Use default Kaleidoswap LSP"
             >

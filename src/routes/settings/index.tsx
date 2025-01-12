@@ -315,7 +315,7 @@ export const Component: React.FC = () => {
 
       {/* Main Content Grid */}
       <div className="w-full max-w-7xl mx-auto space-y-8">
-        {/* Settings Grid */}
+        {/* Settings Grid - Modified to be side-by-side only for settings and status */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Application Settings */}
           <div className="lg:col-span-2 space-y-6">
@@ -702,102 +702,100 @@ export const Component: React.FC = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Logs Section */}
-            {isLocalNode && (
-              <div className="bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-700 overflow-hidden">
-                {/* Header with controls */}
-                <div className="p-4 border-b border-gray-700/50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Activity className="w-5 h-5 text-blue-400" />
-                      <h3 className="text-xl font-semibold text-white">
-                        Node Logs
-                      </h3>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      {/* Entry selector */}
-                      <div className="flex items-center gap-2 bg-gray-700/30 px-2 py-1 rounded-lg border border-gray-600">
-                        <span className="text-sm text-gray-400">Show</span>
-                        <select
-                          className="bg-transparent text-white text-sm focus:outline-none focus:ring-0 border-0"
-                          onChange={(e) =>
-                            setMaxLogEntries(Number(e.target.value))
-                          }
-                          value={maxLogEntries}
-                        >
-                          <option value="100">100</option>
-                          <option value="200">200</option>
-                          <option value="500">500</option>
-                          <option value="1000">1000</option>
-                          <option value="5000">5000</option>
-                        </select>
-                        <span className="text-sm text-gray-400">entries</span>
-                      </div>
-
-                      {/* Action buttons */}
-                      <div className="flex gap-1.5">
-                        <button
-                          className="p-2 text-sm bg-gray-700/30 hover:bg-gray-600/50 text-white rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-600"
-                          disabled={nodeLogs.length === 0}
-                          onClick={handleExportLogs}
-                          title="Export logs"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
-                        <button
-                          className="p-2 text-sm bg-gray-700/30 hover:bg-gray-600/50 text-white rounded-lg transition-colors border border-gray-600"
-                          onClick={fetchNodeLogs}
-                          title="Refresh logs"
-                        >
-                          <RefreshCw className="w-4 h-4" />
-                        </button>
-                        <button
-                          className="p-2 text-sm bg-gray-700/30 hover:bg-gray-600/50 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-gray-600"
-                          disabled={nodeLogs.length === 0}
-                          onClick={() => setNodeLogs([])}
-                          title="Clear logs"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+        {/* Logs Section - Now full width below other cards */}
+        {isLocalNode && (
+          <div className="bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-700 overflow-hidden">
+            {/* Header with controls */}
+            <div className="p-4 border-b border-gray-700/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-blue-400" />
+                  <h3 className="text-xl font-semibold text-white">
+                    Node Logs
+                  </h3>
                 </div>
 
-                {/* Logs display area */}
-                <div className="bg-gray-900/95">
-                  <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700/50 bg-gray-800/50">
-                    <span className="text-sm font-medium text-gray-300">
-                      Live Node Logs
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      Showing {Math.min(maxLogEntries, nodeLogs.length)} of{' '}
-                      {nodeLogs.length} entries
-                    </span>
+                <div className="flex items-center gap-3">
+                  {/* Entry selector */}
+                  <div className="flex items-center gap-2 bg-gray-700/30 px-2 py-1 rounded-lg border border-gray-600">
+                    <span className="text-sm text-gray-400">Show</span>
+                    <select
+                      className="bg-transparent text-white text-sm focus:outline-none focus:ring-0 border-0"
+                      onChange={(e) => setMaxLogEntries(Number(e.target.value))}
+                      value={maxLogEntries}
+                    >
+                      <option value="100">100</option>
+                      <option value="200">200</option>
+                      <option value="500">500</option>
+                      <option value="1000">1000</option>
+                      <option value="5000">5000</option>
+                    </select>
+                    <span className="text-sm text-gray-400">entries</span>
                   </div>
 
-                  <div className="h-[350px]">
-                    {nodeLogs.length === 0 ? (
-                      <div className="flex items-center justify-center h-full text-gray-500">
-                        <span className="flex items-center gap-2">
-                          <Activity className="w-4 h-4" />
-                          No logs available
-                        </span>
-                      </div>
-                    ) : (
-                      <TerminalLogDisplay
-                        logs={nodeLogs}
-                        maxEntries={maxLogEntries}
-                      />
-                    )}
+                  {/* Action buttons */}
+                  <div className="flex gap-1.5">
+                    <button
+                      className="p-2 text-sm bg-gray-700/30 hover:bg-gray-600/50 text-white rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-600"
+                      disabled={nodeLogs.length === 0}
+                      onClick={handleExportLogs}
+                      title="Export logs"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                    <button
+                      className="p-2 text-sm bg-gray-700/30 hover:bg-gray-600/50 text-white rounded-lg transition-colors border border-gray-600"
+                      onClick={fetchNodeLogs}
+                      title="Refresh logs"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
+                    <button
+                      className="p-2 text-sm bg-gray-700/30 hover:bg-gray-600/50 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-gray-600"
+                      disabled={nodeLogs.length === 0}
+                      onClick={() => setNodeLogs([])}
+                      title="Clear logs"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               </div>
-            )}
+            </div>
+
+            {/* Logs display area - Now with more height since it's full width */}
+            <div className="bg-gray-900/95">
+              <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700/50 bg-gray-800/50">
+                <span className="text-sm font-medium text-gray-300">
+                  Live Node Logs
+                </span>
+                <span className="text-xs text-gray-500">
+                  Showing {Math.min(maxLogEntries, nodeLogs.length)} of{' '}
+                  {nodeLogs.length} entries
+                </span>
+              </div>
+
+              <div className="h-[500px]">
+                {nodeLogs.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-gray-500">
+                    <span className="flex items-center gap-2">
+                      <Activity className="w-4 h-4" />
+                      No logs available
+                    </span>
+                  </div>
+                ) : (
+                  <TerminalLogDisplay
+                    logs={nodeLogs}
+                    maxEntries={maxLogEntries}
+                  />
+                )}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Keep existing modals */}

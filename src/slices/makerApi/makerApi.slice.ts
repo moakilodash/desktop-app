@@ -200,6 +200,7 @@ export const makerApi = createApi({
       query: (body) => ({
         body,
         method: 'POST',
+        timeout: 180000,
         url: '/api/v1/swaps/execute',
       }),
     }),
