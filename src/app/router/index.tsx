@@ -6,7 +6,7 @@ import {
   CHANNELS_PATH,
   CREATE_NEW_CHANNEL_PATH,
   ORDER_CHANNEL_PATH,
-  INIT_PATH,
+  WALLET_INIT_PATH,
   ROOT_PATH,
   SETTINGS_PATH,
   TRADE_PATH,
@@ -29,7 +29,7 @@ export const router = createBrowserRouter([
   },
   {
     lazy: () => import('../../routes/wallet-init'),
-    path: INIT_PATH,
+    path: WALLET_INIT_PATH,
   },
   {
     lazy: () => import('../../routes/wallet-remote'),

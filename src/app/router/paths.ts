@@ -10,7 +10,7 @@ export const ROOT_PATH = makePath([])
 
 export const WALLET_SETUP_PATH = makePath(['wallet-setup'])
 
-export const INIT_PATH = makePath(['init'])
+export const WALLET_INIT_PATH = makePath(['init'])
 
 export const WALLET_REMOTE_PATH = makePath(['wallet-config'])
 

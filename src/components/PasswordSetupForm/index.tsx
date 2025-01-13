@@ -3,8 +3,8 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
-  Lock,
   Loader2,
+  ArrowRight,
 } from 'lucide-react'
 import { useState } from 'react'
 import { UseFormReturn, SubmitHandler } from 'react-hook-form'
@@ -191,17 +191,22 @@ export const PasswordSetupForm = ({
             className="w-full mt-6 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan to-purple 
                      text-white font-semibold hover:opacity-90 transition-all duration-200
                      focus:ring-2 focus:ring-cyan/20 focus:outline-none
-                     flex items-center justify-center gap-2 disabled:opacity-50 
-                     disabled:cursor-not-allowed"
+                     flex items-center justify-center gap-2
+                     disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isSubmitting}
             type="submit"
           >
             {isSubmitting ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Initializing...</span>
+              </>
             ) : (
-              <Lock className="w-5 h-5" />
+              <>
+                <span>Initialize Node</span>
+                <ArrowRight className="w-5 h-5" />
+              </>
             )}
-            <span>Initialize Node</span>
           </button>
         </div>
       </form>

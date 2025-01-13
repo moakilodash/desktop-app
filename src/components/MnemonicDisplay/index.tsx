@@ -1,4 +1,4 @@
-import { ArrowLeft, Copy, AlertCircle, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, Copy, AlertCircle, ArrowRight } from 'lucide-react'
 
 interface MnemonicDisplayProps {
   mnemonic: string[]
@@ -96,7 +96,7 @@ export const MnemonicDisplay = ({
           type="button"
         >
           <span>I've Securely Saved My Recovery Phrase</span>
-          <ShieldCheck className="w-5 h-5" />
+          <ArrowRight className="w-5 h-5" />
         </button>
       </div>
     </div>

@@ -10,17 +10,14 @@ import {
   ArrowLeft,
 } from 'lucide-react'
 import React, { useState } from 'react'
-import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 
 import {
-  INIT_PATH,
+  WALLET_INIT_PATH,
   WALLET_REMOTE_PATH,
   WALLET_RESTORE_PATH,
 } from '../../app/router/paths'
-import { RootState } from '../../app/store'
 import { Layout } from '../../components/Layout'
-import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 
 interface NodeOptionProps {
   title: string
@@ -145,30 +142,30 @@ const LocalNodeWarning: React.FC = () => (
   </div>
 )
 
-const LocalNodeStatus: React.FC = () => {
-  const nodeSettings = useSelector((state: RootState) => state.nodeSettings)
-  const nodeInfo = nodeApi.endpoints.nodeInfo.useQueryState()
+// const LocalNodeStatus: React.FC = () => {
+//   const nodeSettings = useSelector((state: RootState) => state.nodeSettings)
+//   const nodeInfo = nodeApi.endpoints.nodeInfo.useQueryState()
 
-  if (!nodeInfo.isSuccess) return null
+//   if (!nodeInfo.isSuccess) return null
 
-  return (
-    <div className={`${CardBase} bg-blue-dark/60 border-divider/20 p-6 mb-8`}>
-      <div className="flex items-center gap-3 mb-4">
-        <div className={`${IconWrapper} bg-cyan/10`}>
-          <Server className="w-5 h-5 text-cyan" />
-        </div>
-        <h3 className="text-white font-semibold">Current Local Node</h3>
-      </div>
-      <div className="grid grid-cols-2 gap-4 text-gray-300 text-sm">
-        <div className="space-y-2">
-          <p>Network: {nodeSettings.data.network}</p>
-          <p>Data Path: {nodeSettings.data.datapath}</p>
-          <p>Account: {nodeSettings.data.name}</p>
-        </div>
-      </div>
-    </div>
-  )
-}
+//   return (
+//     <div className={`${CardBase} bg-blue-dark/60 border-divider/20 p-6 mb-8`}>
+//       <div className="flex items-center gap-3 mb-4">
+//         <div className={`${IconWrapper} bg-cyan/10`}>
+//           <Server className="w-5 h-5 text-cyan" />
+//         </div>
+//         <h3 className="text-white font-semibold">Current Local Node</h3>
+//       </div>
+//       <div className="grid grid-cols-2 gap-4 text-gray-300 text-sm">
+//         <div className="space-y-2">
+//           <p>Network: {nodeSettings.data.network}</p>
+//           <p>Data Path: {nodeSettings.data.datapath}</p>
+//           <p>Account: {nodeSettings.data.name}</p>
+//         </div>
+//       </div>
+//     </div>
+//   )
+// }
 
 const RemoteNodeInfo: React.FC = () => (
   <div className="mb-6">
@@ -269,14 +266,14 @@ export const Component = () => {
                 </h2>
               </div>
               <LocalNodeWarning />
-              <LocalNodeStatus />
+              {/* <LocalNodeStatus /> */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <WalletAction
                   description="Create a fresh RGB Lightning wallet with a guided setup process."
                   icon={Wallet}
                   onClick={() => {
                     handleNodeTypeChange(null)
-                    navigate(INIT_PATH)
+                    navigate(WALLET_INIT_PATH)
                   }}
                   primary
                   title="New Wallet"

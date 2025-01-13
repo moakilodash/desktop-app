@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, ChevronLeft, AlertCircle, ArrowRight } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { SubmitHandler, UseFormReturn, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
@@ -77,6 +77,42 @@ export const Component = () => {
     },
   })
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      nodeSetupForm.reset()
+      passwordForm.reset()
+      mnemonicForm.reset()
+      setAdditionalErrors([])
+    }
+  }, [])
+
+  // Cleanup when changing steps
+  const handleStepChange = (newStep: SetupStep) => {
+    setAdditionalErrors([]) // Clear additional errors
+
+    // Reset form errors based on step
+    switch (newStep) {
+      case 'setup':
+        nodeSetupForm.clearErrors()
+        break
+      case 'password':
+        passwordForm.clearErrors()
+        break
+      case 'mnemonic':
+        // No form to clear for mnemonic display
+        break
+      case 'verify':
+        mnemonicForm.clearErrors()
+        break
+      case 'unlock':
+        // Handle unlock step cleanup
+        break
+    }
+
+    setCurrentStep(newStep)
+  }
+
   const handleNodeSetup: SubmitHandler<NodeSetupFields> = async (data) => {
     try {
       const formattedName = data.name
@@ -110,7 +146,7 @@ export const Component = () => {
         })
       )
 
-      setCurrentStep('password')
+      handleStepChange('password')
     } catch (error) {
       console.error('Node setup failed:', error)
       toast.error('Failed to set up node. Please try again.')
@@ -200,7 +236,7 @@ export const Component = () => {
 
       setNodePassword(data.password)
       setMnemonic(initResponse.data.mnemonic.split(' '))
-      setCurrentStep('mnemonic')
+      handleStepChange('mnemonic')
       toast.success('Node initialized successfully!')
     } catch (error) {
       console.error('Password setup failed:', error)
@@ -220,7 +256,7 @@ export const Component = () => {
         setAdditionalErrors(['Mnemonic does not match'])
         return
       }
-      setCurrentStep('unlock')
+      handleStepChange('unlock')
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'An unexpected error occurred'
@@ -233,6 +269,52 @@ export const Component = () => {
       .writeText(mnemonic.join(' '))
       .then(() => toast.success('Mnemonic copied to clipboard'))
       .catch(() => toast.error('Failed to copy mnemonic'))
+  }
+
+  const handleUnlockComplete = async () => {
+    try {
+      const rpcConfig = parseRpcUrl(
+        nodeSetupForm.getValues('rpc_connection_url')
+      )
+
+      await unlock({
+        bitcoind_rpc_host: rpcConfig.host,
+        bitcoind_rpc_password: rpcConfig.password,
+        bitcoind_rpc_port: rpcConfig.port,
+        bitcoind_rpc_username: rpcConfig.username,
+        indexer_url: nodeSetupForm.getValues('indexer_url'),
+        password: nodePassword,
+        proxy_endpoint: nodeSetupForm.getValues('proxy_endpoint'),
+      }).unwrap()
+
+      // Format settings before dispatching
+      const network = nodeSetupForm.getValues('network')
+      const defaultMakerUrl = NETWORK_DEFAULTS[network].default_maker_url
+      await dispatch(
+        setSettingsAsync({
+          datapath: `kaleidoswap-${nodeSetupForm.getValues('name')}`,
+          default_lsp_url: NETWORK_DEFAULTS[network].default_lsp_url,
+          default_maker_url: defaultMakerUrl,
+          indexer_url: nodeSetupForm.getValues('indexer_url'),
+          maker_urls: [defaultMakerUrl],
+          name: nodeSetupForm.getValues('name'),
+          network: network,
+          node_url: `http://localhost:${nodeSetupForm.getValues('daemon_listening_port')}`,
+          proxy_endpoint: nodeSetupForm.getValues('proxy_endpoint'),
+          rpc_connection_url: nodeSetupForm.getValues('rpc_connection_url'),
+        })
+      )
+
+      navigate(TRADE_PATH)
+    } catch (error) {
+      console.error('Unlock failed:', error)
+      throw error
+    }
+  }
+
+  const handleUnlockError = (error: Error) => {
+    // Don't navigate back to verify anymore
+    setAdditionalErrors([error.message])
   }
 
   const renderCurrentStep = () => {
@@ -249,15 +331,6 @@ export const Component = () => {
 
     // Move variable declarations outside the switch
     const rpcConfig = parseRpcUrl(nodeSetupForm.getValues('rpc_connection_url'))
-    const unlockParams = {
-      bitcoind_rpc_host: rpcConfig.host,
-      bitcoind_rpc_password: rpcConfig.password,
-      bitcoind_rpc_port: rpcConfig.port,
-      bitcoind_rpc_username: rpcConfig.username,
-      indexer_url: nodeSetupForm.getValues('indexer_url'),
-      password: nodePassword,
-      proxy_endpoint: nodeSetupForm.getValues('proxy_endpoint'),
-    }
 
     switch (currentStep) {
       case 'setup':
@@ -274,7 +347,7 @@ export const Component = () => {
             errors={additionalErrors}
             form={passwordForm}
             isPasswordVisible={isPasswordVisible}
-            onBack={() => setCurrentStep('setup')}
+            onBack={() => handleStepChange('setup')}
             onSubmit={handlePasswordSetup}
             setIsPasswordVisible={setIsPasswordVisible}
           />
@@ -283,9 +356,9 @@ export const Component = () => {
         return (
           <MnemonicDisplay
             mnemonic={mnemonic}
-            onBack={() => setCurrentStep('password')}
+            onBack={() => handleStepChange('password')}
             onCopy={copyMnemonicToClipboard}
-            onNext={() => setCurrentStep('verify')}
+            onNext={() => handleStepChange('verify')}
           />
         )
       case 'verify':
@@ -293,36 +366,25 @@ export const Component = () => {
           <MnemonicVerifyForm
             errors={additionalErrors}
             form={mnemonicForm}
-            onBack={() => setCurrentStep('mnemonic')}
+            onBack={() => handleStepChange('mnemonic')}
             onSubmit={handleMnemonicVerify}
           />
         )
       case 'unlock':
         return (
           <UnlockProgress
-            onBack={() => setCurrentStep('verify')}
-            onUnlockComplete={async () => {
-              try {
-                const unlockResponse = await unlock(unlockParams)
-
-                if (unlockResponse.isSuccess) {
-                  const nodeInfoRes = await nodeInfo()
-                  if (nodeInfoRes.isSuccess) {
-                    navigate(TRADE_PATH)
-                  }
-                } else {
-                  throw new Error('Failed to unlock the node')
-                }
-              } catch (error) {
-                throw error instanceof Error
-                  ? error
-                  : new Error('Failed to unlock wallet')
-              }
+            onBack={() => handleStepChange('verify')}
+            onUnlockComplete={handleUnlockComplete}
+            onUnlockError={handleUnlockError}
+            unlockParams={{
+              bitcoind_rpc_host: rpcConfig.host,
+              bitcoind_rpc_password: rpcConfig.password,
+              bitcoind_rpc_port: rpcConfig.port,
+              bitcoind_rpc_username: rpcConfig.username,
+              indexer_url: nodeSetupForm.getValues('indexer_url'),
+              password: nodePassword,
+              proxy_endpoint: nodeSetupForm.getValues('proxy_endpoint'),
             }}
-            onUnlockError={(error) => {
-              toast.error(error.message)
-            }}
-            unlockParams={unlockParams}
           />
         )
     }
@@ -330,8 +392,12 @@ export const Component = () => {
 
   return (
     <Layout>
-      <div className="max-w-2xl w-full bg-blue-dark py-8 px-6 rounded">
-        {renderCurrentStep()}
+      <div className="min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="bg-blue-darkest/80 backdrop-blur-sm rounded-3xl shadow-xl p-8 border border-white/5">
+            <div className="max-w-3xl mx-auto">{renderCurrentStep()}</div>
+          </div>
+        </div>
       </div>
     </Layout>
   )
@@ -360,215 +426,224 @@ const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
   }, [network, form])
 
   return (
-    <>
-      <div className="flex justify-between">
+    <div className="max-w-2xl mx-auto px-4 py-4">
+      {/* Back Button */}
+      <div className="mb-6">
         <button
-          className="px-4 py-2 rounded-full border text-sm border-gray-500 hover:bg-gray-700 transition-colors"
+          className="group px-3 py-1.5 rounded-xl border border-slate-700 
+                     hover:bg-slate-800/50 transition-all duration-200 
+                     flex items-center gap-2 text-slate-400 hover:text-white"
           onClick={() => navigate(WALLET_SETUP_PATH)}
           type="button"
         >
-          ← Back
+          <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+          Back
         </button>
       </div>
-      <div className="text-center mb-10">
-        <h3 className="text-2xl font-semibold mb-4">
+
+      {/* Header Section */}
+      <div className="text-center mb-8">
+        <h3
+          className="text-2xl font-bold mb-2 bg-gradient-to-r from-cyan to-purple 
+                       bg-clip-text text-transparent"
+        >
           Set Up Your Kaleidoswap Node
         </h3>
-        <p>Configure your node settings to begin the initialization process.</p>
+        <p className="text-slate-400 max-w-md mx-auto text-sm leading-relaxed">
+          Configure your node settings to begin the initialization process.
+        </p>
       </div>
+
+      {/* Form Section */}
       <form
-        className="flex items-center justify-center flex-col"
+        className="max-w-md mx-auto bg-slate-900/50 p-6 rounded-2xl 
+                   border border-slate-800/50 backdrop-blur-sm"
         onSubmit={form.handleSubmit(onSubmit)}
       >
-        <div className="w-80 space-y-4">
+        <div className="space-y-6">
           {/* Account Name Field */}
           <div>
-            <div className="text-xs mb-3">Account Name</div>
-            <div className="relative">
-              <input
-                className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
-                placeholder="Enter a name for your account"
-                type="text"
-                {...form.register('name', { required: 'Required' })}
-              />
-            </div>
-            <div className="text-sm text-gray-400">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Account Name
+            </label>
+            <input
+              className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
+                        bg-slate-800/30 text-slate-300 
+                        focus:border-cyan focus:ring-2 focus:ring-cyan/20 
+                        outline-none transition-all placeholder:text-slate-600"
+              placeholder="Enter a name for your account"
+              type="text"
+              {...form.register('name', { required: 'Required' })}
+            />
+            <p className="mt-2 text-sm text-slate-400">
               This name will be used to create your account folder
-            </div>
-            <div className="text-sm text-red mt-2">
-              {form.formState.errors.name?.message}
-            </div>
+            </p>
+            {form.formState.errors.name && (
+              <p className="mt-2 text-red-400 text-sm flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4" />
+                {form.formState.errors.name.message}
+              </p>
+            )}
           </div>
 
           {/* Network Selection */}
           <div>
-            <div className="text-xs mb-3">Network</div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Network
+            </label>
             <div className="relative">
               <select
-                className="block w-full pl-3 pr-10 py-2 text-white bg-gray-700 border border-gray-600 rounded-md appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
+                          bg-slate-800/30 text-slate-300 appearance-none
+                          focus:border-cyan focus:ring-2 focus:ring-cyan/20 
+                          outline-none transition-all"
                 {...form.register('network', { required: 'Required' })}
               >
                 <option value="Testnet">Testnet</option>
                 <option value="Signet">Signet</option>
                 <option value="Regtest">Regtest</option>
               </select>
-              <ChevronDown className="absolute right-2 top-2.5 h-5 w-5 text-gray-400 pointer-events-none" />
-            </div>
-            <div className="text-sm text-red mt-2">
-              {form.formState.errors.network?.message}
+              <ChevronDown
+                className="absolute right-3 top-1/2 -translate-y-1/2 
+                                    w-5 h-5 text-slate-400 pointer-events-none"
+              />
             </div>
           </div>
 
           {/* Advanced Settings Toggle */}
-          <div className="pt-4">
-            <button
-              className="flex items-center text-sm text-gray-400 hover:text-white"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              type="button"
-            >
-              <ChevronDown
-                className={`h-4 w-4 mr-2 transform transition-transform ${
-                  showAdvanced ? 'rotate-180' : ''
-                }`}
-              />
-              Advanced Settings
-            </button>
-          </div>
+          <button
+            className="flex items-center text-sm text-slate-400 hover:text-white 
+                     transition-colors w-full py-2"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            type="button"
+          >
+            <ChevronDown
+              className={`w-4 h-4 mr-2 transition-transform 
+                         ${showAdvanced ? 'rotate-180' : ''}`}
+            />
+            Advanced Settings
+          </button>
 
           {/* Advanced Settings Section */}
           {showAdvanced && (
-            <div className="space-y-4 pt-2 border-t border-gray-700">
+            <div className="space-y-4 pt-2 border-t border-slate-700">
               {/* RPC Connection URL */}
               <div>
-                <div className="text-xs mb-3">Bitcoind RPC Connection URL</div>
-                <div className="relative">
-                  <input
-                    className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
-                    placeholder="username:password@host:port"
-                    type="text"
-                    {...form.register('rpc_connection_url', {
-                      pattern: {
-                        message:
-                          'Invalid RPC URL format. Expected: username:password@host:port',
-                        value: /^[^:]+:[^@]+@[^:]+:\d+$/,
-                      },
-                      required: 'Required',
-                    })}
-                  />
-                </div>
-                <div className="text-sm text-gray-400">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Bitcoind RPC Connection URL
+                </label>
+                <input
+                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
+                            bg-slate-800/30 text-slate-300 
+                            focus:border-cyan focus:ring-2 focus:ring-cyan/20 
+                            outline-none transition-all placeholder:text-slate-600"
+                  placeholder="username:password@host:port"
+                  type="text"
+                  {...form.register('rpc_connection_url')}
+                />
+                <p className="mt-2 text-sm text-slate-400">
                   Example: user:password@localhost:18443
-                </div>
-                <div className="text-sm text-red mt-2">
-                  {form.formState.errors.rpc_connection_url?.message}
-                </div>
+                </p>
               </div>
 
               {/* Indexer URL */}
               <div>
-                <div className="text-xs mb-3">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
                   Indexer URL (electrum server)
-                </div>
-                <div className="relative">
-                  <input
-                    className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
-                    placeholder="Enter the indexer URL"
-                    type="text"
-                    {...form.register('indexer_url', { required: 'Required' })}
-                  />
-                </div>
-                <div className="text-sm text-red mt-2">
-                  {form.formState.errors.indexer_url?.message}
-                </div>
+                </label>
+                <input
+                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
+                            bg-slate-800/30 text-slate-300 
+                            focus:border-cyan focus:ring-2 focus:ring-cyan/20 
+                            outline-none transition-all placeholder:text-slate-600"
+                  placeholder="Enter the indexer URL"
+                  type="text"
+                  {...form.register('indexer_url')}
+                />
               </div>
 
               {/* Proxy Endpoint */}
               <div>
-                <div className="text-xs mb-3">RGB Proxy Endpoint</div>
-                <div className="relative">
-                  <input
-                    className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
-                    placeholder="Enter the proxy endpoint"
-                    type="text"
-                    {...form.register('proxy_endpoint', {
-                      required: 'Required',
-                    })}
-                  />
-                </div>
-                <div className="text-sm text-red mt-2">
-                  {form.formState.errors.proxy_endpoint?.message}
-                </div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  RGB Proxy Endpoint
+                </label>
+                <input
+                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
+                            bg-slate-800/30 text-slate-300 
+                            focus:border-cyan focus:ring-2 focus:ring-cyan/20 
+                            outline-none transition-all placeholder:text-slate-600"
+                  placeholder="Enter the proxy endpoint"
+                  type="text"
+                  {...form.register('proxy_endpoint')}
+                />
               </div>
 
               {/* Daemon Listening Port */}
               <div>
-                <div className="text-xs mb-3">Daemon Listening Port</div>
-                <div className="relative">
-                  <input
-                    className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
-                    placeholder="Enter the daemon listening port"
-                    type="text"
-                    {...form.register('daemon_listening_port', {
-                      pattern: {
-                        message: 'Please enter a valid port number',
-                        value: /^\d+$/,
-                      },
-                      required: 'Required',
-                    })}
-                  />
-                </div>
-                <div className="text-sm text-gray-400">Default: 3001</div>
-                <div className="text-sm text-red mt-2">
-                  {form.formState.errors.daemon_listening_port?.message}
-                </div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Daemon Listening Port
+                </label>
+                <input
+                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
+                            bg-slate-800/30 text-slate-300 
+                            focus:border-cyan focus:ring-2 focus:ring-cyan/20 
+                            outline-none transition-all placeholder:text-slate-600"
+                  placeholder="Enter the daemon listening port"
+                  type="text"
+                  {...form.register('daemon_listening_port')}
+                />
+                <p className="mt-2 text-sm text-slate-400">Default: 3001</p>
               </div>
 
               {/* LDK Peer Listening Port */}
               <div>
-                <div className="text-xs mb-3">LDK Peer Listening Port</div>
-                <div className="relative">
-                  <input
-                    className="border border-grey-light rounded bg-blue-dark px-4 py-3 w-full outline-none"
-                    placeholder="Enter the LDK peer listening port"
-                    type="text"
-                    {...form.register('ldk_peer_listening_port', {
-                      pattern: {
-                        message: 'Please enter a valid port number',
-                        value: /^\d+$/,
-                      },
-                      required: 'Required',
-                    })}
-                  />
-                </div>
-                <div className="text-sm text-gray-400">Default: 9735</div>
-                <div className="text-sm text-red mt-2">
-                  {form.formState.errors.ldk_peer_listening_port?.message}
-                </div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  LDK Peer Listening Port
+                </label>
+                <input
+                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
+                            bg-slate-800/30 text-slate-300 
+                            focus:border-cyan focus:ring-2 focus:ring-cyan/20 
+                            outline-none transition-all placeholder:text-slate-600"
+                  placeholder="Enter the LDK peer listening port"
+                  type="text"
+                  {...form.register('ldk_peer_listening_port')}
+                />
+                <p className="mt-2 text-sm text-slate-400">Default: 9735</p>
               </div>
             </div>
           )}
 
           {/* Error Display */}
           {errors.length > 0 && (
-            <div className="text-sm text-red">
-              <ul>
+            <div
+              className="p-4 bg-red-500/10 border border-red-500/20 
+                          rounded-xl flex items-start gap-3"
+            >
+              <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+              <ul className="text-red-400 text-sm space-y-1">
                 {errors.map((error, index) => (
-                  <li key={index}>{error}</li>
+                  <li className="flex items-center gap-2" key={index}>
+                    <span>•</span> {error}
+                  </li>
                 ))}
               </ul>
             </div>
           )}
-        </div>
 
-        <div className="flex self-end justify-end mt-8">
+          {/* Submit Button */}
           <button
-            className="px-6 py-3 rounded border text-lg font-bold border-cyan"
+            className="w-full mt-6 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan to-purple 
+                     text-white font-semibold hover:opacity-90 transition-all duration-200
+                     focus:ring-2 focus:ring-cyan/20 focus:outline-none
+                     flex items-center justify-center gap-2"
             type="submit"
           >
             Continue to Password Setup
+            <ArrowRight className="w-5 h-5" />
           </button>
         </div>
       </form>
-    </>
+    </div>
   )
 }

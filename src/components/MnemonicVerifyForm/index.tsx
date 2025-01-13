@@ -1,7 +1,10 @@
-import { ArrowLeft, AlertCircle, Check, Loader2 } from 'lucide-react'
+import { ArrowLeft, AlertCircle, ArrowRight, Loader2 } from 'lucide-react'
 import React, { useState } from 'react'
 import { SubmitHandler, UseFormReturn } from 'react-hook-form'
 import { toast } from 'react-toastify'
+
+// Import the wordlist
+import wordlistRaw from '../../assets/bip39-english.txt?raw'
 
 export interface MnemonicVerifyFields {
   mnemonic: string
@@ -21,8 +24,61 @@ export const MnemonicVerifyForm = ({
   errors,
 }: MnemonicVerifyFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [wordlist] = useState(() => wordlistRaw.split('\n').filter(Boolean))
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [_, setCurrentWord] = useState('')
+  const [cursorPosition, setCursorPosition] = useState(0)
 
-  // Wrap the onSubmit handler to manage loading state
+  // Handle word suggestions
+  const updateSuggestions = (text: string, position: number) => {
+    const words = text.slice(0, position).split(' ')
+    const currentWordInput = words[words.length - 1].toLowerCase()
+    setCurrentWord(currentWordInput)
+
+    if (words.length > 12) {
+      setSuggestions([])
+      return
+    }
+
+    if (currentWordInput.length > 0) {
+      const matches = wordlist
+        .filter((word) => word.startsWith(currentWordInput))
+        .slice(0, 5) // Limit to 5 suggestions
+      setSuggestions(matches)
+    } else {
+      setSuggestions([])
+    }
+  }
+
+  // Handle suggestion click
+  const handleSuggestionClick = (word: string) => {
+    const textarea = document.querySelector('textarea') as HTMLTextAreaElement
+    const text = textarea.value
+    const beforeCursor = text.slice(0, cursorPosition)
+    const afterCursor = text.slice(cursorPosition)
+
+    const words = beforeCursor.split(' ')
+    words[words.length - 1] = word
+
+    const newText = words.join(' ') + ' ' + afterCursor.trim()
+    form.setValue('mnemonic', newText)
+    setSuggestions([])
+
+    // Set focus back to textarea
+    textarea.focus()
+    const newPosition = words.join(' ').length + 1
+    textarea.setSelectionRange(newPosition, newPosition)
+    setCursorPosition(newPosition)
+  }
+
+  // Handle key down event to select the first suggestion with Tab
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Tab' && suggestions.length > 0) {
+      e.preventDefault()
+      handleSuggestionClick(suggestions[0])
+    }
+  }
+
   const handleSubmit: SubmitHandler<MnemonicVerifyFields> = async (data) => {
     if (isSubmitting) return
     setIsSubmitting(true)
@@ -41,8 +97,8 @@ export const MnemonicVerifyForm = ({
       .map((word, index) => (
         <span
           className="inline-block bg-slate-800/50 text-slate-300 px-3 py-1.5 
-                   rounded-lg border border-slate-700/50 text-sm font-medium m-1
-                   transition-colors hover:border-slate-600"
+                     rounded-lg border border-slate-700/50 text-sm font-medium m-1
+                     transition-colors hover:border-slate-600"
           key={index}
         >
           {word}
@@ -52,14 +108,7 @@ export const MnemonicVerifyForm = ({
 
   React.useEffect(() => {
     errors.forEach((error) => {
-      toast.error(error, {
-        autoClose: 5000,
-        closeOnClick: true,
-        draggable: true,
-        hideProgressBar: false,
-        pauseOnHover: true,
-        position: 'top-right',
-      })
+      toast.error(error)
     })
   }, [errors])
 
@@ -72,9 +121,10 @@ export const MnemonicVerifyForm = ({
                      hover:bg-slate-800/50 transition-all duration-200 
                      flex items-center gap-2 text-slate-400 hover:text-white"
           onClick={onBack}
+          type="button"
         >
           <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-          Back to Recovery Phrase
+          Back
         </button>
       </div>
 
@@ -100,24 +150,66 @@ export const MnemonicVerifyForm = ({
       >
         <div className="space-y-6">
           <div>
-            <label
-              className="block text-sm font-medium text-slate-300 mb-2"
-              htmlFor="mnemonic"
-            >
+            <label className="block text-sm font-medium text-slate-300 mb-2">
               Recovery Phrase
             </label>
             <div className="relative">
               <textarea
                 className="w-full min-h-[120px] rounded-xl border-2 border-slate-700/50 
+                          bg-slate-800/30 px-4 py-3 text-slate-300 font-mono text-base
                           focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                          bg-slate-800/30 px-4 py-3 outline-none transition-all
-                          text-slate-300 font-mono text-base placeholder:text-slate-600"
-                id="mnemonic"
+                          outline-none transition-all placeholder:text-slate-600"
                 placeholder="Enter your recovery phrase..."
                 {...form.register('mnemonic', {
                   required: 'Recovery phrase is required',
                 })}
+                onChange={(e) => {
+                  form.register('mnemonic').onChange(e)
+                  updateSuggestions(e.target.value, e.target.selectionStart)
+                }}
+                onClick={(e) => {
+                  setCursorPosition(e.currentTarget.selectionStart)
+                  updateSuggestions(
+                    e.currentTarget.value,
+                    e.currentTarget.selectionStart
+                  )
+                }}
+                onKeyDown={handleKeyDown}
+                onKeyUp={(e) => {
+                  setCursorPosition(e.currentTarget.selectionStart)
+                  updateSuggestions(
+                    e.currentTarget.value,
+                    e.currentTarget.selectionStart
+                  )
+                }}
               />
+
+              {/* Word Suggestions */}
+              {suggestions.length > 0 && (
+                <div
+                  className="absolute left-0 right-0 mt-1 bg-slate-800 
+                               border border-slate-700 rounded-lg overflow-hidden"
+                >
+                  {suggestions.map((word, index) => (
+                    <button
+                      className="w-full px-4 py-2 text-left text-slate-300 
+                                hover:bg-slate-700/50 transition-colors
+                                flex items-center justify-between"
+                      key={word}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        handleSuggestionClick(word)
+                      }}
+                      type="button"
+                    >
+                      <span>{word}</span>
+                      {index === 0 && (
+                        <span className="text-xs text-slate-500">Tab ↹</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Word Display */}
               <div className="mt-3 min-h-[40px]">
@@ -131,7 +223,7 @@ export const MnemonicVerifyForm = ({
               {/* Word Counter */}
               <div
                 className="absolute bottom-2 right-2 px-2 py-1 rounded-md 
-                            bg-slate-800/80 text-xs text-slate-400"
+                             bg-slate-800/80 text-xs text-slate-400"
               >
                 {form.watch('mnemonic')?.split(/\s+/).filter(Boolean).length ||
                   0}{' '}
@@ -143,7 +235,7 @@ export const MnemonicVerifyForm = ({
             {(form.formState.errors.mnemonic || errors.length > 0) && (
               <div
                 className="mt-4 p-4 bg-red-500/10 border border-red-500/20 
-                            rounded-xl flex items-start gap-3"
+                             rounded-xl flex items-start gap-3"
               >
                 <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                 <div className="flex-1">
@@ -165,24 +257,27 @@ export const MnemonicVerifyForm = ({
               </div>
             )}
           </div>
-        </div>
 
-        {/* Submit Button */}
-        <div className="mt-10">
+          {/* Submit Button */}
           <button
-            className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-cyan to-purple 
+            className="w-full mt-6 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan to-purple 
                      text-white font-semibold hover:opacity-90 transition-all duration-200
                      focus:ring-2 focus:ring-cyan/20 focus:outline-none
-                     flex items-center justify-center gap-2 disabled:opacity-50 
-                     disabled:cursor-not-allowed"
+                     flex items-center justify-center gap-2
+                     disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isSubmitting}
             type="submit"
           >
-            <span>Confirm Recovery Phrase</span>
             {isSubmitting ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Verifying...</span>
+              </>
             ) : (
-              <Check className="w-5 h-5" />
+              <>
+                <span>Confirm Recovery Phrase</span>
+                <ArrowRight className="w-5 h-5" />
+              </>
             )}
           </button>
         </div>
