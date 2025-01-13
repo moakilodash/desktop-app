@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { toast, ToastContainer } from 'react-toastify'
@@ -10,6 +11,7 @@ import {
 } from '../../app/router/paths'
 import logo from '../../assets/logo.svg'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
+import { Toolbar } from '../Toolbar'
 
 import { ChannelMenu } from './ChannelMenu'
 import { LayoutModal } from './Modal'
@@ -40,6 +42,7 @@ const NAV_ITEMS = [
 export const Layout = (props: Props) => {
   const [lastDeposit, setLastDeposit] = useState<number | undefined>(undefined)
   const [isRetrying, setIsRetrying] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -115,54 +118,103 @@ export const Layout = (props: Props) => {
     checkDeposits()
   }, [data, error, shouldPoll, lastDeposit])
 
+  const isWalletSetup = location.pathname === WALLET_SETUP_PATH
+  const isNodeConnected = nodeInfo.isSuccess
+
   return (
     <div className={props.className}>
       <div className="min-h-screen flex">
-        <div className="px-16 py-14 min-h-screen min-w-full flex flex-col">
-          <header className="flex items-center mb-20">
-            <img
-              alt="KaleidoSwap"
-              className="cursor-pointer"
-              onClick={() => navigate(WALLET_SETUP_PATH)}
-              src={logo}
-            />
-
-            {nodeInfo.isSuccess && (
-              <>
-                <nav className="flex-1 ml-16">
-                  <ul className="flex space-x-6 items-center">
-                    {NAV_ITEMS.map((item) => {
-                      const isActive = new RegExp(item.matchPath).test(
-                        location.pathname
-                      )
-
-                      return (
-                        <li className="p-2 font-medium" key={item.to}>
-                          <NavLink
-                            className={isActive ? 'text-cyan' : undefined}
-                            to={item.to}
-                          >
-                            {item.label}
-                          </NavLink>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </nav>
-
-                <div className="flex space-x-6 items-center">
-                  <ChannelMenu />
-                  <WalletMenu />
+        {isWalletSetup ? (
+          // Full wallet setup view with sidebar
+          <div className="flex w-full">
+            {!isNodeConnected && (
+              // Show sidebar only when no node is connected
+              <div
+                className={`flex flex-col fixed left-0 top-0 h-screen bg-blue-darkest border-r border-divider/10
+                transition-all duration-300 ease-in-out z-50 group
+                ${isSidebarCollapsed ? 'w-16' : 'w-72'}`}
+              >
+                <div className="flex items-center justify-between p-4 border-b border-divider/10">
+                  <img
+                    alt="KaleidoSwap"
+                    className={`h-8 cursor-pointer ${isSidebarCollapsed ? 'w-8' : 'w-auto'}`}
+                    onClick={() => navigate(WALLET_SETUP_PATH)}
+                    src={logo}
+                  />
+                  <button
+                    className="p-2 rounded-lg text-gray-400 hover:text-white 
+                      hover:bg-blue-darker transition-colors duration-200"
+                    onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                  >
+                    {isSidebarCollapsed ? (
+                      <ChevronRight size={20} />
+                    ) : (
+                      <ChevronLeft size={20} />
+                    )}
+                  </button>
                 </div>
-              </>
-            )}
-          </header>
 
-          <main className="flex justify-center items-center flex-1">
-            {props.children}
-          </main>
-        </div>
+                <Toolbar isCollapsed={isSidebarCollapsed} />
+              </div>
+            )}
+
+            {/* Main wallet setup content */}
+            <main
+              className={`flex-1 min-h-screen bg-gradient-to-br from-blue-darker to-blue-darkest
+              ${!isNodeConnected ? (isSidebarCollapsed ? 'ml-16' : 'ml-72') : ''}`}
+            >
+              {props.children}
+            </main>
+          </div>
+        ) : (
+          // Regular header for other routes
+          <div className="px-16 py-14 min-h-screen min-w-full flex flex-col">
+            <header className="flex items-center mb-20">
+              <img
+                alt="KaleidoSwap"
+                className="cursor-pointer"
+                onClick={() => navigate(WALLET_SETUP_PATH)}
+                src={logo}
+              />
+
+              {isNodeConnected && (
+                <>
+                  <nav className="flex-1 ml-16">
+                    <ul className="flex space-x-6 items-center">
+                      {NAV_ITEMS.map((item) => {
+                        const isActive = new RegExp(item.matchPath).test(
+                          location.pathname
+                        )
+
+                        return (
+                          <li className="p-2 font-medium" key={item.to}>
+                            <NavLink
+                              className={isActive ? 'text-cyan' : undefined}
+                              to={item.to}
+                            >
+                              {item.label}
+                            </NavLink>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </nav>
+
+                  <div className="flex space-x-6 items-center">
+                    <ChannelMenu />
+                    <WalletMenu />
+                  </div>
+                </>
+              )}
+            </header>
+
+            <main className="flex justify-center items-center flex-1">
+              {props.children}
+            </main>
+          </div>
+        )}
       </div>
+
       <LayoutModal />
       <ToastContainer
         autoClose={5000}
