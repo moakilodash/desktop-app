@@ -17,7 +17,12 @@ import 'react-toastify/dist/ReactToastify.css'
 import { useAppSelector } from '../../app/store/hooks'
 import { formatBitcoinAmount } from '../../helpers/number'
 import { Lsps1CreateOrderResponse } from '../../slices/makerApi/makerApi.slice'
-import { nodeApi, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
+import {
+  nodeApi,
+  NiaAsset,
+  NodeApiError,
+  SendPaymentResponse,
+} from '../../slices/nodeApi/nodeApi.slice'
 
 interface StepProps {
   onBack: () => void
@@ -102,6 +107,9 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
 
   // Add loading state for data fetching
   const [isLoadingData, setIsLoadingData] = useState(false)
+
+  // Add decodeInvoice to the list of queries
+  const [decodeInvoice] = nodeApi.endpoints.decodeInvoice.useLazyQuery()
 
   // Memoize the refresh function
   const refreshData = useCallback(async () => {
@@ -190,24 +198,84 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
     setIsProcessingWalletPayment(true)
     try {
       if (paymentMethod === 'lightning' && order?.payment?.bolt11) {
-        await sendPayment({ invoice: order.payment.bolt11.invoice })
-        toast.success('Lightning payment sent successfully!')
+        // First decode and validate the invoice
+        const decodeResult = await decodeInvoice({
+          invoice: order.payment.bolt11.invoice,
+        })
+
+        if ('error' in decodeResult || !decodeResult.data) {
+          const error =
+            'error' in decodeResult
+              ? (decodeResult.error as NodeApiError)
+              : { data: { error: 'Failed to decode invoice' } }
+          throw new Error(error.data.error)
+        }
+
+        // Now we can safely use decodeResult.data
+        if (
+          decodeResult.data.amt_msat !==
+          order.payment.bolt11.order_total_sat * 1000
+        ) {
+          throw new Error(
+            'Invoice amount does not match order amount. Expected: ' +
+              order.payment.bolt11.order_total_sat * 1000 +
+              ' msat, got: ' +
+              decodeResult.data.amt_msat +
+              ' msat'
+          )
+        }
+
+        // If validation passes, send the payment
+        const result = await sendPayment({
+          invoice: order.payment.bolt11.invoice,
+        })
+
+        if ('error' in result) {
+          const error = result.error as NodeApiError
+          throw new Error(error.data.error)
+        }
+
+        const response = result.data as SendPaymentResponse
+
+        if (response.status === 'Failed') {
+          throw new Error('Lightning payment failed')
+        }
+
+        // Payment is either Pending or Succeeded
+        toast.success(
+          response.status === 'Pending'
+            ? 'Lightning payment initiated successfully!'
+            : 'Lightning payment completed successfully!'
+        )
+        setPaymentStatus('paid')
       } else if (paymentMethod === 'onchain' && order?.payment?.onchain) {
         const feeRate =
           selectedFee === 'custom'
             ? customFee
             : feeRates.find((rate) => rate.value === selectedFee)?.rate || 1
-        await sendBtc({
+
+        const result = await sendBtc({
           address: order.payment.onchain.address,
           amount: order.payment.onchain.order_total_sat,
           fee_rate: feeRate,
         })
+
+        if ('error' in result) {
+          const error = result.error as NodeApiError
+          throw new Error(error.data.error)
+        }
+
         toast.success('On-chain payment sent successfully!')
+        setPaymentStatus('paid')
       }
-      setPaymentStatus('paid')
+
       setShowWalletConfirmation(false)
     } catch (error) {
-      toast.error('Payment failed: ' + (error as Error).message)
+      toast.error(
+        'Payment failed: ' +
+          (error instanceof Error ? error.message : 'Unknown error')
+      )
+      setPaymentStatus(null)
     } finally {
       setIsProcessingWalletPayment(false)
     }
@@ -605,11 +673,12 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
           </svg>
         </div>
         <h3 className="text-xl font-bold text-white mb-2">
-          Payment Successful!
+          Payment {paymentMethod === 'lightning' ? 'Initiated' : 'Successful'}!
         </h3>
         <p className="text-gray-400 mb-4">
-          Your payment has been sent successfully. Please wait while we confirm
-          the channel setup with the LSP.
+          {paymentMethod === 'lightning'
+            ? 'Your lightning payment has been initiated. Please wait while we process the payment and set up the channel with the LSP.'
+            : 'Your payment has been sent successfully. Please wait while we confirm the channel setup with the LSP.'}
         </p>
         <div className="w-full max-w-sm bg-gray-900/50 rounded-lg p-4">
           <div className="flex justify-between items-center mb-2">
@@ -641,7 +710,11 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
         </div>
         <div className="mt-6 flex items-center gap-2 text-blue-400">
           <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-          <span>Waiting for LSP confirmation...</span>
+          <span>
+            {paymentMethod === 'lightning'
+              ? 'Processing payment and setting up channel...'
+              : 'Waiting for LSP confirmation...'}
+          </span>
         </div>
       </div>
     </div>
