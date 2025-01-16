@@ -9,6 +9,7 @@ use std::io::{BufReader, BufRead};
 use tauri::Window;
 
 const SHUTDOWN_TIMEOUT_SECS: u64 = 5;
+const PROCESS_RESTART_WAIT_SECS: u64 = 5;
 
 pub struct NodeProcess {
     child_process: Arc<Mutex<Option<Child>>>,
@@ -56,8 +57,8 @@ impl NodeProcess {
                 if start.elapsed() > self.shutdown_timeout {
                     println!("Force killing process after timeout...");
                     self.force_kill();
-                    // Add additional wait to ensure process is fully killed
-                    std::thread::sleep(Duration::from_secs(1));
+                    println!("Waiting {} seconds before starting new process...", PROCESS_RESTART_WAIT_SECS);
+                    std::thread::sleep(Duration::from_secs(PROCESS_RESTART_WAIT_SECS));
                     break;
                 }
                 std::thread::sleep(Duration::from_millis(100));
@@ -190,7 +191,8 @@ impl NodeProcess {
 
                 // Restart if needed
                 if should_restart {
-                    thread::sleep(Duration::from_secs(1));
+                    println!("Waiting {} seconds before restarting process...", PROCESS_RESTART_WAIT_SECS);
+                    thread::sleep(Duration::from_secs(PROCESS_RESTART_WAIT_SECS));
                     let new_process = run_rgb_lightning_node(&network, &datapath, &daemon_listening_port, &ldk_peer_listening_port);
                     if let Some(child) = new_process {
                         *child_process.lock().unwrap() = Some(child);
