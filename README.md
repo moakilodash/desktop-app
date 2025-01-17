@@ -109,7 +109,7 @@ Before building Kaleidoswap locally, you need:
    - Currently, with RLN disabled, CMake is not strictly required.
 
 #### Linux-Specific Instructions
-1. Basic Build Tools and Libraries
+1. **Basic Build Tools and Libraries**
    - Install standard build tools (e.g., `build-essential` on Debian/Ubuntu or the equivalent on other distros).
    - Ensure **pkg-config** and the **SSL libraries** are installed.
 2. **libsoup and javascriptcoregtk**
