@@ -11,6 +11,7 @@ import {
   Copy,
   Network,
   Blocks,
+  Database,
 } from 'lucide-react'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -23,6 +24,7 @@ import {
 } from '../../app/router/paths'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { ChannelCard } from '../../components/ChannelCard'
+import { UTXOManagementModal } from '../../components/UTXOManagementModal'
 import { BitcoinNetwork, DEFAULT_RGB_ICON } from '../../constants'
 import { formatBitcoinAmount } from '../../helpers/number'
 import { nodeApi, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
@@ -382,13 +384,12 @@ export const Component = () => {
   const [assetsMap, setAssetsMap] = useState<Record<string, NiaAsset>>({})
   const bitcoinUnit = useAppSelector((state) => state.settings.bitcoinUnit)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  // const [refreshRgbTransfers] =
-  //   nodeApi.endpoints.refreshRgbTransfers.useLazyQuery()
   const [sync] = nodeApi.endpoints.sync.useLazyQuery()
   const [getNodeInfo, nodeInfoResponse] =
     nodeApi.endpoints.nodeInfo.useLazyQuery()
   const [getNetworkInfo, networkInfoResponse] =
     nodeApi.endpoints.networkInfo.useLazyQuery()
+  const [showUTXOModal, setShowUTXOModal] = useState(false)
 
   const refreshData = useCallback(async () => {
     setIsRefreshing(true)
@@ -557,10 +558,10 @@ export const Component = () => {
           <button
             className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 
                      text-white rounded-xl font-medium transition-colors"
-            onClick={() => navigate(CREATEUTXOS_PATH)}
+            onClick={() => setShowUTXOModal(true)}
           >
-            <Plus className="w-5 h-5" />
-            Create UTXOs
+            <Database className="w-5 h-5" />
+            Manage UTXOs
           </button>
 
           <button
@@ -576,6 +577,13 @@ export const Component = () => {
             )}
             {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </button>
+
+          {showUTXOModal && (
+            <UTXOManagementModal
+              bitcoinUnit={bitcoinUnit}
+              onClose={() => setShowUTXOModal(false)}
+            />
+          )}
         </div>
 
         <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4">
