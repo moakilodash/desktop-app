@@ -12,6 +12,7 @@ import {
   Network,
   Blocks,
   Database,
+  Users,
 } from 'lucide-react'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -24,6 +25,7 @@ import {
 } from '../../app/router/paths'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { ChannelCard } from '../../components/ChannelCard'
+import { PeerManagementModal } from '../../components/PeerManagementModal'
 import { UTXOManagementModal } from '../../components/UTXOManagementModal'
 import { BitcoinNetwork, DEFAULT_RGB_ICON } from '../../constants'
 import { formatBitcoinAmount } from '../../helpers/number'
@@ -390,6 +392,7 @@ export const Component = () => {
   const [getNetworkInfo, networkInfoResponse] =
     nodeApi.endpoints.networkInfo.useLazyQuery()
   const [showUTXOModal, setShowUTXOModal] = useState(false)
+  const [showPeerModal, setShowPeerModal] = useState(false)
 
   const refreshData = useCallback(async () => {
     setIsRefreshing(true)
@@ -567,13 +570,22 @@ export const Component = () => {
           <button
             className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 
                      text-white rounded-xl font-medium transition-colors"
+            onClick={() => setShowPeerModal(true)}
+          >
+            <Users className="w-5 h-5" />
+            Peers
+          </button>
+
+          <button
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 
+                     text-blue-500 rounded-lg font-medium transition-colors"
             disabled={isRefreshing}
             onClick={refreshData}
           >
             {isRefreshing ? (
-              <Loader className="w-5 h-5 animate-spin" />
+              <Loader className="w-4 h-4 animate-spin" />
             ) : (
-              <RefreshCw className="w-5 h-5" />
+              <RefreshCw className="w-4 h-4" />
             )}
             {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </button>
@@ -583,6 +595,10 @@ export const Component = () => {
               bitcoinUnit={bitcoinUnit}
               onClose={() => setShowUTXOModal(false)}
             />
+          )}
+
+          {showPeerModal && (
+            <PeerManagementModal onClose={() => setShowPeerModal(false)} />
           )}
         </div>
 
