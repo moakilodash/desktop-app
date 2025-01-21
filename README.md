@@ -13,8 +13,10 @@
   - [Installation 🛠️](#installation-️)
     - [1. Download Binaries](#1-download-binaries)
     - [2. Building Locally](#2-building-locally)
-      - [Prerequisites](#prerequisites)
-      - [Building](#building)
+      - [Common Prerequisites](#common-prerequisites)
+      - [Windows-Specific Instructions](#windows-specific-instructions)
+      - [Linux-Specific Instructions](#linux-specific-instructions)
+      - [Building and Running](#building-and-running)
   - [Usage 💡](#usage-)
     - [Connecting to an RGB Lightning Node](#connecting-to-an-rgb-lightning-node)
     - [Trading and Swapping Assets](#trading-and-swapping-assets)
@@ -76,37 +78,62 @@ You can install the app in two ways:
 
 ### 2. Building Locally
 
-#### Prerequisites
+#### Common Prerequisites
 
-If you are building the app locally, ensure you have the following:
+Before building Kaleidoswap locally, you need:
 
-- **[Tauri Prerequisites](https://tauri.app/v1/guides/getting-started/prerequisites)**: Required to build the frontend.
-- **Node.js & npm**: For running the Tauri app in a development environment.
-- **Rust**: Needed for the Tauri backend.
+1. **Tauri 1.6.0**  
+   Make sure you have installed all the [official Tauri prerequisites](https://tauri.app/v1/guides/getting-started/prerequisites). This includes:
+   - **Rust** (and the corresponding toolchain)
+   - **Node.js**  
+   - **npm**  
+   - **pnpm** for installing Tauri
+  
+2. **Repository**  
+   Clone the project repository:
+   ```sh
+   git clone https://github.com/kaleidoswap/desktop-app
+   cd desktop-app
+   ```
+#### Windows-Specific Instructions
+1. **Disable RLN Integration (Temporarily)**
+   - The `rgb-lightning-node (RLN)` integration is not fully supported on Windows yet.
+   - If you still want to experiment with RLN on Windows, you can run it in a Docker container locally without integrating it directly into the Kaleidoswap build.
+2. **Install vcpkg**
+   - Windows requires [vcpkg](https://github.com/microsoft/vcpkg) (the equivalent of pkg-config) to install certain libraries.
+   - Using vcpkg, install **openssl** and **sqlite3**.
+3. **MSVC for C++ Linking**
+   - You must have **Microsoft Visual C++ (MSVC)** installed, typically provided with Visual Studio or Visual Studio Build Tools.
+4. **(Future) CMake for RLN**
+   - Once RLN support on Windows is optimized, you will also need **CMake** for building RLN itself.
+   - Currently, with RLN disabled, CMake is not strictly required.
 
-#### Building
+#### Linux-Specific Instructions
+1. **Basic Build Tools and Libraries**
+   - Install standard build tools (e.g., `build-essential` on Debian/Ubuntu or the equivalent on other distros).
+   - Ensure **pkg-config** and the **SSL libraries** are installed.
+2. **libsoup and javascriptcoregtk**
+   - Tauri requires **libsoup 2.4**, **javascriptcoregtk 4.0** and **webkit2gtk 4.0**.
+   - Some newer distributions (e.g., recent Ubuntu versions) may only provide gtk libraries from version 4.1. If so, install the 4.0 versions manually.
+3. **Rust, Node.js, npm, pnpm**
+   - Follow the [Tauri documentation](https://tauri.app/v1/guides/getting-started/prerequisites) to ensure your environment is correctly set up.
+   - Make sure you have the appropriate Rust toolchain, Node.js, npm, and pnpm installed.
 
-1. Clone the repository:
-
+#### Building and Running
+Once you have met the prerequisites for your operating system, proceed with the following steps:
+1. **Enter the repository folder:**
     ```sh
-    git clone https://github.com/kaleidoswap/desktop-app
     cd desktop-app
     ```
-
-2. Install dependencies:
-
+2. **Install dependencies:**
     ```sh
     npm install
     ```
-
-3. Build the Tauri app:
-
+3. **Build the Tauri app:**
     ```sh
     tauri build
     ```
-
 4. Run Kaleidoswap in development mode:
-
     ```sh
     tauri dev
     ```
