@@ -103,15 +103,16 @@ interface NodeInfoResponse {
 }
 
 interface ConnectPeerRequest {
-  pubkey_and_addr: string
+  peer_pubkey_and_addr: string
 }
 
+interface DisconnectPeerRequest {
+  peer_pubkey: string
+}
 interface ListPeersResponse {
-  peers: [
-    {
-      pubkey: string
-    },
-  ]
+  peers: Array<{
+    pubkey: string
+  }>
 }
 
 interface BtcBalanceRequest {
@@ -224,10 +225,16 @@ interface SendPaymentRequest {
   invoice: string
 }
 
-interface SendPaymentResponse {
+enum HTLCStatus {
+  Pending = 'Pending',
+  Succeeded = 'Succeeded',
+  Failed = 'Failed',
+}
+
+export interface SendPaymentResponse {
   payment_hash: string
   payment_secret: string
-  status: string
+  status: HTLCStatus
 }
 
 interface ListTransactionsRequest {
@@ -370,10 +377,17 @@ interface EstimateFeeRequest {
   blocks: number
 }
 
+export interface NodeApiError {
+  status: number
+  data: {
+    error: string
+  }
+}
+
 const dynamicBaseQuery: BaseQueryFn<
   string | FetchArgs,
   unknown,
-  FetchBaseQueryError
+  NodeApiError
 > = async (args, api, extraOptions) => {
   const state = api.getState() as RootState
   const node_url = state.nodeSettings.data.node_url
@@ -381,9 +395,10 @@ const dynamicBaseQuery: BaseQueryFn<
   if (!node_url) {
     return {
       error: {
-        data: 'Node URL not set',
+        data: {
+          error: 'Node URL not set',
+        },
         status: 400,
-        statusText: 'Bad Request',
       },
     }
   }
@@ -393,7 +408,44 @@ const dynamicBaseQuery: BaseQueryFn<
   const adjustedArgs =
     typeof args === 'string' ? adjustedUrl : { ...args, url: adjustedUrl }
 
-  return fetchBaseQuery({ baseUrl: '' })(adjustedArgs, api, extraOptions)
+  const baseQuery = fetchBaseQuery({
+    baseUrl: '',
+    timeout: 180000,
+    validateStatus: (response, _) => {
+      return response.status >= 200 && response.status < 300
+    },
+  })
+
+  try {
+    const result = await baseQuery(adjustedArgs, api, extraOptions)
+
+    if (result.error) {
+      const err = result.error as FetchBaseQueryError
+      return {
+        error: {
+          data: {
+            error:
+              typeof err.data === 'string'
+                ? err.data
+                : (err.data as any)?.error || 'Unknown error',
+          },
+          status: err.status as number,
+        },
+      }
+    }
+
+    return result
+  } catch (error) {
+    return {
+      error: {
+        data: {
+          error:
+            error instanceof Error ? error.message : 'Unknown error occurred',
+        },
+        status: 500,
+      },
+    }
+  }
 }
 
 export const nodeApi = createApi({
@@ -442,9 +494,7 @@ export const nodeApi = createApi({
     }),
     connectPeer: builder.mutation<void, ConnectPeerRequest>({
       query: (body) => ({
-        body: {
-          peer_pubkey_and_addr: body.pubkey_and_addr,
-        },
+        body,
         method: 'POST',
         url: '/connectpeer',
       }),
@@ -467,6 +517,13 @@ export const nodeApi = createApi({
         body,
         method: 'POST',
         url: '/decodelninvoice',
+      }),
+    }),
+    disconnectPeer: builder.mutation<void, DisconnectPeerRequest>({
+      query: (body) => ({
+        body,
+        method: 'POST',
+        url: '/disconnectpeer',
       }),
     }),
     estimateFee: builder.query<EstimateFeeResponse, EstimateFeeRequest>({
@@ -687,6 +744,7 @@ export const nodeApi = createApi({
           proxy_endpoint: body.proxy_endpoint,
         },
         method: 'POST',
+        timeout: 180000,
         url: '/unlock',
       }),
     }),

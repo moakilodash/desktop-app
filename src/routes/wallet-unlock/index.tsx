@@ -18,11 +18,11 @@ import {
   PasswordSetupForm,
   PasswordFields,
 } from '../../components/PasswordSetupForm'
-import { Spinner } from '../../components/Spinner'
+import { UnlockingProgress } from '../../components/UnlockingProgress'
 import { parseRpcUrl } from '../../helpers/utils'
 import { ChevronDownIcon } from '../../icons/ChevronDown'
 import { EyeIcon } from '../../icons/Eye'
-import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
+import { nodeApi , NodeApiError } from '../../slices/nodeApi/nodeApi.slice'
 
 interface Fields {
   password: string
@@ -43,11 +43,17 @@ const ConnectionDetails = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
 
+  const toggleExpanded = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsExpanded(!isExpanded)
+  }
+
   return (
     <div className="mt-4 mb-6">
       <button
         className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors rounded-lg border border-gray-600 hover:border-gray-500"
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={toggleExpanded}
+        type="button"
       >
         <span>Connection Details</span>
         <ChevronDownIcon
@@ -144,6 +150,7 @@ export const Component = () => {
         data.password,
         nodeSettings.proxy_endpoint
       )
+
       const unlockResponse = await unlock({
         bitcoind_rpc_host: rpcConfig.host,
         bitcoind_rpc_password: rpcConfig.password,
@@ -161,36 +168,29 @@ export const Component = () => {
         } else {
           throw new Error('Failed to get node info after unlock')
         }
-      } else {
-        if ('error' in unlockResponse && unlockResponse.error) {
-          if (
-            isFetchBaseQueryError(unlockResponse.error) &&
-            unlockResponse.error.status === 'FETCH_ERROR'
-          ) {
-            throw new Error(
-              `Unable to connect to the node service. 
-              Please ensure the service is running on ${nodeSettings.node_url} and try again.`
-            )
-          }
+      } else if (unlockResponse.error) {
+        const error = unlockResponse.error as NodeApiError
 
-          if (
-            isFetchBaseQueryError(unlockResponse.error) &&
-            unlockResponse.error.status === 403 &&
-            (unlockResponse.error.data as { error?: string })?.error ===
-              'Wallet has not been initialized (hint: call init)'
-          ) {
-            setShowInitModal(true)
-            return
-          }
-          if ('error' in unlockResponse && unlockResponse.error) {
-            const errorData = isFetchBaseQueryError(unlockResponse.error)
-              ? (unlockResponse.error.data as { error?: string })?.error ||
-                'Unknown error'
-              : unlockResponse.error.message || 'Unknown error'
-            throw new Error(errorData)
-          }
+        if (
+          typeof error.status === 'string' &&
+          error.status === 'FETCH_ERROR'
+        ) {
+          throw new Error(
+            `Unable to connect to the node service. 
+            Please ensure the service is running on ${nodeSettings.node_url} and try again.`
+          )
         }
-        throw new Error('Failed to unlock the node')
+
+        if (
+          error.status === 403 &&
+          error.data?.error ===
+            'Wallet has not been initialized (hint: call init)'
+        ) {
+          setShowInitModal(true)
+          return
+        }
+
+        throw new Error(error.data?.error || 'Unknown error occurred')
       }
     } catch (error: unknown) {
       const errorMessage =
@@ -310,14 +310,7 @@ export const Component = () => {
     <Layout>
       <div className="max-w-md w-full bg-blue-dark py-12 px-8 rounded-lg shadow-lg">
         {isUnlocking || isVerifying ? (
-          <div className="py-20 flex flex-col items-center space-y-4">
-            <Spinner size={30} />
-            <div className="text-center text-lg">
-              {isUnlocking
-                ? 'Unlocking your wallet...'
-                : 'Verifying your recovery phrase...'}
-            </div>
-          </div>
+          <UnlockingProgress isUnlocking={isUnlocking} />
         ) : currentStep === 'unlock' ? (
           <form
             className="space-y-6"

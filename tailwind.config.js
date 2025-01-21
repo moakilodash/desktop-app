@@ -39,6 +39,57 @@ export default {
       fontFamily: {
         sans: ['Mulish', 'sans-serif'],
       },
+      animation: {
+        'spin-slow': 'spin 3s linear infinite',
+        'fadeIn': 'fadeIn 0.5s ease-in forwards',
+        'fadeInUp': 'fadeInUp 0.5s ease-out forwards',
+        'slideInRight': 'slideInRight 0.5s ease-out forwards',
+        'pulse': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        fadeInUp: {
+          '0%': { 
+            opacity: '0', 
+            transform: 'translateY(20px)' 
+          },
+          '100%': { 
+            opacity: '1', 
+            transform: 'translateY(0)' 
+          },
+        },
+        slideInRight: {
+          '0%': { 
+            opacity: '0', 
+            transform: 'translateX(-20px)' 
+          },
+          '100%': { 
+            opacity: '1', 
+            transform: 'translateX(0)' 
+          },
+        },
+        spin: {
+          '0%': { 
+            transform: 'rotate(0deg)' 
+          },
+          '100%': { 
+            transform: 'rotate(360deg)' 
+          },
+        },
+        pulse: {
+          '0%, 100%': { 
+            opacity: '1',
+            transform: 'scale(1)',
+          },
+          '50%': { 
+            opacity: '.9',
+            transform: 'scale(1.05)',
+          },
+        },
+      },
     },
   },
 }
