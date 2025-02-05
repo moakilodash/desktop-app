@@ -148,7 +148,9 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
     }
     setIsLoading(true)
     try {
-      const response = await connectPeer({ pubkey_and_addr: connectionUrl })
+      const response = await connectPeer({
+        peer_pubkey_and_addr: connectionUrl,
+      })
       if ('error' in response) {
         const error = response.error as FetchBaseQueryError
         const errorMessage =

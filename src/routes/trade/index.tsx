@@ -1,3 +1,4 @@
+import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import React, { useCallback, useEffect, useState, useMemo } from 'react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
@@ -756,7 +757,7 @@ export const Component = () => {
     setShowConfirmation(true)
   }
 
-  // Add the executeSwap function
+  // Update the executeSwap function's error handling
   const executeSwap = async (data: Fields) => {
     let toastId: string | number | null = null
     let timeoutId: any | null = null
@@ -831,8 +832,25 @@ export const Component = () => {
       logger.debug('Swap payload:', payload)
 
       const initSwapResponse = await initSwap(payload)
-      if ('error' in initSwapResponse || !initSwapResponse.data) {
+      if ('error' in initSwapResponse) {
+        // Extract the error detail from the response
+        const errorData = initSwapResponse.error as FetchBaseQueryError
+        if (errorData) {
+          throw new Error(
+            typeof errorData === 'string'
+              ? errorData
+              : errorData.data &&
+                  typeof errorData.data === 'object' &&
+                  'error' in errorData.data
+                ? String(errorData.data.error)
+                : 'Failed to initialize swap'
+          )
+        }
         throw new Error('Failed to initialize swap')
+      }
+
+      if (!initSwapResponse.data) {
+        throw new Error('No data received from swap initialization')
       }
 
       const { swapstring, payment_hash } = initSwapResponse.data
@@ -883,6 +901,18 @@ export const Component = () => {
 
       const takerResponse = await taker({ swapstring })
       if ('error' in takerResponse) {
+        const errorData = takerResponse.error as FetchBaseQueryError
+        if (errorData) {
+          throw new Error(
+            typeof errorData === 'string'
+              ? errorData
+              : errorData.data &&
+                  typeof errorData.data === 'object' &&
+                  'error' in errorData.data
+                ? String(errorData.data.error)
+                : 'Failed to confirm swap'
+          )
+        }
         throw new Error('Taker operation failed')
       }
 
@@ -898,6 +928,18 @@ export const Component = () => {
 
       const confirmSwapResponse = await execSwap(confirmSwapPayload)
       if ('error' in confirmSwapResponse) {
+        const errorData = confirmSwapResponse.error as FetchBaseQueryError
+        if (errorData) {
+          throw new Error(
+            typeof errorData === 'string'
+              ? errorData
+              : errorData.data &&
+                  typeof errorData.data === 'object' &&
+                  'error' in errorData.data
+                ? String(errorData.data.error)
+                : 'Failed to confirm swap'
+          )
+        }
         throw new Error('Failed to confirm swap')
       }
 
@@ -925,15 +967,32 @@ export const Component = () => {
       setShowRecap(true)
     } catch (error) {
       logger.error('Error executing swap', error)
+
+      // Extract error detail from various error formats
+      let errorDetail = ''
+      if (typeof error === 'object' && error !== null) {
+        if ('data' in error) {
+          // Handle RTK Query error format
+          const errorData = error.data as any
+          errorDetail =
+            errorData?.detail || errorData?.error || JSON.stringify(errorData)
+        } else if ('message' in error) {
+          // Handle standard Error object
+          errorDetail = (error as Error).message
+        }
+      }
+
+      // If no specific error detail was found, use the error as a string
+      const readableError = errorDetail || String(error)
       const errorDetails =
         error instanceof Error
           ? `${error.name}: ${error.message}`
-          : 'An unknown error occurred during the swap'
+          : String(error)
 
       // Clear any existing toasts first
       toast.dismiss()
 
-      // Create a new persistent error toast
+      // Create a new persistent error toast with improved UI
       toast.error(
         <div
           className="flex flex-col gap-2"
@@ -941,18 +1000,23 @@ export const Component = () => {
         >
           <div className="flex items-center justify-between">
             <span className="font-medium text-red-500">Swap Failed</span>
-            <button
-              className="p-1 hover:bg-slate-700/50 rounded transition-colors"
-              onClick={(e) => {
-                e.stopPropagation()
-                copyToClipboard(errorDetails)
-              }}
-              title="Copy error details"
-            >
-              <Copy className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                className="p-1 hover:bg-slate-700/50 rounded transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  copyToClipboard(errorDetails)
+                }}
+                title="Copy error details"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            </div>
           </div>
-          <p className="text-sm text-slate-300 break-all">{errorDetails}</p>
+          <p className="text-sm text-slate-300">{readableError}</p>
+          {errorDetails !== readableError && (
+            <p className="text-xs text-slate-400 break-all">{errorDetails}</p>
+          )}
         </div>,
         {
           autoClose: false,
@@ -966,15 +1030,14 @@ export const Component = () => {
         }
       )
 
-      setErrorMessage(errorDetails)
-      setIsSwapInProgress(false) // Reset swap progress state
+      setErrorMessage(readableError)
+      setIsSwapInProgress(false)
 
-      // Don't call clearToastAndTimeout() for errors
       if (timeoutId !== null) {
         clearTimeout(timeoutId)
         timeoutId = null
       }
-      return // Exit early to prevent clearToastAndTimeout from running
+      return
     } finally {
       setShowConfirmation(false)
       if (!errorMessage) {

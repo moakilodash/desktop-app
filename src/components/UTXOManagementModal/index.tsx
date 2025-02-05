@@ -73,7 +73,7 @@ export const UTXOManagementModal = ({
     navigate(CREATEUTXOS_PATH)
   }
 
-  const UTXOCard = ({ unspent, index }: { unspent: any; index: number }) => (
+  const UTXOCard = ({ unspent }: { unspent: any; index: number }) => (
     <div
       className="bg-slate-800/50 rounded-xl border border-slate-700 p-4"
       key={unspent.utxo.outpoint}
