@@ -130,14 +130,14 @@ interface AddressResponse {
   address: string
 }
 
-interface IssueAssetRequest {
+interface IssueNiaAssetRequest {
   amounts: number[]
   ticker: string
   name: string
   precision: number
 }
 
-interface IssueAssetResponse {
+interface IssueNiaAssetResponse {
   asset_id: string
 }
 
@@ -549,11 +549,11 @@ export const nodeApi = createApi({
         url: '/invoicestatus',
       }),
     }),
-    issueAsset: builder.query<IssueAssetResponse, IssueAssetRequest>({
+    issueNiaAsset: builder.query<IssueNiaAssetResponse, IssueNiaAssetRequest>({
       query: (body) => ({
         body,
         method: 'POST',
-        url: '/issueasset',
+        url: '/issueassetnia',
       }),
     }),
     listAssets: builder.query<ListAssetsResponse, void>({

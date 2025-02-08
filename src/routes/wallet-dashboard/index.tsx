@@ -25,6 +25,7 @@ import {
 } from '../../app/router/paths'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { ChannelCard } from '../../components/ChannelCard'
+import { IssueAssetModal } from '../../components/IssueAssetModal'
 import { PeerManagementModal } from '../../components/PeerManagementModal'
 import { UTXOManagementModal } from '../../components/UTXOManagementModal'
 import { BitcoinNetwork, DEFAULT_RGB_ICON } from '../../constants'
@@ -415,6 +416,7 @@ export const Component = () => {
     nodeApi.endpoints.networkInfo.useLazyQuery()
   const [showUTXOModal, setShowUTXOModal] = useState(false)
   const [showPeerModal, setShowPeerModal] = useState(false)
+  const [showIssueAssetModal, setShowIssueAssetModal] = useState(false)
 
   const refreshData = useCallback(async () => {
     setIsRefreshing(true)
@@ -562,6 +564,13 @@ export const Component = () => {
             </p>
           </div>
         </div>
+      )}
+
+      {showIssueAssetModal && (
+        <IssueAssetModal
+          onClose={() => setShowIssueAssetModal(false)}
+          onSuccess={refreshData}
+        />
       )}
 
       <div className="flex flex-col items-center mb-8">
@@ -794,18 +803,12 @@ export const Component = () => {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-white">Assets</h2>
           <button
-            className="px-4 py-2 rounded-xl border border-slate-600 text-slate-300
-                     hover:border-blue-500/50 hover:text-blue-500 transition-all
-                     flex items-center gap-2"
-            disabled={isRefreshing}
-            onClick={refreshData}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white 
+                     rounded-xl font-medium transition-colors flex items-center gap-2"
+            onClick={() => setShowIssueAssetModal(true)}
           >
-            {isRefreshing ? (
-              <Loader className="w-4 h-4 animate-spin" />
-            ) : (
-              <RefreshCw className="w-4 h-4" />
-            )}
-            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            <Plus className="w-4 h-4" />
+            Issue Asset
           </button>
         </div>
 
@@ -829,7 +832,7 @@ export const Component = () => {
         </div>
       </div>
 
-      <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6">
+      <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6 mb-8">
         <h2 className="text-xl font-bold text-white mb-6">
           Lightning Channels
         </h2>
