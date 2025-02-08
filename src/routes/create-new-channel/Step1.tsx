@@ -26,7 +26,6 @@ interface FormFields {
 }
 
 export const Step1 = (props: Props) => {
-  const [lspConnectionUrl, setLspConnectionUrl] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [showConnectionDialog, setShowConnectionDialog] = useState(false)
@@ -64,16 +63,35 @@ export const Step1 = (props: Props) => {
     setError('')
     try {
       const networkInfo = await getNetworkInfo().unwrap()
-      const apiUrl =
-        NETWORK_DEFAULTS[networkInfo.network.toLowerCase()].default_lsp_url
+
+      if (!networkInfo?.network) {
+        throw new Error('Network information not available')
+      }
+
+      // Normalize network name to match NETWORK_DEFAULTS keys
+      const network = networkInfo.network
+        .toLowerCase()
+        .replace(/^\w/, (c) => c.toUpperCase())
+
+      if (!NETWORK_DEFAULTS[network]) {
+        throw new Error(`Unsupported network: ${networkInfo.network}`)
+      }
+
+      const apiUrl = NETWORK_DEFAULTS[network].default_lsp_url
+      if (!apiUrl) {
+        throw new Error(`No default LSP URL configured for network: ${network}`)
+      }
+
       const response = await axios.get(`${apiUrl}api/v1/lsps1/get_info`)
       const connectionUrl = response.data.lsp_connection_url
-      setLspConnectionUrl(connectionUrl)
-      console.log('lspConnectionUrl', lspConnectionUrl)
       setValue('pubKeyAndAddress', connectionUrl)
     } catch (err) {
       console.error('Error fetching LSP info:', err)
-      setError('Failed to fetch LSP connection information')
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to fetch LSP connection information'
+      )
     } finally {
       setIsLoading(false)
     }
@@ -155,8 +173,7 @@ export const Step1 = (props: Props) => {
                       : 'border-gray-600 focus:border-blue-500'
                   } 
                   focus:ring-1 focus:ring-blue-500 font-mono text-sm min-h-[6rem] resize-none`}
-                placeholder="Format: <66-char-hex-pubkey>@<host>:<port>
-Example: 039257e0669aa5dea5df7c971048699a39f9023333d550a90800b9412f231ee8e7@lsp.signet.kaleidoswap.com:9735"
+                placeholder="Example: 039257e0669aa5dea5df7c971048699a39f9023333d550a90800b9412f231ee8e7@lsp.signet.kaleidoswap.com:9735"
                 {...field}
                 onChange={(e) => {
                   field.onChange(e)

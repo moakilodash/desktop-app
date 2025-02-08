@@ -180,7 +180,7 @@ enum ChannelStatus {
 }
 
 interface RGBInvoiceRequest {
-  asset_id: string
+  asset_id?: string
 }
 
 interface RGBInvoiceResponse {
@@ -612,7 +612,18 @@ export const nodeApi = createApi({
     }),
     lnInvoice: builder.query<LNINvoiceResponse, LNInvoiceRequest>({
       query: (body) => ({
-        body: { ...body, amt_msat: body.amt_msat || 3000000, expiry_sec: 420 },
+        body: {
+          ...(body.asset_id
+            ? {
+                amt_msat: 3000000,
+                asset_amount: body.asset_amount,
+                asset_id: body.asset_id,
+              }
+            : {
+                amt_msat: body.amt_msat || 3000000,
+              }),
+          expiry_sec: 3600,
+        },
         method: 'POST',
         url: '/lninvoice',
       }),
@@ -667,8 +678,8 @@ export const nodeApi = createApi({
     rgbInvoice: builder.query<RGBInvoiceResponse, RGBInvoiceRequest>({
       query: (body) => ({
         body: {
-          asset_id: body.asset_id,
-          min_confirmations: 0,
+          ...(body.asset_id ? { asset_id: body.asset_id } : {}),
+          min_confirmations: 1,
         },
         method: 'POST',
         url: '/rgbinvoice',

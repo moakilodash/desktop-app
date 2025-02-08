@@ -199,99 +199,121 @@ const OnChainDetailsOverlay = ({
   onChainColoredSpendableBalance: number
   bitcoinUnit: string
   onCreateUtxos: () => void
-}) => (
-  <div
-    className="absolute inset-0 bg-[#0B101B]/95 backdrop-blur-sm rounded-lg opacity-0 
-                  group-hover:opacity-100 transition-all duration-300 ease-in-out
-                  flex flex-col p-4 sm:p-6"
-  >
-    {/* Header */}
-    <div className="flex justify-between items-center mb-4 sm:mb-6">
-      <h3 className="text-base font-medium text-white">On-chain Details</h3>
-      <button
-        className="p-1.5 sm:p-2 bg-blue-500/10 hover:bg-blue-500/20 
-                   text-blue-500 rounded-lg transition-all duration-200"
-        onClick={onCreateUtxos}
-      >
-        <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
-      </button>
-    </div>
+}) => {
+  const [showOverlay, setShowOverlay] = useState(false)
 
-    {/* Balance Details */}
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-      {/* Normal Balance */}
-      <div className="bg-[#151C2E] rounded-xl p-3 sm:p-4 border border-slate-700/30">
-        <h4 className="text-base sm:text-lg font-medium text-white mb-3">
-          Normal Balance
-        </h4>
-        <div className="space-y-2 sm:space-y-3">
-          <div className="bg-[#0B101B] rounded-lg p-2 sm:p-3">
-            <div className="text-xs sm:text-sm text-gray-400 mb-0.5">
-              Settled
-            </div>
-            <div className="text-sm sm:text-base font-medium text-white">
-              {formatBitcoinAmount(onChainBalance, bitcoinUnit)} {bitcoinUnit}
-            </div>
-          </div>
-          <div className="bg-[#0B101B] rounded-lg p-2 sm:p-3">
-            <div className="text-xs sm:text-sm text-gray-400 mb-0.5">
-              Future
-            </div>
-            <div className="text-sm sm:text-base font-medium text-white">
-              {formatBitcoinAmount(onChainFutureBalance, bitcoinUnit)}{' '}
-              {bitcoinUnit}
-            </div>
-          </div>
-          <div className="bg-[#0B101B] rounded-lg p-2 sm:p-3">
-            <div className="text-xs sm:text-sm text-gray-400 mb-0.5">
-              Spendable
-            </div>
-            <div className="text-sm sm:text-base font-medium text-white">
-              {formatBitcoinAmount(onChainSpendableBalance, bitcoinUnit)}{' '}
-              {bitcoinUnit}
-            </div>
-          </div>
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setShowOverlay(true)}
+      onMouseLeave={() => setShowOverlay(false)}
+    >
+      <div>
+        <span className="text-sm text-gray-400 flex items-center gap-2">
+          <ChainIcon className="w-4 h-4 text-blue-500" />
+          On-chain
+        </span>
+        <div className="text-lg sm:text-2xl font-medium text-white">
+          {formatBitcoinAmount(
+            onChainBalance + onChainColoredBalance,
+            bitcoinUnit
+          )}{' '}
+          {bitcoinUnit}
         </div>
       </div>
 
-      {/* Colored Balance */}
-      <div className="bg-[#151C2E] rounded-xl p-3 sm:p-4 border border-slate-700/30">
-        <h4 className="text-base sm:text-lg font-medium text-white mb-3">
-          Colored Balance
-        </h4>
-        <div className="space-y-2 sm:space-y-3">
-          <div className="bg-[#0B101B] rounded-lg p-2 sm:p-3">
-            <div className="text-xs sm:text-sm text-gray-400 mb-0.5">
-              Settled
-            </div>
-            <div className="text-sm sm:text-base font-medium text-white">
-              {formatBitcoinAmount(onChainColoredBalance, bitcoinUnit)}{' '}
-              {bitcoinUnit}
-            </div>
+      {showOverlay && (
+        <div
+          className="absolute inset-0 bg-[#0B101B]/95 backdrop-blur-sm rounded-lg
+                     flex flex-col p-4 sm:p-6 z-10"
+        >
+          {/* Header */}
+          <div className="flex justify-between items-center mb-4 sm:mb-6">
+            <h3 className="text-base font-medium text-white">
+              On-chain Details
+            </h3>
+            <button
+              className="p-1.5 sm:p-2 bg-blue-500/10 hover:bg-blue-500/20 
+                        text-blue-500 rounded-lg transition-all duration-200"
+              onClick={onCreateUtxos}
+            >
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+            </button>
           </div>
-          <div className="bg-[#0B101B] rounded-lg p-2 sm:p-3">
-            <div className="text-xs sm:text-sm text-gray-400 mb-0.5">
-              Future
+
+          {/* Balance Details */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Normal Balance */}
+            <div className="bg-[#151C2E] rounded-lg p-2.5 border border-slate-700/30">
+              <h4 className="text-sm font-medium text-white mb-2">
+                Normal Balance
+              </h4>
+              <div className="space-y-1.5">
+                <div className="bg-[#0B101B] rounded-lg p-1.5">
+                  <div className="text-xs text-gray-400">Settled</div>
+                  <div className="text-xs font-medium text-white truncate">
+                    {formatBitcoinAmount(onChainBalance, bitcoinUnit)}{' '}
+                    {bitcoinUnit}
+                  </div>
+                </div>
+                <div className="bg-[#0B101B] rounded-lg p-1.5">
+                  <div className="text-xs text-gray-400">Future</div>
+                  <div className="text-xs font-medium text-white truncate">
+                    {formatBitcoinAmount(onChainFutureBalance, bitcoinUnit)}{' '}
+                    {bitcoinUnit}
+                  </div>
+                </div>
+                <div className="bg-[#0B101B] rounded-lg p-1.5">
+                  <div className="text-xs text-gray-400">Spendable</div>
+                  <div className="text-xs font-medium text-white truncate">
+                    {formatBitcoinAmount(onChainSpendableBalance, bitcoinUnit)}{' '}
+                    {bitcoinUnit}
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="text-sm sm:text-base font-medium text-white">
-              {formatBitcoinAmount(onChainColoredFutureBalance, bitcoinUnit)}{' '}
-              {bitcoinUnit}
-            </div>
-          </div>
-          <div className="bg-[#0B101B] rounded-lg p-2 sm:p-3">
-            <div className="text-xs sm:text-sm text-gray-400 mb-0.5">
-              Spendable
-            </div>
-            <div className="text-sm sm:text-base font-medium text-white">
-              {formatBitcoinAmount(onChainColoredSpendableBalance, bitcoinUnit)}{' '}
-              {bitcoinUnit}
+
+            {/* Colored Balance */}
+            <div className="bg-[#151C2E] rounded-lg p-2.5 border border-slate-700/30">
+              <h4 className="text-sm font-medium text-white mb-2">
+                Colored Balance
+              </h4>
+              <div className="space-y-1.5">
+                <div className="bg-[#0B101B] rounded-lg p-1.5">
+                  <div className="text-xs text-gray-400">Settled</div>
+                  <div className="text-xs font-medium text-white truncate">
+                    {formatBitcoinAmount(onChainColoredBalance, bitcoinUnit)}{' '}
+                    {bitcoinUnit}
+                  </div>
+                </div>
+                <div className="bg-[#0B101B] rounded-lg p-1.5">
+                  <div className="text-xs text-gray-400">Future</div>
+                  <div className="text-xs font-medium text-white truncate">
+                    {formatBitcoinAmount(
+                      onChainColoredFutureBalance,
+                      bitcoinUnit
+                    )}{' '}
+                    {bitcoinUnit}
+                  </div>
+                </div>
+                <div className="bg-[#0B101B] rounded-lg p-1.5">
+                  <div className="text-xs text-gray-400">Spendable</div>
+                  <div className="text-xs font-medium text-white truncate">
+                    {formatBitcoinAmount(
+                      onChainColoredSpendableBalance,
+                      bitcoinUnit
+                    )}{' '}
+                    {bitcoinUnit}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
-  </div>
-)
+  )
+}
 
 const LiquidityCard = ({
   title,
@@ -718,27 +740,7 @@ export const Component = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div
-              className="group relative bg-[#0B101B]/80 rounded-lg p-3 sm:p-4 
-                            hover:bg-[#0B101B] transition-all duration-200"
-            >
-              <div>
-                <span className="text-sm text-gray-400 flex items-center gap-2">
-                  <ChainIcon className="w-4 h-4 text-blue-500" />
-                  On-chain
-                </span>
-                <div className="text-lg sm:text-2xl font-medium text-white">
-                  {isLoading ? (
-                    <LoadingPlaceholder />
-                  ) : (
-                    `${formatBitcoinAmount(
-                      onChainBalance + onChainColoredBalance,
-                      bitcoinUnit
-                    )} ${bitcoinUnit}`
-                  )}
-                </div>
-              </div>
-
+            <div className="bg-[#0B101B]/80 rounded-lg p-3 sm:p-4 hover:bg-[#0B101B] transition-all duration-200">
               <OnChainDetailsOverlay
                 bitcoinUnit={bitcoinUnit}
                 onChainBalance={onChainBalance}

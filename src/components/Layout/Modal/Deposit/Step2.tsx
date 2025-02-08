@@ -19,7 +19,7 @@ import { BTC_ASSET_ID } from '../../../../constants'
 import { nodeApi } from '../../../../slices/nodeApi/nodeApi.slice'
 
 interface Props {
-  assetId: string
+  assetId?: string
   onBack: VoidFunction
   onNext: VoidFunction
 }
@@ -100,8 +100,8 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
         } else {
           setAddress(res.data?.invoice)
         }
-      } else if (assetId !== BTC_ASSET_ID) {
-        const res = await rgbInvoice({ asset_id: assetId })
+      } else if (!assetId || assetId !== BTC_ASSET_ID) {
+        const res = await rgbInvoice(assetId ? { asset_id: assetId } : {})
         if ('error' in res) {
           toast.error('Failed to generate RGB invoice')
         } else {
@@ -145,23 +145,34 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
     type: 'on-chain' | 'lightning'
     icon: any
     label: string
-  }) => (
-    <button
-      className={`
-        flex-1 py-4 px-6 flex flex-col items-center justify-center gap-2
-        rounded-xl transition-all duration-200 border-2
-        ${
-          network === type
-            ? 'bg-blue-500/10 border-blue-500 text-blue-500'
-            : 'border-slate-700 hover:border-blue-500/50 text-slate-400 hover:text-blue-500/80'
-        }
-      `}
-      onClick={() => setNetwork(type)}
-    >
-      <Icon className={`w-6 h-6 ${network === type ? 'animate-pulse' : ''}`} />
-      <span className="font-medium">{label}</span>
-    </button>
-  )
+  }) => {
+    const isDisabled = type === 'lightning' && !assetId
+
+    return (
+      <button
+        className={`
+          flex-1 py-4 px-6 flex flex-col items-center justify-center gap-2
+          rounded-xl transition-all duration-200 border-2
+          ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
+          ${
+            network === type
+              ? 'bg-blue-500/10 border-blue-500 text-blue-500'
+              : 'border-slate-700 hover:border-blue-500/50 text-slate-400 hover:text-blue-500/80'
+          }
+        `}
+        disabled={isDisabled}
+        onClick={() => !isDisabled && setNetwork(type)}
+      >
+        <Icon
+          className={`w-6 h-6 ${network === type ? 'animate-pulse' : ''}`}
+        />
+        <span className="font-medium">{label}</span>
+        {isDisabled && (
+          <span className="text-xs text-slate-500">Requires asset ID</span>
+        )}
+      </button>
+    )
+  }
 
   const getStatusColor = () => {
     if (!invoiceStatus) return 'text-slate-400'
@@ -186,6 +197,16 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
       </div>
 
       <div className="space-y-6">
+        {!assetId && (
+          <div className="mb-6 p-4 bg-blue-500/10 rounded-xl border border-blue-500/20">
+            <p className="text-blue-400 text-sm">
+              You are generating a deposit address that can receive any RGB
+              asset. Make sure to communicate with the sender about which asset
+              they intend to send.
+            </p>
+          </div>
+        )}
+
         {/* Network Selection */}
         <div className="flex gap-4 p-1">
           <NetworkOption icon={ChainIcon} label="On-chain" type="on-chain" />
@@ -210,6 +231,15 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
                 {assetId === BTC_ASSET_ID ? bitcoinUnit : assetTicker}
               </div>
             </div>
+            {assetId && assetId !== BTC_ASSET_ID && (
+              <div className="mt-2 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                <p className="text-sm text-blue-400">
+                  <span className="font-medium">Note:</span> 3,000 sats will be
+                  included in the lightning invoice. This is required for RGB
+                  asset transfers over the Lightning Network.
+                </p>
+              </div>
+            )}
           </div>
         )}
 

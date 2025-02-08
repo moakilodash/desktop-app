@@ -8,7 +8,7 @@ import { nodeApi } from '../../../../slices/nodeApi/nodeApi.slice'
 import { DepositModal, uiSliceSeletors } from '../../../../slices/ui/ui.slice'
 
 interface Props {
-  onNext: (assetId: string) => void
+  onNext: (assetId?: string) => void
 }
 
 interface Asset {
@@ -50,13 +50,19 @@ export const Step1 = ({ onNext }: Props) => {
     setIsDropdownOpen(false)
   }
 
+  const handleAddNewAsset = () => {
+    setIsNewAsset(true)
+    setAssetId('')
+    setIsDropdownOpen(false)
+  }
+
   const handleSubmit = useCallback(() => {
-    if (!assetId) {
-      toast.error('Please select an asset')
+    if (isNewAsset && !assetId) {
+      onNext(undefined)
       return
     }
     onNext(assetId)
-  }, [assetId, onNext])
+  }, [assetId, onNext, isNewAsset])
 
   return (
     <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
@@ -78,7 +84,7 @@ export const Step1 = ({ onNext }: Props) => {
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           >
             <div className="flex items-center gap-3">
-              {selectedAsset ? (
+              {selectedAsset && !isNewAsset ? (
                 <>
                   <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
                     <span className="text-blue-500 font-bold">
@@ -95,7 +101,9 @@ export const Step1 = ({ onNext }: Props) => {
                   </div>
                 </>
               ) : (
-                <span className="text-slate-400">Select an asset</span>
+                <span className="text-slate-400">
+                  {isNewAsset ? 'New Asset' : 'Select an asset'}
+                </span>
               )}
             </div>
             <ChevronDown
@@ -152,10 +160,7 @@ export const Step1 = ({ onNext }: Props) => {
                 <button
                   className="w-full px-4 py-3 flex items-center gap-3 hover:bg-blue-500/10 
                            text-blue-500 transition-colors duration-200"
-                  onClick={() => {
-                    setIsNewAsset(true)
-                    setIsDropdownOpen(false)
-                  }}
+                  onClick={handleAddNewAsset}
                 >
                   <Plus className="w-5 h-5" />
                   <span>Add New Asset</span>
@@ -167,18 +172,27 @@ export const Step1 = ({ onNext }: Props) => {
 
         {/* New Asset Input */}
         {isNewAsset && (
-          <div className="space-y-2 animate-fadeIn">
-            <label className="text-sm font-medium text-slate-400">
-              Asset ID
-            </label>
-            <input
-              className="w-full px-4 py-3 bg-slate-800/50 rounded-xl border border-slate-700 
-                       focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white
-                       placeholder:text-slate-600"
-              onChange={(e) => setAssetId(e.target.value)}
-              placeholder="Enter asset ID"
-              type="text"
-            />
+          <div className="space-y-4 animate-fadeIn">
+            <div className="p-4 bg-blue-500/10 rounded-xl border border-blue-500/20">
+              <p className="text-blue-400 text-sm">
+                If you don't know the asset ID, you can proceed without entering
+                it. The system will generate a deposit address that can receive
+                any RGB asset.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-400">
+                Asset ID (optional)
+              </label>
+              <input
+                className="w-full px-4 py-3 bg-slate-800/50 rounded-xl border border-slate-700 
+                         focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white
+                         placeholder:text-slate-600"
+                onChange={(e) => setAssetId(e.target.value)}
+                placeholder="Enter asset ID (optional)"
+                type="text"
+              />
+            </div>
           </div>
         )}
 
