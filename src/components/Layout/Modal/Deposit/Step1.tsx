@@ -1,6 +1,5 @@
 import { Search, ChevronDown, Plus, Bitcoin } from 'lucide-react'
 import { useCallback, useState } from 'react'
-import { toast } from 'react-toastify'
 
 import { useAppSelector } from '../../../../app/store/hooks'
 import { BTC_ASSET_ID } from '../../../../constants'

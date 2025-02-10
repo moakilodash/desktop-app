@@ -85,7 +85,7 @@ export const Component = () => {
   const [hasValidChannelsForTrading, setHasValidChannelsForTrading] =
     useState(false)
   const [debouncedFromAmount, setDebouncedFromAmount] = useState('')
-  const [debouncedToAmount, setDebouncedToAmount] = useState('')
+  const [debouncedToAmount] = useState('')
   const previousFromAmount = usePrevious(form.getValues().from)
   const previousToAmount = usePrevious(form.getValues().to)
 
@@ -1662,7 +1662,6 @@ export const Component = () => {
       {swapRecapDetails && (
         <SwapRecap
           bitcoinUnit={bitcoinUnit}
-          formatAmount={formatAmount}
           getAssetPrecision={getAssetPrecision}
           isOpen={showRecap}
           onClose={() => {

@@ -31,7 +31,6 @@ interface SwapRecapProps {
   onClose: () => void
   swapDetails: SwapDetails
   bitcoinUnit: string
-  formatAmount: (amount: number, asset: string) => string
   getAssetPrecision: (asset: string) => number
 }
 
@@ -84,7 +83,6 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
   onClose,
   swapDetails,
   bitcoinUnit,
-  formatAmount,
   getAssetPrecision,
 }) => {
   const {

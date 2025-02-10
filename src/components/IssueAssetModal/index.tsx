@@ -34,7 +34,14 @@ export const IssueAssetModal: React.FC<IssueAssetModalProps> = ({
       })
 
       if ('error' in response) {
-        throw new Error(response.error.data.error)
+        const errorData = response.error
+        let errorMessage = 'Failed to issue asset'
+
+        if (errorData && typeof errorData === 'object' && 'data' in errorData) {
+          errorMessage = (errorData.data as any).error || errorMessage
+        }
+
+        throw new Error(errorMessage)
       }
 
       toast.success('Asset issued successfully!')
