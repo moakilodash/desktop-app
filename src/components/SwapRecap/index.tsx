@@ -60,7 +60,14 @@ const getStatusConfig = (status: string | undefined) => {
         bg: 'bg-blue-500/10',
         color: 'text-blue-500',
         icon: Clock,
-        message: 'Swap in progress',
+        message: 'Processing swap with maker...',
+      }
+    case 'waiting':
+      return {
+        bg: 'bg-amber-500/10',
+        color: 'text-amber-500',
+        icon: Clock,
+        message: 'Waiting for maker to process swap...',
       }
     default:
       return {
@@ -100,90 +107,105 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
     (swap) => swap.payment_hash === payment_hash
   )
 
-  const calculateAndFormatRate = useCallback(
-    (
-      fromAsset: string,
-      toAsset: string,
-      price: number,
-      selectedPair: TradingPair | null
-    ) => {
-      if (!price) return ''
+  const displayFromAsset = getDisplayAsset(fromAsset, bitcoinUnit)
+  const displayToAsset = getDisplayAsset(toAsset, bitcoinUnit)
 
-      let rate = price
-      if (!selectedPair) return rate
+  const calculateAndFormatRate = useCallback(() => {
+    if (!price || !selectedPair) return ''
 
-      const isInverted =
-        fromAsset === selectedPair.quote_asset &&
-        toAsset === selectedPair.base_asset
+    const isInverted =
+      fromAsset === selectedPair.quote_asset &&
+      toAsset === selectedPair.base_asset
 
-      const precision = !isInverted
-        ? getAssetPrecision(displayToAsset)
-        : getAssetPrecision(displayFromAsset)
+    const precision = !isInverted
+      ? getAssetPrecision(toAsset)
+      : getAssetPrecision(fromAsset)
 
-      let fromUnit = fromAsset === 'BTC' ? bitcoinUnit : fromAsset
-      let toUnit = toAsset === 'BTC' ? bitcoinUnit : toAsset
+    let rate = price
+    let fromUnit = fromAsset === 'BTC' ? bitcoinUnit : fromAsset
+    let toUnit = toAsset === 'BTC' ? bitcoinUnit : toAsset
 
-      if (
-        (fromUnit === 'SAT' && !isInverted) ||
-        (toUnit === 'SAT' && isInverted)
-      ) {
-        rate = rate / SATOSHIS_PER_BTC
-      }
+    if (
+      (fromUnit === 'SAT' && !isInverted) ||
+      (toUnit === 'SAT' && isInverted)
+    ) {
+      rate = rate / SATOSHIS_PER_BTC
+    }
 
-      const formattedRate = !isInverted
-        ? new Intl.NumberFormat('en-US', {
-            maximumFractionDigits: precision > 4 ? precision : 4,
-            minimumFractionDigits: precision,
-            useGrouping: true,
-          }).format(
-            parseFloat(
-              (rate / Math.pow(10, precision)).toFixed(
-                precision > 4 ? precision : 4
-              )
-            )
-          )
-        : new Intl.NumberFormat('en-US', {
-            maximumFractionDigits: precision > 4 ? precision : 4,
-            minimumFractionDigits: precision,
-            useGrouping: true,
-          }).format(
-            parseFloat(
-              (Math.pow(10, precision) / rate).toFixed(
-                precision > 4 ? precision : 4
-              )
-            )
-          )
+    // Format with a minimum of 2 decimal places and a maximum based on asset precision
+    const formattedRate = !isInverted
+      ? new Intl.NumberFormat('en-US', {
+          maximumFractionDigits: Math.max(precision, 4),
+          minimumFractionDigits: 2,
+          useGrouping: true,
+        }).format(rate)
+      : new Intl.NumberFormat('en-US', {
+          maximumFractionDigits: Math.max(precision, 4),
+          minimumFractionDigits: 2,
+          useGrouping: true,
+        }).format(1 / rate)
 
-      return `1 ${fromUnit} = ${formattedRate} ${toUnit}`
-    },
-    [bitcoinUnit, formatAmount]
-  )
+    return `1 ${fromUnit} = ${formattedRate} ${toUnit}`
+  }, [price, selectedPair, fromAsset, toAsset, bitcoinUnit, getAssetPrecision])
+
+  const exchangeRate = calculateAndFormatRate()
+
+  const isPending = currentSwap?.status?.toLowerCase() === 'pending'
+  const isWaiting = currentSwap?.status?.toLowerCase() === 'waiting'
+  const isSucceeded = currentSwap?.status?.toLowerCase() === 'succeeded'
+  const isExpired = currentSwap?.status?.toLowerCase() === 'expired'
+  const isInProgress = isPending || isWaiting
+
+  const handleClose = useCallback(() => {
+    onClose()
+  }, [onClose])
 
   if (!isOpen) return null
 
-  const displayFromAsset = getDisplayAsset(fromAsset, bitcoinUnit)
-  const displayToAsset = getDisplayAsset(toAsset, bitcoinUnit)
-  const exchangeRate = calculateAndFormatRate(
-    fromAsset,
-    toAsset,
-    price,
-    selectedPair
-  )
-
-  const isPending = currentSwap?.status === 'Pending'
-  const isSucceeded = currentSwap?.status === 'Succeeded'
-  const isExpired = currentSwap?.status === 'Expired'
-
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-900/90 rounded-xl border border-slate-800/50 w-full max-w-md">
-        <div className="p-6 space-y-6">
+    <div
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200"
+      onClick={(e) => {
+        // Only allow closing if not in progress
+        if (!isInProgress) {
+          e.stopPropagation()
+          handleClose()
+        }
+      }}
+    >
+      <div
+        className="bg-slate-900/90 rounded-2xl border border-slate-800/50 w-full max-w-md shadow-xl animate-in slide-in-from-bottom-8 duration-300"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-8 space-y-6">
           {/* Header */}
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold text-white">Swap Details</h2>
+            <h2 className="text-2xl font-bold text-white tracking-tight">
+              Swap Details
+              {isInProgress && (
+                <span className="ml-2 text-sm font-normal text-slate-400">
+                  (Please wait...)
+                </span>
+              )}
+            </h2>
             <button
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-lg transition-colors"
-              onClick={onClose}
+              aria-label={
+                isInProgress
+                  ? 'Cannot close while swap is in progress'
+                  : 'Close'
+              }
+              className={`p-2.5 rounded-xl transition-all duration-200 ${
+                isInProgress
+                  ? 'opacity-50 cursor-not-allowed text-slate-600'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800 active:scale-95'
+              }`}
+              disabled={isInProgress}
+              onClick={isInProgress ? undefined : handleClose}
+              title={
+                isInProgress
+                  ? 'Cannot close while swap is in progress'
+                  : 'Close'
+              }
             >
               <X className="w-5 h-5" />
             </button>
@@ -191,16 +213,25 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
 
           {/* Status Card */}
           <div
-            className={`${getStatusConfig(currentSwap?.status).bg} rounded-lg p-4 space-y-4`}
+            className={`${getStatusConfig(currentSwap?.status).bg} rounded-xl p-5 space-y-4 transition-all duration-300`}
           >
             <div className="flex flex-col space-y-3">
               <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   {isSwapsLoading ? (
                     <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                  ) : isInProgress ? (
+                    <div className="relative">
+                      <Clock
+                        className={`w-5 h-5 ${getStatusConfig(currentSwap?.status).color} transition-colors duration-300`}
+                      />
+                      <div
+                        className={`absolute inset-0 rounded-full ${getStatusConfig(currentSwap?.status).color} animate-ping opacity-75`}
+                      />
+                    </div>
                   ) : (
                     <span
-                      className={getStatusConfig(currentSwap?.status).color}
+                      className={`${getStatusConfig(currentSwap?.status).color} transition-colors duration-300`}
                     >
                       {React.createElement(
                         getStatusConfig(currentSwap?.status).icon,
@@ -208,10 +239,10 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
                       )}
                     </span>
                   )}
-                  <span className="font-medium text-slate-200">Status</span>
+                  <span className="font-semibold text-slate-100">Status</span>
                 </div>
                 <span
-                  className={`px-3 py-1 rounded-full text-sm font-medium 
+                  className={`px-3.5 py-1.5 rounded-full text-sm font-medium transition-all duration-300
                     ${getStatusConfig(currentSwap?.status).color} 
                     ${getStatusConfig(currentSwap?.status).bg}`}
                 >
@@ -221,26 +252,37 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
 
               {/* Status Message */}
               <div
-                className={`text-sm ${getStatusConfig(currentSwap?.status).color}`}
+                className={`text-sm ${getStatusConfig(currentSwap?.status).color} transition-colors duration-300`}
               >
                 {getStatusConfig(currentSwap?.status).message}
               </div>
             </div>
 
-            {isPending && (
-              <div className="w-full h-1 bg-blue-500/20 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 rounded-full animate-progress" />
+            {/* Progress Bar for Waiting/Pending States */}
+            {isInProgress && (
+              <div className="w-full h-1.5 bg-slate-700/50 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${isWaiting ? 'bg-amber-500' : 'bg-blue-500'} 
+                    animate-[progress_2s_ease-in-out_infinite] transition-colors duration-300`}
+                  style={{
+                    animation: 'progress 2s ease-in-out infinite',
+                    background: isWaiting
+                      ? 'linear-gradient(90deg, rgba(245, 158, 11, 0.5) 0%, rgba(245, 158, 11, 1) 50%, rgba(245, 158, 11, 0.5) 100%)'
+                      : 'linear-gradient(90deg, rgba(59, 130, 246, 0.5) 0%, rgba(59, 130, 246, 1) 50%, rgba(59, 130, 246, 0.5) 100%)',
+                    transform: 'translateX(-100%)',
+                  }}
+                />
               </div>
             )}
 
             {/* Show warning message for expired swaps */}
             {isExpired && (
-              <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-3 text-sm">
-                <div className="flex items-start gap-2">
+              <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="text-red-500 font-medium">Swap Failed</p>
-                    <p className="text-red-400/80">
+                  <div className="space-y-1.5">
+                    <p className="text-red-500 font-semibold">Swap Failed</p>
+                    <p className="text-red-400/90 leading-relaxed">
                       The swap request expired because the maker did not respond
                       in time. This could be due to network issues or the maker
                       being temporarily unavailable. Please try again.
@@ -252,21 +294,21 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
 
             {/* Swap Details */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between bg-slate-800/50 rounded-lg p-4">
-                <div className="space-y-1">
+              <div className="flex items-center justify-between bg-slate-800/50 rounded-xl p-5 backdrop-blur-sm">
+                <div className="space-y-1.5 min-w-0 flex-1">
                   <span className="text-sm text-slate-400">You sent</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg font-medium text-white">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-lg font-semibold text-white break-all">
                       {fromAmount}
                     </span>
                     <AssetOption label={displayFromAsset} value={fromAsset} />
                   </div>
                 </div>
-                <ArrowRight className="text-slate-600 mx-2" />
-                <div className="space-y-1 text-right">
+                <ArrowRight className="text-slate-500 mx-3 w-5 h-5 flex-shrink-0" />
+                <div className="space-y-1.5 min-w-0 flex-1 text-right">
                   <span className="text-sm text-slate-400">You received</span>
-                  <div className="flex items-center gap-2 justify-end">
-                    <span className="text-lg font-medium text-white">
+                  <div className="flex items-center gap-2 justify-end flex-wrap">
+                    <span className="text-lg font-semibold text-white break-all">
                       {toAmount}
                     </span>
                     <AssetOption label={displayToAsset} value={toAsset} />
@@ -274,14 +316,18 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
                 </div>
               </div>
 
-              <div className="space-y-3 bg-slate-800/50 rounded-lg p-4">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-400">Exchange rate</span>
-                  <span className="text-white font-medium">{exchangeRate}</span>
+              <div className="space-y-3.5 bg-slate-800/50 rounded-xl p-5 backdrop-blur-sm">
+                <div className="flex justify-between items-center text-sm gap-4">
+                  <span className="text-slate-400 flex-shrink-0">
+                    Exchange rate
+                  </span>
+                  <span className="text-white font-medium break-all text-right">
+                    {exchangeRate}
+                  </span>
                 </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-400">Time</span>
-                  <span className="text-white">
+                <div className="flex justify-between items-center text-sm gap-4">
+                  <span className="text-slate-400 flex-shrink-0">Time</span>
+                  <span className="text-white text-right">
                     {new Date(timestamp).toLocaleString(undefined, {
                       dateStyle: 'medium',
                       timeStyle: 'short',
@@ -294,14 +340,17 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
 
           {/* Action Button */}
           <button
-            className={`w-full py-3 px-4 rounded-lg font-medium transition-colors 
-              flex items-center justify-center gap-2
+            className={`w-full py-3.5 px-4 rounded-xl font-medium transition-all duration-200 
+              flex items-center justify-center gap-2.5 text-base
               ${
                 isExpired
-                  ? 'bg-red-600 hover:bg-red-700 text-white'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'
-              }`}
-            onClick={onClose}
+                  ? 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white shadow-lg shadow-red-500/20'
+                  : isInProgress
+                    ? 'bg-slate-700/50 cursor-not-allowed text-slate-300'
+                    : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-lg shadow-blue-500/20'
+              } ${!isInProgress && 'active:scale-[0.98]'}`}
+            disabled={isInProgress}
+            onClick={handleClose}
           >
             {isSucceeded ? (
               <>
@@ -312,6 +361,11 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
               <>
                 <RefreshCw className="w-5 h-5" />
                 Try Again
+              </>
+            ) : isInProgress ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Processing...
               </>
             ) : (
               'OK'
