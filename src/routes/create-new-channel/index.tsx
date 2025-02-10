@@ -2,38 +2,44 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { TRADE_PATH, WALLET_DASHBOARD_PATH } from '../../app/router/paths'
-import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { Spinner } from '../../components/Spinner'
 import { MIN_CHANNEL_CAPACITY } from '../../constants'
-import {
-  channelSliceActions,
-  channelSliceSelectors,
-  TNewChannelForm,
-} from '../../slices/channel/channel.slice'
+import { TNewChannelForm } from '../../slices/channel/channel.slice'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 
+import { FormError } from './FormError'
 import { Step1 } from './Step1'
 import { Step2 } from './Step2'
 import { Step3 } from './Step3'
 import { Step4 } from './Step4'
 
-const FEE_RATES = {
+const DEFAULT_FEE_RATES = {
   fast: 3000,
   medium: 2000,
   slow: 1000,
 }
 
+const initialFormState: TNewChannelForm = {
+  assetAmount: 0,
+  assetId: '',
+  assetTicker: '',
+  capacitySat: MIN_CHANNEL_CAPACITY,
+  fee: 'medium',
+  pubKeyAndAddress: '',
+}
+
 export const Component = () => {
-  const dispatch = useAppDispatch()
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
-  const [feeRates, setFeeRates] = useState(FEE_RATES)
+  const [feeRates, setFeeRates] = useState(DEFAULT_FEE_RATES)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [formData, setFormData] = useState<TNewChannelForm>(initialFormState)
 
   const navigate = useNavigate()
 
-  const [openChannel, openChannelResponse] =
-    nodeApi.endpoints.openChannel.useLazyQuery()
+  const [openChannel] = nodeApi.endpoints.openChannel.useLazyQuery()
   const [getBtcBalance] = nodeApi.endpoints.btcBalance.useLazyQuery()
   const [estimateFee] = nodeApi.endpoints.estimateFee.useLazyQuery()
+  const [getNetworkInfo] = nodeApi.endpoints.networkInfo.useLazyQuery()
 
   const [isLoading, setIsLoading] = useState(true)
   const [insufficientBalance, setInsufficientBalance] = useState(false)
@@ -42,21 +48,29 @@ export const Component = () => {
     null
   )
 
-  const newChannelForm = useAppSelector((state) =>
-    channelSliceSelectors.form(state, 'new')
-  )
+  // Clear form errors when changing steps
+  useEffect(() => {
+    setFormError(null)
+  }, [step])
 
   useEffect(() => {
     const fetchFees = async () => {
-      const slowFeePromise = estimateFee({ blocks: 6 }).unwrap()
-      const mediumFeePromise = estimateFee({ blocks: 3 }).unwrap()
-      const fastFeePromise = estimateFee({ blocks: 1 }).unwrap()
-
       try {
+        // Get network info first
+        const networkInfo = await getNetworkInfo().unwrap()
+        const network = networkInfo?.network?.toLowerCase()
+
+        // Use default fee rates for regtest
+        if (network === 'regtest') {
+          setFeeRates(DEFAULT_FEE_RATES)
+          return
+        }
+
+        // For other networks, fetch fee rates
         const [slowFee, mediumFee, fastFee] = await Promise.all([
-          slowFeePromise,
-          mediumFeePromise,
-          fastFeePromise,
+          estimateFee({ blocks: 6 }).unwrap(),
+          estimateFee({ blocks: 3 }).unwrap(),
+          estimateFee({ blocks: 1 }).unwrap(),
         ])
         setFeeRates({
           fast: fastFee.fee_rate * 1000,
@@ -64,12 +78,13 @@ export const Component = () => {
           slow: slowFee.fee_rate * 1000,
         })
       } catch (e) {
-        console.error(e)
+        console.error('Failed to fetch fee rates:', e)
+        setFormError('Failed to fetch fee rates. Please try again.')
       }
     }
 
     fetchFees()
-  }, [estimateFee])
+  }, [estimateFee, getNetworkInfo])
 
   useEffect(() => {
     const checkInitialBalance = async () => {
@@ -82,10 +97,10 @@ export const Component = () => {
 
           setInsufficientBalance(totalSpendable < MIN_CHANNEL_CAPACITY)
         } else {
-          setError('Failed to fetch balance')
+          throw new Error('Failed to fetch balance')
         }
       } catch (err) {
-        setError('An error occurred while fetching balance')
+        setError(err instanceof Error ? err.message : 'Failed to fetch balance')
       } finally {
         setIsLoading(false)
       }
@@ -94,68 +109,87 @@ export const Component = () => {
     checkInitialBalance()
   }, [getBtcBalance])
 
+  const validateForm = () => {
+    if (!formData.pubKeyAndAddress) {
+      setFormError('Peer connection information is required')
+      return false
+    }
+
+    if (!formData.capacitySat || formData.capacitySat < MIN_CHANNEL_CAPACITY) {
+      setFormError(
+        `Channel capacity must be at least ${MIN_CHANNEL_CAPACITY} satoshis`
+      )
+      return false
+    }
+
+    if (!formData.fee) {
+      setFormError('Please select a fee rate')
+      return false
+    }
+
+    return true
+  }
+
   const onSubmit = useCallback(async () => {
-    const form = newChannelForm as TNewChannelForm
+    if (!validateForm()) {
+      return
+    }
+
     setChannelOpeningError(null)
 
     try {
       const openChannelResponse = await openChannel({
-        asset_amount: form.assetAmount,
-        asset_id: form.assetId,
-        capacity_sat: form.capacitySat,
-        fee_rate_msat: feeRates[form.fee],
-        peer_pubkey_and_opt_addr: form.pubKeyAndAddress,
-      })
+        asset_amount: formData.assetAmount,
+        asset_id: formData.assetId,
+        capacity_sat: formData.capacitySat,
+        fee_rate_msat: feeRates[formData.fee],
+        peer_pubkey_and_opt_addr: formData.pubKeyAndAddress,
+      }).unwrap()
 
-      if (openChannelResponse.error) {
-        const errorMessage =
-          typeof openChannelResponse.error === 'object' &&
-          openChannelResponse.error !== null
-            ? (openChannelResponse.error as any).data?.error ||
-              JSON.stringify(openChannelResponse.error)
-            : String(openChannelResponse.error)
-        throw new Error(errorMessage)
+      if (
+        'error' in openChannelResponse &&
+        typeof openChannelResponse.error === 'string'
+      ) {
+        throw new Error(openChannelResponse.error)
       }
 
-      console.log('Opened channel successfully:', openChannelResponse.data)
+      console.log('Channel opened successfully:', openChannelResponse)
       setStep(4)
     } catch (error) {
       console.error('Failed to open channel:', error)
       setChannelOpeningError(
-        error instanceof Error ? error.message : 'An unknown error occurred'
+        error instanceof Error ? error.message : 'Failed to open channel'
       )
       setStep(4)
     }
-  }, [openChannel, newChannelForm])
+  }, [openChannel, formData, feeRates])
 
-  const onStep2Back = useCallback(() => {
-    dispatch(
-      channelSliceActions.setNewChannelForm({
-        ...newChannelForm,
-      })
-    )
-    setStep(1)
-  }, [dispatch, channelSliceActions, setStep, newChannelForm])
+  const handleFormUpdate = (updates: Partial<TNewChannelForm>) => {
+    setFormData((prev) => ({
+      ...prev,
+      ...updates,
+    }))
+  }
 
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-full">
-        <Spinner
-          color="#8FD5EA"
-          overlay={false}
-          size={120}
-          speed="normal"
-          thickness={4}
-        />
-        <div className="ml-4">Checking balance...</div>
+        <Spinner color="#8FD5EA" overlay={false} size={120} />
+        <div className="ml-4 text-gray-400">Checking balance...</div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="text-center text-red-500">
-        {error}. Please try again later.
+      <div className="text-center">
+        <FormError message={error} />
+        <button
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          onClick={() => window.location.reload()}
+        >
+          Retry
+        </button>
       </div>
     )
   }
@@ -164,53 +198,56 @@ export const Component = () => {
     <div className="max-w-screen-lg w-full bg-blue-dark py-8 rounded px-14 pt-20 pb-8">
       {insufficientBalance ? (
         <div className="text-center">
-          <p className="text-red-500 mb-4">
-            Insufficient balance to open a channel. You need at least{' '}
-            {MIN_CHANNEL_CAPACITY} satoshis.
-          </p>
-          <p className="text-red-500 mb-4">
-            Deposit some funds to your wallet to continue.
-          </p>
+          <FormError
+            message={`Insufficient balance to open a channel. You need at least ${MIN_CHANNEL_CAPACITY} satoshis.`}
+          />
           <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             onClick={() => navigate(WALLET_DASHBOARD_PATH)}
           >
-            Go to Dashboard Page
+            Go to Dashboard
           </button>
         </div>
       ) : (
         <>
-          <div className={step !== 1 ? 'hidden' : ''}>
-            <Step1 error={''} onNext={() => setStep(2)} />
-          </div>
+          {formError && <FormError message={formError} />}
 
-          <div className={step !== 2 ? 'hidden' : ''}>
+          {step === 1 && (
+            <Step1
+              formData={formData}
+              onFormUpdate={handleFormUpdate}
+              onNext={() => setStep(2)}
+            />
+          )}
+
+          {step === 2 && (
             <Step2
               feeRates={feeRates}
-              onBack={onStep2Back}
+              formData={formData}
+              onBack={() => setStep(1)}
+              onFormUpdate={handleFormUpdate}
               onNext={() => setStep(3)}
             />
-          </div>
+          )}
 
-          <div className={step !== 3 ? 'hidden' : ''}>
+          {step === 3 && (
             <Step3
-              error={
-                (openChannelResponse.error as { data: { error: string } })?.data
-                  .error
-              }
+              error={formError || undefined}
               feeRates={feeRates}
+              formData={formData}
               onBack={() => setStep(2)}
+              onFormUpdate={handleFormUpdate}
               onNext={onSubmit}
             />
-          </div>
+          )}
 
-          <div className={step !== 4 ? 'hidden' : ''}>
+          {step === 4 && (
             <Step4
               error={channelOpeningError}
               onFinish={() => navigate(TRADE_PATH)}
               onRetry={() => setStep(3)}
             />
-          </div>
+          )}
         </>
       )}
     </div>

@@ -1,14 +1,14 @@
-import { useAppSelector } from '../../app/store/hooks'
-import {
-  channelSliceSelectors,
-  TNewChannelForm,
-} from '../../slices/channel/channel.slice'
+import { useEffect, useMemo } from 'react'
+
+import { TNewChannelForm } from '../../slices/channel/channel.slice'
 
 interface Props {
   error?: string
   onBack: VoidFunction
   onNext: VoidFunction
   feeRates: Record<string, number>
+  formData: TNewChannelForm
+  onFormUpdate: (updates: Partial<TNewChannelForm>) => void
 }
 
 const formatNumber = (num: number) => {
@@ -20,11 +20,48 @@ const formatPubKey = (pubKey: string) => {
   return `${pubKey.slice(0, 8)}...${pubKey.slice(-8)}`
 }
 
-export const Step3 = (props: Props) => {
-  const newChannelForm = useAppSelector(
-    (state) => channelSliceSelectors.form(state, 'new') as TNewChannelForm
-  )
-  const [pubKey, address] = newChannelForm.pubKeyAndAddress?.split('@') ?? []
+export const Step3 = ({ error, onBack, onNext, feeRates, formData }: Props) => {
+  // Log initial form data
+  useEffect(() => {
+    console.log('Step3: Initial form data:', formData)
+  }, [formData])
+
+  // Parse the peer connection string using useMemo to persist the values
+  const connectionDetails = useMemo(() => {
+    const [pubKey = '', hostAddress = ''] = formData.pubKeyAndAddress?.split(
+      '@'
+    ) ?? ['', '']
+    const [host = '', port = ''] = hostAddress?.split(':') ?? ['', '']
+
+    console.log('Step3: Parsed connection details:', {
+      host,
+      originalString: formData.pubKeyAndAddress,
+      port,
+      pubKey,
+    })
+
+    return { host, port, pubKey }
+  }, [formData.pubKeyAndAddress])
+
+  // Validate if we have the required data
+  const hasValidNodeInfo = useMemo(() => {
+    const isValid = !!(
+      connectionDetails.pubKey &&
+      connectionDetails.host &&
+      connectionDetails.port &&
+      formData.pubKeyAndAddress
+    )
+
+    console.log('Step3: Node info validation:', {
+      hasConnectionString: !!formData.pubKeyAndAddress,
+      hasHost: !!connectionDetails.host,
+      hasPort: !!connectionDetails.port,
+      hasPubKey: !!connectionDetails.pubKey,
+      hasValidNodeInfo: isValid,
+    })
+
+    return isValid
+  }, [connectionDetails, formData.pubKeyAndAddress])
 
   return (
     <div className="max-w-lg mx-auto">
@@ -35,6 +72,12 @@ export const Step3 = (props: Props) => {
         <p className="text-gray-400">Review and confirm your channel details</p>
       </div>
 
+      {error && (
+        <div className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-center">
+          {error}
+        </div>
+      )}
+
       <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-8 space-y-8">
         {/* Channel Capacity Section */}
         <div>
@@ -43,11 +86,11 @@ export const Step3 = (props: Props) => {
           </h4>
           <div className="bg-gray-900/50 p-6 rounded-lg text-center">
             <div className="text-3xl font-bold text-blue-400">
-              {formatNumber(newChannelForm.capacitySat)} SAT
+              {formatNumber(formData.capacitySat)} SAT
             </div>
-            {newChannelForm.assetAmount > 0 && (
+            {formData.assetAmount > 0 && (
               <div className="mt-2 text-lg text-gray-400">
-                {newChannelForm.assetAmount} {newChannelForm.assetTicker}
+                {formData.assetAmount} {formData.assetTicker}
               </div>
             )}
           </div>
@@ -59,51 +102,55 @@ export const Step3 = (props: Props) => {
             Connected Node
           </h4>
           <div className="bg-gray-900/50 p-6 rounded-lg space-y-4">
-            <div>
-              <span className="text-gray-400 text-sm">Node ID:</span>
-              <div className="font-mono text-sm break-all mt-1">
-                <span className="text-white">{pubKey}</span>
-                <button
-                  className="ml-2 text-blue-400 hover:text-blue-300 text-xs"
-                  onClick={() => navigator.clipboard.writeText(pubKey)}
-                  title="Copy full pubkey"
-                  type="button"
-                >
-                  {formatPubKey(pubKey)} (click to copy)
-                </button>
+            {hasValidNodeInfo ? (
+              <>
+                <div>
+                  <span className="text-gray-400 text-sm">Node ID:</span>
+                  <div className="font-mono text-sm break-all mt-1">
+                    <span className="text-white">
+                      {connectionDetails.pubKey}
+                    </span>
+                    <button
+                      className="ml-2 text-blue-400 hover:text-blue-300 text-xs"
+                      onClick={() =>
+                        navigator.clipboard.writeText(connectionDetails.pubKey)
+                      }
+                      title="Copy full pubkey"
+                      type="button"
+                    >
+                      {formatPubKey(connectionDetails.pubKey)} (click to copy)
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-gray-400 text-sm">Host:</span>
+                  <div className="font-mono text-sm break-all mt-1">
+                    <span className="text-white">{connectionDetails.host}</span>
+                    <span className="text-white">
+                      :{connectionDetails.port}
+                    </span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center text-red-500">
+                Please go back and enter valid node connection information
               </div>
-            </div>
-            <div>
-              <span className="text-gray-400 text-sm">Host:</span>
-              <div className="font-mono text-sm break-all mt-1">
-                <span className="text-white">{address}</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Fee Rate Info */}
+        {/* Fee Rate Section */}
         <div>
           <h4 className="text-sm font-medium text-gray-400 mb-3">
             Transaction Fee Rate
           </h4>
           <div className="bg-gray-900/50 p-6 rounded-lg">
             <div className="flex items-center justify-between">
-              <div>
-                <div className="text-gray-400">Selected Rate:</div>
-                <div className="text-lg font-medium text-white mt-1">
-                  {newChannelForm.fee.charAt(0).toUpperCase() +
-                    newChannelForm.fee.slice(1)}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-gray-400">Fee Rate:</div>
-                <div className="text-lg font-medium text-white mt-1">
-                  {props.feeRates && props.feeRates[newChannelForm.fee]
-                    ? `${props.feeRates[newChannelForm.fee] / 1000} sat/vB`
-                    : 'Loading...'}
-                </div>
-              </div>
+              <span className="text-white capitalize">{formData.fee}</span>
+              <span className="text-gray-400">
+                {feeRates[formData.fee] / 1000} sat/vB
+              </span>
             </div>
           </div>
         </div>
@@ -117,7 +164,8 @@ export const Step3 = (props: Props) => {
             focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50
             shadow-md hover:shadow-lg
             flex items-center"
-          onClick={props.onBack}
+          onClick={onBack}
+          type="button"
         >
           <svg
             className="w-5 h-5 mr-2"
@@ -142,9 +190,11 @@ export const Step3 = (props: Props) => {
             focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
             shadow-lg hover:shadow-xl
             flex items-center"
-          onClick={props.onNext}
+          disabled={!hasValidNodeInfo}
+          onClick={onNext}
+          type="button"
         >
-          Confirm
+          Open Channel
           <svg
             className="w-5 h-5 ml-2"
             fill="none"
@@ -152,7 +202,7 @@ export const Step3 = (props: Props) => {
             viewBox="0 0 24 24"
           >
             <path
-              d="M5 13l4 4L19 7"
+              d="M9 5l7 7-7 7"
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={2}
@@ -160,12 +210,6 @@ export const Step3 = (props: Props) => {
           </svg>
         </button>
       </div>
-
-      {props.error && (
-        <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500">
-          {props.error}
-        </div>
-      )}
     </div>
   )
 }

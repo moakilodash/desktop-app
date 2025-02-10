@@ -1,6 +1,5 @@
 import { combineReducers, configureStore } from '@reduxjs/toolkit'
 
-import { channelSlice } from '../../slices/channel/channel.slice'
 import { makerApi } from '../../slices/makerApi/makerApi.slice.ts'
 import { pairsSlice } from '../../slices/makerApi/pairs.slice.ts'
 import { nodeReducer } from '../../slices/node/node.slice'
@@ -12,7 +11,6 @@ import { uiSlice } from '../../slices/ui/ui.slice'
 const rootReducer = combineReducers({
   [nodeApi.reducerPath]: nodeApi.reducer,
   [makerApi.reducerPath]: makerApi.reducer,
-  channel: channelSlice.reducer,
   node: nodeReducer,
   nodeSettings: nodeSettingsSlice.reducer,
   pairs: pairsSlice.reducer,

@@ -1,11 +1,5 @@
-import {
-  PayloadAction,
-  createDraftSafeSelector,
-  createSlice,
-} from '@reduxjs/toolkit'
-import * as z from 'zod'
+import { z } from 'zod'
 
-import { RootState } from '../../app/store'
 import { MIN_CHANNEL_CAPACITY } from '../../constants'
 
 export const NewChannelFormSchema = z.object({
@@ -26,53 +20,3 @@ export const NewChannelFormSchema = z.object({
 })
 
 export type TNewChannelForm = z.infer<typeof NewChannelFormSchema>
-
-interface SliceState {
-  forms: {
-    new: TNewChannelForm
-  }
-}
-
-export const initialState: SliceState = {
-  forms: {
-    new: {
-      assetAmount: 0,
-      assetId: '',
-      assetTicker: '',
-      capacitySat: MIN_CHANNEL_CAPACITY,
-      fee: 'medium',
-      pubKeyAndAddress: '',
-    },
-  },
-}
-
-export const channelSlice = createSlice({
-  initialState,
-  name: 'channel',
-  reducers: {
-    setNewChannelForm: (
-      state,
-      action: PayloadAction<Partial<SliceState['forms']['new']>>
-    ) => {
-      state.forms.new = {
-        ...state.forms.new,
-        ...action.payload,
-      }
-    },
-  },
-})
-
-export const channelSliceActions = {
-  ...channelSlice.actions,
-}
-
-// Selectors
-const selfSelector = (state: { channel: SliceState }) => state.channel
-const formSelector = createDraftSafeSelector(
-  selfSelector,
-  (_state: RootState, formKey: keyof SliceState['forms']) => formKey,
-  (state, formKey) => state.forms[formKey]
-)
-export const channelSliceSelectors = {
-  form: formSelector,
-}

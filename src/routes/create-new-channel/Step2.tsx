@@ -1,15 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
 import { z } from 'zod'
 
-import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { Select } from '../../components/Select'
 import { MAX_CHANNEL_CAPACITY, MIN_CHANNEL_CAPACITY } from '../../constants'
 import {
   NewChannelFormSchema,
-  channelSliceActions,
-  channelSliceSelectors,
   TNewChannelForm,
 } from '../../slices/channel/channel.slice'
 import { nodeApi, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
@@ -20,6 +17,8 @@ interface Props {
   onBack: VoidFunction
   onNext: VoidFunction
   feeRates: Record<string, number>
+  formData: TNewChannelForm
+  onFormUpdate: (updates: Partial<TNewChannelForm>) => void
 }
 
 interface FormFields {
@@ -39,20 +38,20 @@ const Step2Schema = NewChannelFormSchema.omit({
   pubKeyAndAddress: z.string(),
 })
 
-export const Step2 = (props: Props) => {
-  const newChannelForm = useAppSelector(
-    (state) => channelSliceSelectors.form(state, 'new') as TNewChannelForm
-  )
-
-  const dispatch = useAppDispatch()
-
+export const Step2 = ({
+  onBack,
+  onNext,
+  feeRates,
+  formData,
+  onFormUpdate,
+}: Props) => {
   const [maxCapacity, setMaxCapacity] = useState<number>(MAX_CHANNEL_CAPACITY)
   const [addAsset, setAddAsset] = useState<boolean>(false)
-  const [assetAmount, setAssetAmount] = useState<number>(0)
   const [hasAvailableAssets, setHasAvailableAssets] = useState<boolean>(false)
   const [maxAssetAmountMap, setMaxAssetAmountMap] = useState<
     Record<string, number>
   >({})
+  const [selectedAsset, setSelectedAsset] = useState<NiaAsset | null>(null)
 
   const [takerAssets, takerAssetsResponse] =
     nodeApi.endpoints.listAssets.useLazyQuery()
@@ -62,26 +61,37 @@ export const Step2 = (props: Props) => {
     useForm<FormFields>({
       criteriaMode: 'all',
       defaultValues: {
-        ...newChannelForm,
-        capacitySat: newChannelForm.capacitySat || MIN_CHANNEL_CAPACITY,
-        fee: newChannelForm.fee || 'medium',
-        pubKeyAndAddress: newChannelForm.pubKeyAndAddress,
+        ...formData,
+        assetAmount: formData.assetAmount || 0,
+        assetId: formData.assetId || '',
+        assetTicker: formData.assetTicker || '',
+        capacitySat: formData.capacitySat || MIN_CHANNEL_CAPACITY,
+        fee: formData.fee || 'medium',
+        pubKeyAndAddress: formData.pubKeyAndAddress,
       },
       mode: 'onChange',
       resolver: zodResolver(Step2Schema),
     })
 
   useEffect(() => {
-    const subscription = watch((_, { name }) => {
+    const subscription = watch((value, { name }) => {
       if (name && formState.errors[name]) {
         clearErrors(name)
       }
+
+      // Log form value changes
+      console.log('Step2: Form value changed:', {
+        field: name,
+        value: value[name as keyof FormFields],
+      })
     })
     return () => subscription.unsubscribe()
   }, [watch, clearErrors, formState.errors])
 
   const capacitySat = watch('capacitySat')
   const selectedFee = watch('fee')
+  const currentAssetAmount = watch('assetAmount')
+  const currentAssetId = watch('assetId')
 
   useEffect(() => {
     takerAssets()
@@ -97,18 +107,16 @@ export const Step2 = (props: Props) => {
         const newMaxCapacity = Math.min(MAX_CHANNEL_CAPACITY, totalSpendable)
         setMaxCapacity(newMaxCapacity)
 
-        // Set initial capacity if not already set
-        if (!capacitySat) {
+        if (!formData.capacitySat) {
           setValue('capacitySat', MIN_CHANNEL_CAPACITY)
         }
       } catch (error) {
-        console.error('Failed to fetch BTC balance:', error)
-        setMaxCapacity(MAX_CHANNEL_CAPACITY)
+        console.error('Error fetching BTC balance:', error)
       }
     }
 
     fetchBtcBalance()
-  }, [btcBalance, setValue, capacitySat])
+  }, [btcBalance, formData.capacitySat, setValue])
 
   useEffect(() => {
     if (
@@ -129,6 +137,16 @@ export const Step2 = (props: Props) => {
           {}
         )
         setMaxAssetAmountMap(newMaxAssetAmountMap)
+
+        // If we have a previously selected asset, find and set it
+        if (formData.assetId) {
+          const asset = filteredAssets.find(
+            (a) => a.asset_id === formData.assetId
+          )
+          if (asset) {
+            setSelectedAsset(asset)
+          }
+        }
       } else {
         setAddAsset(false)
       }
@@ -136,69 +154,81 @@ export const Step2 = (props: Props) => {
       setHasAvailableAssets(false)
       setAddAsset(false)
     }
-  }, [takerAssetsResponse])
+  }, [takerAssetsResponse, formData.assetId])
 
   useEffect(() => {
     if (formState.isSubmitted) {
       clearErrors()
     }
-  }, [capacitySat, watch('assetAmount'), watch('assetId'), clearErrors])
+  }, [capacitySat, currentAssetAmount, currentAssetId, clearErrors])
 
   const formatNumber = (num: number): string => {
     return num.toLocaleString('en-US')
   }
 
   const parseInputValue = (value: string): number => {
-    const sanitized = value.replace(/[^0-9]/g, '')
-    return sanitized ? parseInt(sanitized, 10) : MIN_CHANNEL_CAPACITY
+    const sanitized = value.replace(/[^0-9.]/g, '')
+    const parsed = parseFloat(sanitized)
+    return isNaN(parsed) ? 0 : parsed
   }
 
   const handleCapacityChange = (value: string) => {
-    const numericValue = parseInputValue(value)
-    const clampedValue = Math.min(
-      Math.max(numericValue, MIN_CHANNEL_CAPACITY),
-      maxCapacity
-    )
-    setValue('capacitySat', clampedValue, {
-      shouldDirty: true,
-      shouldValidate: true,
-    })
-    if (formState.errors.capacitySat) {
-      clearErrors('capacitySat')
+    const numValue = parseInputValue(value)
+    if (numValue >= 0) {
+      setValue('capacitySat', numValue)
+      onFormUpdate({ capacitySat: numValue })
     }
   }
 
   const handleAssetAmountChange = (value: string) => {
-    const numericValue = parseInputValue(value)
-    const maxAmount = maxAssetAmountMap[watch('assetId')] || 0
-    const clampedValue = Math.min(Math.max(numericValue, 0), maxAmount)
-
-    setValue('assetAmount', clampedValue, { shouldValidate: true })
-    setAssetAmount(clampedValue)
+    const numValue = parseInputValue(value)
+    if (numValue >= 0) {
+      setValue('assetAmount', numValue)
+      onFormUpdate({ assetAmount: numValue })
+    }
   }
 
   const handleFeeChange = (fee: 'slow' | 'medium' | 'fast') => {
-    setValue('fee', fee, { shouldValidate: true })
+    setValue('fee', fee)
+    onFormUpdate({ fee })
   }
 
-  const onSubmit: SubmitHandler<FormFields> = useCallback(
-    (data) => {
-      const selectedAsset = takerAssetsResponse.data?.nia.find(
-        (asset: NiaAsset) => asset.asset_id === data.assetId
-      )
+  const handleAssetSelect = (assetId: string) => {
+    const asset = takerAssetsResponse.data?.nia.find(
+      (a) => a.asset_id === assetId
+    )
+    if (asset) {
+      setSelectedAsset(asset)
+      setValue('assetId', asset.asset_id)
+      setValue('assetTicker', asset.ticker)
+      onFormUpdate({
+        assetAmount: 0,
+        assetId: asset.asset_id,
+        assetTicker: asset.ticker, // Reset amount when changing asset
+      })
+    }
+  }
 
-      const formData = {
-        ...data,
-        assetAmount: addAsset ? data.assetAmount : 0,
-        assetId: addAsset ? data.assetId : undefined,
-        assetTicker: addAsset ? selectedAsset?.ticker || '' : '',
-      }
+  const handleAddAssetToggle = (checked: boolean) => {
+    setAddAsset(checked)
+    if (!checked) {
+      // Clear asset data when disabling
+      setValue('assetId', '')
+      setValue('assetTicker', '')
+      setValue('assetAmount', 0)
+      setSelectedAsset(null)
+      onFormUpdate({
+        assetAmount: 0,
+        assetId: '',
+        assetTicker: '',
+      })
+    }
+  }
 
-      dispatch(channelSliceActions.setNewChannelForm(formData))
-      props.onNext()
-    },
-    [dispatch, takerAssetsResponse.data?.nia, props, addAsset]
-  )
+  const onSubmit: SubmitHandler<FormFields> = (data) => {
+    onFormUpdate(data)
+    onNext()
+  }
 
   const availableAssets =
     takerAssetsResponse.data?.nia.filter(
@@ -223,7 +253,7 @@ export const Step2 = (props: Props) => {
             Opening Channel with Node:
           </label>
           <div className="bg-gray-900/50 px-4 py-3 rounded-lg break-all font-mono text-sm text-white">
-            {newChannelForm.pubKeyAndAddress}
+            {formData.pubKeyAndAddress}
           </div>
         </div>
 
@@ -236,13 +266,15 @@ export const Step2 = (props: Props) => {
           </label>
           <div className="flex items-center space-x-4">
             <input
-              className="flex-grow rounded bg-blue-dark px-4 py-3 outline-none"
+              className="flex-grow rounded bg-blue-dark px-4 py-3 outline-none text-white"
               onChange={(e) => handleCapacityChange(e.target.value)}
               placeholder="Enter amount"
               type="text"
               value={capacitySat ? formatNumber(capacitySat) : ''}
             />
-            <span className="text-sm">{formatNumber(maxCapacity)} max</span>
+            <span className="text-sm text-gray-400">
+              {formatNumber(maxCapacity)} max
+            </span>
           </div>
           <input
             className="w-full mt-2"
@@ -264,76 +296,153 @@ export const Step2 = (props: Props) => {
 
         {hasAvailableAssets ? (
           <div className="mb-8">
-            <h5 className="text-lg font-semibold text-white mb-4">
-              RGB Assets
-            </h5>
-            <label className="flex items-center text-sm mb-4 text-gray-400">
-              <input
-                checked={addAsset}
-                className="mr-2 rounded border-gray-600 bg-gray-700 text-purple-500 focus:ring-purple-500"
-                onChange={(e) => setAddAsset(e.target.checked)}
-                type="checkbox"
-              />
-              Add Asset
-            </label>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h5 className="text-lg font-semibold text-white">RGB Assets</h5>
+                <p className="text-sm text-gray-400 mt-1">
+                  Add RGB assets to your channel for asset transfers
+                </p>
+              </div>
+              <button
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all
+                  ${
+                    addAsset
+                      ? 'bg-purple-600/20 border border-purple-500 text-white'
+                      : 'bg-gray-900/50 border border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300'
+                  }`}
+                onClick={() => handleAddAssetToggle(!addAsset)}
+                type="button"
+              >
+                {addAsset ? 'Remove Asset' : 'Add Asset'}
+              </button>
+            </div>
 
             {addAsset && (
-              <>
-                <label className="block text-sm mb-2">Select Asset</label>
-                <Controller
-                  control={control}
-                  name="assetId"
-                  render={({ field }) => (
-                    <Select
-                      {...field}
-                      active={field.value}
-                      onSelect={field.onChange}
-                      options={availableAssets.map((a: NiaAsset) => ({
-                        label: a.ticker,
-                        value: a.asset_id,
-                      }))}
-                      theme="dark"
-                    />
-                  )}
-                />
+              <div className="space-y-6">
+                <div className="bg-gray-900/50 p-6 rounded-lg">
+                  <label className="block text-sm font-medium text-gray-400 mb-3">
+                    Select Asset
+                  </label>
+                  <Controller
+                    control={control}
+                    name="assetId"
+                    render={({ field }) => (
+                      <Select
+                        {...field}
+                        active={field.value}
+                        onSelect={(value) => {
+                          field.onChange(value)
+                          handleAssetSelect(value)
+                        }}
+                        options={availableAssets.map((a: NiaAsset) => ({
+                          label: a.ticker,
+                          value: a.asset_id,
+                        }))}
+                        theme="dark"
+                      />
+                    )}
+                  />
 
-                {watch('assetId') && (
-                  <div className="mt-4">
-                    <label className="block text-sm mb-2">Asset Amount</label>
-                    <div className="flex items-center space-x-4">
+                  {selectedAsset && (
+                    <div className="mt-4 grid grid-cols-2 gap-4">
+                      <div className="bg-gray-800/50 p-4 rounded-lg">
+                        <div className="text-xs text-gray-400">
+                          Available Balance
+                        </div>
+                        <div className="text-lg text-white font-medium mt-1">
+                          {formatNumber(
+                            maxAssetAmountMap[selectedAsset.asset_id] || 0
+                          )}
+                        </div>
+                      </div>
+                      <div className="bg-gray-800/50 p-4 rounded-lg">
+                        <div className="text-xs text-gray-400">Asset Name</div>
+                        <div className="text-lg text-white font-medium mt-1">
+                          {selectedAsset.ticker}
+                        </div>
+                      </div>
+                      <div className="col-span-2 bg-gray-800/50 p-4 rounded-lg">
+                        <div className="text-xs text-gray-400">Asset ID</div>
+                        <div className="text-sm text-white font-mono mt-1 break-all">
+                          {selectedAsset.asset_id}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {selectedAsset && (
+                  <div className="bg-gray-900/50 p-6 rounded-lg">
+                    <div className="flex justify-between items-center mb-3">
+                      <label className="block text-sm font-medium text-gray-400">
+                        Asset Amount
+                      </label>
+                      <span className="text-xs text-gray-500">
+                        Max:{' '}
+                        {formatNumber(
+                          maxAssetAmountMap[selectedAsset.asset_id] || 0
+                        )}
+                      </span>
+                    </div>
+                    <div className="space-y-3">
                       <input
-                        className="flex-grow rounded bg-blue-dark px-4 py-3 outline-none"
+                        className="w-full rounded bg-blue-dark px-4 py-3 outline-none text-white"
                         onChange={(e) =>
                           handleAssetAmountChange(e.target.value)
                         }
-                        placeholder="Enter asset amount"
+                        placeholder={`Enter amount to allocate`}
                         type="text"
-                        value={assetAmount ? formatNumber(assetAmount) : ''}
+                        value={
+                          currentAssetAmount
+                            ? formatNumber(currentAssetAmount)
+                            : ''
+                        }
                       />
-                      <span className="text-sm">
-                        {formatNumber(maxAssetAmountMap[watch('assetId')] || 0)}{' '}
-                        max
-                      </span>
+                      <input
+                        className="w-full"
+                        max={maxAssetAmountMap[selectedAsset.asset_id] || 0}
+                        min={0}
+                        onChange={(e) =>
+                          handleAssetAmountChange(e.target.value)
+                        }
+                        type="range"
+                        value={currentAssetAmount || 0}
+                      />
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>0</span>
+                        <span>
+                          {formatNumber(
+                            maxAssetAmountMap[selectedAsset.asset_id] || 0
+                          )}
+                        </span>
+                      </div>
                     </div>
-                    <input
-                      className="w-full mt-2"
-                      max={maxAssetAmountMap[watch('assetId')] || 0}
-                      min={0}
-                      onChange={(e) => handleAssetAmountChange(e.target.value)}
-                      type="range"
-                      value={assetAmount}
-                    />
                   </div>
                 )}
-              </>
+              </div>
             )}
           </div>
         ) : (
-          <div className="mb-8 text-center">
-            <p className="text-yellow-500">
-              You do not have any spendable on-chain RGB assets to open a
-              channel with.
-            </p>
+          <div className="mb-8 p-6 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+            <div className="flex items-center justify-center text-yellow-500">
+              <svg
+                className="w-5 h-5 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                />
+              </svg>
+              <p>
+                You do not have any spendable on-chain RGB assets to open a
+                channel with.
+              </p>
+            </div>
           </div>
         )}
 
@@ -341,17 +450,17 @@ export const Step2 = (props: Props) => {
         <div className="border-t border-gray-700/50 my-8"></div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-400 mb-2">
-            Transaction Fee
+          <label className="block text-sm font-medium text-gray-400 mb-4">
+            Transaction Fee Rate
           </label>
           <div className="flex space-x-4">
             {['slow', 'medium', 'fast'].map((speed) => (
               <button
-                className={`flex-1 py-2 px-4 rounded-lg text-center transition-colors
+                className={`flex-1 py-3 px-4 rounded-lg text-center transition-all
                   ${
                     selectedFee === speed
-                      ? 'bg-purple-600/20 border border-purple-500 text-white'
-                      : 'bg-gray-900/50 border border-gray-700 text-gray-400 hover:border-gray-600'
+                      ? 'bg-purple-600/20 border border-purple-500 text-white shadow-lg'
+                      : 'bg-gray-900/50 border border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300'
                   }`}
                 key={speed}
                 onClick={() =>
@@ -359,10 +468,10 @@ export const Step2 = (props: Props) => {
                 }
                 type="button"
               >
-                {speed.charAt(0).toUpperCase() + speed.slice(1)}
-                <span className="text-xs text-gray-500 ml-2">
-                  ({`${props.feeRates[speed] / 1000} sat/vB`})
-                </span>
+                <div className="font-medium capitalize">{speed}</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {`${feeRates[speed] / 1000} sat/vB`}
+                </div>
               </button>
             ))}
           </div>
@@ -377,7 +486,7 @@ export const Step2 = (props: Props) => {
             focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50
             shadow-md hover:shadow-lg
             flex items-center"
-          onClick={props.onBack}
+          onClick={onBack}
           type="button"
         >
           <svg
@@ -403,6 +512,7 @@ export const Step2 = (props: Props) => {
             focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
             shadow-lg hover:shadow-xl
             flex items-center"
+          disabled={!formState.isValid}
           type="submit"
         >
           Next

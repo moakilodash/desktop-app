@@ -3,35 +3,60 @@ import axios from 'axios'
 import { useState, useEffect } from 'react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
 
-import { useAppDispatch } from '../../app/store/hooks'
 import { Spinner } from '../../components/Spinner'
 import { NETWORK_DEFAULTS } from '../../constants/networks'
 import { BitFinexBoxIcon } from '../../icons/BitFinexBox'
 import { KaleidoswapBoxIcon } from '../../icons/KaleidoswapBox'
 import {
   NewChannelFormSchema,
-  channelSliceActions,
+  TNewChannelForm,
 } from '../../slices/channel/channel.slice'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 
-import { FormError } from './FormError'
-
 interface Props {
-  error: string
   onNext: VoidFunction
+  formData: TNewChannelForm
+  onFormUpdate: (updates: Partial<TNewChannelForm>) => void
 }
 
 interface FormFields {
   pubKeyAndAddress: string
 }
 
-export const Step1 = (props: Props) => {
+// Add this validation helper function at the top level
+const isValidPubkeyAndAddress = (value: string): boolean => {
+  // Check basic format: pubkey@host:port
+  const parts = value.split('@')
+  if (parts.length !== 2) return false
+
+  const [pubkey, hostAndPort] = parts
+
+  // Validate pubkey: 66 characters hex string
+  const pubkeyRegex = /^[0-9a-fA-F]{66}$/
+  if (!pubkeyRegex.test(pubkey)) return false
+
+  // Validate host:port format
+  const hostPortParts = hostAndPort.split(':')
+  if (hostPortParts.length !== 2) return false
+
+  const [host, port] = hostPortParts
+
+  // Basic host validation
+  if (!host || host.length < 1) return false
+
+  // Port should be a number between 1-65535
+  const portNum = parseInt(port, 10)
+  if (isNaN(portNum) || portNum < 1 || portNum > 65535) return false
+
+  return true
+}
+
+export const Step1 = ({ onNext, formData, onFormUpdate }: Props) => {
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [localError, setLocalError] = useState('')
   const [showConnectionDialog, setShowConnectionDialog] = useState(false)
   const [selectedPeerInfo, setSelectedPeerInfo] = useState<string>('')
   const [isConnecting, setIsConnecting] = useState(false)
-
   const [getNetworkInfo] = nodeApi.endpoints.networkInfo.useLazyQuery()
   const [connectPeer] = nodeApi.endpoints.connectPeer.useMutation()
   const [listPeers] = nodeApi.endpoints.listPeers.useLazyQuery()
@@ -39,28 +64,67 @@ export const Step1 = (props: Props) => {
   const { handleSubmit, control, formState, clearErrors, setValue, watch } =
     useForm<FormFields>({
       defaultValues: {
-        pubKeyAndAddress: '',
+        pubKeyAndAddress: formData.pubKeyAndAddress || '',
       },
       mode: 'onChange',
       resolver: zodResolver(
-        NewChannelFormSchema.pick({ pubKeyAndAddress: true })
+        NewChannelFormSchema.pick({ pubKeyAndAddress: true }).refine(
+          (data) => isValidPubkeyAndAddress(data.pubKeyAndAddress),
+          {
+            message:
+              'Invalid peer format. Expected: <66-char-hex-pubkey>@hostname:port',
+            path: ['pubKeyAndAddress'],
+          }
+        )
       ),
     })
 
+  // Watch for form changes
   useEffect(() => {
-    const subscription = watch((_, { name }) => {
-      if (name && formState.errors[name]) {
-        clearErrors(name)
-      }
+    const subscription = watch((value) => {
+      console.log('Step1: Form value changed:', value)
     })
     return () => subscription.unsubscribe()
-  }, [watch, clearErrors, formState.errors])
+  }, [watch])
 
-  const dispatch = useAppDispatch()
+  const onSubmit: SubmitHandler<FormFields> = async (data) => {
+    console.log('Step1: Form submitted with data:', data)
+    // Clear any previous errors
+    setLocalError('')
+
+    if (!isValidPubkeyAndAddress(data.pubKeyAndAddress)) {
+      console.log('Step1: Invalid peer format detected')
+      setLocalError(
+        'Invalid peer format. Expected format: <66-char-hex-pubkey>@hostname:port'
+      )
+      return
+    }
+
+    // First update the form data
+    console.log('Step1: Updating form data with:', data.pubKeyAndAddress)
+    onFormUpdate({
+      pubKeyAndAddress: data.pubKeyAndAddress,
+    })
+
+    // Then check connection
+    const isConnected = await checkPeerConnection(data.pubKeyAndAddress)
+    console.log('Step1: Connection check result:', isConnected)
+
+    if (!isConnected) {
+      console.log('Step1: Not connected, showing dialog')
+      setSelectedPeerInfo(data.pubKeyAndAddress)
+      setShowConnectionDialog(true)
+      return
+    }
+
+    // If already connected, proceed to next step
+    console.log('Step1: Already connected, proceeding to next step')
+    onNext()
+  }
 
   const fetchLspInfo = async () => {
     setIsLoading(true)
-    setError('')
+    setLocalError('')
     try {
       const networkInfo = await getNetworkInfo().unwrap()
 
@@ -84,10 +148,24 @@ export const Step1 = (props: Props) => {
 
       const response = await axios.get(`${apiUrl}api/v1/lsps1/get_info`)
       const connectionUrl = response.data.lsp_connection_url
+
+      // Update both form state and form data
       setValue('pubKeyAndAddress', connectionUrl)
+      onFormUpdate({
+        pubKeyAndAddress: connectionUrl,
+      })
+
+      // Check if we need to connect
+      const isConnected = await checkPeerConnection(connectionUrl)
+      if (!isConnected) {
+        setSelectedPeerInfo(connectionUrl)
+        setShowConnectionDialog(true)
+      } else {
+        onNext()
+      }
     } catch (err) {
       console.error('Error fetching LSP info:', err)
-      setError(
+      setLocalError(
         err instanceof Error
           ? err.message
           : 'Failed to fetch LSP connection information'
@@ -109,42 +187,31 @@ export const Step1 = (props: Props) => {
   }
 
   const handleConnect = async () => {
-    if (!selectedPeerInfo) return
+    if (!selectedPeerInfo || !isValidPubkeyAndAddress(selectedPeerInfo)) {
+      setLocalError('Invalid peer connection string')
+      return
+    }
 
     setIsConnecting(true)
     try {
       await connectPeer({ peer_pubkey_and_addr: selectedPeerInfo }).unwrap()
-      dispatch(
-        channelSliceActions.setNewChannelForm({
-          pubKeyAndAddress: selectedPeerInfo,
-        })
-      )
-      props.onNext()
+
+      // Update form data and proceed
+      onFormUpdate({
+        pubKeyAndAddress: selectedPeerInfo,
+      })
+      setValue('pubKeyAndAddress', selectedPeerInfo)
+      setShowConnectionDialog(false)
+      onNext()
     } catch (err) {
-      console.error('Failed to connect to peer:', err)
-      setError('Failed to connect to peer. Please try again.')
+      setLocalError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to connect to peer. Please try again.'
+      )
     } finally {
       setIsConnecting(false)
-      setShowConnectionDialog(false)
     }
-  }
-
-  const handlePeerSelection = async (peerInfo: string) => {
-    setSelectedPeerInfo(peerInfo)
-    const isConnected = await checkPeerConnection(peerInfo)
-
-    if (!isConnected) {
-      setShowConnectionDialog(true)
-    } else {
-      dispatch(
-        channelSliceActions.setNewChannelForm({ pubKeyAndAddress: peerInfo })
-      )
-      props.onNext()
-    }
-  }
-
-  const onSubmit: SubmitHandler<FormFields> = async (data) => {
-    await handlePeerSelection(data.pubKeyAndAddress)
   }
 
   return (
@@ -168,7 +235,7 @@ export const Step1 = (props: Props) => {
               <textarea
                 className={`w-full px-4 py-3 bg-gray-700 text-white rounded-lg border 
                   ${
-                    fieldState.error
+                    fieldState.error || localError
                       ? 'border-red-500 focus:border-red-500'
                       : 'border-gray-600 focus:border-blue-500'
                   } 
@@ -180,11 +247,18 @@ export const Step1 = (props: Props) => {
                   if (formState.errors.pubKeyAndAddress) {
                     clearErrors('pubKeyAndAddress')
                   }
+                  if (localError) {
+                    setLocalError('')
+                  }
+                  // Update form data as user types
+                  onFormUpdate({
+                    pubKeyAndAddress: e.target.value,
+                  })
                 }}
               />
-              {fieldState.error && (
+              {(fieldState.error || localError) && (
                 <p className="text-red-500 text-sm">
-                  {fieldState.error.message}
+                  {localError || fieldState.error?.message}
                 </p>
               )}
               <p className="text-gray-400 text-xs">
@@ -228,9 +302,9 @@ export const Step1 = (props: Props) => {
           </div>
         )}
 
-        {error && (
+        {localError && (
           <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500">
-            {error}
+            {localError}
           </div>
         )}
       </div>
@@ -243,6 +317,7 @@ export const Step1 = (props: Props) => {
             focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
             shadow-lg hover:shadow-xl
             flex items-center"
+          disabled={!formState.isValid}
           type="submit"
         >
           Next
@@ -307,21 +382,6 @@ export const Step1 = (props: Props) => {
             </div>
           </div>
         </div>
-      )}
-
-      {!formState.isSubmitSuccessful && formState.isSubmitted && (
-        <FormError
-          errors={Object.entries(formState.errors).reduce(
-            (acc, [key, error]) => {
-              if (error?.message) {
-                acc[key] = [error.message]
-              }
-              return acc
-            },
-            {} as Record<string, string[]>
-          )}
-          message="Please check the form for errors"
-        />
       )}
     </form>
   )
