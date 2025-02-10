@@ -1,5 +1,5 @@
 import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
-import React, { useCallback, useEffect, useState, useMemo } from 'react'
+import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -44,6 +44,26 @@ const MSATS_PER_SAT = 1000
 export const Component = () => {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
+
+  // Add these utility functions at the top level of the component
+  const usePrevious = (value: any) => {
+    const ref = useRef()
+    useEffect(() => {
+      ref.current = value
+    }, [value])
+    return ref.current
+  }
+
+  const form = useForm<Fields>({
+    defaultValues: {
+      from: '',
+      fromAsset: 'BTC',
+      rfq_id: '',
+      to: '',
+      toAsset: '',
+    },
+  })
+
   const [channels, setChannels] = useState<Channel[]>([])
   const [assets, setAssets] = useState<NiaAsset[]>([])
   const [tradablePairs, setTradablePairs] = useState<TradingPair[]>([])
@@ -64,6 +84,10 @@ export const Component = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [hasValidChannelsForTrading, setHasValidChannelsForTrading] =
     useState(false)
+  const [debouncedFromAmount, setDebouncedFromAmount] = useState('')
+  const [debouncedToAmount, setDebouncedToAmount] = useState('')
+  const previousFromAmount = usePrevious(form.getValues().from)
+  const previousToAmount = usePrevious(form.getValues().to)
 
   const [showRecap, setShowRecap] = useState<boolean>(false)
   const [swapRecapDetails, setSwapRecapDetails] = useState<SwapDetails | null>(
@@ -95,16 +119,6 @@ export const Component = () => {
   const [initSwap] = makerApi.endpoints.initSwap.useLazyQuery()
   const [execSwap] = makerApi.endpoints.execSwap.useLazyQuery()
   const [getPairs] = makerApi.endpoints.getPairs.useLazyQuery()
-
-  const form = useForm<Fields>({
-    defaultValues: {
-      from: '',
-      fromAsset: 'BTC',
-      rfq_id: '',
-      to: '',
-      toAsset: '',
-    },
-  })
 
   const getDisplayAsset = useCallback(
     (asset: string) => {
@@ -295,33 +309,72 @@ export const Component = () => {
     calculateRate,
   ])
 
-  // Handle "from" amount change
+  // Add these new functions inside the Component
+  const formatNumberInput = (value: string, precision: number): string => {
+    // Remove all characters except digits and decimal point
+    let cleanValue = value.replace(/[^\d.]/g, '')
+
+    // Handle multiple decimal points
+    const parts = cleanValue.split('.')
+    if (parts.length > 2) {
+      cleanValue = parts[0] + '.' + parts.slice(1).join('')
+    }
+
+    // If it's just a decimal point or empty, return as is
+    if (cleanValue === '.' || !cleanValue) return cleanValue
+
+    // If ends with decimal point, preserve it
+    const endsWithDecimal = value.endsWith('.')
+
+    try {
+      const num = parseFloat(cleanValue)
+      if (isNaN(num)) return ''
+
+      // Don't format if still typing decimals
+      if (
+        endsWithDecimal ||
+        (cleanValue.includes('.') &&
+          cleanValue.split('.')[1].length <= precision)
+      ) {
+        return cleanValue
+      }
+
+      // Only format complete numbers
+      return num.toLocaleString('en-US', {
+        maximumFractionDigits: precision,
+        minimumFractionDigits: 0,
+      })
+    } catch {
+      return cleanValue
+    }
+  }
+
+  // Replace the handleFromAmountChange function
   const handleFromAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target?.value
-    if (value === undefined || value === null) {
-      logger.warn('Invalid input value:', value)
-      return
-    }
+    const value = e.target.value
+    const fromAsset = form.getValues().fromAsset
+    const precision = getAssetPrecision(fromAsset)
 
     try {
-      const cleanedValue = value.replace(/[^0-9.]/g, '')
-      const fromAsset = form.getValues().fromAsset
-      const numValue = parseAssetAmount(cleanedValue, fromAsset)
+      const formattedValue = formatNumberInput(value, precision)
+      form.setValue('from', formattedValue)
 
-      if (numValue === 0) {
-        form.setValue('from', '')
-        form.setValue('to', '')
-      } else if (numValue < minFromAmount) {
-        form.setValue('from', formatAmount(minFromAmount, fromAsset))
-        updateToAmount(formatAmount(minFromAmount, fromAsset))
-      } else if (numValue > maxFromAmount) {
-        form.setValue('from', formatAmount(maxFromAmount, fromAsset))
-        updateToAmount(formatAmount(maxFromAmount, fromAsset))
-      } else {
-        form.setValue('from', formatAmount(numValue, fromAsset))
-        updateToAmount(formatAmount(numValue, fromAsset))
+      // Only update the other field if we have a complete number
+      if (!formattedValue.endsWith('.') && formattedValue !== '') {
+        const numValue = parseAssetAmount(formattedValue, fromAsset)
+
+        if (numValue === 0) {
+          form.setValue('to', '')
+        } else if (numValue < minFromAmount) {
+          const minFormatted = formatAmount(minFromAmount, fromAsset)
+          setDebouncedFromAmount(minFormatted)
+        } else if (numValue > maxFromAmount) {
+          const maxFormatted = formatAmount(maxFromAmount, fromAsset)
+          setDebouncedFromAmount(maxFormatted)
+        } else {
+          setDebouncedFromAmount(formattedValue)
+        }
       }
-      logger.debug('Updated "from" amount:', form.getValues().from)
     } catch (error) {
       logger.error('Error handling amount change:', error)
       form.setValue('from', '')
@@ -329,44 +382,98 @@ export const Component = () => {
     }
   }
 
-  // Handle "to" amount change
+  // Replace the handleToAmountChange function
   const handleToAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target?.value
-    if (value === undefined || value === null) {
-      logger.warn('Invalid input value:', value)
-      return
-    }
+    const value = e.target.value
+    const toAsset = form.getValues().toAsset
+    const precision = getAssetPrecision(toAsset)
 
     try {
-      const cleanedValue = value.replace(/[^0-9.]/g, '')
-      const toAsset = form.getValues().toAsset
-      const numValue = parseAssetAmount(cleanedValue, toAsset)
+      const formattedValue = formatNumberInput(value, precision)
+      form.setValue('to', formattedValue)
 
-      if (numValue === 0) {
-        form.setValue('to', '')
-        form.setValue('from', '')
-      } else if (numValue > maxToAmount) {
-        form.setValue('to', formatAmount(maxToAmount, toAsset))
-        const fromAmount = maxToAmount / calculateRate()
-        form.setValue(
-          'from',
-          formatAmount(fromAmount, form.getValues().fromAsset)
-        )
-      } else {
-        form.setValue('to', formatAmount(numValue, toAsset))
-        const fromAmount = numValue / calculateRate()
-        form.setValue(
-          'from',
-          formatAmount(fromAmount, form.getValues().fromAsset)
-        )
+      // Only update the other field if we have a complete number
+      if (!formattedValue.endsWith('.') && formattedValue !== '') {
+        const numValue = parseAssetAmount(formattedValue, toAsset)
+        const rate = calculateRate()
+
+        if (numValue === 0) {
+          form.setValue('from', '')
+        } else if (numValue > maxToAmount) {
+          const maxFormatted = formatAmount(maxToAmount, toAsset)
+          form.setValue('to', maxFormatted)
+          const fromAmount = maxToAmount / rate
+          form.setValue(
+            'from',
+            formatAmount(fromAmount, form.getValues().fromAsset)
+          )
+        } else {
+          const fromAmount = numValue / rate
+          const fromFormatted = formatAmount(
+            fromAmount,
+            form.getValues().fromAsset
+          )
+
+          // Check if the calculated fromAmount exceeds maxFromAmount
+          if (fromAmount > maxFromAmount) {
+            const maxFromFormatted = formatAmount(
+              maxFromAmount,
+              form.getValues().fromAsset
+            )
+            form.setValue('from', maxFromFormatted)
+            const adjustedToAmount = maxFromAmount * rate
+            form.setValue('to', formatAmount(adjustedToAmount, toAsset))
+          } else if (fromAmount < minFromAmount) {
+            const minFromFormatted = formatAmount(
+              minFromAmount,
+              form.getValues().fromAsset
+            )
+            form.setValue('from', minFromFormatted)
+            const adjustedToAmount = minFromAmount * rate
+            form.setValue('to', formatAmount(adjustedToAmount, toAsset))
+          } else {
+            form.setValue('from', fromFormatted)
+          }
+        }
       }
-      logger.debug('To amount changed:', value)
     } catch (error) {
       logger.error('Error handling amount change:', error)
       form.setValue('to', '')
       form.setValue('from', '')
     }
   }
+
+  // Add debounce effect for updating the opposite amount
+  useEffect(() => {
+    if (!debouncedFromAmount || debouncedFromAmount.endsWith('.')) return
+
+    const timer = setTimeout(() => {
+      if (debouncedFromAmount !== previousFromAmount) {
+        updateToAmount(debouncedFromAmount)
+      }
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [debouncedFromAmount])
+
+  useEffect(() => {
+    if (!debouncedToAmount || debouncedToAmount.endsWith('.')) return
+
+    const timer = setTimeout(() => {
+      if (debouncedToAmount !== previousToAmount) {
+        const fromAmount =
+          parseAssetAmount(debouncedToAmount, form.getValues().toAsset) /
+          calculateRate()
+        form.setValue(
+          'from',
+          formatAmount(fromAmount, form.getValues().fromAsset)
+        )
+      }
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [debouncedToAmount])
+
   // Swap assets
   const onSwapAssets = useCallback(async () => {
     if (selectedPair) {
@@ -960,13 +1067,19 @@ export const Component = () => {
 
       // Prepare and show the swap recap
       const recapDetails: SwapDetails = {
-        fromAmount: data.from,
+        fromAmount: formatAmount(
+          parseAssetAmount(data.from, data.fromAsset),
+          data.fromAsset
+        ),
         fromAsset: data.fromAsset,
         payment_hash: payment_hash,
-        price: selectedPairFeed.price,
+        price: selectedPairFeed.price / selectedPairFeed.size,
         selectedPair: selectedPair,
         timestamp: new Date().toISOString(),
-        toAmount: data.to,
+        toAmount: formatAmount(
+          parseAssetAmount(data.to, data.toAsset),
+          data.toAsset
+        ),
         toAsset: data.toAsset,
       }
       setSwapRecapDetails(recapDetails)
