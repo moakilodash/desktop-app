@@ -755,7 +755,7 @@ export const nodeApi = createApi({
           proxy_endpoint: body.proxy_endpoint,
         },
         method: 'POST',
-        timeout: 180000,
+        timeout: 300000,
         url: '/unlock',
       }),
     }),
