@@ -54,6 +54,7 @@ export const Component = () => {
   const [minFromAmount, setMinFromAmount] = useState(0)
   const [maxFromAmount, setMaxFromAmount] = useState(0)
   const [maxToAmount, setMaxToAmount] = useState(0)
+  const [max_outbound_htlc_sat, setMaxOutboundHtlcSat] = useState(0)
 
   const [isToAmountLoading, setIsToAmountLoading] = useState(true)
   const [isPriceLoading, setIsPriceLoading] = useState(true)
@@ -218,19 +219,16 @@ export const Component = () => {
       }
       const assetsList = assetsResponse.data.nia
 
-      let maxChannelBalance = 0
       if (asset === 'BTC') {
-        if (isFrom) {
-          maxChannelBalance = Math.max(
-            ...channels.map((c) => c.outbound_balance_msat / MSATS_PER_SAT)
+        // next_outbound_htlc_limit_msat already considers both the HTLC limit (10% of capacity)
+        // and the available balance
+        const maxHtlcLimit = Math.max(
+          ...channels.map(
+            (c) => c.next_outbound_htlc_limit_msat / MSATS_PER_SAT
           )
-          return maxChannelBalance
-        } else {
-          maxChannelBalance = Math.max(
-            ...channels.map((c) => c.inbound_balance_msat / MSATS_PER_SAT)
-          )
-        }
-        return maxChannelBalance
+        )
+        setMaxOutboundHtlcSat(maxHtlcLimit)
+        return maxHtlcLimit
       } else {
         const assetInfo = assetsList.find((a) => a.ticker === asset)
         if (!assetInfo) {
@@ -552,6 +550,13 @@ export const Component = () => {
       setErrorMessage(
         `Maximum amount to receive: ${formatAmount(maxToAmount, form.getValues().toAsset)} ${getDisplayAsset(form.getValues().toAsset)}`
       )
+    } else if (
+      form.getValues().fromAsset === 'BTC' &&
+      fromAmount > max_outbound_htlc_sat
+    ) {
+      setErrorMessage(
+        `Maximum HTLC size: ${formatAmount(max_outbound_htlc_sat, 'BTC')} ${getDisplayAsset('BTC')}`
+      )
     } else {
       setErrorMessage(null)
     }
@@ -560,6 +565,7 @@ export const Component = () => {
     minFromAmount,
     maxFromAmount,
     maxToAmount,
+    max_outbound_htlc_sat,
     parseAssetAmount,
     formatAmount,
   ])
@@ -1182,9 +1188,42 @@ export const Component = () => {
               />
             </div>
 
-            <div className="text-xs text-slate-500">
-              Min: {formatAmount(minFromAmount, form.getValues().fromAsset)}{' '}
-              {getDisplayAsset(form.getValues().fromAsset)}
+            <div className="flex items-center gap-4 text-xs">
+              <div className="text-slate-500">
+                Min: {formatAmount(minFromAmount, form.getValues().fromAsset)}{' '}
+                {getDisplayAsset(form.getValues().fromAsset)}
+              </div>
+              {form.getValues().fromAsset === 'BTC' && (
+                <div className="relative group">
+                  <span className="text-slate-500 cursor-help border-b border-dotted border-slate-600">
+                    Max HTLC: {formatAmount(max_outbound_htlc_sat, 'BTC')}{' '}
+                    {getDisplayAsset('BTC')}
+                  </span>
+                  <div
+                    className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 
+                                bg-slate-800 text-xs text-slate-200 rounded-lg w-64 hidden group-hover:block
+                                shadow-lg border border-slate-700 z-10"
+                  >
+                    <div className="relative">
+                      <div className="text-left space-y-1">
+                        <p>
+                          Maximum amount that can be sent in a single payment
+                          (HTLC).
+                        </p>
+                        <p className="text-slate-400">
+                          This value considers both your available balance and
+                          channel capacity limits.
+                        </p>
+                      </div>
+                      <div
+                        className="absolute w-2 h-2 bg-slate-800 rotate-45 
+                                    left-1/2 bottom-0 transform -translate-x-1/2 translate-y-1/2
+                                    border-r border-b border-slate-700"
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-4 gap-2">
@@ -1474,6 +1513,17 @@ export const Component = () => {
                 ? 'Unable to connect to the selected maker. Please select a different maker from the dropdown above.'
                 : "The current maker doesn't offer any trading pairs for your assets. Please select a different maker from the dropdown above."}
             </p>
+            <button
+              className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg 
+                       font-medium transition-colors flex items-center gap-2 mx-auto"
+              disabled={isLoading}
+              onClick={refreshData}
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}
+              />
+              {isLoading ? 'Refreshing...' : 'Refresh'}
+            </button>
           </div>
         </div>
       ) : (
