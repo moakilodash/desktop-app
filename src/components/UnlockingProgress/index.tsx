@@ -72,7 +72,13 @@ export const UnlockingProgress = ({ isUnlocking }: UnlockingProgressProps) => {
                 className="mt-6 p-4 rounded-lg bg-blue-900/30 border border-cyan-500/10 text-sm text-gray-400 animate-[fadeIn_0.5s_ease-out]"
                 style={{ animationDelay: '600ms' }}
               >
-                Please keep the application open while we complete the setup.
+                <p>
+                  Please keep the application open while we complete the setup.
+                </p>
+                <p className="mt-2">
+                  Note: If your node has been offline for some time,
+                  synchronization may take a few minutes.
+                </p>
               </div>
             </div>
           )}

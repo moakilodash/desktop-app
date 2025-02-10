@@ -102,8 +102,10 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
         }
       } else if (!assetId || assetId !== BTC_ASSET_ID) {
         const res = await rgbInvoice(assetId ? { asset_id: assetId } : {})
-        if ('error' in res) {
-          toast.error('Failed to generate RGB invoice')
+        if ('error' in res && res.error) {
+          const errorMessage =
+            'data' in res.error ? res.error.data?.error : 'Unknown error'
+          toast.error('Failed to generate RGB invoice: ' + errorMessage)
         } else {
           setAddress(res.data?.invoice)
           setRecipientId(res.data?.recipient_id)
@@ -308,6 +310,7 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
                           transition-all duration-200"
             >
               <div className="truncate flex-1 text-slate-300 font-mono text-sm">
+                <span className="text-slate-400 mr-2">RGB Invoice:</span>
                 {address.length > 45 ? `${address.slice(0, 42)}...` : address}
               </div>
               <button
