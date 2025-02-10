@@ -259,10 +259,7 @@ export const StatusToast: React.FC<{
             })
           )
         }
-      } else if (
-        !existingStatus &&
-        (swap.status === 'Waiting' || swap.status === 'Pending')
-      ) {
+      } else if (!existingStatus && swap.status === 'Pending') {
         // Create new toast
         setToasts((prev) => [
           ...prev,
