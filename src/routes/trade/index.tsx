@@ -1,21 +1,26 @@
 import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
+import { Copy } from 'lucide-react'
 import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
-import { Controller, SubmitHandler, useForm } from 'react-hook-form'
+import { useForm, SubmitHandler } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { v4 as uuidv4 } from 'uuid'
 
 import { webSocketService } from '../../app/hubs/websocketService'
-import {
-  CREATE_NEW_CHANNEL_PATH,
-  ORDER_CHANNEL_PATH,
-} from '../../app/router/paths'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { Loader } from '../../components/Loader'
 import { StatusToast } from '../../components/StatusToast'
+import { SwapConfirmation } from '../../components/SwapConfirmation'
 import { SwapDetails, SwapRecap } from '../../components/SwapRecap'
-import { AssetSelect, ExchangeRateDisplay } from '../../components/Trade'
-import { SparkIcon } from '../../icons/Spark'
+import {
+  NoChannelsMessage,
+  NoTradingPairsMessage,
+  Header,
+  SwapInputField,
+  ExchangeRateSection,
+  SwapButton,
+  MakerSelector,
+} from '../../components/Trade'
 import { SwapIcon } from '../../icons/Swap'
 import { makerApi, TradingPair } from '../../slices/makerApi/makerApi.slice'
 import {
@@ -23,13 +28,9 @@ import {
   subscribeToPair,
   unsubscribeFromPair,
 } from '../../slices/makerApi/pairs.slice'
-import './index.css'
 import { nodeApi, Channel, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
 import { logger } from '../../utils/logger'
-import { RefreshCw, Link, Plus, ShoppingCart, Copy } from 'lucide-react'
-
-import { MakerSelector } from '../../components/Trade/MakerSelector'
-import { SwapConfirmation } from '../../components/SwapConfirmation'
+import './index.css'
 
 interface Fields {
   rfq_id: string
@@ -1198,35 +1199,7 @@ export const Component = () => {
   )
 
   const renderNoChannelsMessage = () => (
-    <div className="max-w-xl w-full bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
-      <div className="flex flex-col items-center space-y-4">
-        <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center">
-          <Link className="w-8 h-8 text-blue-500" />
-        </div>
-        <h2 className="text-2xl font-bold text-white">No Channels Available</h2>
-        <p className="text-slate-400 text-center">
-          You need to open a channel with an asset to start trading.
-        </p>
-        <div className="flex gap-4 pt-4">
-          <button
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl 
-                     font-medium transition-colors flex items-center gap-2"
-            onClick={() => navigate(CREATE_NEW_CHANNEL_PATH)}
-          >
-            <Plus className="w-5 h-5" />
-            Open Channel
-          </button>
-          <button
-            className="px-6 py-3 border border-blue-500/50 text-blue-500 rounded-xl 
-                     hover:bg-blue-500/10 transition-colors flex items-center gap-2"
-            onClick={() => navigate(ORDER_CHANNEL_PATH)}
-          >
-            <ShoppingCart className="w-5 h-5" />
-            Buy from LSP
-          </button>
-        </div>
-      </div>
-    </div>
+    <NoChannelsMessage onNavigate={navigate} />
   )
 
   const renderSwapForm = () => (
@@ -1254,111 +1227,27 @@ export const Component = () => {
         onSubmit={form.handleSubmit(onSubmit)}
       >
         <div className="space-y-4">
-          <div className="space-y-3 bg-slate-800/50 rounded-lg p-4">
-            <div className="flex justify-between items-center">
-              <div className="text-sm font-medium text-slate-400">You Send</div>
-              <div className="flex items-center gap-2 text-xs text-slate-400">
-                <span>
-                  Available:{' '}
-                  {formatAmount(maxFromAmount, form.getValues().fromAsset)}{' '}
-                  {getDisplayAsset(form.getValues().fromAsset)}
-                </span>
-                <button
-                  className="p-1 rounded hover:bg-slate-700/50 transition-colors"
-                  disabled={isLoading || isSwapInProgress}
-                  onClick={refreshAmounts}
-                  title="Refresh amounts"
-                  type="button"
-                >
-                  <RefreshCw
-                    className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`}
-                  />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <input
-                className="flex-1 px-4 py-2.5 bg-slate-900/50 rounded-lg border border-slate-700 
-                         text-white text-base focus:border-blue-500 focus:ring-1 focus:ring-blue-500
-                         placeholder:text-slate-600 min-h-[42px]"
-                type="text"
-                {...form.register('from')}
-                disabled={!hasChannels || !hasTradablePairs || isSwapInProgress}
-                onChange={handleFromAmountChange}
-              />
-              <Controller
-                control={form.control}
-                name="fromAsset"
-                render={({ field }) => (
-                  <AssetSelect
-                    disabled={!hasChannels || !hasTradablePairs}
-                    onChange={(value) => handleAssetChange('fromAsset', value)}
-                    options={getAssetOptions(form.getValues().toAsset)}
-                    value={field.value}
-                  />
-                )}
-              />
-            </div>
-
-            <div className="flex items-center gap-4 text-xs">
-              <div className="text-slate-500">
-                Min: {formatAmount(minFromAmount, form.getValues().fromAsset)}{' '}
-                {getDisplayAsset(form.getValues().fromAsset)}
-              </div>
-              {form.getValues().fromAsset === 'BTC' && (
-                <div className="relative group">
-                  <span className="text-slate-500 cursor-help border-b border-dotted border-slate-600">
-                    Max HTLC: {formatAmount(max_outbound_htlc_sat, 'BTC')}{' '}
-                    {getDisplayAsset('BTC')}
-                  </span>
-                  <div
-                    className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 
-                                bg-slate-800 text-xs text-slate-200 rounded-lg w-64 hidden group-hover:block
-                                shadow-lg border border-slate-700 z-10"
-                  >
-                    <div className="relative">
-                      <div className="text-left space-y-1">
-                        <p>
-                          Maximum amount that can be sent in a single payment
-                          (HTLC).
-                        </p>
-                        <p className="text-slate-400">
-                          This value considers both your available balance and
-                          channel capacity limits.
-                        </p>
-                      </div>
-                      <div
-                        className="absolute w-2 h-2 bg-slate-800 rotate-45 
-                                    left-1/2 bottom-0 transform -translate-x-1/2 translate-y-1/2
-                                    border-r border-b border-slate-700"
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-4 gap-2">
-              {[25, 50, 75, 100].map((size) => (
-                <button
-                  className={`py-1.5 px-3 rounded-lg border text-sm transition-all duration-200
-                    ${
-                      selectedSize === size
-                        ? 'border-blue-500 bg-blue-500/10 text-blue-500'
-                        : 'border-slate-700 text-slate-400 hover:border-blue-500/50'
-                    } ${!hasChannels || !hasTradablePairs ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  key={size}
-                  onClick={() =>
-                    hasChannels && hasTradablePairs && onSizeClick(size)
-                  }
-                  type="button"
-                >
-                  {size}%
-                </button>
-              ))}
-            </div>
-          </div>
+          <SwapInputField
+            asset={form.getValues().fromAsset}
+            assetOptions={getAssetOptions(form.getValues().toAsset)}
+            availableAmount={`${formatAmount(maxFromAmount, form.getValues().fromAsset)} ${getDisplayAsset(form.getValues().fromAsset)}`}
+            disabled={!hasChannels || !hasTradablePairs || isSwapInProgress}
+            formatAmount={formatAmount}
+            getDisplayAsset={getDisplayAsset}
+            label="You Send"
+            maxAmount={maxFromAmount}
+            maxHtlcAmount={max_outbound_htlc_sat}
+            minAmount={minFromAmount}
+            onAmountChange={handleFromAmountChange}
+            onAssetChange={(value) => handleAssetChange('fromAsset', value)}
+            onRefresh={refreshAmounts}
+            onSizeClick={onSizeClick}
+            selectedSize={selectedSize}
+            showMaxHtlc
+            showMinAmount
+            showSizeButtons
+            value={form.getValues().from}
+          />
 
           <div className="flex justify-center -my-1">
             <button
@@ -1380,98 +1269,31 @@ export const Component = () => {
             </button>
           </div>
 
-          <div className="space-y-3 bg-slate-800/50 rounded-lg p-4">
-            <div className="flex justify-between items-center">
-              <div className="text-sm font-medium text-slate-400">
-                You Receive (Estimated)
-              </div>
-              <div className="text-sm text-slate-400">
-                Can receive up to:{' '}
-                {`${formatAmount(maxToAmount, form.getValues().toAsset)} ${getDisplayAsset(form.getValues().toAsset)}`}
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              {isToAmountLoading ? (
-                <div
-                  className="flex-1 px-4 py-2.5 bg-slate-900/50 rounded-lg border border-slate-700 
-                             text-slate-400 min-h-[42px] flex items-center"
-                >
-                  Estimating...
-                </div>
-              ) : (
-                <input
-                  className="flex-1 px-4 py-2.5 bg-slate-900/50 rounded-lg border border-slate-700 
-                           text-white text-base focus:border-blue-500 focus:ring-1 focus:ring-blue-500
-                           placeholder:text-slate-600 min-h-[42px]"
-                  type="text"
-                  {...form.register('to')}
-                  disabled={
-                    !hasChannels || !hasTradablePairs || isSwapInProgress
-                  }
-                  onChange={handleToAmountChange}
-                />
-              )}
-
-              <Controller
-                control={form.control}
-                name="toAsset"
-                render={({ field }) => (
-                  <AssetSelect
-                    disabled={
-                      !hasChannels || !hasTradablePairs || isSwapInProgress
-                    }
-                    onChange={(value) => handleAssetChange('toAsset', value)}
-                    options={getAssetOptions(form.getValues().fromAsset)}
-                    value={field.value}
-                  />
-                )}
-              />
-            </div>
-          </div>
+          <SwapInputField
+            asset={form.getValues().toAsset}
+            assetOptions={getAssetOptions(form.getValues().fromAsset)}
+            disabled={!hasChannels || !hasTradablePairs || isSwapInProgress}
+            formatAmount={formatAmount}
+            getDisplayAsset={getDisplayAsset}
+            isLoading={isToAmountLoading}
+            label="You Receive (Estimated)"
+            maxAmount={maxToAmount}
+            onAmountChange={handleToAmountChange}
+            onAssetChange={(value) => handleAssetChange('toAsset', value)}
+            value={form.getValues().to}
+          />
 
           {selectedPair && (
-            <>
-              <div className="text-center text-xs text-slate-400 flex items-center justify-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                Best Exchange Rate Available
-              </div>
-              <div className="bg-slate-800/50 rounded-lg p-4 space-y-3">
-                <div className="flex justify-between items-center text-xs text-slate-400">
-                  <span>Exchange Rate</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500/50 animate-pulse" />
-                    Live Price
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between gap-4">
-                  {isPriceLoading ? (
-                    <div
-                      className="flex-1 px-4 py-2.5 bg-slate-900/50 rounded-lg border border-slate-700 
-                                 text-slate-400 min-h-[42px] flex items-center"
-                    >
-                      Loading exchange rate...
-                    </div>
-                  ) : (
-                    <div className="flex-1 flex items-center justify-between">
-                      <ExchangeRateDisplay
-                        bitcoinUnit={bitcoinUnit}
-                        formatAmount={formatAmount}
-                        fromAsset={form.getValues().fromAsset}
-                        getAssetPrecision={getAssetPrecision}
-                        price={selectedPairFeed ? selectedPairFeed.price : null}
-                        selectedPair={selectedPair}
-                        toAsset={form.getValues().toAsset}
-                      />
-                      <div className="flex items-center gap-2">
-                        <SparkIcon color="#fff" />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </>
+            <ExchangeRateSection
+              bitcoinUnit={bitcoinUnit}
+              formatAmount={formatAmount}
+              fromAsset={form.getValues().fromAsset}
+              getAssetPrecision={getAssetPrecision}
+              isPriceLoading={isPriceLoading}
+              selectedPair={selectedPair}
+              selectedPairFeed={selectedPairFeed}
+              toAsset={form.getValues().toAsset}
+            />
           )}
 
           {errorMessage && (
@@ -1489,35 +1311,15 @@ export const Component = () => {
             </div>
           )}
 
-          <button
-            className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-900
-                     text-white rounded-lg font-medium transition-colors flex items-center 
-                     justify-center gap-2 disabled:cursor-not-allowed text-base min-h-[48px]"
-            disabled={
-              !wsConnected ||
-              isToAmountLoading ||
-              isPriceLoading ||
-              !!errorMessage ||
-              !hasChannels ||
-              !hasTradablePairs ||
-              isSwapInProgress
-            }
-            type="submit"
-          >
-            {!wsConnected
-              ? 'Connecting...'
-              : isToAmountLoading || isPriceLoading
-                ? 'Preparing Swap...'
-                : !hasChannels
-                  ? 'No Channels Available'
-                  : !hasTradablePairs
-                    ? 'No Tradable Pairs'
-                    : errorMessage
-                      ? 'Invalid Amount'
-                      : isSwapInProgress
-                        ? 'Swap in Progress...'
-                        : 'Swap Now'}
-          </button>
+          <SwapButton
+            errorMessage={errorMessage}
+            hasChannels={hasChannels}
+            hasTradablePairs={hasTradablePairs}
+            isPriceLoading={isPriceLoading}
+            isSwapInProgress={isSwapInProgress}
+            isToAmountLoading={isToAmountLoading}
+            wsConnected={wsConnected}
+          />
         </div>
       </form>
     </div>
@@ -1585,14 +1387,11 @@ export const Component = () => {
 
   // Common header with MakerSelector
   const renderHeader = (showWarning = false) => (
-    <div className="flex justify-between items-center mb-4">
-      <h2 className="text-xl font-semibold text-white">Trade</h2>
-      <MakerSelector
-        hasNoPairs={showWarning}
-        onMakerChange={refreshData}
-        show={hasValidChannelsForTrading}
-      />
-    </div>
+    <Header
+      hasValidChannelsForTrading={hasValidChannelsForTrading}
+      onMakerChange={refreshData}
+      showWarning={showWarning}
+    />
   )
 
   const copyToClipboard = (text: string) => {
@@ -1615,29 +1414,11 @@ export const Component = () => {
       ) : !wsConnected || tradablePairs.length === 0 ? (
         <div className="max-w-xl w-full bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
           {renderHeader(true)}
-          <div className="text-center space-y-4">
-            <h3 className="text-xl font-bold text-white">
-              {!wsConnected
-                ? 'Maker Not Connected'
-                : 'No Trading Pairs Available'}
-            </h3>
-            <p className="text-slate-400">
-              {!wsConnected
-                ? 'Unable to connect to the selected maker. Please select a different maker from the dropdown above.'
-                : "The current maker doesn't offer any trading pairs for your assets. Please select a different maker from the dropdown above."}
-            </p>
-            <button
-              className="mt-4 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg 
-                       font-medium transition-colors flex items-center gap-2 mx-auto"
-              disabled={isLoading}
-              onClick={refreshData}
-            >
-              <RefreshCw
-                className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}
-              />
-              {isLoading ? 'Refreshing...' : 'Refresh'}
-            </button>
-          </div>
+          <NoTradingPairsMessage
+            isLoading={isLoading}
+            onRefresh={refreshData}
+            wsConnected={wsConnected}
+          />
         </div>
       ) : (
         renderSwapForm()

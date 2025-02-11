@@ -10,12 +10,12 @@ import { nodeSettingsActions } from '../../slices/nodeSettings/nodeSettings.slic
 
 interface MakerSelectorProps {
   hasNoPairs?: boolean
-  onMakerChange?: () => Promise<void>
+  onMakerChange: () => Promise<void>
   show?: boolean
 }
 
 export const MakerSelector: React.FC<MakerSelectorProps> = ({
-  hasNoPairs,
+  hasNoPairs = false,
   onMakerChange,
   show = true,
 }) => {

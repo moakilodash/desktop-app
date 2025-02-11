@@ -230,4 +230,12 @@ const ExchangeRateDisplay: React.FC<ExchangeRateDisplayProps> = ({
   return <div className="flex-1 text-base">{displayRate}</div>
 }
 
+export { NoChannelsMessage } from './NoChannelsMessage'
+export { NoTradingPairsMessage } from './NoTradingPairsMessage'
+export { Header } from './Header'
+export { SizeButtons } from './SizeButtons'
+export { SwapInputField } from './SwapInputField'
+export { ExchangeRateSection } from './ExchangeRateSection'
+export { SwapButton } from './SwapButton'
+export { MakerSelector } from './MakerSelector'
 export { AssetOption, AssetSelect, ExchangeRateDisplay }
