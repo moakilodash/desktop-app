@@ -32,7 +32,6 @@ interface SwapInputFieldProps {
 export const SwapInputField: React.FC<SwapInputFieldProps> = ({
   label,
   availableAmount,
-  maxAmount,
   minAmount,
   maxHtlcAmount,
   isLoading,
