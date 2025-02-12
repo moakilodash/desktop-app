@@ -22,7 +22,7 @@ import { UnlockingProgress } from '../../components/UnlockingProgress'
 import { parseRpcUrl } from '../../helpers/utils'
 import { ChevronDownIcon } from '../../icons/ChevronDown'
 import { EyeIcon } from '../../icons/Eye'
-import { nodeApi , NodeApiError } from '../../slices/nodeApi/nodeApi.slice'
+import { nodeApi, NodeApiError } from '../../slices/nodeApi/nodeApi.slice'
 
 interface Fields {
   password: string
@@ -88,9 +88,9 @@ const ConnectionDetails = ({
 }
 
 export const Component = () => {
+  const nodeSettings = useAppSelector((state) => state.nodeSettings.data)
   const [unlock] = nodeApi.endpoints.unlock.useLazyQuery()
   const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
-  const nodeSettings = useAppSelector((state) => state.nodeSettings.data)
 
   const navigate = useNavigate()
 

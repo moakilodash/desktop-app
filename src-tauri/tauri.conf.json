@@ -33,6 +33,10 @@
       },
       "window": {
         "close": true
+      },
+      "http": {
+        "all": true, 
+        "request": true 
       }
     },
     "bundle": {

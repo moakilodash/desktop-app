@@ -410,7 +410,7 @@ const dynamicBaseQuery: BaseQueryFn<
 
   const baseQuery = fetchBaseQuery({
     baseUrl: '',
-    timeout: 180000,
+    timeout: 300000,
     validateStatus: (response, _) => {
       return response.status >= 200 && response.status < 300
     },
@@ -755,7 +755,6 @@ export const nodeApi = createApi({
           proxy_endpoint: body.proxy_endpoint,
         },
         method: 'POST',
-        timeout: 300000,
         url: '/unlock',
       }),
     }),
