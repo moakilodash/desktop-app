@@ -195,14 +195,17 @@ export const Component = () => {
   }
 
   return (
-    <div className="max-w-screen-lg w-full bg-blue-dark py-8 rounded px-14 pt-20 pb-8">
+    <div className="max-w-screen-lg w-full bg-blue-darkest/80 backdrop-blur-sm rounded-2xl border border-white/5 shadow-2xl px-8 py-12">
       {insufficientBalance ? (
-        <div className="text-center">
+        <div className="text-center p-8 animate-fadeIn">
           <FormError
             message={`Insufficient balance to open a channel. You need at least ${MIN_CHANNEL_CAPACITY} satoshis.`}
           />
           <button
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="mt-6 px-8 py-3 bg-cyan text-blue-darkest font-semibold rounded-xl
+            hover:bg-cyan-400 active:bg-cyan-600 transition-all duration-200
+            focus:outline-none focus:ring-2 focus:ring-cyan/50 focus:ring-offset-2 focus:ring-offset-blue-darkest
+            transform hover:scale-[1.02] active:scale-[0.98]"
             onClick={() => navigate(WALLET_DASHBOARD_PATH)}
           >
             Go to Dashboard

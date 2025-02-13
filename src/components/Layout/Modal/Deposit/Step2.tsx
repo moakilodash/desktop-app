@@ -309,8 +309,19 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
                           flex items-center justify-between group hover:border-blue-500/50 
                           transition-all duration-200"
             >
-              <div className="truncate flex-1 text-slate-300 font-mono text-sm">
-                <span className="text-slate-400 mr-2">RGB Invoice:</span>
+              <div className="truncate flex-1 text-slate-300 font-mono text-sm flex items-center gap-2">
+                <span
+                  className={`
+                  px-2 py-1 rounded-md text-xs font-medium
+                  ${
+                    assetId === BTC_ASSET_ID
+                      ? 'bg-orange-500/20 text-orange-400 border border-orange-500/20'
+                      : 'bg-purple-500/20 text-purple-400 border border-purple-500/20'
+                  }
+                `}
+                >
+                  {assetId === BTC_ASSET_ID ? 'BTC Address' : 'RGB Invoice'}
+                </span>
                 {address.length > 45 ? `${address.slice(0, 42)}...` : address}
               </div>
               <button

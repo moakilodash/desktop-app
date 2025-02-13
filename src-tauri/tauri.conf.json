@@ -49,7 +49,9 @@
         "icons/512x512.png"        
       ],
       "identifier": "com.kaleidoswap.dev",
-      "resources": [],
+      "resources": [
+        "../bin/rgb-lightning-node"
+      ],
       "targets": "all"
     },
     "security": {
