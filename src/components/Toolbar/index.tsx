@@ -26,6 +26,8 @@ export interface Account {
   node_url: string
   proxy_endpoint: string
   rpc_connection_url: string
+  daemon_listening_port: string
+  ldk_peer_listening_port: string
 }
 
 interface EditAccountModalProps {
@@ -189,6 +191,32 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
 
   const handleAccountChange = async (account: Account) => {
     try {
+      // First check if this is already the current account
+      const currentAccount = await invoke<Account | null>('get_current_account')
+      const isNodeRunning = await invoke<boolean>('is_node_running', {
+        accountName: account.name,
+      })
+      const runningNodeAccount = await invoke<string | null>(
+        'get_running_node_account'
+      )
+
+      // If this is the current account and its node is running, just navigate to root
+      if (
+        currentAccount &&
+        currentAccount.name === account.name &&
+        isNodeRunning
+      ) {
+        navigate(ROOT_PATH)
+        return
+      }
+
+      // If a different account's node is running, we need to stop it
+      if (runningNodeAccount && runningNodeAccount !== account.name) {
+        await invoke('stop_node')
+        // Give it a moment to fully stop
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+      }
+
       // First set the current account in the database
       await invoke('set_current_account', { accountName: account.name })
 
@@ -216,7 +244,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
 
       setIsLoading(true)
       if (
-        account.node_url === 'http://localhost:3001' &&
+        account.node_url.startsWith('http://localhost:') &&
         account.datapath !== ''
       ) {
         toast.info('Starting local node...', {
@@ -224,12 +252,19 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
           position: 'bottom-right',
         })
         await new Promise((resolve) => setTimeout(resolve, 1000))
-        await invoke('start_node', {
-          daemonListeningPort: '3001',
-          datapath: account.datapath,
-          ldkPeerListeningPort: '9735',
-          network: account.network,
-        })
+        try {
+          await invoke('start_node', {
+            accountName: account.name,
+            daemonListeningPort: account.daemon_listening_port,
+            datapath: account.datapath,
+            ldkPeerListeningPort: account.ldk_peer_listening_port,
+            network: account.network,
+          })
+        } catch (error) {
+          console.error('Could not start node:', error)
+          toast.error(`Could not start node: ${error}`)
+          throw error // Re-throw to trigger the outer catch block
+        }
       }
       await new Promise((resolve) => setTimeout(resolve, 1000))
       navigate(ROOT_PATH)

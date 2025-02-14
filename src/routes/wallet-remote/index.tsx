@@ -30,6 +30,8 @@ interface Fields {
   password: string
   useAuth: boolean
   authToken: string
+  daemon_listening_port: string
+  ldk_peer_listening_port: string
 }
 
 export const Component = () => {
@@ -47,7 +49,9 @@ export const Component = () => {
   const form = useForm<Fields>({
     defaultValues: {
       authToken: '',
+      daemon_listening_port: '3001',
       indexer_url: 'electrs:50001',
+      ldk_peer_listening_port: '9735',
       name: 'Test Account',
       network: 'Regtest',
       node_url: `http://localhost:${NETWORK_DEFAULTS.Regtest.daemon_listening_port}`,
@@ -102,10 +106,12 @@ export const Component = () => {
 
     await dispatch(
       setSettingsAsync({
+        daemon_listening_port: data.daemon_listening_port,
         datapath: '',
         default_lsp_url: NETWORK_DEFAULTS[data.network].default_lsp_url,
         default_maker_url: defaultMakerUrl,
         indexer_url: data.indexer_url,
+        ldk_peer_listening_port: data.ldk_peer_listening_port,
         maker_urls: [defaultMakerUrl],
         name: data.name,
         network: data.network,
@@ -117,16 +123,24 @@ export const Component = () => {
 
     // Insert account
     await invoke('insert_account', {
+      daemonListeningPort: '',
       datapath: '',
       defaultLspUrl: NETWORK_DEFAULTS[data.network].default_lsp_url,
       defaultMakerUrl,
       indexerUrl: data.indexer_url,
-      makerUrls: defaultMakerUrl,
-      name: data.name,
-      network: data.network,
-      nodeUrl: data.node_url,
-      proxyEndpoint: data.proxy_endpoint,
-      rpcConnectionUrl: data.rpc_connection_url,
+      // Empty for remote nodes
+ldkPeerListeningPort: '',
+      
+makerUrls: defaultMakerUrl,
+      
+name: data.name,
+      
+network: data.network,
+      
+nodeUrl: data.node_url,
+      
+proxyEndpoint: data.proxy_endpoint, 
+      rpcConnectionUrl: data.rpc_connection_url, // Empty for remote nodes
     })
 
     // Set as current account

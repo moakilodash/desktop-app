@@ -132,10 +132,12 @@ export const Component: React.FC = () => {
       dispatch(setNodeConnectionString(data.nodeConnectionString))
 
       await invoke('update_account', {
+        daemonListeningPort: currentAccount.daemon_listening_port,
         datapath: currentAccount.datapath,
         defaultLspUrl: data.lspUrl,
         defaultMakerUrl: data.defaultMakerUrl,
         indexerUrl: data.indexerUrl,
+        ldkPeerListeningPort: currentAccount.ldk_peer_listening_port,
         makerUrls: data.makerUrls.join(','),
         name: currentAccount.name,
         network: currentAccount.network,
@@ -147,9 +149,11 @@ export const Component: React.FC = () => {
       dispatch(
         nodeSettingsActions.setNodeSettings({
           ...currentAccount,
+          daemon_listening_port: currentAccount.daemon_listening_port,
           default_lsp_url: data.lspUrl,
           default_maker_url: data.defaultMakerUrl,
           indexer_url: data.indexerUrl,
+          ldk_peer_listening_port: currentAccount.ldk_peer_listening_port,
           maker_urls: data.makerUrls,
           proxy_endpoint: data.proxyEndpoint,
           rpc_connection_url: data.rpcConnectionUrl,

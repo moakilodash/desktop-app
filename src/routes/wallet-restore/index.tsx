@@ -102,10 +102,12 @@ export const Component = () => {
         const defaultMakerUrl = NETWORK_DEFAULTS[data.network].default_maker_url
         await dispatch(
           setSettingsAsync({
+            daemon_listening_port: data.daemon_listening_port,
             datapath: datapath,
             default_lsp_url: NETWORK_DEFAULTS[data.network].default_lsp_url,
             default_maker_url: defaultMakerUrl,
             indexer_url: data.indexer_url,
+            ldk_peer_listening_port: data.ldk_peer_listening_port,
             maker_urls: [defaultMakerUrl],
             name: data.name,
             network: data.network,
@@ -114,16 +116,20 @@ export const Component = () => {
             rpc_connection_url: data.rpc_connection_url,
           })
         )
-
-        await invoke('start_node', {
-          daemonListeningPort: data.daemon_listening_port,
-          datapath: datapath,
-          ldkPeerListeningPort: data.ldk_peer_listening_port,
-          network: data.network,
-        })
+        try {
+          await invoke('start_node', {
+            accountName: data.name,
+            daemonListeningPort: data.daemon_listening_port,
+            datapath: datapath,
+            ldkPeerListeningPort: data.ldk_peer_listening_port,
+            network: data.network,
+          })
+          toast.success('Node started successfully!')
+        } catch (error) {
+          toast.error(`Could not start node: ${error}`)
+        }
 
         // Wait for node to be ready
-        // TODO: Check if the node is ready
         await new Promise((resolve) => setTimeout(resolve, 5000))
 
         const restoreResponse = await restore({

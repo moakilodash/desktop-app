@@ -133,10 +133,13 @@ export const Component = () => {
       const defaultMakerUrl = NETWORK_DEFAULTS[data.network].default_maker_url
       await dispatch(
         setSettingsAsync({
-          datapath: datapath, // Use formatted name-based datapath
-          default_lsp_url: NETWORK_DEFAULTS[data.network].default_lsp_url,
+          daemon_listening_port: data.daemon_listening_port, 
+          datapath: datapath,
+          // Use formatted name-based datapath
+default_lsp_url: NETWORK_DEFAULTS[data.network].default_lsp_url,
           default_maker_url: defaultMakerUrl,
           indexer_url: data.indexer_url,
+          ldk_peer_listening_port: data.ldk_peer_listening_port,
           maker_urls: [defaultMakerUrl],
           name: data.name,
           network: data.network,
@@ -153,42 +156,58 @@ export const Component = () => {
     }
   }
 
+  const formatAccountName = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+  }
+
+  const getDatapath = (accountName: string): string => {
+    return `kaleidoswap-${formatAccountName(accountName)}`
+  }
+
   const handlePasswordSetup: SubmitHandler<PasswordFields> = async (data) => {
     setIsStartingNode(true)
-    try {
-      const formattedName = nodeSetupForm
-        .getValues('name')
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '')
-      const datapath = `kaleidoswap-${formattedName}`
-      const network = nodeSetupForm.getValues('network')
+    const accountName = nodeSetupForm.getValues('name')
+    const network = nodeSetupForm.getValues('network')
+    const datapath = getDatapath(accountName)
 
+    try {
+      // Start the node
       await invoke('start_node', {
+        accountName,
         daemonListeningPort: nodeSetupForm.getValues('daemon_listening_port'),
-        datapath: datapath,
+        datapath,
         ldkPeerListeningPort: nodeSetupForm.getValues(
           'ldk_peer_listening_port'
         ),
-        network: nodeSetupForm.getValues('network'),
+        network,
+      }).catch((error) => {
+        throw new Error(`Failed to start node: ${error}`)
       })
-      await new Promise((resolve) => setTimeout(resolve, 5000))
 
-      const initResponse = await init({ password: data.password })
+      // Verify node is running and attempt initialization
+      const initResult = await init({ password: data.password }).catch(
+        (error) => {
+          throw new Error(`Node initialization failed: ${error}`)
+        }
+      )
 
+      // Handle case where node is already initialized
       if (
-        initResponse.error &&
-        'status' in initResponse.error &&
-        initResponse.error.status === 403
+        initResult.error &&
+        'status' in initResult.error &&
+        initResult.error.status === 403
       ) {
         toast.info('Node is already initialized, attempting to unlock...')
         setNodePassword(data.password)
-        // Try unlocking directly
+
         const rpcConfig = parseRpcUrl(
           nodeSetupForm.getValues('rpc_connection_url')
         )
-        const unlockResponse = await unlock({
+        const unlockResult = await unlock({
           bitcoind_rpc_host: rpcConfig.host,
           bitcoind_rpc_password: rpcConfig.password,
           bitcoind_rpc_port: rpcConfig.port,
@@ -196,56 +215,89 @@ export const Component = () => {
           indexer_url: nodeSetupForm.getValues('indexer_url'),
           password: data.password,
           proxy_endpoint: nodeSetupForm.getValues('proxy_endpoint'),
-        })
+        }).unwrap()
 
-        if (unlockResponse.isSuccess) {
-          const nodeInfoRes = await nodeInfo()
-          if (nodeInfoRes.isSuccess) {
+        // Check if unlock was successful
+        if (unlockResult !== undefined) {
+          const nodeInfoResult = await nodeInfo()
+          if (nodeInfoResult.isSuccess) {
+            await saveAccountSettings(accountName, network, datapath)
             navigate(TRADE_PATH)
             return
           }
         }
-        throw new Error('Failed to unlock the node')
+        throw new Error('Failed to unlock the existing node')
       }
 
-      if (!initResponse.isSuccess) {
+      // Handle successful initialization
+      if (!initResult.isSuccess) {
         throw new Error(
-          initResponse.error && 'data' in initResponse.error
-            ? (initResponse.error.data as { error: string }).error
-            : 'Initialization failed'
+          initResult.error && 'data' in initResult.error
+            ? (initResult.error.data as { error: string }).error
+            : 'Node initialization failed'
         )
       }
-      const defaultMakerUrl = NETWORK_DEFAULTS[network].default_maker_url
 
-      await invoke('insert_account', {
-        datapath: datapath,
-        defaultLspUrl: NETWORK_DEFAULTS[network].default_lsp_url,
-        defaultMakerUrl,
-        indexerUrl: nodeSetupForm.getValues('indexer_url'),
-        makerUrls: defaultMakerUrl,
-        name: nodeSetupForm.getValues('name'),
-        network: network,
-        nodeUrl: `http://localhost:${nodeSetupForm.getValues('daemon_listening_port')}`,
-        proxyEndpoint: nodeSetupForm.getValues('proxy_endpoint'),
-        rpcConnectionUrl: nodeSetupForm.getValues('rpc_connection_url'),
-      })
-
-      await invoke('set_current_account', {
-        accountName: nodeSetupForm.getValues('name'),
-      })
-
+      // Save mnemonic and proceed
       setNodePassword(data.password)
-      setMnemonic(initResponse.data.mnemonic.split(' '))
+      setMnemonic(initResult.data.mnemonic.split(' '))
+      await saveAccountSettings(accountName, network, datapath)
       handleStepChange('mnemonic')
       toast.success('Node initialized successfully!')
     } catch (error) {
       console.error('Password setup failed:', error)
-      toast.error('Failed to initialize node. Please try again.')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to initialize node'
+      )
       dispatch(nodeSettingsActions.resetNodeSettings())
-      await invoke('stop_node')
+      await invoke('stop_node').catch(console.error)
     } finally {
       setIsStartingNode(false)
     }
+  }
+
+  const saveAccountSettings = async (
+    accountName: string,
+    network: BitcoinNetwork,
+    datapath: string
+  ) => {
+    const defaultMakerUrl = NETWORK_DEFAULTS[network].default_maker_url
+
+    await invoke('insert_account', {
+      daemonListeningPort: nodeSetupForm.getValues('daemon_listening_port'),
+      datapath,
+      defaultLspUrl: NETWORK_DEFAULTS[network].default_lsp_url,
+      defaultMakerUrl,
+      indexerUrl: nodeSetupForm.getValues('indexer_url'),
+      ldkPeerListeningPort: nodeSetupForm.getValues('ldk_peer_listening_port'),
+      makerUrls: defaultMakerUrl,
+      name: accountName,
+      network,
+      nodeUrl: `http://localhost:${nodeSetupForm.getValues('daemon_listening_port')}`,
+      proxyEndpoint: nodeSetupForm.getValues('proxy_endpoint'),
+      rpcConnectionUrl: nodeSetupForm.getValues('rpc_connection_url'),
+    })
+
+    await invoke('set_current_account', { accountName })
+
+    await dispatch(
+      setSettingsAsync({
+        daemon_listening_port: nodeSetupForm.getValues('daemon_listening_port'),
+        datapath,
+        default_lsp_url: NETWORK_DEFAULTS[network].default_lsp_url,
+        default_maker_url: defaultMakerUrl,
+        indexer_url: nodeSetupForm.getValues('indexer_url'),
+        ldk_peer_listening_port: nodeSetupForm.getValues(
+          'ldk_peer_listening_port'
+        ),
+        maker_urls: [defaultMakerUrl],
+        name: accountName,
+        network,
+        node_url: `http://localhost:${nodeSetupForm.getValues('daemon_listening_port')}`,
+        proxy_endpoint: nodeSetupForm.getValues('proxy_endpoint'),
+        rpc_connection_url: nodeSetupForm.getValues('rpc_connection_url'),
+      })
+    )
   }
 
   const handleMnemonicVerify: SubmitHandler<MnemonicVerifyFields> = async (
@@ -292,10 +344,16 @@ export const Component = () => {
       const defaultMakerUrl = NETWORK_DEFAULTS[network].default_maker_url
       await dispatch(
         setSettingsAsync({
+          daemon_listening_port: nodeSetupForm.getValues(
+            'daemon_listening_port'
+          ),
           datapath: `kaleidoswap-${nodeSetupForm.getValues('name')}`,
           default_lsp_url: NETWORK_DEFAULTS[network].default_lsp_url,
           default_maker_url: defaultMakerUrl,
           indexer_url: nodeSetupForm.getValues('indexer_url'),
+          ldk_peer_listening_port: nodeSetupForm.getValues(
+            'ldk_peer_listening_port'
+          ),
           maker_urls: [defaultMakerUrl],
           name: nodeSetupForm.getValues('name'),
           network: network,

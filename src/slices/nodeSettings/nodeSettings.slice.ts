@@ -7,12 +7,14 @@ export interface Account {
   default_lsp_url: string
   default_maker_url: string
   indexer_url: string
-  maker_urls: string[]
+  maker_urls: string[] | string
   name: string
   network: BitcoinNetwork
   node_url: string
   proxy_endpoint: string
   rpc_connection_url: string
+  daemon_listening_port: string
+  ldk_peer_listening_port: string
 }
 
 export interface NodeSettingsState {
@@ -23,10 +25,12 @@ export type NodeSettings = Account
 
 const initialState: NodeSettingsState = {
   data: {
+    daemon_listening_port: '',
     datapath: '',
     default_lsp_url: '',
     default_maker_url: '',
     indexer_url: '',
+    ldk_peer_listening_port: '',
     maker_urls: [],
     name: '',
     network: 'Regtest' as BitcoinNetwork,
