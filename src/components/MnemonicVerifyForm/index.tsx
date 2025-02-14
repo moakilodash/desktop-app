@@ -182,6 +182,17 @@ export const MnemonicVerifyForm = ({
                     e.currentTarget.selectionStart
                   )
                 }}
+                onPaste={() => {
+                  // Clear suggestions on paste
+                  setTimeout(() => {
+                    setSuggestions([])
+                    // Get the current value and ensure it ends with a space
+                    const currentValue = form.getValues('mnemonic')
+                    if (currentValue && !currentValue.endsWith(' ')) {
+                      form.setValue('mnemonic', currentValue + ' ')
+                    }
+                  }, 0)
+                }}
               />
 
               {/* Word Suggestions */}
