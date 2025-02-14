@@ -1,4 +1,3 @@
-// Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use db::Account;
@@ -9,7 +8,6 @@ use std::sync::{Arc, Mutex, RwLock};
 use tauri::{Manager, Window};
 use std::env;
 use tauri_plugin_log::{Builder as LogBuilder, LogTarget};
-use std::fs;
 
 mod db;
 mod rgb_node;
@@ -40,7 +38,7 @@ fn main() {
                     tauri::WindowEvent::CloseRequested { .. } => {
                         println!("Window close requested, shutting down node...");
                         let node_process = node_process.lock().unwrap();
-                        // First try graceful shutdown
+                        // Graceful shutdown
                         node_process.shutdown();
                         
                         // Wait a bit to ensure the process has time to shut down
@@ -59,7 +57,7 @@ fn main() {
         .plugin(
             LogBuilder::default()
                 .targets([
-                    LogTarget::Folder(log_dir), // Save the logs in the “logs” directory next to the executable
+                    LogTarget::Folder(log_dir), // Save the logs in the "logs" directory
                     LogTarget::Stdout,          // Also show logs in the terminal
                 ])
                 .build()
@@ -69,10 +67,10 @@ fn main() {
             move |app| {
                 if let Some(main_window) = app.get_window("main") {
                     // Configure DevTools for debugging
-                    #[cfg(debug_assertions)] // Only in debug mode
-                    {
-                        main_window.open_devtools();
-                    }
+                    // #[cfg(debug_assertions)]
+                    // {
+                    //     main_window.open_devtools();
+                    // }
                     node_process.lock().unwrap().set_window(main_window);
                 }
                 db::init();
@@ -81,18 +79,22 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             close_splashscreen,
+            // DB commands
             get_accounts,
             insert_account,
             update_account,
             delete_account,
+            // Node commands
             start_node,
             stop_node,
+            is_node_running,
             check_account_exists,
             set_current_account,
             get_current_account,
             get_account_by_name,
             get_node_logs,
-            save_logs_to_file
+            save_logs_to_file,
+            get_running_node_account
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -100,14 +102,11 @@ fn main() {
 
 #[tauri::command]
 async fn close_splashscreen(window: Window) {
-    // First ensure the main window is ready
+    // Show main window first
     if let Some(main_window) = window.get_window("main") {
-        // Show main window first
         main_window.show().unwrap();
-        
         // Give the main window a moment to render
         std::thread::sleep(std::time::Duration::from_millis(1000));
-        
         // Then close splashscreen
         if let Some(splashscreen) = window.get_window("splashscreen") {
             splashscreen.close().unwrap();
@@ -122,53 +121,33 @@ fn start_node(
     datapath: Option<String>,
     daemon_listening_port: String,
     ldk_peer_listening_port: String,
+    account_name: String,
 ) -> Result<(), String> {
-    let app_data_dir = if cfg!(debug_assertions) {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../bin")
-    } else {
-        if cfg!(target_os = "macos") {
-            let home = env::var("HOME").expect("Failed to get HOME directory");
-            PathBuf::from(home).join("Library/Application Support/com.kaleidoswap.dev/data")
-        } else if cfg!(target_os = "windows") {
-            let local_app_data = env::var("LOCALAPPDATA")
-                .expect("Failed to get LOCALAPPDATA directory");
-            PathBuf::from(local_app_data).join("com.kaleidoswap.dev/data")
-        } else {
-            // Linux
-            let home = env::var("HOME").expect("Failed to get HOME directory");
-            PathBuf::from(home).join(".local/share/com.kaleidoswap.dev/data")
-        }
-    };
-
-    // Create the data directory if it doesn't exist
-    fs::create_dir_all(&app_data_dir).expect("Failed to create data directory");
-
-    let datapath = datapath
-        .map(|path| app_data_dir.join(path).to_str().unwrap().to_string())
-        .unwrap_or_else(|| "".to_string());
-
+    // Lock the shared NodeProcess
     let node_process = node_process.lock().unwrap();
-    if node_process.is_running() {
-        node_process.stop();
-    }
-    
-    node_process.start(network, datapath, daemon_listening_port, ldk_peer_listening_port);
-    Ok(())
+    // Attempt to start; bubble up any errors
+    node_process
+        .start(network, datapath, daemon_listening_port, ldk_peer_listening_port, account_name)
+        .map_err(|e| {
+            eprintln!("Failed to start node: {e}");
+            e
+        })
 }
 
 #[tauri::command]
 fn stop_node(node_process: tauri::State<Arc<Mutex<NodeProcess>>>) -> Result<(), String> {
-    println!("Locking mutex");
     let node_process = node_process.lock().unwrap();
     if node_process.is_running() {
         node_process.stop();
-        println!("Node stopped");
         Ok(())
     } else {
+        // Return an error or just Ok(()) – depends on your UI needs
         Err("RGB Lightning Node is not running.".to_string())
     }
 }
 
+// -- DB COMMANDS OMITTED FOR BREVITY --
+// (Same as your original code)
 #[tauri::command]
 fn get_accounts() -> Result<Vec<Account>, String> {
     match db::get_accounts() {
@@ -189,6 +168,8 @@ fn insert_account(
     default_lsp_url: String,
     maker_urls: String,
     default_maker_url: String,
+    daemon_listening_port: String,
+    ldk_peer_listening_port: String,
 ) -> Result<usize, String> {
     match db::insert_account(
         name,
@@ -201,6 +182,8 @@ fn insert_account(
         default_lsp_url,
         maker_urls,
         default_maker_url,
+        daemon_listening_port,
+        ldk_peer_listening_port,
     ) {
         Ok(num_rows) => Ok(num_rows),
         Err(e) => Err(e.to_string()),
@@ -219,6 +202,8 @@ fn update_account(
     default_lsp_url: String,
     maker_urls: String,
     default_maker_url: String,
+    daemon_listening_port: String,
+    ldk_peer_listening_port: String,
 ) -> Result<usize, String> {
     match db::update_account(
         name,
@@ -231,6 +216,8 @@ fn update_account(
         default_lsp_url,
         maker_urls,
         default_maker_url,
+        daemon_listening_port,
+        ldk_peer_listening_port,
     ) {
         Ok(num_rows) => Ok(num_rows),
         Err(e) => Err(e.to_string()),
@@ -306,6 +293,23 @@ fn get_node_logs(node_process: tauri::State<Arc<Mutex<NodeProcess>>>) -> Vec<Str
 
 #[tauri::command]
 async fn save_logs_to_file(file_path: String, content: String) -> Result<(), String> {
-    std::fs::write(file_path, content)
-        .map_err(|e| e.to_string())
+    std::fs::write(file_path, content).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn is_node_running(
+    node_process: tauri::State<Arc<Mutex<NodeProcess>>>,
+    account_name: Option<String>,
+) -> bool {
+    let node_process = node_process.lock().unwrap();
+    if let Some(account_name) = account_name {
+        node_process.is_running_for_account(&account_name)
+    } else {
+        node_process.is_running()
+    }
+}
+
+#[tauri::command]
+fn get_running_node_account(node_process: tauri::State<Arc<Mutex<NodeProcess>>>) -> Option<String> {
+    node_process.lock().unwrap().get_current_account()
 }

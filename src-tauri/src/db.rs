@@ -16,6 +16,8 @@ pub struct Account {
     pub default_lsp_url: String,
     pub maker_urls: String,
     pub default_maker_url: String,
+    pub daemon_listening_port: String,
+    pub ldk_peer_listening_port: String,
 }
 
 // Check if a database file exists, and create one if it does not.
@@ -41,6 +43,8 @@ pub fn init() {
             'default_lsp_url'  TEXT NOT NULL,
             'maker_urls'  TEXT NOT NULL DEFAULT '',
             'default_maker_url'  TEXT NOT NULL DEFAULT '',
+            'daemon_listening_port'  TEXT NOT NULL DEFAULT '3001',
+            'ldk_peer_listening_port'  TEXT NOT NULL DEFAULT '9735',
             PRIMARY KEY('id' AUTOINCREMENT)
         );",
         (),
@@ -120,6 +124,8 @@ pub fn get_accounts() -> Result<Vec<Account>, rusqlite::Error> {
                 default_lsp_url: row.get(8)?,
                 maker_urls: row.get(9)?,
                 default_maker_url: row.get(10)?,
+                daemon_listening_port: row.get(11)?,
+                ldk_peer_listening_port: row.get(12)?,
             })
         })?
         .map(|res| res.unwrap())
@@ -139,6 +145,8 @@ pub fn insert_account(
     default_lsp_url: String,
     maker_urls: String,
     default_maker_url: String,
+    daemon_listening_port: String,
+    ldk_peer_listening_port: String,
 ) -> Result<usize, rusqlite::Error> {
     let conn = Connection::open(get_db_path())?;
     
@@ -154,8 +162,9 @@ pub fn insert_account(
     }
     
     conn.execute(
-        "INSERT INTO Accounts (name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint, default_lsp_url, maker_urls, default_maker_url) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
-        rusqlite::params![name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint, default_lsp_url, maker_urls, default_maker_url],
+        "INSERT INTO Accounts (name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint, default_lsp_url, maker_urls, default_maker_url, daemon_listening_port, ldk_peer_listening_port) 
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+        rusqlite::params![name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint, default_lsp_url, maker_urls, default_maker_url, daemon_listening_port, ldk_peer_listening_port],
     )
 }
 
@@ -170,6 +179,8 @@ pub fn update_account(
     default_lsp_url: String,
     maker_urls: String,
     default_maker_url: String,
+    daemon_listening_port: String,
+    ldk_peer_listening_port: String,
 ) -> Result<usize, rusqlite::Error> {
     let conn = Connection::open(get_db_path())?;
     conn.execute(
@@ -182,8 +193,10 @@ pub fn update_account(
             proxy_endpoint = ?6, 
             default_lsp_url = ?7,
             maker_urls = ?8,
-            default_maker_url = ?9
-         WHERE name = ?10",
+            default_maker_url = ?9,
+            daemon_listening_port = ?10,
+            ldk_peer_listening_port = ?11
+         WHERE name = ?12",
         rusqlite::params![
             network,
             datapath,
@@ -194,6 +207,8 @@ pub fn update_account(
             default_lsp_url,
             maker_urls,
             default_maker_url,
+            daemon_listening_port,
+            ldk_peer_listening_port,
             name
         ],
     )
@@ -215,6 +230,8 @@ pub fn get_account_by_name(name: &str) -> Result<Option<Account>, rusqlite::Erro
             default_lsp_url: row.get(8)?,
             maker_urls: row.get(9)?,
             default_maker_url: row.get(10)?,
+            daemon_listening_port: row.get(11)?,
+            ldk_peer_listening_port: row.get(12)?,
         })
     }).optional()?;
     
