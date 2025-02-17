@@ -683,8 +683,9 @@ export const Component = () => {
     if (makerConnectionUrl && channels.length > 0) {
       const hasValidChannels = channels.some(
         (channel) =>
-          // Check for BTC channels or channels with asset_id
+          // Check for BTC channels or channels with asset_id that are ready and usable
           channel.asset_id &&
+          channel.ready &&
           (channel.outbound_balance_msat > 0 ||
             channel.inbound_balance_msat > 0)
       )
@@ -735,10 +736,11 @@ export const Component = () => {
           const channelsList = listChannelsResponse.data.channels
           setChannels(channelsList)
 
-          // Check if there's at least one channel with an asset
+          // Check if there's at least one channel with an asset that is ready and usable
           const hasValidChannels = channelsList.some(
             (channel) =>
               channel.asset_id !== null &&
+              channel.ready &&
               (channel.outbound_balance_msat > 0 ||
                 channel.inbound_balance_msat > 0)
           )
@@ -768,11 +770,13 @@ export const Component = () => {
 
   // Add a new function to fetch and set pairs
   const getAvailableAssets = useCallback(() => {
-    // Get unique assets from channels
+    // Get unique assets from channels that are ready and usable
     const channelAssets = new Set(
       channels
         .filter(
-          (c) => c.outbound_balance_msat > 0 || c.inbound_balance_msat > 0
+          (c) =>
+            c.ready &&
+            (c.outbound_balance_msat > 0 || c.inbound_balance_msat > 0)
         )
         .map((c) => assets.find((a) => a.asset_id === c.asset_id)?.ticker)
         .filter(Boolean)

@@ -131,7 +131,7 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center space-x-2">
           <span className="font-bold text-lg">
-            {channel.channel_id.slice(0, 8)}
+            {channel.peer_pubkey.slice(0, 8)}
           </span>
           <button
             className="text-gray-400 hover:text-white transition-colors"
