@@ -57,12 +57,15 @@ impl NodeProcess {
         ldk_peer_listening_port: String,
         account_name: String,
     ) -> Result<(), String> {
+        println!("Starting node for account: {}", account_name);
+        
         // Store the account name before starting the node
-        *self.current_account.lock().unwrap() = Some(account_name);
+        *self.current_account.lock().unwrap() = Some(account_name.clone());
 
         // 1) If already running, attempt to stop & wait for complete shutdown
         if self.is_running() {
-            println!("Node is already running. Stopping existing process...");
+            println!("Node is already running for account: {}. Stopping existing process...", 
+                self.current_account.lock().unwrap().as_ref().unwrap_or(&"unknown".to_string()));
             self.shutdown();
 
             let start_time = std::time::Instant::now();
@@ -78,27 +81,42 @@ impl NodeProcess {
 
         // 2) Build the final data path for the node
         let app_data_dir = if cfg!(debug_assertions) {
+            println!("Debug mode: Using local bin directory");
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../bin")
         } else if cfg!(target_os = "macos") {
-            let home = env::var("HOME").expect("Failed to get HOME directory");
+            println!("MacOS: Using Application Support directory");
+            let home = env::var("HOME").map_err(|e| format!("Failed to get HOME directory: {}", e))?;
             PathBuf::from(home).join("Library/Application Support/com.kaleidoswap.dev/data")
         } else if cfg!(target_os = "windows") {
-            let local_app_data = env::var("LOCALAPPDATA").expect("Failed to get LOCALAPPDATA");
+            println!("Windows: Using LOCALAPPDATA directory");
+            let local_app_data = env::var("LOCALAPPDATA")
+                .map_err(|e| format!("Failed to get LOCALAPPDATA: {}", e))?;
             PathBuf::from(local_app_data).join("com.kaleidoswap.dev/data")
         } else {
-            // Linux
-            let home = env::var("HOME").expect("Failed to get HOME directory");
+            println!("Linux: Using .local/share directory");
+            let home = env::var("HOME").map_err(|e| format!("Failed to get HOME directory: {}", e))?;
             PathBuf::from(home).join(".local/share/com.kaleidoswap.dev/data")
         };
 
+        println!("App data directory: {:?}", app_data_dir);
+
         // Ensure base directory exists
         if let Err(e) = std::fs::create_dir_all(&app_data_dir) {
-            return Err(format!("Failed to create data directory: {e}"));
+            let err = format!("Failed to create data directory {:?}: {}", app_data_dir, e);
+            println!("{}", err);
+            return Err(err);
         }
 
         let final_datapath = match datapath {
-            Some(path) => app_data_dir.join(path).to_string_lossy().to_string(),
-            None => "".to_string(),
+            Some(path) => {
+                let path = app_data_dir.join(path);
+                println!("Using datapath: {:?}", path);
+                path.to_string_lossy().to_string()
+            },
+            None => {
+                println!("No datapath provided");
+                "".to_string()
+            },
         };
 
         // 3) Actually spawn the child process
@@ -110,11 +128,12 @@ impl NodeProcess {
         ) {
             Ok(child) => child,
             Err(e) => {
-                // We can log or emit an event here
+                let err = format!("Failed to start RGB Lightning Node: {}", e);
+                println!("{}", err);
                 if let Some(window) = &*self.window.lock().unwrap() {
-                    let _ = window.emit("node-error", e.clone());
+                    let _ = window.emit("node-error", err.clone());
                 }
-                return Err(e);
+                return Err(err);
             }
         };
 
@@ -125,6 +144,8 @@ impl NodeProcess {
         }
         self.is_running.store(true, Ordering::SeqCst);
 
+        println!("Node started successfully for account: {}", account_name);
+        
         // Optionally emit an event so your UI knows a node started
         if let Some(window) = &*self.window.lock().unwrap() {
             let _ = window.emit("node-started", ());
@@ -333,11 +354,24 @@ fn run_rgb_lightning_node(
     daemon_listening_port: &str,
     ldk_peer_listening_port: &str,
 ) -> Result<Child, String> {
-    // In debug mode, assume the binary is in ../bin relative to Cargo
-    // Otherwise, handle it differently (like in your original code).
-    // Adjust to your actual path to `rgb-lightning-node`.
-    let mut executable_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    executable_path.push("../bin/rgb-lightning-node");
+    let executable_path = if cfg!(debug_assertions) {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../bin/rgb-lightning-node");
+        println!("Debug mode: Looking for executable at {:?}", path);
+        path
+    } else {
+        let exe_dir = env::current_exe()
+            .map_err(|e| format!("Failed to get current executable path: {}", e))?;
+        let path = exe_dir.parent()
+            .ok_or_else(|| "Failed to get parent directory of executable".to_string())?
+            .join("rgb-lightning-node");
+        println!("Production mode: Looking for executable at {:?}", path);
+        path
+    };
+
+    #[cfg(target_os = "windows")]
+    {
+        executable_path.set_extension("exe");
+    }
 
     if !executable_path.exists() {
         return Err(format!(
@@ -347,18 +381,30 @@ fn run_rgb_lightning_node(
     }
 
     println!("Starting RGB Lightning Node with arguments:");
+    println!("  Executable: {:?}", executable_path);
     println!("  Network: {}", network);
     println!("  Data path: {}", datapath);
     println!("  Daemon port: {}", daemon_listening_port);
     println!("  LDK peer port: {}", ldk_peer_listening_port);
 
-    Command::new(&executable_path)
+    let child = Command::new(&executable_path)
         .arg(datapath)
         .args(&["--daemon-listening-port", daemon_listening_port])
         .args(&["--ldk-peer-listening-port", ldk_peer_listening_port])
         .args(&["--network", network])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|e| format!("Failed to spawn rgb-lightning-node process: {e}"))
+        .spawn();
+
+    match child {
+        Ok(child) => {
+            println!("Successfully spawned RGB Lightning Node process");
+            Ok(child)
+        },
+        Err(e) => {
+            let err = format!("Failed to spawn rgb-lightning-node process: {}", e);
+            println!("{}", err);
+            Err(err)
+        }
+    }
 }

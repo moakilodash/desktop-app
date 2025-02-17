@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use tauri::{Manager, Window};
 use std::env;
 use tauri_plugin_log::{Builder as LogBuilder, LogTarget};
+use log::LevelFilter;
 
 mod db;
 mod rgb_node;
@@ -57,9 +58,14 @@ fn main() {
         .plugin(
             LogBuilder::default()
                 .targets([
-                    LogTarget::Folder(log_dir), // Save the logs in the "logs" directory
-                    LogTarget::Stdout,          // Also show logs in the terminal
+                    LogTarget::Folder(log_dir),
+                    LogTarget::Stdout,
                 ])
+                .level(LevelFilter::Info)
+                .filter(|metadata| {
+                    !metadata.target().starts_with("tao::") &&
+                    !metadata.target().starts_with("wry::")
+                })
                 .build()
         )
         .setup({
@@ -123,15 +129,34 @@ fn start_node(
     ldk_peer_listening_port: String,
     account_name: String,
 ) -> Result<(), String> {
+    println!("Received start_node command for account: {}", account_name);
+    println!("Parameters:");
+    println!("  Network: {}", network);
+    println!("  Datapath: {:?}", datapath);
+    println!("  Daemon port: {}", daemon_listening_port);
+    println!("  LDK peer port: {}", ldk_peer_listening_port);
+
     // Lock the shared NodeProcess
-    let node_process = node_process.lock().unwrap();
+    let node_process = match node_process.lock() {
+        Ok(process) => process,
+        Err(e) => {
+            let err = format!("Failed to acquire lock on node process: {}", e);
+            println!("{}", err);
+            return Err(err);
+        }
+    };
+
     // Attempt to start; bubble up any errors
-    node_process
-        .start(network, datapath, daemon_listening_port, ldk_peer_listening_port, account_name)
-        .map_err(|e| {
-            eprintln!("Failed to start node: {e}");
-            e
-        })
+    match node_process.start(network, datapath, daemon_listening_port, ldk_peer_listening_port, account_name) {
+        Ok(_) => {
+            println!("Node started successfully");
+            Ok(())
+        }
+        Err(e) => {
+            println!("Failed to start node: {}", e);
+            Err(e)
+        }
+    }
 }
 
 #[tauri::command]
