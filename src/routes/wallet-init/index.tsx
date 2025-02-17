@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api'
+import { listen } from '@tauri-apps/api/event'
 import { ChevronDown, ChevronLeft, AlertCircle, ArrowRight } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { SubmitHandler, UseFormReturn, useForm } from 'react-hook-form'
@@ -133,10 +134,10 @@ export const Component = () => {
       const defaultMakerUrl = NETWORK_DEFAULTS[data.network].default_maker_url
       await dispatch(
         setSettingsAsync({
-          daemon_listening_port: data.daemon_listening_port, 
+          daemon_listening_port: data.daemon_listening_port,
           datapath: datapath,
           // Use formatted name-based datapath
-default_lsp_url: NETWORK_DEFAULTS[data.network].default_lsp_url,
+          default_lsp_url: NETWORK_DEFAULTS[data.network].default_lsp_url,
           default_maker_url: defaultMakerUrl,
           indexer_url: data.indexer_url,
           ldk_peer_listening_port: data.ldk_peer_listening_port,
@@ -168,13 +169,112 @@ default_lsp_url: NETWORK_DEFAULTS[data.network].default_lsp_url,
     return `kaleidoswap-${formatAccountName(accountName)}`
   }
 
-  const handlePasswordSetup: SubmitHandler<PasswordFields> = async (data) => {
-    setIsStartingNode(true)
-    const accountName = nodeSetupForm.getValues('name')
-    const network = nodeSetupForm.getValues('network')
-    const datapath = getDatapath(accountName)
+  // Helper functions for node management
+  const checkAndStopExistingNode = async (): Promise<void> => {
+    const runningNodeAccount = await invoke<string | null>(
+      'get_running_node_account'
+    )
+    const isNodeRunning = await invoke<boolean>('is_node_running')
+
+    if (runningNodeAccount && isNodeRunning) {
+      console.log('Stopping existing node for account:', runningNodeAccount)
+
+      try {
+        // Create a promise that will resolve when the node is stopped
+        const nodeStoppedPromise = new Promise<void>((resolve, reject) => {
+          let unlistenFn: (() => void) | null = null
+
+          const timeoutId = setTimeout(() => {
+            if (unlistenFn) unlistenFn()
+            reject(new Error('Timeout waiting for node to stop'))
+          }, 10000)
+
+          listen('node-stopped', () => {
+            if (unlistenFn) unlistenFn()
+            clearTimeout(timeoutId)
+            resolve()
+          })
+            .then((unlisten) => {
+              unlistenFn = unlisten
+            })
+            .catch((error) => {
+              clearTimeout(timeoutId)
+              reject(new Error(`Failed to set up node stop listener: ${error}`))
+            })
+        })
+
+        await invoke('stop_node')
+        await nodeStoppedPromise
+        // Additional delay to ensure resources are released
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+      } catch (error) {
+        console.error('Error stopping existing node:', error)
+        throw new Error(`Failed to stop existing node: ${error}`)
+      }
+    } else if (runningNodeAccount) {
+      console.log(
+        'Node account exists but node is not running:',
+        runningNodeAccount
+      )
+    }
+  }
+
+  const startLocalNode = async (
+    accountName: string,
+    network: BitcoinNetwork,
+    datapath: string
+  ): Promise<void> => {
+    console.log('Starting local node with parameters:', {
+      accountName,
+      daemonListeningPort: nodeSetupForm.getValues('daemon_listening_port'),
+      datapath,
+      ldkPeerListeningPort: nodeSetupForm.getValues('ldk_peer_listening_port'),
+      network,
+    })
 
     try {
+      // Create a promise that will resolve when the node is ready
+      const nodeStartedPromise = new Promise<void>((resolve, reject) => {
+        let unlistenFn: (() => void) | null = null
+
+        console.log('Setting up node event listener...')
+
+        const timeoutId = setTimeout(async () => {
+          console.log('Timeout occurred, checking node status...')
+          if (unlistenFn) unlistenFn()
+
+          try {
+            const isRunning = await invoke<boolean>('is_node_running')
+            if (isRunning) {
+              console.log('Node is running, proceeding...')
+              resolve()
+              return
+            }
+          } catch (error) {
+            console.error('Error checking node status:', error)
+          }
+
+          reject(new Error('Timeout waiting for node to start'))
+        }, 15000)
+
+        listen('node-log', (event: { payload: string }) => {
+          console.log('Node log:', event.payload)
+          if (event.payload.includes('Listening on')) {
+            console.log('Node is ready')
+            if (unlistenFn) unlistenFn()
+            clearTimeout(timeoutId)
+            resolve()
+          }
+        })
+          .then((unlisten) => {
+            unlistenFn = unlisten
+          })
+          .catch((error) => {
+            clearTimeout(timeoutId)
+            reject(new Error(`Failed to set up node event listener: ${error}`))
+          })
+      })
+
       // Start the node
       await invoke('start_node', {
         accountName,
@@ -184,73 +284,114 @@ default_lsp_url: NETWORK_DEFAULTS[data.network].default_lsp_url,
           'ldk_peer_listening_port'
         ),
         network,
-      }).catch((error) => {
-        throw new Error(`Failed to start node: ${error}`)
       })
 
-      // Verify node is running and attempt initialization
-      const initResult = await init({ password: data.password }).catch(
-        (error) => {
-          throw new Error(`Node initialization failed: ${error}`)
-        }
-      )
+      await nodeStartedPromise
+    } catch (error) {
+      console.error('Error starting local node:', error)
+      throw new Error(`Failed to start node: ${error}`)
+    }
+  }
 
-      // Handle case where node is already initialized
+  const initializeNode = async (password: string): Promise<string[]> => {
+    const initResult = await init({ password })
+
+    if (!initResult.isSuccess) {
       if (
         initResult.error &&
         'status' in initResult.error &&
         initResult.error.status === 403
       ) {
-        toast.info('Node is already initialized, attempting to unlock...')
+        throw new Error('NODE_ALREADY_INITIALIZED')
+      }
+      throw new Error(
+        initResult.error && 'data' in initResult.error
+          ? (initResult.error.data as { error: string }).error
+          : 'Node initialization failed'
+      )
+    }
+
+    return initResult.data.mnemonic.split(' ')
+  }
+
+  const unlockExistingNode = async (password: string): Promise<void> => {
+    const rpcConfig = parseRpcUrl(nodeSetupForm.getValues('rpc_connection_url'))
+
+    const unlockResult = await unlock({
+      bitcoind_rpc_host: rpcConfig.host,
+      bitcoind_rpc_password: rpcConfig.password,
+      bitcoind_rpc_port: rpcConfig.port,
+      bitcoind_rpc_username: rpcConfig.username,
+      indexer_url: nodeSetupForm.getValues('indexer_url'),
+      password,
+      proxy_endpoint: nodeSetupForm.getValues('proxy_endpoint'),
+    }).unwrap()
+
+    if (unlockResult === undefined) {
+      throw new Error('Failed to unlock the node')
+    }
+
+    const nodeInfoResult = await nodeInfo()
+    if (!nodeInfoResult.isSuccess) {
+      throw new Error('Failed to verify node status after unlock')
+    }
+  }
+
+  const handlePasswordSetup: SubmitHandler<PasswordFields> = async (data) => {
+    setIsStartingNode(true)
+    const accountName = nodeSetupForm.getValues('name')
+    const network = nodeSetupForm.getValues('network')
+    const datapath = getDatapath(accountName)
+
+    try {
+      // Step 1: Check and stop any existing node
+      await checkAndStopExistingNode()
+
+      // Step 2: Start the local node
+      await startLocalNode(accountName, network, datapath)
+      toast.info('Starting local node...', {
+        autoClose: 2000,
+        position: 'bottom-right',
+      })
+
+      // Step 3: Initialize or unlock the node
+      try {
+        const mnemonic = await initializeNode(data.password)
         setNodePassword(data.password)
-
-        const rpcConfig = parseRpcUrl(
-          nodeSetupForm.getValues('rpc_connection_url')
-        )
-        const unlockResult = await unlock({
-          bitcoind_rpc_host: rpcConfig.host,
-          bitcoind_rpc_password: rpcConfig.password,
-          bitcoind_rpc_port: rpcConfig.port,
-          bitcoind_rpc_username: rpcConfig.username,
-          indexer_url: nodeSetupForm.getValues('indexer_url'),
-          password: data.password,
-          proxy_endpoint: nodeSetupForm.getValues('proxy_endpoint'),
-        }).unwrap()
-
-        // Check if unlock was successful
-        if (unlockResult !== undefined) {
-          const nodeInfoResult = await nodeInfo()
-          if (nodeInfoResult.isSuccess) {
-            await saveAccountSettings(accountName, network, datapath)
-            navigate(TRADE_PATH)
-            return
-          }
+        setMnemonic(mnemonic)
+        await saveAccountSettings(accountName, network, datapath)
+        handleStepChange('mnemonic')
+        toast.success('Node initialized successfully!')
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message === 'NODE_ALREADY_INITIALIZED'
+        ) {
+          toast.info('Node is already initialized, attempting to unlock...')
+          setNodePassword(data.password)
+          await unlockExistingNode(data.password)
+          await saveAccountSettings(accountName, network, datapath)
+          navigate(TRADE_PATH)
+        } else {
+          throw error
         }
-        throw new Error('Failed to unlock the existing node')
       }
-
-      // Handle successful initialization
-      if (!initResult.isSuccess) {
-        throw new Error(
-          initResult.error && 'data' in initResult.error
-            ? (initResult.error.data as { error: string }).error
-            : 'Node initialization failed'
-        )
-      }
-
-      // Save mnemonic and proceed
-      setNodePassword(data.password)
-      setMnemonic(initResult.data.mnemonic.split(' '))
-      await saveAccountSettings(accountName, network, datapath)
-      handleStepChange('mnemonic')
-      toast.success('Node initialized successfully!')
     } catch (error) {
       console.error('Password setup failed:', error)
       toast.error(
         error instanceof Error ? error.message : 'Failed to initialize node'
       )
-      dispatch(nodeSettingsActions.resetNodeSettings())
-      await invoke('stop_node').catch(console.error)
+
+      // Only stop the node if we're not in the middle of unlocking
+      if (
+        !(
+          error instanceof Error &&
+          error.message === 'Failed to unlock the existing node'
+        )
+      ) {
+        dispatch(nodeSettingsActions.resetNodeSettings())
+        await invoke('stop_node').catch(console.error)
+      }
     } finally {
       setIsStartingNode(false)
     }

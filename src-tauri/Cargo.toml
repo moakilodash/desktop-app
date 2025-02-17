@@ -14,7 +14,7 @@ serde_json = "1.0"
 dotenv = "0.15.0"
 
 [dependencies]
-tauri = { version = "1.5.4", features = [ "http-all", "process-all", "dialog-save", "clipboard-write-text", "clipboard-read-text", "dialog-message", "dialog-open", "fs-all", "window-close", "shell-open"] }
+tauri = { version = "1.5.4", features = [ "process-all", "dialog-save", "clipboard-write-text", "clipboard-read-text", "dialog-message", "dialog-open", "fs-all", "window-close", "shell-open"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
 fs_extra = "1.2"

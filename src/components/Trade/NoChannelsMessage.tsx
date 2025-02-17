@@ -5,7 +5,6 @@ import {
   CREATE_NEW_CHANNEL_PATH,
   ORDER_CHANNEL_PATH,
 } from '../../app/router/paths'
-import { useAppSelector } from '../../app/store/hooks'
 
 import { MakerSelector } from './MakerSelector'
 
@@ -18,10 +17,6 @@ export const NoChannelsMessage: React.FC<NoChannelsMessageProps> = ({
   onNavigate,
   onMakerChange,
 }) => {
-  const nodeSettings = useAppSelector((state) => state.nodeSettings.data)
-  const makerUrl = nodeSettings.default_maker_url
-  const makerHostname = makerUrl ? new URL(makerUrl).hostname : ''
-
   return (
     <div className="max-w-xl w-full bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
       <div className="flex flex-col items-center space-y-4">
@@ -40,11 +35,10 @@ export const NoChannelsMessage: React.FC<NoChannelsMessageProps> = ({
             supported asset
             <HelpCircle className="inline-block ml-1 w-4 h-4 text-blue-500" />
             <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-sm text-white bg-gray-800 rounded-lg w-48 invisible group-hover:visible">
-              A RGB asset issued by a trusted issuer
+              An asset listed from the maker
             </span>
           </span>{' '}
-          with the maker at{' '}
-          <span className="text-blue-400">{makerHostname}</span>.
+          with the maker
         </p>
 
         <div className="flex gap-4 pt-4">

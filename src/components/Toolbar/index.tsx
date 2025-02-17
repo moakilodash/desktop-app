@@ -555,6 +555,16 @@ interface DeleteConfirmationModalContentProps {
 const DeleteConfirmationModalContent: React.FC<
   DeleteConfirmationModalContentProps
 > = ({ account, onCancel, onConfirm }) => {
+  const handleDelete = async () => {
+    try {
+      await onConfirm(account)
+      onCancel() // Close the modal after successful deletion
+    } catch (error) {
+      // Error is already handled in the parent component
+      console.error('Failed to delete account:', error)
+    }
+  }
+
   return (
     <>
       <div className="flex flex-col items-center mb-6">
@@ -610,7 +620,7 @@ const DeleteConfirmationModalContent: React.FC<
         </button>
         <button
           className="w-full sm:w-1/2 px-6 py-3 bg-blue-500/10 hover:bg-blue-500/20 text-white text-lg font-bold rounded-lg shadow-md transition duration-200 flex items-center justify-center gap-2"
-          onClick={() => onConfirm(account)}
+          onClick={handleDelete}
           type="button"
         >
           <Trash2 size={20} />
