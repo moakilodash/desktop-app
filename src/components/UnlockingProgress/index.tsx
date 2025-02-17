@@ -5,7 +5,7 @@ interface UnlockingProgressProps {
 export const UnlockingProgress = ({ isUnlocking }: UnlockingProgressProps) => {
   const steps = [
     { title: 'Decrypting wallet' },
-    { title: 'Connecting to Bitcoin network' },
+    { title: 'Synchronizing Bitcoin blockchain' },
     { title: 'Connecting to RGB proxy' },
     { title: 'Connecting to Lightning' },
   ]

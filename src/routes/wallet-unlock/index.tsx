@@ -190,6 +190,11 @@ export const Component = () => {
           return
         }
 
+        if (error.data?.error === 'Node has already been unlocked') {
+          navigate(TRADE_PATH)
+          return
+        }
+
         throw new Error(error.data?.error || 'Unknown error occurred')
       }
     } catch (error: unknown) {

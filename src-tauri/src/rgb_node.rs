@@ -8,6 +8,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::io::{BufReader, BufRead};
 use tauri::Window;
 use std::env;
+use std::net::TcpListener;
 
 const SHUTDOWN_TIMEOUT_SECS: u64 = 5;
 
@@ -46,6 +47,11 @@ impl NodeProcess {
         *self.window.lock().unwrap() = Some(window);
     }
 
+    /// Check if a port is available
+    fn is_port_available(port: u16) -> bool {
+        TcpListener::bind(("127.0.0.1", port)).is_ok()
+    }
+
     /// Starts a new RGB Lightning Node process (if none is running).
     /// If one is running, it is shut down first, then a new one is started.
     /// Returns an error if the node binary cannot be started.
@@ -59,6 +65,30 @@ impl NodeProcess {
     ) -> Result<(), String> {
         println!("Starting node for account: {}", account_name);
         
+        // Check if ports are available before proceeding
+        let daemon_port = daemon_listening_port.parse::<u16>()
+            .map_err(|e| format!("Invalid daemon port number: {}", e))?;
+        let ldk_port = ldk_peer_listening_port.parse::<u16>()
+            .map_err(|e| format!("Invalid LDK peer port number: {}", e))?;
+
+        if !Self::is_port_available(daemon_port) {
+            let err = format!("Port {} is already in use. Please make sure no other node is running or try a different port.", daemon_port);
+            println!("{}", err);
+            if let Some(window) = &*self.window.lock().unwrap() {
+                let _ = window.emit("node-error", err.clone());
+            }
+            return Err(err);
+        }
+
+        if !Self::is_port_available(ldk_port) {
+            let err = format!("Port {} is already in use. Please make sure no other node is running or try a different port.", ldk_port);
+            println!("{}", err);
+            if let Some(window) = &*self.window.lock().unwrap() {
+                let _ = window.emit("node-error", err.clone());
+            }
+            return Err(err);
+        }
+
         // Store the account name before starting the node
         *self.current_account.lock().unwrap() = Some(account_name.clone());
 
@@ -66,17 +96,36 @@ impl NodeProcess {
         if self.is_running() {
             println!("Node is already running for account: {}. Stopping existing process...", 
                 self.current_account.lock().unwrap().as_ref().unwrap_or(&"unknown".to_string()));
+            
+            // First try graceful shutdown
             self.shutdown();
-
+            
+            // Wait for up to 10 seconds for graceful shutdown
             let start_time = std::time::Instant::now();
+            let graceful_timeout = Duration::from_secs(10);
             while self.is_running() {
-                if start_time.elapsed() > self.shutdown_timeout {
-                    println!("Force killing process after shutdown timeout...");
+                if start_time.elapsed() > graceful_timeout {
+                    println!("Graceful shutdown timed out, attempting force kill...");
                     self.force_kill();
+                    
+                    // Wait additional 5 seconds after force kill
+                    thread::sleep(Duration::from_secs(5));
+                    
+                    if self.is_running() {
+                        let err = "Failed to stop existing node process. Please try restarting the application.".to_string();
+                        println!("{}", err);
+                        if let Some(window) = &*self.window.lock().unwrap() {
+                            let _ = window.emit("node-error", err.clone());
+                        }
+                        return Err(err);
+                    }
                     break;
                 }
                 thread::sleep(Duration::from_millis(100));
             }
+            
+            // Add a small delay to ensure resources are released
+            thread::sleep(Duration::from_secs(2));
         }
 
         // 2) Build the final data path for the node
@@ -302,6 +351,10 @@ impl NodeProcess {
                 }
                 thread::sleep(Duration::from_millis(100));
             }
+
+            // Add additional delay to ensure ports are released
+            println!("Waiting for ports to be released...");
+            thread::sleep(Duration::from_secs(1));
         }
     }
 
@@ -338,11 +391,27 @@ impl NodeProcess {
         println!("Force killing node process...");
         let mut proc_guard = self.child_process.lock().unwrap();
         if let Some(mut child) = proc_guard.take() {
+            // Kill the main process
             let _ = child.kill();
             let _ = child.wait();
+            
+            // On Unix-like systems, try to ensure child processes are killed
+            #[cfg(unix)]
+            {
+                use std::process::Command;
+                let pid = child.id();  // This returns u32, not Option<u32>
+                println!("Killing child processes of PID: {}", pid);
+                let _ = Command::new("pkill")
+                    .args(&["-P", &pid.to_string()])
+                    .output();
+            }
         }
         self.is_running.store(false, Ordering::SeqCst);
         *self.current_account.lock().unwrap() = None;  // Clear the current account
+        
+        // Add additional delay to ensure ports are released
+        println!("Waiting for ports to be released after force kill...");
+        thread::sleep(Duration::from_secs(1));
     }
 }
 

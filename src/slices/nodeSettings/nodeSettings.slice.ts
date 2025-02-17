@@ -7,7 +7,7 @@ export interface Account {
   default_lsp_url: string
   default_maker_url: string
   indexer_url: string
-  maker_urls: string[] | string
+  maker_urls: string[]
   name: string
   network: BitcoinNetwork
   node_url: string

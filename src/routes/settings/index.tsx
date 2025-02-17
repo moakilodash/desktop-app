@@ -72,11 +72,12 @@ export const Component: React.FC = () => {
     {
       defaultValues: {
         bitcoinUnit,
-        defaultMakerUrl:
-          nodeSettings.default_maker_url || nodeSettings.default_lsp_url,
+        defaultMakerUrl: nodeSettings.default_maker_url || '',
         indexerUrl: nodeSettings.indexer_url || '',
         lspUrl: nodeSettings.default_lsp_url || 'http://localhost:8000',
-        makerUrls: nodeSettings.maker_urls || [],
+        makerUrls: Array.isArray(nodeSettings.maker_urls)
+          ? nodeSettings.maker_urls
+          : [],
         nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
         proxyEndpoint: nodeSettings.proxy_endpoint || '',
         rpcConnectionUrl: nodeSettings.rpc_connection_url || '',
@@ -115,11 +116,12 @@ export const Component: React.FC = () => {
   useEffect(() => {
     reset({
       bitcoinUnit,
-      defaultMakerUrl:
-        nodeSettings.default_maker_url || nodeSettings.default_lsp_url,
+      defaultMakerUrl: nodeSettings.default_maker_url || '',
       indexerUrl: nodeSettings.indexer_url || '',
       lspUrl: nodeSettings.default_lsp_url || 'http://localhost:8000',
-      makerUrls: nodeSettings.maker_urls || [],
+      makerUrls: Array.isArray(nodeSettings.maker_urls)
+        ? nodeSettings.maker_urls
+        : [],
       nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
       proxyEndpoint: nodeSettings.proxy_endpoint || '',
       rpcConnectionUrl: nodeSettings.rpc_connection_url || '',
@@ -225,11 +227,12 @@ export const Component: React.FC = () => {
   const handleUndo = () => {
     reset({
       bitcoinUnit,
-      defaultMakerUrl:
-        nodeSettings.default_maker_url || nodeSettings.default_lsp_url,
+      defaultMakerUrl: nodeSettings.default_maker_url || '',
       indexerUrl: nodeSettings.indexer_url || '',
       lspUrl: nodeSettings.default_lsp_url || 'http://localhost:8000',
-      makerUrls: nodeSettings.maker_urls || [],
+      makerUrls: Array.isArray(nodeSettings.maker_urls)
+        ? nodeSettings.maker_urls
+        : [],
       nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
       proxyEndpoint: nodeSettings.proxy_endpoint || '',
       rpcConnectionUrl: nodeSettings.rpc_connection_url || '',
@@ -390,29 +393,10 @@ export const Component: React.FC = () => {
                       Maker Settings
                     </h4>
                     <div className="space-y-6">
-                      {/* Default Maker URL */}
-                      <Controller
-                        control={control}
-                        name="defaultMakerUrl"
-                        render={({ field }) => (
-                          <div className="group transition-all duration-300 hover:translate-x-1">
-                            <label className="block text-sm font-semibold text-gray-300 mb-2">
-                              Default Maker URL
-                            </label>
-                            <input
-                              {...field}
-                              className="w-full px-4 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
-                              placeholder="Default maker service URL"
-                              type="text"
-                            />
-                          </div>
-                        )}
-                      />
-
                       {/* Additional Maker URLs */}
                       <div>
                         <label className="block text-sm font-semibold text-gray-300 mb-4">
-                          Additional Maker URLs
+                          Maker URLs
                         </label>
                         <Controller
                           control={control}
@@ -473,7 +457,10 @@ export const Component: React.FC = () => {
                                         field.onChange(newUrls)
                                         // If we're removing the default URL, clear it
                                         if (url === watch('defaultMakerUrl')) {
-                                          setValue('defaultMakerUrl', '')
+                                          setValue(
+                                            'defaultMakerUrl',
+                                            newUrls[0] || ''
+                                          )
                                         }
                                       }}
                                       title="Remove URL"
@@ -486,9 +473,14 @@ export const Component: React.FC = () => {
                               ))}
                               <button
                                 className="w-full px-4 py-3 border border-blue-500/20 text-blue-500 rounded-lg hover:bg-blue-500/10 transition-colors"
-                                onClick={() =>
-                                  field.onChange([...field.value, ''])
-                                }
+                                onClick={() => {
+                                  const newUrls = [...field.value, '']
+                                  field.onChange(newUrls)
+                                  // If this is the first URL, set it as default
+                                  if (field.value.length === 0) {
+                                    setValue('defaultMakerUrl', '')
+                                  }
+                                }}
                                 type="button"
                               >
                                 Add Maker URL

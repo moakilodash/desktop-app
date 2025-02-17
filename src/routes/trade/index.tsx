@@ -1203,7 +1203,7 @@ export const Component = () => {
   )
 
   const renderNoChannelsMessage = () => (
-    <NoChannelsMessage onNavigate={navigate} />
+    <NoChannelsMessage onMakerChange={refreshData} onNavigate={navigate} />
   )
 
   const renderSwapForm = () => (
@@ -1235,6 +1235,7 @@ export const Component = () => {
             asset={form.getValues().fromAsset}
             assetOptions={getAssetOptions(form.getValues().toAsset)}
             availableAmount={`${formatAmount(maxFromAmount, form.getValues().fromAsset)} ${getDisplayAsset(form.getValues().fromAsset)}`}
+            availableAmountLabel="Available:"
             disabled={!hasChannels || !hasTradablePairs || isSwapInProgress}
             formatAmount={formatAmount}
             getDisplayAsset={getDisplayAsset}
@@ -1276,6 +1277,8 @@ export const Component = () => {
           <SwapInputField
             asset={form.getValues().toAsset}
             assetOptions={getAssetOptions(form.getValues().fromAsset)}
+            availableAmount={`${formatAmount(maxToAmount, form.getValues().toAsset)} ${getDisplayAsset(form.getValues().toAsset)}`}
+            availableAmountLabel="Can receive up to:"
             disabled={!hasChannels || !hasTradablePairs || isSwapInProgress}
             formatAmount={formatAmount}
             getDisplayAsset={getDisplayAsset}

@@ -8,6 +8,7 @@ import { AssetSelect } from './index'
 interface SwapInputFieldProps {
   label: string
   availableAmount?: string
+  availableAmountLabel?: string
   maxAmount?: number
   minAmount?: number
   maxHtlcAmount?: number
@@ -32,6 +33,7 @@ interface SwapInputFieldProps {
 export const SwapInputField: React.FC<SwapInputFieldProps> = ({
   label,
   availableAmount,
+  availableAmountLabel = 'Available:',
   minAmount,
   maxHtlcAmount,
   isLoading,
@@ -56,7 +58,9 @@ export const SwapInputField: React.FC<SwapInputFieldProps> = ({
       <div className="text-sm font-medium text-slate-400">{label}</div>
       {availableAmount && (
         <div className="flex items-center gap-2 text-xs text-slate-400">
-          <span>Available: {availableAmount}</span>
+          <span>
+            {availableAmountLabel} {availableAmount}
+          </span>
           {onRefresh && (
             <button
               className="p-1 rounded hover:bg-slate-700/50 transition-colors"
