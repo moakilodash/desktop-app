@@ -9,6 +9,8 @@ use std::io::{BufReader, BufRead};
 use tauri::Window;
 use std::env;
 use std::net::TcpListener;
+use tauri::AppHandle;
+use tauri::Manager;
 
 const SHUTDOWN_TIMEOUT_SECS: u64 = 5;
 
@@ -26,6 +28,7 @@ pub struct NodeProcess {
     window: Arc<Mutex<Option<Window>>>,
     shutdown_timeout: Duration,
     current_account: Arc<Mutex<Option<String>>>,
+    app_handle: Arc<Mutex<Option<AppHandle>>>,
 }
 
 impl NodeProcess {
@@ -40,11 +43,13 @@ impl NodeProcess {
             window: Arc::new(Mutex::new(None)),
             shutdown_timeout: Duration::from_secs(SHUTDOWN_TIMEOUT_SECS),
             current_account: Arc::new(Mutex::new(None)),
+            app_handle: Arc::new(Mutex::new(None)),
         }
     }
 
     pub fn set_window(&self, window: Window) {
-        *self.window.lock().unwrap() = Some(window);
+        *self.window.lock().unwrap() = Some(window.clone());
+        *self.app_handle.lock().unwrap() = Some(window.app_handle());
     }
 
     /// Check if a port is available
@@ -169,7 +174,7 @@ impl NodeProcess {
         };
 
         // 3) Actually spawn the child process
-        let child = match run_rgb_lightning_node(
+        let child = match self.run_rgb_lightning_node(
             &network,
             &final_datapath,
             &daemon_listening_port,
@@ -413,67 +418,149 @@ impl NodeProcess {
         println!("Waiting for ports to be released after force kill...");
         thread::sleep(Duration::from_secs(1));
     }
-}
 
-/// Spawns the rgb-lightning-node process.
-/// Returns a `Child` on success or an error message otherwise.
-fn run_rgb_lightning_node(
-    network: &str,
-    datapath: &str,
-    daemon_listening_port: &str,
-    ldk_peer_listening_port: &str,
-) -> Result<Child, String> {
-    let executable_path = if cfg!(debug_assertions) {
-        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../bin/rgb-lightning-node");
-        println!("Debug mode: Looking for executable at {:?}", path);
-        path
-    } else {
-        let exe_dir = env::current_exe()
-            .map_err(|e| format!("Failed to get current executable path: {}", e))?;
-        let path = exe_dir.parent()
-            .ok_or_else(|| "Failed to get parent directory of executable".to_string())?
-            .join("rgb-lightning-node");
-        println!("Production mode: Looking for executable at {:?}", path);
-        path
-    };
+    /// Spawns the rgb-lightning-node process.
+    /// Returns a `Child` on success or an error message otherwise.
+    fn run_rgb_lightning_node(
+        &self,
+        network: &str,
+        datapath: &str,
+        daemon_listening_port: &str,
+        ldk_peer_listening_port: &str,
+    ) -> Result<Child, String> {
+        let executable_path = if cfg!(debug_assertions) {
+            // In debug mode, look in the bin directory relative to CARGO_MANIFEST_DIR
+            let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../bin/rgb-lightning-node");
+            println!("Debug mode: Looking for executable at {:?}", path);
+            path
+        } else {
+            // In production mode, get the resource path from the app handle
+            let app_handle = self.app_handle.lock().unwrap();
+            let app_handle = app_handle.as_ref()
+                .ok_or_else(|| "App handle not set. Make sure to call set_window first.".to_string())?;
+            
+            let resource_dir = app_handle.path_resolver()
+                .resource_dir()
+                .ok_or_else(|| "Failed to get resource directory".to_string())?;
 
-    #[cfg(target_os = "windows")]
-    {
-        executable_path.set_extension("exe");
-    }
+            // Platform-specific binary path resolution
+            let binary_path = if cfg!(target_os = "macos") {
+                // macOS: Resources/_up_/bin/rgb-lightning-node
+                resource_dir
+                    .join("_up_")
+                    .join("bin")
+                    .join("rgb-lightning-node")
+            } else if cfg!(target_os = "windows") {
+                // Windows: resources\rgb-lightning-node.exe
+                resource_dir.join("rgb-lightning-node")
+            } else {
+                // Linux: resources/rgb-lightning-node
+                resource_dir.join("rgb-lightning-node")
+            };
+            
+            println!("Production mode: Looking for executable at {:?}", binary_path);
+            binary_path
+        };
 
-    if !executable_path.exists() {
-        return Err(format!(
-            "rgb-lightning-node executable not found at: {:?}",
-            executable_path
-        ));
-    }
+        #[cfg(target_os = "windows")]
+        let executable_path = executable_path.with_extension("exe");
 
-    println!("Starting RGB Lightning Node with arguments:");
-    println!("  Executable: {:?}", executable_path);
-    println!("  Network: {}", network);
-    println!("  Data path: {}", datapath);
-    println!("  Daemon port: {}", daemon_listening_port);
-    println!("  LDK peer port: {}", ldk_peer_listening_port);
+        if !executable_path.exists() {
+            // Print more detailed error information
+            println!("Binary not found. Checking parent directories:");
+            if let Some(parent) = executable_path.parent() {
+                if let Ok(entries) = std::fs::read_dir(parent) {
+                    println!("Contents of {:?}:", parent);
+                    for entry in entries {
+                        if let Ok(entry) = entry {
+                            println!("  {:?}", entry.path());
+                        }
+                    }
+                }
+            }
+            return Err(format!(
+                "rgb-lightning-node executable not found at: {:?}",
+                executable_path
+            ));
+        }
 
-    let child = Command::new(&executable_path)
-        .arg(datapath)
-        .args(&["--daemon-listening-port", daemon_listening_port])
-        .args(&["--ldk-peer-listening-port", ldk_peer_listening_port])
-        .args(&["--network", network])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn();
+        // Set up logging directory
+        let log_dir = if cfg!(debug_assertions) {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("logs")
+        } else {
+            let app_handle = self.app_handle.lock().unwrap();
+            let app_handle = app_handle.as_ref()
+                .ok_or_else(|| "App handle not set".to_string())?;
+            
+            if cfg!(target_os = "macos") {
+                // macOS: ~/Library/Logs/com.kaleidoswap.dev/
+                let home = env::var("HOME")
+                    .map_err(|e| format!("Failed to get HOME directory: {}", e))?;
+                PathBuf::from(home)
+                    .join("Library/Logs/com.kaleidoswap.dev")
+            } else if cfg!(target_os = "windows") {
+                // Windows: %APPDATA%\com.kaleidoswap.dev\logs
+                let app_data = env::var("APPDATA")
+                    .map_err(|e| format!("Failed to get APPDATA directory: {}", e))?;
+                PathBuf::from(app_data)
+                    .join("com.kaleidoswap.dev")
+                    .join("logs")
+            } else {
+                // Linux: ~/.local/share/com.kaleidoswap.dev/logs
+                let home = env::var("HOME")
+                    .map_err(|e| format!("Failed to get HOME directory: {}", e))?;
+                PathBuf::from(home)
+                    .join(".local/share/com.kaleidoswap.dev/logs")
+            }
+        };
 
-    match child {
-        Ok(child) => {
-            println!("Successfully spawned RGB Lightning Node process");
-            Ok(child)
-        },
-        Err(e) => {
-            let err = format!("Failed to spawn rgb-lightning-node process: {}", e);
-            println!("{}", err);
-            Err(err)
+        // Ensure log directory exists
+        std::fs::create_dir_all(&log_dir)
+            .map_err(|e| format!("Failed to create log directory: {}", e))?;
+
+        let log_file = log_dir.join("rgb-lightning-node.log");
+        println!("Log file path: {:?}", log_file);
+
+        // Open log file for writing
+        let log_file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&log_file)
+            .map_err(|e| format!("Failed to open log file: {}", e))?;
+
+        println!("Starting RGB Lightning Node with arguments:");
+        println!("  Executable: {:?}", executable_path);
+        println!("  Network: {}", network);
+        println!("  Data path: {}", datapath);
+        println!("  Daemon port: {}", daemon_listening_port);
+        println!("  LDK peer port: {}", ldk_peer_listening_port);
+        println!("  Log file: {:?}", log_file);
+
+        // Clone the file handles for stdout and stderr
+        let stdout_log = log_file.try_clone()
+            .map_err(|e| format!("Failed to clone log file for stdout: {}", e))?;
+        let stderr_log = log_file.try_clone()
+            .map_err(|e| format!("Failed to clone log file for stderr: {}", e))?;
+
+        let child = Command::new(&executable_path)
+            .arg(datapath)
+            .args(&["--daemon-listening-port", daemon_listening_port])
+            .args(&["--ldk-peer-listening-port", ldk_peer_listening_port])
+            .args(&["--network", network])
+            .stdout(Stdio::from(stdout_log))
+            .stderr(Stdio::from(stderr_log))
+            .spawn();
+
+        match child {
+            Ok(child) => {
+                println!("Successfully spawned RGB Lightning Node process");
+                Ok(child)
+            },
+            Err(e) => {
+                let err = format!("Failed to spawn rgb-lightning-node process: {}", e);
+                println!("{}", err);
+                Err(err)
+            }
         }
     }
 }

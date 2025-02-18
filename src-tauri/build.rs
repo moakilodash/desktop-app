@@ -126,7 +126,7 @@ impl TauriConfig {
         }
     }
 
-    // Returns the entire config as a JSON string “pretty”
+    // Returns the entire config as a JSON string "pretty"
     fn to_pretty_json(&self) -> String {
         serde_json::to_string_pretty(&self.config)
             .expect("Failed to serialize tauri.conf.json in memory")
@@ -172,7 +172,7 @@ impl BuildManager {
         // Clone the rgb-lightning-node repo
         self.project_builder.clone_repo();
 
-        // Check whether it is a “release” or “debug” build
+        // Check whether it is "release" or "debug" build
         let is_release = env::var("PROFILE").unwrap_or_else(|_| "debug".to_string()) == "release";
 
         // Build the project
@@ -392,30 +392,44 @@ impl ProjectBuilder {
     }
 
     fn copy_executable(&self, target_dir: &PathBuf, bin_dir: &PathBuf, release: bool) {
-        fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
-
-        let executable_name = if cfg!(target_os = "windows") {
-            "rgb-lightning-node.exe"
+        let source_path = if cfg!(target_os = "windows") {
+            target_dir.join(if release { "release" } else { "debug" }).join("rgb-lightning-node.exe")
         } else {
-            "rgb-lightning-node"
+            target_dir.join(if release { "release" } else { "debug" }).join("rgb-lightning-node")
         };
 
-        let executable_path = if release {
-            target_dir.join("release").join(executable_name)
+        if !source_path.exists() {
+            panic!("Executable not found at: {}", source_path.display());
+        }
+
+        // Create bin directory if it doesn't exist
+        if !bin_dir.exists() {
+            fs::create_dir_all(bin_dir)
+                .expect("Failed to create bin directory");
+        }
+
+        let dest_path = if cfg!(target_os = "windows") {
+            bin_dir.join("rgb-lightning-node.exe")
         } else {
-            target_dir.join("debug").join(executable_name)
+            bin_dir.join("rgb-lightning-node")
         };
 
-        println!("Debug: Looking for executable at: {}", executable_path.display());
-        if !executable_path.exists() {
-            panic!("Executable not found at: {}", executable_path.display());
+        fs::copy(&source_path, &dest_path)
+            .expect("Failed to copy executable");
+
+        // Set executable permissions on Unix-like systems
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = fs::metadata(&dest_path)
+                .expect("Failed to get file metadata")
+                .permissions();
+            perms.set_mode(0o755); // rwxr-xr-x
+            fs::set_permissions(&dest_path, perms)
+                .expect("Failed to set executable permissions");
         }
 
-        if let Err(e) = fs::copy(&executable_path, bin_dir.join(executable_name)) {
-            panic!("Failed to copy binary to bin directory: {}", e);
-        }
-
-        println!("cargo:rerun-if-changed={}", bin_dir.join(executable_name).display());
+        println!("Copied executable to: {}", dest_path.display());
     }
 
     fn find_project_root(&self) -> PathBuf {
