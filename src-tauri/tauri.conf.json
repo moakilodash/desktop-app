@@ -48,7 +48,10 @@
       "resources": [
         "../bin/rgb-lightning-node"
       ],
-      "targets": "all"
+      "targets": "all",
+      "appimage": {
+        "bundleMediaFramework": true
+      }
     },
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://raw.githubusercontent.com; connect-src 'self' http://localhost:* http://127.0.0.1:* https://* http://* ws://localhost:* wss://* ws://*;"
