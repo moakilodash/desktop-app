@@ -128,7 +128,7 @@ jobs:
       - name: Upload signature files
         uses: actions/upload-artifact@v4
         with:
-          name: signatures-${{ matrix.platform }}
+          name: signatures-${{ matrix.platform }}${{ matrix.args != '' && format('-{0}', matrix.args) || '' }}
           path: |
             ${{ matrix.platform == 'macos-latest' && matrix.args == '--target aarch64-apple-darwin' && 'src-tauri/target/aarch64-apple-darwin/release/bundle/**/*.asc' || matrix.platform == 'macos-latest' && matrix.args == '--target x86_64-apple-darwin' && 'src-tauri/target/x86_64-apple-darwin/release/bundle/**/*.asc' || 'src-tauri/target/release/bundle/**/*.asc' }}
             ${{ matrix.platform == 'macos-latest' && matrix.args == '--target aarch64-apple-darwin' && 'src-tauri/target/aarch64-apple-darwin/release/bundle/SHA256SUMS*' || matrix.platform == 'macos-latest' && matrix.args == '--target x86_64-apple-darwin' && 'src-tauri/target/x86_64-apple-darwin/release/bundle/SHA256SUMS*' || 'src-tauri/target/release/bundle/SHA256SUMS*' }} 
