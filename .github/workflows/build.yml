@@ -91,7 +91,18 @@ jobs:
 
       - name: Sign artifacts
         run: |
-          cd src-tauri/target/release/bundle
+          # Set target-specific directory
+          if [[ "${{ matrix.platform }}" == "macos-latest" ]]; then
+            if [[ "${{ matrix.args }}" == "--target aarch64-apple-darwin" ]]; then
+              BUNDLE_DIR="src-tauri/target/aarch64-apple-darwin/release/bundle"
+            else
+              BUNDLE_DIR="src-tauri/target/x86_64-apple-darwin/release/bundle"
+            fi
+          else
+            BUNDLE_DIR="src-tauri/target/release/bundle"
+          fi
+          
+          cd "$BUNDLE_DIR"
           
           # Sign macOS artifacts
           if [ -d "macos" ]; then
@@ -119,5 +130,5 @@ jobs:
         with:
           name: signatures-${{ matrix.platform }}
           path: |
-            src-tauri/target/release/bundle/**/*.asc
-            src-tauri/target/release/bundle/SHA256SUMS* 
+            ${{ matrix.platform == 'macos-latest' && matrix.args == '--target aarch64-apple-darwin' && 'src-tauri/target/aarch64-apple-darwin/release/bundle/**/*.asc' || matrix.platform == 'macos-latest' && matrix.args == '--target x86_64-apple-darwin' && 'src-tauri/target/x86_64-apple-darwin/release/bundle/**/*.asc' || 'src-tauri/target/release/bundle/**/*.asc' }}
+            ${{ matrix.platform == 'macos-latest' && matrix.args == '--target aarch64-apple-darwin' && 'src-tauri/target/aarch64-apple-darwin/release/bundle/SHA256SUMS*' || matrix.platform == 'macos-latest' && matrix.args == '--target x86_64-apple-darwin' && 'src-tauri/target/x86_64-apple-darwin/release/bundle/SHA256SUMS*' || 'src-tauri/target/release/bundle/SHA256SUMS*' }} 
