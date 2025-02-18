@@ -381,17 +381,6 @@ export const Component = () => {
       toast.error(
         error instanceof Error ? error.message : 'Failed to initialize node'
       )
-
-      // Only stop the node if we're not in the middle of unlocking
-      if (
-        !(
-          error instanceof Error &&
-          error.message === 'Failed to unlock the existing node'
-        )
-      ) {
-        dispatch(nodeSettingsActions.resetNodeSettings())
-        await invoke('stop_node').catch(console.error)
-      }
     } finally {
       setIsStartingNode(false)
     }
