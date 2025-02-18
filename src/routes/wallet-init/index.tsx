@@ -24,10 +24,7 @@ import { BitcoinNetwork } from '../../constants'
 import { NETWORK_DEFAULTS } from '../../constants/networks'
 import { parseRpcUrl } from '../../helpers/utils'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
-import {
-  nodeSettingsActions,
-  setSettingsAsync,
-} from '../../slices/nodeSettings/nodeSettings.slice'
+import { setSettingsAsync } from '../../slices/nodeSettings/nodeSettings.slice'
 // Separate interfaces for each step
 interface NodeSetupFields {
   name: string
