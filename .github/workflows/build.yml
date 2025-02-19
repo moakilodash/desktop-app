@@ -69,6 +69,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        id: tauri_build
         with:
           tagName: app-v__VERSION__
           releaseName: 'App v__VERSION__'
@@ -125,13 +126,23 @@ jobs:
           find . -type f \( -name "*.dmg" -o -name "*.app.tar.gz" -o -name "*.AppImage" -o -name "*.deb" \) -exec sha256sum {} \; > SHA256SUMS
           gpg --detach-sign --armor SHA256SUMS
 
+      - name: Install GitHub CLI
+        run: |
+          if [[ "${{ matrix.platform }}" == "macos-latest" ]]; then
+            brew install gh
+          else
+            type -p curl >/dev/null || (sudo apt update && sudo apt install curl -y)
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+            && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+            && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+            && sudo apt update \
+            && sudo apt install gh -y
+          fi
+
       - name: Upload signatures to release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get the release ID
-          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/app-v__VERSION__ --jq .id)
-          
           # Set target-specific directory
           if [[ "${{ matrix.platform }}" == "macos-latest" ]]; then
             if [[ "${{ matrix.args }}" == "--target aarch64-apple-darwin" ]]; then
@@ -147,13 +158,13 @@ jobs:
           
           # Upload all signature files
           for sig in $(find . -type f -name "*.asc"); do
-            gh release upload app-v__VERSION__ "$sig" --clobber
+            gh release upload "${{ steps.tauri_build.outputs.releaseId }}" "$sig" --clobber
           done
           
           # Upload SHA256SUMS and its signature
           if [ -f "SHA256SUMS" ]; then
-            gh release upload app-v__VERSION__ "SHA256SUMS" --clobber
+            gh release upload "${{ steps.tauri_build.outputs.releaseId }}" "SHA256SUMS" --clobber
           fi
           if [ -f "SHA256SUMS.asc" ]; then
-            gh release upload app-v__VERSION__ "SHA256SUMS.asc" --clobber
+            gh release upload "${{ steps.tauri_build.outputs.releaseId }}" "SHA256SUMS.asc" --clobber
           fi 
