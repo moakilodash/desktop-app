@@ -454,8 +454,11 @@ impl NodeProcess {
                 // Windows: resources\rgb-lightning-node.exe
                 resource_dir.join("rgb-lightning-node")
             } else {
-                // Linux: resources/rgb-lightning-node
-                resource_dir.join("rgb-lightning-node")
+                // Linux: resources/_up_/bin/rgb-lightning-node
+                resource_dir
+                    .join("_up_")
+                    .join("bin")
+                    .join("rgb-lightning-node")
             };
             
             println!("Production mode: Looking for executable at {:?}", binary_path);

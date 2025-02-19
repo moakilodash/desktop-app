@@ -125,10 +125,35 @@ jobs:
           find . -type f \( -name "*.dmg" -o -name "*.app.tar.gz" -o -name "*.AppImage" -o -name "*.deb" \) -exec sha256sum {} \; > SHA256SUMS
           gpg --detach-sign --armor SHA256SUMS
 
-      - name: Upload signature files
-        uses: actions/upload-artifact@v4
-        with:
-          name: signatures-${{ matrix.platform }}${{ matrix.args != '' && format('-{0}', matrix.args) || '' }}
-          path: |
-            ${{ matrix.platform == 'macos-latest' && matrix.args == '--target aarch64-apple-darwin' && 'src-tauri/target/aarch64-apple-darwin/release/bundle/**/*.asc' || matrix.platform == 'macos-latest' && matrix.args == '--target x86_64-apple-darwin' && 'src-tauri/target/x86_64-apple-darwin/release/bundle/**/*.asc' || 'src-tauri/target/release/bundle/**/*.asc' }}
-            ${{ matrix.platform == 'macos-latest' && matrix.args == '--target aarch64-apple-darwin' && 'src-tauri/target/aarch64-apple-darwin/release/bundle/SHA256SUMS*' || matrix.platform == 'macos-latest' && matrix.args == '--target x86_64-apple-darwin' && 'src-tauri/target/x86_64-apple-darwin/release/bundle/SHA256SUMS*' || 'src-tauri/target/release/bundle/SHA256SUMS*' }} 
+      - name: Upload signatures to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get the release ID
+          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/app-v__VERSION__ --jq .id)
+          
+          # Set target-specific directory
+          if [[ "${{ matrix.platform }}" == "macos-latest" ]]; then
+            if [[ "${{ matrix.args }}" == "--target aarch64-apple-darwin" ]]; then
+              BUNDLE_DIR="src-tauri/target/aarch64-apple-darwin/release/bundle"
+            else
+              BUNDLE_DIR="src-tauri/target/x86_64-apple-darwin/release/bundle"
+            fi
+          else
+            BUNDLE_DIR="src-tauri/target/release/bundle"
+          fi
+          
+          cd "$BUNDLE_DIR"
+          
+          # Upload all signature files
+          for sig in $(find . -type f -name "*.asc"); do
+            gh release upload app-v__VERSION__ "$sig" --clobber
+          done
+          
+          # Upload SHA256SUMS and its signature
+          if [ -f "SHA256SUMS" ]; then
+            gh release upload app-v__VERSION__ "SHA256SUMS" --clobber
+          fi
+          if [ -f "SHA256SUMS.asc" ]; then
+            gh release upload app-v__VERSION__ "SHA256SUMS.asc" --clobber
+          fi 
