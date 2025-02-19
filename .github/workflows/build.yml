@@ -141,11 +141,8 @@ jobs:
 
       - name: Upload signatures to release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Authenticate GitHub CLI
-          gh auth login --with-token <<< "$GITHUB_TOKEN"
-          
           # Get the version from Cargo.toml
           VERSION=$(grep '^version =' src-tauri/Cargo.toml | head -n1 | cut -d'"' -f2)
           
