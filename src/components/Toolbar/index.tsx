@@ -276,7 +276,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
         return
       }
 
-      if (runningNodeAccount && runningNodeAccount !== account.name) {
+      if (runningNodeAccount && isNodeRunning) {
         console.log('Stopping existing node for account:', runningNodeAccount)
         await invoke('stop_node')
         await new Promise((resolve) => setTimeout(resolve, 1000))

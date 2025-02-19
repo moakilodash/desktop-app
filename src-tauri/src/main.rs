@@ -3,12 +3,9 @@
 use db::Account;
 use dotenv::dotenv;
 use rgb_node::NodeProcess;
-use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
 use tauri::{Manager, Window};
 use std::env;
-// use tauri_plugin_log::{Builder as LogBuilder, LogTarget};
-// use log::LevelFilter;
 
 mod db;
 mod rgb_node;
@@ -20,14 +17,6 @@ fn main() {
     dotenv().ok();
     
     let node_process = Arc::new(Mutex::new(NodeProcess::new()));
-
-    // Get the executable directory
-    // let exe_dir = env::current_exe()
-    //     .map(|path| path.parent().unwrap_or_else(|| path.as_path()).to_path_buf())
-    //     .unwrap_or_else(|_| PathBuf::from("."));
-    
-    // Configure the log directory next to the executable
-    // let log_dir = exe_dir.join("logs");
 
     tauri::Builder::default()
         .manage(Arc::clone(&node_process))
@@ -55,28 +44,10 @@ fn main() {
                 }
             }
         })
-        // .plugin(
-        //     LogBuilder::default()
-        //         .targets([
-        //             LogTarget::Folder(log_dir),
-        //             LogTarget::Stdout,
-        //         ])
-        //         .level(LevelFilter::Info)
-        //         .filter(|metadata| {
-        //             !metadata.target().starts_with("tao::") &&
-        //             !metadata.target().starts_with("wry::")
-        //         })
-        //         .build()
-        // )
         .setup({
             let node_process = Arc::clone(&node_process);
             move |app| {
                 if let Some(main_window) = app.get_window("main") {
-                    // Configure DevTools for debugging
-                    // #[cfg(debug_assertions)]
-                    // {
-                    //     main_window.open_devtools();
-                    // }
                     node_process.lock().unwrap().set_window(main_window);
                 }
                 db::init();
@@ -171,8 +142,6 @@ fn stop_node(node_process: tauri::State<Arc<Mutex<NodeProcess>>>) -> Result<(), 
     }
 }
 
-// -- DB COMMANDS OMITTED FOR BREVITY --
-// (Same as your original code)
 #[tauri::command]
 fn get_accounts() -> Result<Vec<Account>, String> {
     match db::get_accounts() {

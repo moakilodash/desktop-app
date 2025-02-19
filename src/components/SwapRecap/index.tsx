@@ -163,13 +163,7 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
   return (
     <div
       className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200"
-      onClick={(e) => {
-        // Only allow closing if not in progress
-        if (!isInProgress) {
-          e.stopPropagation()
-          handleClose()
-        }
-      }}
+      onClick={handleClose}
     >
       <div
         className="bg-slate-900/90 rounded-2xl border border-slate-800/50 w-full max-w-md shadow-xl animate-in slide-in-from-bottom-8 duration-300"
@@ -187,23 +181,10 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
               )}
             </h2>
             <button
-              aria-label={
-                isInProgress
-                  ? 'Cannot close while swap is in progress'
-                  : 'Close'
-              }
-              className={`p-2.5 rounded-xl transition-all duration-200 ${
-                isInProgress
-                  ? 'opacity-50 cursor-not-allowed text-slate-600'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800 active:scale-95'
-              }`}
-              disabled={isInProgress}
-              onClick={isInProgress ? undefined : handleClose}
-              title={
-                isInProgress
-                  ? 'Cannot close while swap is in progress'
-                  : 'Close'
-              }
+              aria-label="Close"
+              className="p-2.5 rounded-xl transition-all duration-200 text-slate-400 hover:text-white hover:bg-slate-800 active:scale-95"
+              onClick={handleClose}
+              title="Close"
             >
               <X className="w-5 h-5" />
             </button>
@@ -344,10 +325,9 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
                 isExpired
                   ? 'bg-red-600 hover:bg-red-700 active:bg-red-800 text-white shadow-lg shadow-red-500/20'
                   : isInProgress
-                    ? 'bg-slate-700/50 cursor-not-allowed text-slate-300'
+                    ? 'bg-slate-700/50 text-slate-300'
                     : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-lg shadow-blue-500/20'
-              } ${!isInProgress && 'active:scale-[0.98]'}`}
-            disabled={isInProgress}
+              } active:scale-[0.98]`}
             onClick={handleClose}
           >
             {isSucceeded ? (

@@ -491,9 +491,6 @@ impl NodeProcess {
         let log_dir = if cfg!(debug_assertions) {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("logs")
         } else {
-            let app_handle = self.app_handle.lock().unwrap();
-            let app_handle = app_handle.as_ref()
-                .ok_or_else(|| "App handle not set".to_string())?;
             
             if cfg!(target_os = "macos") {
                 // macOS: ~/Library/Logs/com.kaleidoswap.dev/
