@@ -143,6 +143,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Authenticate GitHub CLI
+          gh auth login --with-token <<< "$GITHUB_TOKEN"
+          
+          # Get the version from Cargo.toml
+          VERSION=$(grep '^version =' src-tauri/Cargo.toml | head -n1 | cut -d'"' -f2)
+          
           # Set target-specific directory
           if [[ "${{ matrix.platform }}" == "macos-latest" ]]; then
             if [[ "${{ matrix.args }}" == "--target aarch64-apple-darwin" ]]; then
@@ -158,13 +164,13 @@ jobs:
           
           # Upload all signature files
           for sig in $(find . -type f -name "*.asc"); do
-            gh release upload "${{ steps.tauri_build.outputs.releaseId }}" "$sig" --clobber
+            gh release upload "app-v${VERSION}" "$sig" --clobber || true
           done
           
           # Upload SHA256SUMS and its signature
           if [ -f "SHA256SUMS" ]; then
-            gh release upload "${{ steps.tauri_build.outputs.releaseId }}" "SHA256SUMS" --clobber
+            gh release upload "app-v${VERSION}" "SHA256SUMS" --clobber || true
           fi
           if [ -f "SHA256SUMS.asc" ]; then
-            gh release upload "${{ steps.tauri_build.outputs.releaseId }}" "SHA256SUMS.asc" --clobber
+            gh release upload "app-v${VERSION}" "SHA256SUMS.asc" --clobber || true
           fi 
