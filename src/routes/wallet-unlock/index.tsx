@@ -136,49 +136,78 @@ export const Component = () => {
   })
 
   const onSubmit: SubmitHandler<Fields> = async (data) => {
+    let shouldRetry = true
+    let pollingInterval = 2000
+    let doubleFetchErrorFlag = false
+
     setIsUnlocking(true)
 
-    try {
-      const rpcConfig = parseRpcUrl(nodeSettings.rpc_connection_url)
-      console.log(
-        'Unlocking the node with params: ',
-        rpcConfig.host,
-        rpcConfig.password,
-        rpcConfig.port,
-        rpcConfig.username,
-        nodeSettings.indexer_url,
-        data.password,
-        nodeSettings.proxy_endpoint
-      )
+    while (shouldRetry) {
+      try {
+        const rpcConfig = parseRpcUrl(nodeSettings.rpc_connection_url)
+        console.log(
+          'Unlocking the node with params: ',
+          rpcConfig.host,
+          rpcConfig.password,
+          rpcConfig.port,
+          rpcConfig.username,
+          nodeSettings.indexer_url,
+          data.password,
+          nodeSettings.proxy_endpoint
+        )
 
-      const unlockResponse = await unlock({
-        bitcoind_rpc_host: rpcConfig.host,
-        bitcoind_rpc_password: rpcConfig.password,
-        bitcoind_rpc_port: rpcConfig.port,
-        bitcoind_rpc_username: rpcConfig.username,
-        indexer_url: nodeSettings.indexer_url,
-        password: data.password,
-        proxy_endpoint: nodeSettings.proxy_endpoint,
-      })
+        await unlock({
+          bitcoind_rpc_host: rpcConfig.host,
+          bitcoind_rpc_password: rpcConfig.password,
+          bitcoind_rpc_port: rpcConfig.port,
+          bitcoind_rpc_username: rpcConfig.username,
+          indexer_url: nodeSettings.indexer_url,
+          password: data.password,
+          proxy_endpoint: nodeSettings.proxy_endpoint,
+        }).unwrap()
 
-      if (unlockResponse.isSuccess) {
         const nodeInfoRes = await nodeInfo()
         if (nodeInfoRes.isSuccess) {
           navigate(TRADE_PATH)
         } else {
           throw new Error('Failed to get node info after unlock')
         }
-      } else if (unlockResponse.error) {
-        const error = unlockResponse.error as NodeApiError
 
+        shouldRetry = false
+      } catch (e: any) {
+        const error = e as NodeApiError
         if (
           typeof error.status === 'string' &&
-          error.status === 'FETCH_ERROR'
+          error?.status === 'FETCH_ERROR'
         ) {
-          throw new Error(
-            `Unable to connect to the node service. 
-            Please ensure the service is running on ${nodeSettings.node_url} and try again.`
+          if (doubleFetchErrorFlag) {
+            toast.error(error.data.error, {
+              autoClose: 5000,
+              closeOnClick: false,
+              draggable: false,
+              hideProgressBar: false,
+              pauseOnHover: false,
+              position: 'top-right',
+            })
+            shouldRetry = false
+            continue
+          } else {
+            console.warn('Fetch error, retrying immediately...')
+            continue
+          }
+        }
+
+        if (
+          error?.status === 403 &&
+          error?.data.error ===
+            'Cannot call other APIs while node is changing state'
+        ) {
+          console.warn(
+            `Node is changing state, retrying in ${pollingInterval / 1000}s...`
           )
+          await new Promise((res) => setTimeout(res, pollingInterval))
+          pollingInterval = Math.min(pollingInterval * 2, 15000)
+          continue
         }
 
         if (
@@ -187,30 +216,27 @@ export const Component = () => {
             'Wallet has not been initialized (hint: call init)'
         ) {
           setShowInitModal(true)
-          return
+          shouldRetry = false
         }
 
         if (error.data?.error === 'Node has already been unlocked') {
           navigate(TRADE_PATH)
-          return
+          shouldRetry = false
         }
 
-        throw new Error(error.data?.error || 'Unknown error occurred')
+        toast.error(error.data.error, {
+          autoClose: 5000,
+          closeOnClick: false,
+          draggable: false,
+          hideProgressBar: false,
+          pauseOnHover: false,
+          position: 'top-right',
+        })
+        shouldRetry = false
       }
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'An unexpected error occurred'
-      toast.error(errorMessage, {
-        autoClose: 5000,
-        closeOnClick: false,
-        draggable: false,
-        hideProgressBar: false,
-        pauseOnHover: false,
-        position: 'top-right',
-      })
-    } finally {
-      setIsUnlocking(false)
     }
+
+    setIsUnlocking(false)
   }
 
   const handleInitPassword: SubmitHandler<PasswordFields> = async (data) => {
