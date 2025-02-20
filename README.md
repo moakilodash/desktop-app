@@ -69,7 +69,7 @@ You can install the app in two ways:
 2. Download both the binary file and its corresponding `.sig` signature file.
 3. Import our public GPG key:
    ```sh
-   curl https://raw.githubusercontent.com/kaleidoswap/desktop-app/main/public-key.asc | gpg --import
+      curl https://keybase.io/bitwalt/pgp_keys.asc | gpg --import
    ```
 4. Verify the signature:
    ```sh

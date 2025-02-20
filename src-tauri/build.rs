@@ -17,7 +17,7 @@ fn main() {
     let build_rgb_lightning_node = env::var("BUILD_AND_RUN_RGB_LIGHTNING_NODE")
         .unwrap_or_else(|_| "true".to_string()) == "true";
 
-    // Path assoluto verso la cartella del Cargo.toml attuale
+    // Path to the current Cargo.toml directory
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
 
     // Load the Tauri configuration template
