@@ -89,6 +89,10 @@ export default {
             transform: 'scale(1.05)',
           },
         },
+        shutdown: {
+          '0%': { width: '0%' },
+          '100%': { width: '100%' }
+        }
       },
     },
   },

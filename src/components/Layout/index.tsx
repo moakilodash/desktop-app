@@ -1,3 +1,4 @@
+import { listen } from '@tauri-apps/api/event'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
@@ -15,6 +16,7 @@ import {
 } from '../../app/router/paths'
 import logo from '../../assets/logo.svg'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
+import { ShutdownAnimation } from '../ShutdownAnimation'
 import { Toolbar } from '../Toolbar'
 
 import { ChannelMenu } from './ChannelMenu'
@@ -55,6 +57,8 @@ export const Layout = (props: Props) => {
   const [lastDeposit, setLastDeposit] = useState<number | undefined>(undefined)
   const [isRetrying, setIsRetrying] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [isShuttingDown, setIsShuttingDown] = useState(false)
+  const [shutdownStatus, setShutdownStatus] = useState<string>('')
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -130,12 +134,51 @@ export const Layout = (props: Props) => {
     checkDeposits()
   }, [data, error, shouldPoll, lastDeposit])
 
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      setIsShuttingDown(true)
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    // Listen for Tauri shutdown events
+    const setupShutdownListeners = async () => {
+      const unlistenTrigger = await listen<string>(
+        'trigger-shutdown',
+        (event) => {
+          setIsShuttingDown(true)
+          setShutdownStatus(event.payload)
+        }
+      )
+
+      const unlistenStatus = await listen<string>(
+        'update-shutdown-status',
+        (event) => {
+          setShutdownStatus(event.payload)
+        }
+      )
+
+      return () => {
+        unlistenTrigger()
+        unlistenStatus()
+      }
+    }
+
+    const cleanup = setupShutdownListeners()
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      cleanup.then((unsubscribe) => unsubscribe())
+    }
+  }, [])
+
   const isWalletSetup = location.pathname === WALLET_SETUP_PATH
   const isNodeConnected = nodeInfo.isSuccess
   const shouldHideNavbar = HIDE_NAVBAR_PATHS.includes(location.pathname)
 
   return (
     <div className={props.className}>
+      <ShutdownAnimation isVisible={isShuttingDown} status={shutdownStatus} />
       <div className="min-h-screen flex">
         {isWalletSetup ? (
           // Full wallet setup view with sidebar
