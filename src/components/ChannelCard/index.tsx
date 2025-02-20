@@ -1,10 +1,17 @@
-import { ArrowUpRight, ArrowDownRight, X, Lock, Unlock } from 'lucide-react'
-import React, { useState, useEffect } from 'react'
+import {
+  ArrowUpRight,
+  ArrowDownRight,
+  X,
+  Lock,
+  Unlock,
+  Info,
+} from 'lucide-react'
+import React, { useState } from 'react'
 
 import { useAppSelector } from '../../app/store/hooks'
 import { DEFAULT_RGB_ICON } from '../../constants'
 import { formatBitcoinAmount } from '../../helpers/number'
-import { loadAssetIcon, useAssetIcon } from '../../helpers/utils'
+import { useAssetIcon } from '../../helpers/utils'
 import { LiquidityBar } from '../LiquidityBar' // Import LiquidityBar
 
 interface ModalProps {
@@ -51,6 +58,108 @@ const Modal: React.FC<ModalProps> = ({
   )
 }
 
+interface InfoModalProps {
+  isOpen: boolean
+  onClose: () => void
+  channel: any
+  asset: any
+  bitcoinUnit: string
+}
+
+const InfoModal: React.FC<InfoModalProps> = ({
+  isOpen,
+  onClose,
+  channel,
+  asset,
+  bitcoinUnit,
+}) => {
+  if (!isOpen) return null
+
+  const infoRows = [
+    { label: 'Channel ID', value: channel.channel_id },
+    { label: 'Funding Transaction', value: channel.funding_txid },
+    { label: 'Peer Public Key', value: channel.peer_pubkey },
+    {
+      label: 'Short Channel ID',
+      value: channel.short_channel_id?.toString() || 'N/A',
+    },
+    { label: 'Status', value: channel.status },
+    {
+      label: 'Capacity',
+      value: `${formatBitcoinAmount(channel.capacity_sat, bitcoinUnit)} ${bitcoinUnit}`,
+    },
+    {
+      label: 'Local Balance',
+      value: `${formatBitcoinAmount(channel.local_balance_msat / 1000, bitcoinUnit)} ${bitcoinUnit}`,
+    },
+    {
+      label: 'Next HTLC Limit',
+      value: `${formatBitcoinAmount(channel.next_outbound_htlc_limit_msat / 1000, bitcoinUnit)} ${bitcoinUnit}`,
+    },
+    {
+      label: 'Next HTLC Minimum',
+      value: `${formatBitcoinAmount(channel.next_outbound_htlc_minimum_msat / 1000, bitcoinUnit)} ${bitcoinUnit}`,
+    },
+    { label: 'Public Channel', value: channel.public ? 'Yes' : 'No' },
+    { label: 'Usable', value: channel.is_usable ? 'Yes' : 'No' },
+  ]
+
+  if (channel.asset_id) {
+    const assetPrecision = asset?.precision || 8
+    const formatAssetAmount = (amount: number) => {
+      const factor = Math.pow(10, assetPrecision)
+      return (amount / factor).toLocaleString(undefined, {
+        maximumFractionDigits: assetPrecision,
+        minimumFractionDigits: assetPrecision,
+      })
+    }
+
+    infoRows.push(
+      { label: 'Asset ID', value: channel.asset_id },
+      {
+        label: 'Asset Local Amount',
+        value: `${formatAssetAmount(channel.asset_local_amount)} ${asset?.ticker}`,
+      },
+      {
+        label: 'Asset Remote Amount',
+        value: `${formatAssetAmount(channel.asset_remote_amount)} ${asset?.ticker}`,
+      }
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-semibold">Channel Information</h3>
+          <button className="text-gray-400 hover:text-white" onClick={onClose}>
+            <X size={24} />
+          </button>
+        </div>
+        <div className="grid gap-4">
+          {infoRows.map((row, index) => (
+            <div
+              className="border-b border-gray-700 pb-3 last:border-0"
+              key={index}
+            >
+              <div className="text-sm text-gray-400">{row.label}</div>
+              <div className="font-medium break-all">{row.value}</div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-6 flex justify-end">
+          <button
+            className="px-4 py-2 rounded bg-gray-700 text-white hover:bg-gray-600"
+            onClick={onClose}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 interface ChannelCardProps {
   channel: any
   onClose: (channelId: string, peerPubkey: string) => void
@@ -79,19 +188,8 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
   asset,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isCopied, setIsCopied] = useState(false)
-  // const [ setIsClosing] = useState(false)
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false)
   const bitcoinUnit = useAppSelector((state) => state.settings.bitcoinUnit)
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard
-      .writeText(text)
-      .then(() => {
-        setIsCopied(true)
-        setTimeout(() => setIsCopied(false), 2000)
-      })
-      .catch((err) => console.error('Failed to copy: ', err))
-  }
 
   const handleCloseChannel = async () => {
     onClose(channel.channel_id, channel.peer_pubkey)
@@ -113,14 +211,14 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center space-x-2">
           <span className="font-bold text-lg">
-            {channel.peer_pubkey.slice(0, 8)}
+            {channel.peer_alias || channel.peer_pubkey.slice(0, 8)}
           </span>
           <button
-            className="text-gray-400 hover:text-white transition-colors"
-            onClick={() => copyToClipboard(channel.channel_id)}
-            title={isCopied ? 'Copied!' : 'Copy Channel ID'}
+            className="p-1 hover:bg-gray-700 rounded-full transition-colors"
+            onClick={() => setIsInfoModalOpen(true)}
+            title="Channel Information"
           >
-            📋
+            <Info size={16} />
           </button>
         </div>
         <div className="flex items-center space-x-2">
@@ -226,6 +324,14 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
       >
         Close Channel
       </button>
+
+      <InfoModal
+        asset={asset}
+        bitcoinUnit={bitcoinUnit}
+        channel={channel}
+        isOpen={isInfoModalOpen}
+        onClose={() => setIsInfoModalOpen(false)}
+      />
 
       <Modal
         isOpen={isModalOpen}

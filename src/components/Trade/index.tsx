@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect, useRef } from 'react'
+import React, { useCallback, useState, useRef } from 'react'
 import { twJoin } from 'tailwind-merge'
 
 import { DEFAULT_RGB_ICON } from '../../constants'
