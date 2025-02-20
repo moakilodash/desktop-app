@@ -86,3 +86,41 @@ export const parseAssetAmount = (
     return Math.round(parseFloat(cleanAmount) * Math.pow(10, asset.precision))
   }
 }
+
+export const formatNumberInput = (value: string, precision: number): string => {
+  // Remove all characters except digits and decimal point
+  let cleanValue = value.replace(/[^\d.]/g, '')
+
+  // Handle multiple decimal points
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    cleanValue = parts[0] + '.' + parts.slice(1).join('')
+  }
+
+  // If it's just a decimal point or empty, return as is
+  if (cleanValue === '.' || !cleanValue) return cleanValue
+
+  // If ends with decimal point, preserve it
+  const endsWithDecimal = value.endsWith('.')
+
+  try {
+    const num = parseFloat(cleanValue)
+    if (isNaN(num)) return ''
+
+    // Don't format if still typing decimals
+    if (
+      endsWithDecimal ||
+      (cleanValue.includes('.') && cleanValue.split('.')[1].length <= precision)
+    ) {
+      return cleanValue
+    }
+
+    // Only format complete numbers
+    return num.toLocaleString('en-US', {
+      maximumFractionDigits: precision,
+      minimumFractionDigits: 0,
+    })
+  } catch {
+    return cleanValue
+  }
+}

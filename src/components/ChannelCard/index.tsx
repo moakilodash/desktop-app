@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useAppSelector } from '../../app/store/hooks'
 import { DEFAULT_RGB_ICON } from '../../constants'
 import { formatBitcoinAmount } from '../../helpers/number'
+import { loadAssetIcon, useAssetIcon } from '../../helpers/utils'
 import { LiquidityBar } from '../LiquidityBar' // Import LiquidityBar
 
 interface ModalProps {
@@ -60,26 +61,7 @@ const AssetIcon: React.FC<{ ticker: string; className?: string }> = ({
   ticker,
   className = 'h-6 w-6 mr-2',
 }) => {
-  const [imgSrc, setImgSrc] = useState<string>('')
-
-  useEffect(() => {
-    const loadIcon = async () => {
-      try {
-        const iconUrl = `https://raw.githubusercontent.com/alexandrebouttier/coinmarketcap-icons-cryptos/refs/heads/main/icons/${ticker.toLowerCase()}.png`
-        const response = await fetch(iconUrl)
-        if (response.ok) {
-          setImgSrc(iconUrl)
-        } else {
-          throw new Error('Icon not found')
-        }
-      } catch (error) {
-        console.warn(`Failed to load icon for ${ticker}, using default.`)
-        setImgSrc(DEFAULT_RGB_ICON)
-      }
-    }
-
-    loadIcon()
-  }, [ticker])
+  const [imgSrc, setImgSrc] = useAssetIcon(ticker)
 
   return (
     <img

@@ -30,6 +30,7 @@ import { PeerManagementModal } from '../../components/PeerManagementModal'
 import { UTXOManagementModal } from '../../components/UTXOManagementModal'
 import { BitcoinNetwork, DEFAULT_RGB_ICON } from '../../constants'
 import { formatBitcoinAmount } from '../../helpers/number'
+import { useAssetIcon } from '../../helpers/utils'
 import { nodeApi, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
 import { uiSliceActions } from '../../slices/ui/ui.slice'
 
@@ -49,26 +50,7 @@ const AssetIcon: React.FC<AssetIconProps> = ({
   ticker,
   className = 'h-6 w-6 mr-2',
 }) => {
-  const [imgSrc, setImgSrc] = useState<string>('')
-
-  useEffect(() => {
-    const loadIcon = async () => {
-      try {
-        const iconUrl = `https://raw.githubusercontent.com/alexandrebouttier/coinmarketcap-icons-cryptos/refs/heads/main/icons/${ticker.toLowerCase()}.png`
-        const response = await fetch(iconUrl)
-        if (response.ok) {
-          setImgSrc(iconUrl)
-        } else {
-          throw new Error('Icon not found')
-        }
-      } catch (error) {
-        console.warn(`Failed to load icon for ${ticker}, using default.`)
-        setImgSrc(DEFAULT_RGB_ICON)
-      }
-    }
-
-    loadIcon()
-  }, [ticker])
+  const [imgSrc, setImgSrc] = useAssetIcon(ticker)
 
   return (
     <img

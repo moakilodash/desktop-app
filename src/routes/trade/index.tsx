@@ -21,6 +21,7 @@ import {
   SwapButton,
   MakerSelector,
 } from '../../components/Trade'
+import { formatNumberInput } from '../../helpers/number'
 import { SwapIcon } from '../../icons/Swap'
 import { makerApi, TradingPair } from '../../slices/makerApi/makerApi.slice'
 import {
@@ -309,46 +310,6 @@ export const Component = () => {
     isPairInverted,
     calculateRate,
   ])
-
-  // Add these new functions inside the Component
-  const formatNumberInput = (value: string, precision: number): string => {
-    // Remove all characters except digits and decimal point
-    let cleanValue = value.replace(/[^\d.]/g, '')
-
-    // Handle multiple decimal points
-    const parts = cleanValue.split('.')
-    if (parts.length > 2) {
-      cleanValue = parts[0] + '.' + parts.slice(1).join('')
-    }
-
-    // If it's just a decimal point or empty, return as is
-    if (cleanValue === '.' || !cleanValue) return cleanValue
-
-    // If ends with decimal point, preserve it
-    const endsWithDecimal = value.endsWith('.')
-
-    try {
-      const num = parseFloat(cleanValue)
-      if (isNaN(num)) return ''
-
-      // Don't format if still typing decimals
-      if (
-        endsWithDecimal ||
-        (cleanValue.includes('.') &&
-          cleanValue.split('.')[1].length <= precision)
-      ) {
-        return cleanValue
-      }
-
-      // Only format complete numbers
-      return num.toLocaleString('en-US', {
-        maximumFractionDigits: precision,
-        minimumFractionDigits: 0,
-      })
-    } catch {
-      return cleanValue
-    }
-  }
 
   // Replace the handleFromAmountChange function
   const handleFromAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1115,6 +1076,7 @@ export const Component = () => {
 
       // Clear any existing toasts first
       toast.dismiss()
+      setErrorMessage(readableError)
 
       // Create a new persistent error toast with improved UI
       toast.error(
@@ -1154,7 +1116,6 @@ export const Component = () => {
         }
       )
 
-      setErrorMessage(readableError)
       setIsSwapInProgress(false)
 
       if (timeoutId !== null) {
@@ -1169,6 +1130,66 @@ export const Component = () => {
       }
     }
   }
+
+  const refreshData = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const [listChannelsResponse, listAssetsResponse, getPairsResponse] =
+        await Promise.all([listChannels(), listAssets(), getPairs()])
+
+      if ('data' in listChannelsResponse && listChannelsResponse.data) {
+        setChannels(listChannelsResponse.data.channels)
+      }
+
+      if ('data' in listAssetsResponse && listAssetsResponse.data) {
+        setAssets(listAssetsResponse.data.nia)
+      }
+
+      if ('data' in getPairsResponse && getPairsResponse.data) {
+        dispatch(setTradingPairs(getPairsResponse.data.pairs))
+        const tradableAssets = new Set([
+          ...channels.map((c) => c.asset_id).filter((id) => id !== null),
+        ])
+        const filteredPairs = getPairsResponse.data.pairs.filter(
+          (pair) =>
+            tradableAssets.has(pair.base_asset_id) ||
+            tradableAssets.has(pair.quote_asset_id)
+        )
+        setTradablePairs(filteredPairs)
+
+        if (filteredPairs.length > 0) {
+          setSelectedPair(filteredPairs[0])
+          form.setValue('fromAsset', filteredPairs[0].base_asset)
+          form.setValue('toAsset', filteredPairs[0].quote_asset)
+          const defaultMinAmount = filteredPairs[0].min_order_size
+          form.setValue(
+            'from',
+            formatAmount(defaultMinAmount, filteredPairs[0].base_asset)
+          )
+        }
+      }
+
+      await updateMinMaxAmounts()
+      await refreshAmounts()
+
+      logger.info('Data refreshed successfully')
+    } catch (error) {
+      logger.error('Error refreshing data:', error)
+      toast.error('Failed to refresh data. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [
+    listChannels,
+    listAssets,
+    getPairs,
+    dispatch,
+    form,
+    channels,
+    formatAmount,
+    updateMinMaxAmounts,
+    refreshAmounts,
+  ])
 
   // Check for available channels
   const hasChannels = useMemo(() => channels.length > 0, [channels])
@@ -1331,66 +1352,6 @@ export const Component = () => {
       </form>
     </div>
   )
-
-  const refreshData = useCallback(async () => {
-    setIsLoading(true)
-    try {
-      const [listChannelsResponse, listAssetsResponse, getPairsResponse] =
-        await Promise.all([listChannels(), listAssets(), getPairs()])
-
-      if ('data' in listChannelsResponse && listChannelsResponse.data) {
-        setChannels(listChannelsResponse.data.channels)
-      }
-
-      if ('data' in listAssetsResponse && listAssetsResponse.data) {
-        setAssets(listAssetsResponse.data.nia)
-      }
-
-      if ('data' in getPairsResponse && getPairsResponse.data) {
-        dispatch(setTradingPairs(getPairsResponse.data.pairs))
-        const tradableAssets = new Set([
-          ...channels.map((c) => c.asset_id).filter((id) => id !== null),
-        ])
-        const filteredPairs = getPairsResponse.data.pairs.filter(
-          (pair) =>
-            tradableAssets.has(pair.base_asset_id) ||
-            tradableAssets.has(pair.quote_asset_id)
-        )
-        setTradablePairs(filteredPairs)
-
-        if (filteredPairs.length > 0) {
-          setSelectedPair(filteredPairs[0])
-          form.setValue('fromAsset', filteredPairs[0].base_asset)
-          form.setValue('toAsset', filteredPairs[0].quote_asset)
-          const defaultMinAmount = filteredPairs[0].min_order_size
-          form.setValue(
-            'from',
-            formatAmount(defaultMinAmount, filteredPairs[0].base_asset)
-          )
-        }
-      }
-
-      await updateMinMaxAmounts()
-      await refreshAmounts()
-
-      logger.info('Data refreshed successfully')
-    } catch (error) {
-      logger.error('Error refreshing data:', error)
-      toast.error('Failed to refresh data. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [
-    listChannels,
-    listAssets,
-    getPairs,
-    dispatch,
-    form,
-    channels,
-    formatAmount,
-    updateMinMaxAmounts,
-    refreshAmounts,
-  ])
 
   // Common header with MakerSelector
   const renderHeader = (showWarning = false) => (

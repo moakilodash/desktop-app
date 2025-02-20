@@ -2,6 +2,7 @@ import React, { useCallback, useState, useEffect, useRef } from 'react'
 import { twJoin } from 'tailwind-merge'
 
 import { DEFAULT_RGB_ICON } from '../../constants'
+import { useAssetIcon } from '../../helpers/utils'
 import { useOnClickOutside } from '../../hooks/useOnClickOutside'
 import { ArrowDownIcon } from '../../icons/ArrowDown'
 import { TradingPair } from '../../slices/makerApi/makerApi.slice'
@@ -13,26 +14,7 @@ interface AssetOptionProps {
 }
 
 const AssetOption = React.memo(({ value, label }: AssetOptionProps) => {
-  const [imgSrc, setImgSrc] = useState<string>('')
-
-  useEffect(() => {
-    const loadIcon = async () => {
-      try {
-        const iconUrl = `https://raw.githubusercontent.com/alexandrebouttier/coinmarketcap-icons-cryptos/refs/heads/main/icons/${value.toLowerCase()}.png`
-        const response = await fetch(iconUrl)
-        if (response.ok) {
-          setImgSrc(iconUrl)
-        } else {
-          throw new Error('Icon not found')
-        }
-      } catch (error) {
-        console.warn(`Failed to load icon for ${value}, using default.`)
-        setImgSrc(DEFAULT_RGB_ICON)
-      }
-    }
-
-    loadIcon()
-  }, [value])
+  const [imgSrc, setImgSrc] = useAssetIcon(value)
 
   return (
     <div className="flex items-center">
