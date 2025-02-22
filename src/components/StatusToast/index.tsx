@@ -210,7 +210,7 @@ export const StatusToast: React.FC<{
   const paymentHashToStatus = useRef<Record<string, string>>({})
 
   const { data } = nodeApi.useListSwapsQuery(undefined, {
-    pollingInterval: 3000,
+    pollingInterval: 6000,
   })
 
   const removeToast = (id: string) => {

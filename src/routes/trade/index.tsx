@@ -117,10 +117,21 @@ export const Component = () => {
   const [listChannels] = nodeApi.endpoints.listChannels.useLazyQuery()
   const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
   const [taker] = nodeApi.endpoints.taker.useLazyQuery()
-  const [listAssets] = nodeApi.endpoints.listAssets.useLazyQuery()
   const [initSwap] = makerApi.endpoints.initSwap.useLazyQuery()
   const [execSwap] = makerApi.endpoints.execSwap.useLazyQuery()
   const [getPairs] = makerApi.endpoints.getPairs.useLazyQuery()
+
+  const { data: assetsData } = nodeApi.endpoints.listAssets.useQuery(
+    undefined,
+    {
+      // Add caching configuration
+      pollingInterval: 30000, 
+      refetchOnFocus: false,
+      // Poll every 30 seconds
+refetchOnMountOrArgChange: true,
+      refetchOnReconnect: false,
+    }
+  )
 
   const getDisplayAsset = useCallback(
     (asset: string) => {
@@ -228,16 +239,13 @@ export const Component = () => {
   // Calculate max tradable amount
   const calculateMaxTradableAmount = useCallback(
     async (asset: string, isFrom: boolean): Promise<number> => {
-      const assetsResponse = await listAssets()
-      if ('error' in assetsResponse || !assetsResponse.data) {
-        logger.error('Failed to fetch assets list')
+      if (!assetsData) {
+        logger.error('Assets data not available')
         return 0
       }
-      const assetsList = assetsResponse.data.nia
+      const assetsList = assetsData.nia
 
       if (asset === 'BTC') {
-        // next_outbound_htlc_limit_msat already considers both the HTLC limit (10% of capacity)
-        // and the available balance
         const maxHtlcLimit = Math.max(
           ...channels.map(
             (c) => c.next_outbound_htlc_limit_msat / MSATS_PER_SAT
@@ -274,7 +282,7 @@ export const Component = () => {
         return maxAssetAmount
       }
     },
-    [channels, tradablePairs, selectedPairFeed, listAssets]
+    [channels, assetsData]
   )
 
   // Update min and max amounts when selected pair changes
@@ -686,8 +694,10 @@ export const Component = () => {
     const setup = async () => {
       setIsLoading(true)
       try {
-        const [nodeInfoResponse, listChannelsResponse, listAssetsResponse] =
-          await Promise.all([nodeInfo(), listChannels(), listAssets()])
+        const [nodeInfoResponse, listChannelsResponse] = await Promise.all([
+          nodeInfo(),
+          listChannels(),
+        ])
 
         if ('data' in nodeInfoResponse && nodeInfoResponse.data) {
           setPubKey(nodeInfoResponse.data.pubkey)
@@ -708,8 +718,8 @@ export const Component = () => {
           setHasValidChannelsForTrading(hasValidChannels)
         }
 
-        if ('data' in listAssetsResponse && listAssetsResponse.data) {
-          setAssets(listAssetsResponse.data.nia)
+        if (assetsData) {
+          setAssets(assetsData.nia)
         }
 
         // Move pairs fetching to a separate function
@@ -727,7 +737,7 @@ export const Component = () => {
     }
 
     setup()
-  }, [nodeInfo, listChannels, listAssets, dispatch, form, formatAmount])
+  }, [nodeInfo, listChannels, assetsData, dispatch, form, formatAmount])
 
   // Add a new function to fetch and set pairs
   const getAvailableAssets = useCallback(() => {
@@ -851,6 +861,28 @@ export const Component = () => {
       setIsSwapInProgress(false)
     }
 
+    const handleApiError = (error: FetchBaseQueryError): string => {
+      if (!error) return 'Unknown error occurred'
+
+      if (typeof error === 'string') return error
+
+      const errorData = error.data
+      if (!errorData) return 'No error details available'
+
+      if (typeof errorData === 'string') return errorData
+
+      if (typeof errorData === 'object') {
+        // Return the full error detail including status codes
+        if ('detail' in errorData && typeof errorData.detail === 'string')
+          return errorData.detail
+        if ('error' in errorData && typeof errorData.error === 'string')
+          return errorData.error
+        return JSON.stringify(errorData)
+      }
+
+      return String(errorData)
+    }
+
     try {
       setIsSwapInProgress(true)
       toastId = toast.loading('(1/3) Initializing swap...', {
@@ -912,20 +944,9 @@ export const Component = () => {
 
       const initSwapResponse = await initSwap(payload)
       if ('error' in initSwapResponse) {
-        // Extract the error detail from the response
-        const errorData = initSwapResponse.error as FetchBaseQueryError
-        if (errorData) {
-          throw new Error(
-            typeof errorData === 'string'
-              ? errorData
-              : errorData.data &&
-                  typeof errorData.data === 'object' &&
-                  'error' in errorData.data
-                ? String(errorData.data.error)
-                : 'Failed to initialize swap'
-          )
-        }
-        throw new Error('Failed to initialize swap')
+        throw new Error(
+          handleApiError(initSwapResponse.error as FetchBaseQueryError)
+        )
       }
 
       if (!initSwapResponse.data) {
@@ -980,19 +1001,9 @@ export const Component = () => {
 
       const takerResponse = await taker({ swapstring })
       if ('error' in takerResponse) {
-        const errorData = takerResponse.error as FetchBaseQueryError
-        if (errorData) {
-          throw new Error(
-            typeof errorData === 'string'
-              ? errorData
-              : errorData.data &&
-                  typeof errorData.data === 'object' &&
-                  'error' in errorData.data
-                ? String(errorData.data.error)
-                : 'Failed to confirm swap'
-          )
-        }
-        throw new Error('Taker operation failed')
+        throw new Error(
+          handleApiError(takerResponse.error as FetchBaseQueryError)
+        )
       }
 
       const confirmSwapPayload = {
@@ -1007,19 +1018,9 @@ export const Component = () => {
 
       const confirmSwapResponse = await execSwap(confirmSwapPayload)
       if ('error' in confirmSwapResponse) {
-        const errorData = confirmSwapResponse.error as FetchBaseQueryError
-        if (errorData) {
-          throw new Error(
-            typeof errorData === 'string'
-              ? errorData
-              : errorData.data &&
-                  typeof errorData.data === 'object' &&
-                  'error' in errorData.data
-                ? String(errorData.data.error)
-                : 'Failed to confirm swap'
-          )
-        }
-        throw new Error('Failed to confirm swap')
+        throw new Error(
+          handleApiError(confirmSwapResponse.error as FetchBaseQueryError)
+        )
       }
 
       logger.info('Swap executed successfully!')
@@ -1053,30 +1054,40 @@ export const Component = () => {
     } catch (error) {
       logger.error('Error executing swap', error)
 
-      // Extract error detail from various error formats
-      let errorDetail = ''
-      if (typeof error === 'object' && error !== null) {
-        if ('data' in error) {
-          // Handle RTK Query error format
-          const errorData = error.data as any
-          errorDetail =
-            errorData?.detail || errorData?.error || JSON.stringify(errorData)
-        } else if ('message' in error) {
-          // Handle standard Error object
-          errorDetail = (error as Error).message
-        }
-      }
+      // Extract full error message
+      const errorMessage =
+        error instanceof Error ? error.message : 'An unknown error occurred'
 
-      // If no specific error detail was found, use the error as a string
-      const readableError = errorDetail || String(error)
-      const errorDetails =
-        error instanceof Error
-          ? `${error.name}: ${error.message}`
+      // Only show error details if they add meaningful information
+      const rawErrorDetails =
+        typeof error === 'object' && error !== null
+          ? JSON.stringify(
+              error,
+              (value) => {
+                // Skip empty objects and null values
+                if (value === null) return undefined
+                if (
+                  typeof value === 'object' &&
+                  Object.keys(value).length === 0
+                )
+                  return undefined
+                return value
+              },
+              2
+            )
           : String(error)
+
+      // Only keep error details if they're different from the message and not empty
+      const errorDetails =
+        rawErrorDetails &&
+        rawErrorDetails !== '{}' &&
+        rawErrorDetails !== errorMessage
+          ? rawErrorDetails
+          : null
 
       // Clear any existing toasts first
       toast.dismiss()
-      setErrorMessage(readableError)
+      setErrorMessage(errorMessage)
 
       // Create a new persistent error toast with improved UI
       toast.error(
@@ -1086,22 +1097,26 @@ export const Component = () => {
         >
           <div className="flex items-center justify-between">
             <span className="font-medium text-red-500">Swap Failed</span>
-            <div className="flex items-center gap-2">
-              <button
-                className="p-1 hover:bg-slate-700/50 rounded transition-colors"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  copyToClipboard(errorDetails)
-                }}
-                title="Copy error details"
-              >
-                <Copy className="w-4 h-4" />
-              </button>
-            </div>
+            {errorDetails && (
+              <div className="flex items-center gap-2">
+                <button
+                  className="p-1 hover:bg-slate-700/50 rounded transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    copyToClipboard(errorDetails)
+                  }}
+                  title="Copy error details"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
-          <p className="text-sm text-slate-300">{readableError}</p>
-          {errorDetails !== readableError && (
-            <p className="text-xs text-slate-400 break-all">{errorDetails}</p>
+          <p className="text-sm text-slate-300">{errorMessage}</p>
+          {errorDetails && (
+            <pre className="text-xs text-slate-400 overflow-x-auto p-2 bg-slate-900/50 rounded mt-2 font-mono">
+              {errorDetails}
+            </pre>
           )}
         </div>,
         {
@@ -1134,15 +1149,17 @@ export const Component = () => {
   const refreshData = useCallback(async () => {
     setIsLoading(true)
     try {
-      const [listChannelsResponse, listAssetsResponse, getPairsResponse] =
-        await Promise.all([listChannels(), listAssets(), getPairs()])
+      const [listChannelsResponse, getPairsResponse] = await Promise.all([
+        listChannels(),
+        getPairs(),
+      ])
 
       if ('data' in listChannelsResponse && listChannelsResponse.data) {
         setChannels(listChannelsResponse.data.channels)
       }
 
-      if ('data' in listAssetsResponse && listAssetsResponse.data) {
-        setAssets(listAssetsResponse.data.nia)
+      if (assetsData) {
+        setAssets(assetsData.nia)
       }
 
       if ('data' in getPairsResponse && getPairsResponse.data) {
@@ -1181,11 +1198,11 @@ export const Component = () => {
     }
   }, [
     listChannels,
-    listAssets,
     getPairs,
     dispatch,
     form,
     channels,
+    assetsData,
     formatAmount,
     updateMinMaxAmounts,
     refreshAmounts,

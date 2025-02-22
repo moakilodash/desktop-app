@@ -11,6 +11,7 @@ use std::env;
 use std::net::TcpListener;
 use tauri::AppHandle;
 use tauri::Manager;
+use std::fs::File;
 
 const SHUTDOWN_TIMEOUT_SECS: u64 = 5;
 
@@ -386,9 +387,63 @@ impl NodeProcess {
         self.current_account.lock().unwrap().clone()
     }
 
-    /// Returns any logs captured so far.
+    /// Returns the path to the log file
+    fn get_log_file_path(&self) -> Result<PathBuf, String> {
+        let log_dir = if cfg!(debug_assertions) {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("logs")
+        } else {
+            if cfg!(target_os = "macos") {
+                // macOS: ~/Library/Logs/com.kaleidoswap.dev/
+                let home = env::var("HOME")
+                    .map_err(|e| format!("Failed to get HOME directory: {}", e))?;
+                PathBuf::from(home)
+                    .join("Library/Logs/com.kaleidoswap.dev")
+            } else if cfg!(target_os = "windows") {
+                // Windows: %APPDATA%\com.kaleidoswap.dev\logs
+                let app_data = env::var("APPDATA")
+                    .map_err(|e| format!("Failed to get APPDATA directory: {}", e))?;
+                PathBuf::from(app_data)
+                    .join("com.kaleidoswap.dev")
+                    .join("logs")
+            } else {
+                // Linux: ~/.local/share/com.kaleidoswap.dev/logs
+                let home = env::var("HOME")
+                    .map_err(|e| format!("Failed to get HOME directory: {}", e))?;
+                PathBuf::from(home)
+                    .join(".local/share/com.kaleidoswap.dev/logs")
+            }
+        };
+
+        Ok(log_dir.join("rgb-lightning-node.log"))
+    }
+
+    /// Returns any logs captured so far, including those from the log file
     pub fn get_logs(&self) -> Vec<String> {
-        self.logs.lock().unwrap().clone()
+        let mut logs = Vec::new();
+
+        // First get any in-memory logs
+        logs.extend(self.logs.lock().unwrap().clone());
+
+        // Then try to read from the log file
+        if let Ok(log_path) = self.get_log_file_path() {
+            if let Ok(file) = File::open(log_path) {
+                let reader = BufReader::new(file);
+                for line in reader.lines() {
+                    if let Ok(line) = line {
+                        logs.push(line);
+                    }
+                }
+            }
+        }
+
+        logs
+    }
+
+    /// Save logs to a specific file
+    pub fn save_logs_to_file(&self, file_path: &str) -> Result<(), String> {
+        let logs = self.get_logs();
+        std::fs::write(file_path, logs.join("\n"))
+            .map_err(|e| format!("Failed to write logs to file: {}", e))
     }
 
     /// Force kill the process immediately, without waiting for graceful exit.

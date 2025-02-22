@@ -272,11 +272,7 @@ export const Component: React.FC = () => {
       })
 
       if (filePath) {
-        const logsText = nodeLogs.join('\n')
-        await invoke('save_logs_to_file', {
-          content: logsText,
-          filePath,
-        })
+        await invoke('save_logs_to_file', { filePath })
         toast.success('Logs exported successfully')
       }
     } catch (error) {
@@ -293,17 +289,19 @@ export const Component: React.FC = () => {
 
   // Add useEffect for polling
   useEffect(() => {
-    // Initial check
+    // Initial fetch
     nodeInfo()
+    fetchNodeLogs()
 
     // Set up polling interval
     const interval = setInterval(() => {
       nodeInfo()
-    }, 10000) // 10 seconds
+      fetchNodeLogs()
+    }, 6000)
 
     // Cleanup on unmount
     return () => clearInterval(interval)
-  }, [nodeInfo])
+  }, [nodeInfo, fetchNodeLogs])
 
   return (
     <div className="flex flex-col min-h-screen py-8 px-4">

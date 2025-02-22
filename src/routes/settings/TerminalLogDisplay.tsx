@@ -81,9 +81,14 @@ const parseAnsi = (log: string) => {
 interface TerminalLogDisplayProps {
   logs: string[]
   maxEntries: number
+  className?: string
 }
 
-const TerminalLogDisplay = ({ logs, maxEntries }: TerminalLogDisplayProps) => {
+const TerminalLogDisplay = ({
+  logs,
+  maxEntries,
+  className = '',
+}: TerminalLogDisplayProps) => {
   const logsContainerRef = useRef<HTMLDivElement>(null)
 
   // Get only the last N entries
@@ -97,7 +102,7 @@ const TerminalLogDisplay = ({ logs, maxEntries }: TerminalLogDisplayProps) => {
 
   return (
     <div
-      className="h-full overflow-y-auto px-3 py-2"
+      className={`h-full overflow-y-auto px-3 py-2 ${className}`}
       ref={logsContainerRef}
       style={{
         scrollbarColor: '#4B5563 transparent',

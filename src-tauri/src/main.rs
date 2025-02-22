@@ -100,16 +100,16 @@ fn main() {
             insert_account,
             update_account,
             delete_account,
-            // Node commands
-            start_node,
-            stop_node,
-            is_node_running,
             check_account_exists,
             set_current_account,
             get_current_account,
             get_account_by_name,
+            // Node commands
+            start_node,
+            stop_node,
             get_node_logs,
             save_logs_to_file,
+            is_node_running,
             get_running_node_account
         ])
         .run(tauri::generate_context!())
@@ -132,7 +132,7 @@ async fn close_splashscreen(window: Window) {
 
 #[tauri::command]
 fn start_node(
-    node_process: tauri::State<Arc<Mutex<NodeProcess>>>,
+    node_process: tauri::State<'_, Arc<Mutex<NodeProcess>>>,
     network: String,
     datapath: Option<String>,
     daemon_listening_port: String,
@@ -170,7 +170,7 @@ fn start_node(
 }
 
 #[tauri::command]
-fn stop_node(node_process: tauri::State<Arc<Mutex<NodeProcess>>>) -> Result<(), String> {
+fn stop_node(node_process: tauri::State<'_, Arc<Mutex<NodeProcess>>>) -> Result<(), String> {
     let node_process = node_process.lock().unwrap();
     if node_process.is_running() {
         node_process.stop();
@@ -259,7 +259,7 @@ fn update_account(
 
 #[tauri::command]
 fn delete_account(
-    node_process: tauri::State<Arc<Mutex<NodeProcess>>>,
+    node_process: tauri::State<'_, Arc<Mutex<NodeProcess>>>,
     name: String
 ) -> Result<usize, String> {
     println!("Attempting to delete account: {}", name);
@@ -320,18 +320,21 @@ fn get_account_by_name(name: String) -> Result<Option<Account>, String> {
 }
 
 #[tauri::command]
-fn get_node_logs(node_process: tauri::State<Arc<Mutex<NodeProcess>>>) -> Vec<String> {
+fn get_node_logs(node_process: tauri::State<'_, Arc<Mutex<NodeProcess>>>) -> Vec<String> {
     node_process.lock().unwrap().get_logs()
 }
 
 #[tauri::command]
-async fn save_logs_to_file(file_path: String, content: String) -> Result<(), String> {
-    std::fs::write(file_path, content).map_err(|e| e.to_string())
+async fn save_logs_to_file(
+    node_process: tauri::State<'_, Arc<Mutex<NodeProcess>>>,
+    file_path: String,
+) -> Result<(), String> {
+    node_process.lock().unwrap().save_logs_to_file(&file_path)
 }
 
 #[tauri::command]
 fn is_node_running(
-    node_process: tauri::State<Arc<Mutex<NodeProcess>>>,
+    node_process: tauri::State<'_, Arc<Mutex<NodeProcess>>>,
     account_name: Option<String>,
 ) -> bool {
     let node_process = node_process.lock().unwrap();
@@ -343,6 +346,6 @@ fn is_node_running(
 }
 
 #[tauri::command]
-fn get_running_node_account(node_process: tauri::State<Arc<Mutex<NodeProcess>>>) -> Option<String> {
+fn get_running_node_account(node_process: tauri::State<'_, Arc<Mutex<NodeProcess>>>) -> Option<String> {
     node_process.lock().unwrap().get_current_account()
 }
