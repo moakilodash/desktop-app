@@ -1,11 +1,11 @@
+use dotenv::dotenv;
+use serde_json::Value;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
 use std::thread;
 use std::time::Duration;
-use dotenv::dotenv;
-use serde_json::Value;
 
 // --------------------------------------------------
 // Main entrypoint of the build script
@@ -15,7 +15,8 @@ fn main() {
 
     // Read the ENV that decides whether to build/run rgb-lightning-node
     let build_rgb_lightning_node = env::var("BUILD_AND_RUN_RGB_LIGHTNING_NODE")
-        .unwrap_or_else(|_| "true".to_string()) == "true";
+        .unwrap_or_else(|_| "true".to_string())
+        == "true";
 
     // Path to the current Cargo.toml directory
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
@@ -57,7 +58,6 @@ fn main() {
             "../bin/rgb-lightning-node"
         };
         config.add_resource(resource_name);
-
     } else {
         //  In case we do NOT want to build/run the executable, we remove it from the config
         let resource_name = if cfg!(target_os = "windows") {
@@ -103,10 +103,9 @@ struct TauriConfig {
 impl TauriConfig {
     // Load the template file (tauri.conf.template.json)
     fn load(path: &Path) -> Self {
-        let config_str = fs::read_to_string(path)
-            .expect("Failed to read tauri.conf.template.json");
-        let config: Value = serde_json::from_str(&config_str)
-            .expect("Failed to parse tauri.conf.template.json");
+        let config_str = fs::read_to_string(path).expect("Failed to read tauri.conf.template.json");
+        let config: Value =
+            serde_json::from_str(&config_str).expect("Failed to parse tauri.conf.template.json");
         TauriConfig { config }
     }
 
@@ -162,7 +161,10 @@ impl BuildManager {
 
         // If the binary already exists, do not recompile it
         if executable_path.exists() {
-            println!("Executable already exists at: {}", executable_path.display());
+            println!(
+                "Executable already exists at: {}",
+                executable_path.display()
+            );
             return;
         }
 
@@ -214,7 +216,10 @@ impl DependencyChecker {
 
     fn check_openssl(&self) {
         let (openssl_include_dir, openssl_lib_dir) = if cfg!(target_os = "macos") {
-            ("/opt/homebrew/opt/openssl@3/include".to_string(), "/opt/homebrew/opt/openssl@3/lib".to_string())
+            (
+                "/opt/homebrew/opt/openssl@3/include".to_string(),
+                "/opt/homebrew/opt/openssl@3/lib".to_string(),
+            )
         } else if cfg!(target_os = "linux") {
             ("/usr/include/openssl".to_string(), "/usr/lib".to_string())
         } else if cfg!(target_os = "windows") {
@@ -229,7 +234,10 @@ impl DependencyChecker {
 
         let include_path = PathBuf::from(&openssl_include_dir);
         if !include_path.exists() {
-            panic!("OpenSSL include directory does not exist: {:?}", include_path);
+            panic!(
+                "OpenSSL include directory does not exist: {:?}",
+                include_path
+            );
         }
         let lib_path = PathBuf::from(&openssl_lib_dir);
         if !lib_path.exists() {
@@ -267,9 +275,11 @@ impl DependencyChecker {
                 let install_gcc = Command::new("sudo")
                     .args(&["apt-get", "update", "-y"])
                     .status()
-                    .and_then(|_| Command::new("sudo")
-                        .args(&["apt-get", "install", "-y", "build-essential"])
-                        .status())
+                    .and_then(|_| {
+                        Command::new("sudo")
+                            .args(&["apt-get", "install", "-y", "build-essential"])
+                            .status()
+                    })
                     .expect("Failed to install gcc");
                 if !install_gcc.success() {
                     panic!("Failed to install gcc. Please install it manually.");
@@ -277,7 +287,9 @@ impl DependencyChecker {
             }
         } else if cfg!(target_os = "windows") {
             if !self.command_exists("cl") {
-                panic!("MSVC compiler not found. Please install Visual Studio with C++ build tools.");
+                panic!(
+                    "MSVC compiler not found. Please install Visual Studio with C++ build tools."
+                );
             }
         } else {
             panic!("Unsupported OS for compiler checks.");
@@ -393,9 +405,13 @@ impl ProjectBuilder {
 
     fn copy_executable(&self, target_dir: &PathBuf, bin_dir: &PathBuf, release: bool) {
         let source_path = if cfg!(target_os = "windows") {
-            target_dir.join(if release { "release" } else { "debug" }).join("rgb-lightning-node.exe")
+            target_dir
+                .join(if release { "release" } else { "debug" })
+                .join("rgb-lightning-node.exe")
         } else {
-            target_dir.join(if release { "release" } else { "debug" }).join("rgb-lightning-node")
+            target_dir
+                .join(if release { "release" } else { "debug" })
+                .join("rgb-lightning-node")
         };
 
         if !source_path.exists() {
@@ -404,8 +420,7 @@ impl ProjectBuilder {
 
         // Create bin directory if it doesn't exist
         if !bin_dir.exists() {
-            fs::create_dir_all(bin_dir)
-                .expect("Failed to create bin directory");
+            fs::create_dir_all(bin_dir).expect("Failed to create bin directory");
         }
 
         let dest_path = if cfg!(target_os = "windows") {
@@ -414,8 +429,7 @@ impl ProjectBuilder {
             bin_dir.join("rgb-lightning-node")
         };
 
-        fs::copy(&source_path, &dest_path)
-            .expect("Failed to copy executable");
+        fs::copy(&source_path, &dest_path).expect("Failed to copy executable");
 
         // Set executable permissions on Unix-like systems
         #[cfg(unix)]
@@ -425,8 +439,7 @@ impl ProjectBuilder {
                 .expect("Failed to get file metadata")
                 .permissions();
             perms.set_mode(0o755); // rwxr-xr-x
-            fs::set_permissions(&dest_path, perms)
-                .expect("Failed to set executable permissions");
+            fs::set_permissions(&dest_path, perms).expect("Failed to set executable permissions");
         }
 
         println!("Copied executable to: {}", dest_path.display());

@@ -3,9 +3,9 @@
 use db::Account;
 use dotenv::dotenv;
 use rgb_node::NodeProcess;
+use std::env;
 use std::sync::{Arc, Mutex, RwLock};
 use tauri::{Manager, Window};
-use std::env;
 
 mod db;
 mod rgb_node;
@@ -15,10 +15,15 @@ struct CurrentAccount(RwLock<Option<Account>>);
 
 fn main() {
     dotenv().ok();
-    
+
     let node_process = Arc::new(Mutex::new(NodeProcess::new()));
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(Arc::clone(&node_process))
         .manage(CurrentAccount::default())
         .on_window_event({
@@ -29,52 +34,65 @@ fn main() {
                         println!("Window close requested, initiating shutdown sequence...");
                         let window = event.window().clone();
                         api.prevent_close();
-                        
+
                         // Trigger initial shutdown animation
-                        window.emit("trigger-shutdown", "Preparing to shut down...").unwrap();
-                        
+                        window
+                            .emit("trigger-shutdown", "Preparing to shut down...")
+                            .unwrap();
+
                         // Clone Arc before moving into the new thread
                         let node_process = Arc::clone(&node_process);
-                        
+
                         // Create a new thread to handle the shutdown sequence
                         std::thread::spawn(move || {
                             let node_process = node_process.lock().unwrap();
-                            
+
                             // Check if node is running
                             if node_process.is_running() {
                                 // Update status
-                                window.emit("update-shutdown-status", "Shutting down local node...").unwrap();
+                                window
+                                    .emit("update-shutdown-status", "Shutting down local node...")
+                                    .unwrap();
                                 println!("Shutting down node...");
                                 node_process.shutdown();
-                                
+
                                 // Wait for node to shut down gracefully with status updates
                                 let mut attempts = 0;
                                 while node_process.is_running() && attempts < 30 {
                                     std::thread::sleep(std::time::Duration::from_millis(100));
                                     attempts += 1;
-                                    
+
                                     // Update status every second
                                     if attempts % 10 == 0 {
-                                        window.emit(
-                                            "update-shutdown-status",
-                                            format!("Waiting for node to shut down ({} seconds)...", attempts / 10)
-                                        ).unwrap();
+                                        window
+                                            .emit(
+                                                "update-shutdown-status",
+                                                format!(
+                                                    "Waiting for node to shut down ({} seconds)...",
+                                                    attempts / 10
+                                                ),
+                                            )
+                                            .unwrap();
                                     }
                                 }
 
                                 // Force kill if still running
                                 if node_process.is_running() {
-                                    window.emit("update-shutdown-status", "Force stopping node...").unwrap();
+                                    window
+                                        .emit("update-shutdown-status", "Force stopping node...")
+                                        .unwrap();
                                     println!("Node still running after shutdown, forcing kill...");
                                     node_process.force_kill();
                                     std::thread::sleep(std::time::Duration::from_millis(500));
                                 }
                             }
-                            
+
                             // Final status update
-                            window.emit("update-shutdown-status", "Closing application...").unwrap();
+                            window
+                                .emit("update-shutdown-status", "Closing application...")
+                                .unwrap();
                             std::thread::sleep(std::time::Duration::from_millis(500));
-                            
+
                             // Close the window
                             window.close().unwrap();
                         });
@@ -157,7 +175,13 @@ fn start_node(
     };
 
     // Attempt to start; bubble up any errors
-    match node_process.start(network, datapath, daemon_listening_port, ldk_peer_listening_port, account_name) {
+    match node_process.start(
+        network,
+        datapath,
+        daemon_listening_port,
+        ldk_peer_listening_port,
+        account_name,
+    ) {
         Ok(_) => {
             println!("Node started successfully");
             Ok(())
@@ -260,22 +284,22 @@ fn update_account(
 #[tauri::command]
 fn delete_account(
     node_process: tauri::State<Arc<Mutex<NodeProcess>>>,
-    name: String
+    name: String,
 ) -> Result<usize, String> {
     println!("Attempting to delete account: {}", name);
-    
+
     // Stop the node if it's running
     let node_process = node_process.lock().unwrap();
     if node_process.is_running() {
         println!("Stopping node for account: {}", name);
         node_process.stop();
     }
-    
+
     match db::delete_account(name.clone()) {
         Ok(num_rows) => {
             println!("Successfully deleted account: {}", name);
             Ok(num_rows)
-        },
+        }
         Err(e) => {
             println!("Failed to delete account {}: {}", name, e);
             Err(e.to_string())
@@ -301,7 +325,7 @@ fn set_current_account(
         .into_iter()
         .find(|a| a.name == account_name)
         .ok_or_else(|| "Account not found".to_string())?;
-    
+
     *state.0.write().unwrap() = Some(account.clone());
     Ok(account)
 }

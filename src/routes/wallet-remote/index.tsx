@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api'
+import { invoke } from '@tauri-apps/api/core'
 import { ChevronDown, ChevronLeft } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
@@ -129,17 +129,17 @@ export const Component = () => {
       defaultMakerUrl,
       indexerUrl: data.indexer_url,
       // Empty for remote nodes
-ldkPeerListeningPort: '',
-      
-makerUrls: defaultMakerUrl,
-      
-name: data.name,
-      
-network: data.network,
-      
-nodeUrl: data.node_url,
-      
-proxyEndpoint: data.proxy_endpoint, 
+      ldkPeerListeningPort: '',
+
+      makerUrls: defaultMakerUrl,
+
+      name: data.name,
+
+      network: data.network,
+
+      nodeUrl: data.node_url,
+
+      proxyEndpoint: data.proxy_endpoint,
       rpcConnectionUrl: data.rpc_connection_url, // Empty for remote nodes
     })
 

@@ -1,16 +1,16 @@
+use std::env;
+use std::io::{BufRead, BufReader};
+use std::net::TcpListener;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
-use std::sync::mpsc::{channel, Sender, Receiver};
-use std::time::Duration;
-use std::thread;
-use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::io::{BufReader, BufRead};
-use tauri::Window;
-use std::env;
-use std::net::TcpListener;
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration;
 use tauri::AppHandle;
 use tauri::Manager;
+use tauri::Window;
 
 const SHUTDOWN_TIMEOUT_SECS: u64 = 5;
 
@@ -69,11 +69,13 @@ impl NodeProcess {
         account_name: String,
     ) -> Result<(), String> {
         println!("Starting node for account: {}", account_name);
-        
+
         // Check if ports are available before proceeding
-        let daemon_port = daemon_listening_port.parse::<u16>()
+        let daemon_port = daemon_listening_port
+            .parse::<u16>()
             .map_err(|e| format!("Invalid daemon port number: {}", e))?;
-        let ldk_port = ldk_peer_listening_port.parse::<u16>()
+        let ldk_port = ldk_peer_listening_port
+            .parse::<u16>()
             .map_err(|e| format!("Invalid LDK peer port number: {}", e))?;
 
         if !Self::is_port_available(daemon_port) {
@@ -99,12 +101,18 @@ impl NodeProcess {
 
         // 1) If already running, attempt to stop & wait for complete shutdown
         if self.is_running() {
-            println!("Node is already running for account: {}. Stopping existing process...", 
-                self.current_account.lock().unwrap().as_ref().unwrap_or(&"unknown".to_string()));
-            
+            println!(
+                "Node is already running for account: {}. Stopping existing process...",
+                self.current_account
+                    .lock()
+                    .unwrap()
+                    .as_ref()
+                    .unwrap_or(&"unknown".to_string())
+            );
+
             // First try graceful shutdown
             self.shutdown();
-            
+
             // Wait for up to 10 seconds for graceful shutdown
             let start_time = std::time::Instant::now();
             let graceful_timeout = Duration::from_secs(10);
@@ -112,10 +120,10 @@ impl NodeProcess {
                 if start_time.elapsed() > graceful_timeout {
                     println!("Graceful shutdown timed out, attempting force kill...");
                     self.force_kill();
-                    
+
                     // Wait additional 5 seconds after force kill
                     thread::sleep(Duration::from_secs(5));
-                    
+
                     if self.is_running() {
                         let err = "Failed to stop existing node process. Please try restarting the application.".to_string();
                         println!("{}", err);
@@ -128,7 +136,7 @@ impl NodeProcess {
                 }
                 thread::sleep(Duration::from_millis(100));
             }
-            
+
             // Add a small delay to ensure resources are released
             thread::sleep(Duration::from_secs(2));
         }
@@ -139,7 +147,8 @@ impl NodeProcess {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../bin")
         } else if cfg!(target_os = "macos") {
             println!("MacOS: Using Application Support directory");
-            let home = env::var("HOME").map_err(|e| format!("Failed to get HOME directory: {}", e))?;
+            let home =
+                env::var("HOME").map_err(|e| format!("Failed to get HOME directory: {}", e))?;
             PathBuf::from(home).join("Library/Application Support/com.kaleidoswap.dev/data")
         } else if cfg!(target_os = "windows") {
             println!("Windows: Using LOCALAPPDATA directory");
@@ -148,7 +157,8 @@ impl NodeProcess {
             PathBuf::from(local_app_data).join("com.kaleidoswap.dev/data")
         } else {
             println!("Linux: Using .local/share directory");
-            let home = env::var("HOME").map_err(|e| format!("Failed to get HOME directory: {}", e))?;
+            let home =
+                env::var("HOME").map_err(|e| format!("Failed to get HOME directory: {}", e))?;
             PathBuf::from(home).join(".local/share/com.kaleidoswap.dev/data")
         };
 
@@ -166,11 +176,11 @@ impl NodeProcess {
                 let path = app_data_dir.join(path);
                 println!("Using datapath: {:?}", path);
                 path.to_string_lossy().to_string()
-            },
+            }
             None => {
                 println!("No datapath provided");
                 "".to_string()
-            },
+            }
         };
 
         // 3) Actually spawn the child process
@@ -199,7 +209,7 @@ impl NodeProcess {
         self.is_running.store(true, Ordering::SeqCst);
 
         println!("Node started successfully for account: {}", account_name);
-        
+
         // Optionally emit an event so your UI knows a node started
         if let Some(window) = &*self.window.lock().unwrap() {
             let _ = window.emit("node-started", ());
@@ -242,10 +252,7 @@ impl NodeProcess {
                         for line in reader.lines() {
                             if let Ok(line) = line {
                                 println!("Node stderr: {}", line);
-                                logs_clone
-                                    .lock()
-                                    .unwrap()
-                                    .push(format!("Error: {}", line));
+                                logs_clone.lock().unwrap().push(format!("Error: {}", line));
                                 if let Some(win) = &*window_clone.lock().unwrap() {
                                     let _ = win.emit("node-error", line);
                                 }
@@ -334,7 +341,7 @@ impl NodeProcess {
         if self.is_running() {
             println!("Sending Stop signal to node thread...");
             let _ = self.control_sender.send(ControlMessage::Stop);
-            *self.current_account.lock().unwrap() = None;  // Clear the current account
+            *self.current_account.lock().unwrap() = None; // Clear the current account
         } else {
             println!("Node is not running.");
         }
@@ -373,7 +380,7 @@ impl NodeProcess {
         if !self.is_running() {
             return false;
         }
-        
+
         if let Some(current_account) = self.current_account.lock().unwrap().as_ref() {
             current_account == account_name
         } else {
@@ -399,12 +406,12 @@ impl NodeProcess {
             // Kill the main process
             let _ = child.kill();
             let _ = child.wait();
-            
+
             // On Unix-like systems, try to ensure child processes are killed
             #[cfg(unix)]
             {
                 use std::process::Command;
-                let pid = child.id();  // This returns u32, not Option<u32>
+                let pid = child.id(); // This returns u32, not Option<u32>
                 println!("Killing child processes of PID: {}", pid);
                 let _ = Command::new("pkill")
                     .args(&["-P", &pid.to_string()])
@@ -412,8 +419,8 @@ impl NodeProcess {
             }
         }
         self.is_running.store(false, Ordering::SeqCst);
-        *self.current_account.lock().unwrap() = None;  // Clear the current account
-        
+        *self.current_account.lock().unwrap() = None; // Clear the current account
+
         // Add additional delay to ensure ports are released
         println!("Waiting for ports to be released after force kill...");
         thread::sleep(Duration::from_secs(1));
@@ -436,10 +443,12 @@ impl NodeProcess {
         } else {
             // In production mode, get the resource path from the app handle
             let app_handle = self.app_handle.lock().unwrap();
-            let app_handle = app_handle.as_ref()
-                .ok_or_else(|| "App handle not set. Make sure to call set_window first.".to_string())?;
-            
-            let resource_dir = app_handle.path_resolver()
+            let app_handle = app_handle.as_ref().ok_or_else(|| {
+                "App handle not set. Make sure to call set_window first.".to_string()
+            })?;
+
+            let resource_dir = app_handle
+                .path_resolver()
                 .resource_dir()
                 .ok_or_else(|| "Failed to get resource directory".to_string())?;
 
@@ -460,8 +469,11 @@ impl NodeProcess {
                     .join("bin")
                     .join("rgb-lightning-node")
             };
-            
-            println!("Production mode: Looking for executable at {:?}", binary_path);
+
+            println!(
+                "Production mode: Looking for executable at {:?}",
+                binary_path
+            );
             binary_path
         };
 
@@ -491,13 +503,11 @@ impl NodeProcess {
         let log_dir = if cfg!(debug_assertions) {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("logs")
         } else {
-            
             if cfg!(target_os = "macos") {
                 // macOS: ~/Library/Logs/com.kaleidoswap.dev/
-                let home = env::var("HOME")
-                    .map_err(|e| format!("Failed to get HOME directory: {}", e))?;
-                PathBuf::from(home)
-                    .join("Library/Logs/com.kaleidoswap.dev")
+                let home =
+                    env::var("HOME").map_err(|e| format!("Failed to get HOME directory: {}", e))?;
+                PathBuf::from(home).join("Library/Logs/com.kaleidoswap.dev")
             } else if cfg!(target_os = "windows") {
                 // Windows: %APPDATA%\com.kaleidoswap.dev\logs
                 let app_data = env::var("APPDATA")
@@ -507,10 +517,9 @@ impl NodeProcess {
                     .join("logs")
             } else {
                 // Linux: ~/.local/share/com.kaleidoswap.dev/logs
-                let home = env::var("HOME")
-                    .map_err(|e| format!("Failed to get HOME directory: {}", e))?;
-                PathBuf::from(home)
-                    .join(".local/share/com.kaleidoswap.dev/logs")
+                let home =
+                    env::var("HOME").map_err(|e| format!("Failed to get HOME directory: {}", e))?;
+                PathBuf::from(home).join(".local/share/com.kaleidoswap.dev/logs")
             }
         };
 
@@ -537,9 +546,11 @@ impl NodeProcess {
         println!("  Log file: {:?}", log_file);
 
         // Clone the file handles for stdout and stderr
-        let stdout_log = log_file.try_clone()
+        let stdout_log = log_file
+            .try_clone()
             .map_err(|e| format!("Failed to clone log file for stdout: {}", e))?;
-        let stderr_log = log_file.try_clone()
+        let stderr_log = log_file
+            .try_clone()
             .map_err(|e| format!("Failed to clone log file for stderr: {}", e))?;
 
         let child = Command::new(&executable_path)
@@ -555,7 +566,7 @@ impl NodeProcess {
             Ok(child) => {
                 println!("Successfully spawned RGB Lightning Node process");
                 Ok(child)
-            },
+            }
             Err(e) => {
                 let err = format!("Failed to spawn rgb-lightning-node process: {}", e);
                 println!("{}", err);
