@@ -1,4 +1,4 @@
-import { Loader2, ChevronLeft, AlertCircle, ChevronDown } from 'lucide-react'
+import { Loader2, AlertCircle, ChevronDown, ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 
@@ -8,7 +8,7 @@ interface UnlockProgressProps {
   unlockParams: UnlockRequest
   onUnlockComplete: () => void
   onUnlockError: (error: Error) => void
-  onBack: () => void
+  onBack?: () => void
 }
 
 export const UnlockProgress = ({
@@ -29,6 +29,7 @@ export const UnlockProgress = ({
   const startUnlock = async () => {
     setIsUnlocking(true)
     setError(null)
+
     try {
       await onUnlockComplete()
     } catch (error) {
@@ -45,35 +46,33 @@ export const UnlockProgress = ({
   }
 
   return (
-    <div className="max-w-2xl w-full mx-auto">
-      {/* Header with Back Button */}
-      <div className="flex justify-between mb-10">
-        <button
-          className="px-4 py-2 rounded-full border text-sm border-gray-500 hover:bg-gray-700 transition-colors flex items-center gap-2"
-          disabled={isUnlocking}
-          onClick={onBack}
-          type="button"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          Back
-        </button>
+    <div className="w-full">
+      {/* Header Section */}
+      <div className="flex items-center gap-4 mb-6">
+        <div className="p-3 rounded-xl bg-cyan/10 border border-cyan/20 text-cyan">
+          {isUnlocking ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <Loader2 className="w-5 h-5" />
+          )}
+        </div>
+        <h2 className="text-2xl font-bold text-white">Unlock Your Node</h2>
       </div>
 
-      <div className="text-center mb-10">
-        <h3 className="text-2xl font-semibold mb-4">Complete Your Setup</h3>
-        <p className="text-gray-400">
-          Review your connection details and unlock your RGB Lightning Node
-        </p>
-      </div>
+      <p className="text-slate-400 mb-6 leading-relaxed">
+        {isUnlocking
+          ? 'Your node is being unlocked with the provided configuration. This may take a moment.'
+          : 'Click the button below to unlock your node and start using your wallet.'}
+      </p>
 
-      <form className="space-y-6" onSubmit={form.handleSubmit(startUnlock)}>
+      <form className="space-y-5" onSubmit={form.handleSubmit(startUnlock)}>
         {/* Connection Parameters Summary */}
-        <div className="bg-blue-dark rounded-xl p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h4 className="text-lg font-medium">Connection Details</h4>
+        <div className="bg-blue-dark/40 rounded-lg p-5 border border-white/5">
+          <div className="flex justify-between items-center mb-4">
+            <h4 className="text-base font-medium">Connection Details</h4>
             {error && (
               <button
-                className="text-sm text-cyan hover:text-cyan/80 transition-colors"
+                className="text-xs text-cyan hover:text-cyan/80 transition-colors"
                 onClick={() => setIsEditing(!isEditing)}
                 type="button"
               >
@@ -87,56 +86,83 @@ export const UnlockProgress = ({
               // Editable fields when there's an error
               <>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
                     Bitcoin Node Host
                   </label>
                   <input
                     {...form.register('bitcoind_rpc_host')}
-                    className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg"
+                    className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
+                              bg-slate-800/30 text-slate-300 
+                              focus:border-cyan focus:ring-2 focus:ring-cyan/20 
+                              outline-none transition-all"
                     disabled={isUnlocking}
                   />
                 </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">
-                    Bitcoin Node Port
-                  </label>
-                  <input
-                    {...form.register('bitcoind_rpc_port')}
-                    className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg"
-                    disabled={isUnlocking}
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                      Bitcoin Node Port
+                    </label>
+                    <input
+                      {...form.register('bitcoind_rpc_port')}
+                      className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
+                                bg-slate-800/30 text-slate-300 
+                                focus:border-cyan focus:ring-2 focus:ring-cyan/20 
+                                outline-none transition-all"
+                      disabled={isUnlocking}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                      RPC Username
+                    </label>
+                    <input
+                      {...form.register('bitcoind_rpc_username')}
+                      className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
+                                bg-slate-800/30 text-slate-300 
+                                focus:border-cyan focus:ring-2 focus:ring-cyan/20 
+                                outline-none transition-all"
+                      disabled={isUnlocking}
+                    />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
                     Indexer URL
                   </label>
                   <input
                     {...form.register('indexer_url')}
-                    className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg"
+                    className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
+                              bg-slate-800/30 text-slate-300 
+                              focus:border-cyan focus:ring-2 focus:ring-cyan/20 
+                              outline-none transition-all"
                     disabled={isUnlocking}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
                     RGB Proxy Endpoint
                   </label>
                   <input
                     {...form.register('proxy_endpoint')}
-                    className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg"
+                    className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
+                              bg-slate-800/30 text-slate-300 
+                              focus:border-cyan focus:ring-2 focus:ring-cyan/20 
+                              outline-none transition-all"
                     disabled={isUnlocking}
                   />
                 </div>
               </>
             ) : (
               // Read-only summary view
-              <div className="p-4 bg-gray-800/30 rounded-lg">
+              <div className="p-3 bg-slate-800/30 rounded-lg">
                 <button
-                  className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors w-full"
+                  className="flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors w-full"
                   onClick={() => setShowAdvanced(!showAdvanced)}
                   type="button"
                 >
                   <ChevronDown
-                    className={`w-4 h-4 transition-transform ${
+                    className={`w-3.5 h-3.5 transition-transform ${
                       showAdvanced ? 'rotate-180' : ''
                     }`}
                   />
@@ -144,29 +170,33 @@ export const UnlockProgress = ({
                 </button>
 
                 {showAdvanced && (
-                  <div className="mt-4 space-y-3 pt-4 border-t border-gray-700">
+                  <div className="mt-3 space-y-2 pt-3 border-t border-gray-700">
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Bitcoin Node</span>
-                      <span className="font-mono text-sm truncate ml-4 max-w-[300px]">
+                      <span className="text-gray-400 text-xs">
+                        Bitcoin Node
+                      </span>
+                      <span className="font-mono text-xs truncate ml-4 max-w-[300px]">
                         {initialUnlockParams.bitcoind_rpc_host}:
                         {initialUnlockParams.bitcoind_rpc_port}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-400">RPC Username</span>
-                      <span className="font-mono text-sm truncate ml-4 max-w-[300px]">
+                      <span className="text-gray-400 text-xs">
+                        RPC Username
+                      </span>
+                      <span className="font-mono text-xs truncate ml-4 max-w-[300px]">
                         {initialUnlockParams.bitcoind_rpc_username}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Indexer URL</span>
-                      <span className="font-mono text-sm truncate ml-4 max-w-[300px]">
+                      <span className="text-gray-400 text-xs">Indexer URL</span>
+                      <span className="font-mono text-xs truncate ml-4 max-w-[300px]">
                         {initialUnlockParams.indexer_url}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-400">RGB Proxy</span>
-                      <span className="font-mono text-sm truncate ml-4 max-w-[300px]">
+                      <span className="text-gray-400 text-xs">RGB Proxy</span>
+                      <span className="font-mono text-xs truncate ml-4 max-w-[300px]">
                         {initialUnlockParams.proxy_endpoint}
                       </span>
                     </div>
@@ -179,28 +209,45 @@ export const UnlockProgress = ({
 
         {/* Error Display */}
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-3">
+            <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-red-400 text-sm">{error}</p>
+              <p className="text-red-400 text-xs">{error}</p>
             </div>
           </div>
         )}
 
-        {/* Action Button */}
-        <div className="flex justify-end">
+        {/* Action Buttons */}
+        <div className="flex justify-end gap-3">
+          {/* Back Button - Only show if onBack is provided */}
+          {onBack && (
+            <button
+              className="px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
+                       text-slate-300 hover:bg-slate-700/30 transition-all duration-200
+                       focus:ring-2 focus:ring-slate-700/20 focus:outline-none
+                       flex items-center justify-center gap-2 text-sm"
+              disabled={isUnlocking}
+              onClick={onBack}
+              type="button"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+          )}
+
+          {/* Unlock Button */}
           <button
-            className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-cyan to-purple 
-                     text-white font-semibold hover:opacity-90 transition-all duration-200
+            className="flex-1 px-6 py-2.5 rounded-lg bg-cyan text-blue-darkest 
+                     font-semibold hover:bg-cyan/90 transition-colors duration-200
                      focus:ring-2 focus:ring-cyan/20 focus:outline-none
-                     flex items-center justify-center gap-2 disabled:opacity-50 
-                     disabled:cursor-not-allowed"
+                     flex items-center justify-center gap-2 text-sm
+                     disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isUnlocking}
             type="submit"
           >
             {isUnlocking ? (
               <>
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
                 Unlocking Node...
               </>
             ) : (
@@ -212,13 +259,12 @@ export const UnlockProgress = ({
 
       {/* Full-screen Loading Overlay */}
       {isUnlocking && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center">
-          <div className="bg-blue-dark p-8 rounded-xl max-w-md w-full text-center">
-            <Loader2 className="w-12 h-12 text-cyan animate-spin mx-auto mb-4" />
-            <h4 className="text-xl font-bold mb-2">Unlocking Your Node</h4>
-            <p className="text-gray-400">
-              Please wait while we complete the setup of your RGB Lightning
-              Node...
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-blue-dark p-6 rounded-xl max-w-md w-full text-center">
+            <Loader2 className="w-10 h-10 text-cyan animate-spin mx-auto mb-4" />
+            <h4 className="text-lg font-bold mb-2">Unlocking Your Node</h4>
+            <p className="text-gray-400 text-sm">
+              Please wait while we unlock your node. This may take a moment.
             </p>
           </div>
         </div>

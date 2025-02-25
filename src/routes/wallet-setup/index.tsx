@@ -209,7 +209,7 @@ export const Component = () => {
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto w-full p-12 min-h-screen">
+      <div className="max-w-6xl mx-auto w-full p-6">
         <div
           className="bg-blue-darkest/80 backdrop-blur-sm rounded-3xl shadow-xl p-12 
           border border-white/5"

@@ -7,6 +7,7 @@ import {
   XCircle,
   AlertTriangle,
   Folder,
+  ArrowLeftRight,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
@@ -17,11 +18,18 @@ import { TRADE_PATH, WALLET_SETUP_PATH } from '../../app/router/paths'
 import { useAppDispatch } from '../../app/store/hooks'
 import { Layout } from '../../components/Layout'
 import { Spinner } from '../../components/Spinner'
+import { StepIndicator } from '../../components/StepIndicator'
 import { BitcoinNetwork } from '../../constants'
 import { NETWORK_DEFAULTS } from '../../constants/networks'
-import { EyeIcon } from '../../icons/Eye'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 import { setSettingsAsync } from '../../slices/nodeSettings/nodeSettings.slice'
+
+// Define the steps for the wallet restoration process
+const steps = [
+  { id: 'backup-selection', label: 'Backup Selection' },
+  { id: 'restoration', label: 'Restoration' },
+  { id: 'completion', label: 'Completion' },
+]
 
 // Define types for modal state
 const ModalType = {
@@ -162,12 +170,12 @@ const StatusModal = ({
 
 export const Component = () => {
   const [isStartingNode, setIsStartingNode] = useState(false)
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const [additionalErrors] = useState<string[]>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [currentStep, setCurrentStep] = useState<string>('backup-selection')
 
   // Unified modal state
-  const [modal, setModal] = useState<ModalState>({
+  const [modalState, setModalState] = useState<ModalState>({
     autoClose: false,
     details: '',
     isOpen: false,
@@ -204,16 +212,17 @@ export const Component = () => {
   }, [network, form])
 
   const closeModal = () => {
-    setModal((prev) => ({ ...prev, isOpen: false }))
+    setModalState((prev) => ({ ...prev, isOpen: false }))
 
     // Navigate if it was a success modal
-    if (modal.type === ModalType.SUCCESS) {
+    if (modalState.type === ModalType.SUCCESS) {
       navigate(TRADE_PATH)
     }
   }
 
   const showSuccessModal = () => {
-    setModal({
+    setCurrentStep('completion')
+    setModalState({
       autoClose: true,
       details: '',
       isOpen: true,
@@ -224,7 +233,7 @@ export const Component = () => {
   }
 
   const showErrorModal = (title: string, details: string) => {
-    setModal({
+    setModalState({
       autoClose: false,
       details,
       isOpen: true,
@@ -264,6 +273,7 @@ export const Component = () => {
       }
 
       setIsStartingNode(true)
+      setCurrentStep('restoration')
       console.log('Starting node...')
 
       try {
@@ -390,8 +400,29 @@ export const Component = () => {
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto w-full px-12 min-h-[calc(100vh-8rem)] flex items-center justify-center">
-        <div className="w-full bg-blue-darkest/80 backdrop-blur-sm rounded-3xl shadow-xl p-12 border border-white/5">
+      <div className="max-w-6xl mx-auto w-full p-6">
+        <div className="bg-blue-darkest/80 backdrop-blur-sm rounded-3xl shadow-xl p-12 border border-white/5">
+          <button
+            className="text-cyan mb-8 flex items-center gap-2 hover:text-cyan-600 
+              transition-colors group"
+            onClick={() => navigate(WALLET_SETUP_PATH)}
+          >
+            <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+            Back to node selection
+          </button>
+
+          <div className="flex items-center gap-4 mb-8">
+            <div className="p-4 rounded-xl bg-cyan/10 border border-cyan/20 text-cyan">
+              <ArrowLeftRight className="w-6 h-6" />
+            </div>
+            <h1 className="text-3xl font-bold text-white">Restore Wallet</h1>
+          </div>
+
+          {/* Step Indicator */}
+          <div className="mb-8">
+            <StepIndicator currentStep={currentStep} steps={steps} />
+          </div>
+
           {restoreResponse.isLoading || isStartingNode ? (
             <div className="py-20 flex flex-col items-center space-y-4">
               <Spinner size={30} />
@@ -404,27 +435,12 @@ export const Component = () => {
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between mb-8">
-                <button
-                  className="group px-4 py-2 rounded-xl border border-slate-700 
-                           hover:bg-slate-800/50 transition-all duration-200 
-                           flex items-center gap-2 text-slate-400 hover:text-white"
-                  onClick={() => navigate(WALLET_SETUP_PATH)}
-                >
-                  <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-                  Back
-                </button>
-                <h3 className="text-2xl font-semibold text-center flex-1 mr-[88px]">
-                  Restore your Wallet
-                </h3>
-              </div>
-
               <form
                 className="flex items-center justify-center flex-col"
                 onSubmit={form.handleSubmit(onSubmit)}
               >
                 <div className="max-w-xl mx-auto w-full">
-                  <div className="w-full max-w-md mx-auto space-y-6">
+                  <div className="bg-blue-dark/40 p-8 rounded-xl border border-white/5 space-y-6">
                     {/* Account Name Field */}
                     <div>
                       <div className="text-sm font-medium mb-2 text-slate-300">
@@ -432,18 +448,24 @@ export const Component = () => {
                       </div>
                       <div className="relative">
                         <input
-                          className="w-full px-4 py-3 bg-blue-dark/40 border border-divider/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan transition-all"
+                          className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
+                                    bg-slate-800/30 text-slate-300 
+                                    focus:border-cyan focus:ring-2 focus:ring-cyan/20 
+                                    outline-none transition-all placeholder:text-slate-600"
                           placeholder="Enter a name for your account"
                           type="text"
                           {...form.register('name', { required: 'Required' })}
                         />
                       </div>
-                      <div className="text-sm text-gray-400">
+                      <div className="text-sm text-slate-400 mt-2">
                         This name will be used to create your account folder
                       </div>
-                      <div className="text-sm text-red mt-2">
-                        {form.formState.errors.name?.message}
-                      </div>
+                      {form.formState.errors.name && (
+                        <p className="mt-2 text-red-400 text-sm flex items-center gap-1.5">
+                          <AlertTriangle className="w-4 h-4" />
+                          {form.formState.errors.name.message}
+                        </p>
+                      )}
                     </div>
 
                     {/* Network Selection */}
@@ -453,7 +475,10 @@ export const Component = () => {
                       </div>
                       <div className="relative">
                         <select
-                          className="block w-full pl-3 pr-10 py-2 text-white bg-gray-700 border border-gray-600 rounded-md appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
+                                    bg-slate-800/30 text-slate-300 appearance-none
+                                    focus:border-cyan focus:ring-2 focus:ring-cyan/20 
+                                    outline-none transition-all"
                           {...form.register('network', {
                             required: 'Required',
                           })}
@@ -462,62 +487,50 @@ export const Component = () => {
                           <option value="Signet">Signet</option>
                           <option value="Regtest">Regtest</option>
                         </select>
-                        <ChevronDown className="absolute right-2 top-2.5 h-5 w-5 text-gray-400 pointer-events-none" />
-                      </div>
-                      <div className="text-sm text-red mt-2">
-                        {form.formState.errors.network?.message}
-                        <ul>
-                          {additionalErrors.map((e, i) => (
-                            <li key={i}>{e}</li>
-                          ))}
-                        </ul>
+                        <ChevronDown
+                          className="absolute right-3 top-1/2 -translate-y-1/2 
+                                    w-5 h-5 text-slate-400 pointer-events-none"
+                        />
                       </div>
                     </div>
 
-                    {/* Backup Path Field */}
+                    {/* Backup File Selection */}
                     <div>
                       <div className="text-sm font-medium mb-2 text-slate-300">
-                        Backup Path
+                        Backup File
                       </div>
-                      <div className="relative space-y-2">
+                      <div className="relative">
                         <input
-                          className="w-full px-4 py-3 bg-blue-dark/40 border border-divider/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan transition-all"
-                          placeholder="Enter backup path or select a file"
+                          className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
+                                    bg-slate-800/30 text-slate-300 
+                                    focus:border-cyan focus:ring-2 focus:ring-cyan/20 
+                                    outline-none transition-all placeholder:text-slate-600"
+                          placeholder="Select your backup file"
+                          readOnly
                           type="text"
                           {...form.register('backup_path', {
-                            required: 'Backup path is required',
-                            validate: (value) => {
-                              console.log('Validating backup path:', value)
-                              return !!value || 'Backup path is required'
-                            },
+                            required: 'Backup file is required',
                           })}
                         />
-                        <div className="text-sm text-gray-400">
-                          Enter the path manually or select a file below
-                        </div>
                         <button
-                          className="w-full px-4 py-3
-                            bg-blue-600 hover:bg-blue-700
-                            text-white font-medium
-                            rounded-md
-                            transition-colors duration-200
-                            border border-blue-700
-                            flex items-center justify-center
-                            space-x-2"
-                          onClick={handleFileSelect}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5
+                                   text-slate-400 hover:text-white rounded-lg
+                                   hover:bg-slate-700/50 transition-colors"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            handleFileSelect()
+                          }}
                           type="button"
                         >
                           <Folder className="w-5 h-5" />
-                          <span>Choose Backup File</span>
                         </button>
-                        <div className="text-sm text-red mt-2">
-                          {form.formState.errors.backup_path?.message}
-                        </div>
-                        {/* Debug display */}
-                        <div className="text-xs text-gray-400">
-                          Current path: {form.watch('backup_path')}
-                        </div>
                       </div>
+                      {form.formState.errors.backup_path && (
+                        <p className="mt-2 text-red-400 text-sm flex items-center gap-1.5">
+                          <AlertTriangle className="w-4 h-4" />
+                          {form.formState.errors.backup_path.message}
+                        </p>
+                      )}
                     </div>
 
                     {/* Password Field */}
@@ -525,32 +538,25 @@ export const Component = () => {
                       <div className="text-sm font-medium mb-2 text-slate-300">
                         Password
                       </div>
-
                       <div className="relative">
                         <input
-                          className="w-full px-4 py-3 bg-blue-dark/40 border border-divider/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan transition-all"
-                          type={isPasswordVisible ? 'text' : 'password'}
+                          className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
+                                    bg-slate-800/30 text-slate-300 
+                                    focus:border-cyan focus:ring-2 focus:ring-cyan/20 
+                                    outline-none transition-all placeholder:text-slate-600"
+                          placeholder="Enter your backup password"
+                          type="password"
                           {...form.register('password', {
-                            required: 'Required',
+                            required: 'Password is required',
                           })}
                         />
-
-                        <div
-                          className="absolute top-0 right-4 h-full flex items-center cursor-pointer"
-                          onClick={() => setIsPasswordVisible((a) => !a)}
-                        >
-                          <EyeIcon />
-                        </div>
                       </div>
-
-                      <div className="text-sm text-red mt-2">
-                        {form.formState.errors.password?.message}
-                        <ul>
-                          {additionalErrors.map((e, i) => (
-                            <li key={i}>{e}</li>
-                          ))}
-                        </ul>
-                      </div>
+                      {form.formState.errors.password && (
+                        <p className="mt-2 text-red-400 text-sm flex items-center gap-1.5">
+                          <AlertTriangle className="w-4 h-4" />
+                          {form.formState.errors.password.message}
+                        </p>
+                      )}
                     </div>
 
                     {/* Advanced Settings Toggle */}
@@ -716,26 +722,17 @@ export const Component = () => {
                   </div>
 
                   {/* Submit Button */}
-                  <div className="flex justify-end mt-8">
-                    <button
-                      className="px-6 py-3 rounded-lg bg-gradient-to-r from-cyan to-purple
-                               text-white font-semibold hover:opacity-90 transition-all duration-200
-                               focus:ring-2 focus:ring-cyan/20 focus:outline-none
-                               flex items-center justify-center gap-2 min-w-[160px]
-                               disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={isStartingNode}
-                      type="submit"
-                    >
-                      {isStartingNode ? (
-                        <>
-                          <Spinner size={20} />
-                          <span>Processing...</span>
-                        </>
-                      ) : (
-                        'Restore'
-                      )}
-                    </button>
-                  </div>
+                  <button
+                    className="w-full mt-6 px-6 py-3 rounded-xl bg-cyan text-blue-darkest 
+                             font-semibold hover:bg-cyan/90 transition-colors duration-200
+                             focus:ring-2 focus:ring-cyan/20 focus:outline-none
+                             flex items-center justify-center gap-2
+                             disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={form.formState.isSubmitting}
+                    type="submit"
+                  >
+                    Restore Wallet
+                  </button>
                 </div>
               </form>
             </>
@@ -743,14 +740,14 @@ export const Component = () => {
 
           {/* Unified Modal Component */}
           <StatusModal
-            autoClose={modal.autoClose}
+            autoClose={modalState.autoClose}
             autoCloseDelay={3000}
-            details={modal.details}
-            isOpen={modal.isOpen}
-            message={modal.message}
+            details={modalState.details}
+            isOpen={modalState.isOpen}
+            message={modalState.message}
             onClose={closeModal}
-            title={modal.title}
-            type={modal.type}
+            title={modalState.title}
+            type={modalState.type}
           />
         </div>
       </div>

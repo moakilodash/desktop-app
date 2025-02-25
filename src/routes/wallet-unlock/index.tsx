@@ -414,14 +414,12 @@ export const Component = () => {
             errors={[]}
             form={passwordSetupForm}
             isPasswordVisible={isPasswordVisible}
-            onBack={() => setCurrentStep('unlock')}
             onSubmit={handleInitPassword}
             setIsPasswordVisible={setIsPasswordVisible}
           />
         ) : currentStep === 'mnemonic' ? (
           <MnemonicDisplay
             mnemonic={mnemonic}
-            onBack={() => setCurrentStep('init-password')}
             onCopy={() => {
               navigator.clipboard
                 .writeText(mnemonic.join(' '))
@@ -434,7 +432,6 @@ export const Component = () => {
           <MnemonicVerifyForm
             errors={[]}
             form={mnemonicVerifyForm}
-            onBack={() => setCurrentStep('mnemonic')}
             onSubmit={handleMnemonicVerify}
           />
         )}

@@ -1,6 +1,12 @@
 import { invoke } from '@tauri-apps/api'
 import { listen } from '@tauri-apps/api/event'
-import { ChevronDown, ChevronLeft, AlertCircle, ArrowRight } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronLeft,
+  AlertCircle,
+  ArrowRight,
+  Wallet,
+} from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { SubmitHandler, UseFormReturn, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
@@ -18,13 +24,23 @@ import {
   PasswordSetupForm,
   PasswordFields,
 } from '../../components/PasswordSetupForm'
-import { Spinner } from '../../components/Spinner'
+import { StepIndicator } from '../../components/StepIndicator'
 import { UnlockProgress } from '../../components/UnlockProgress'
 import { BitcoinNetwork } from '../../constants'
 import { NETWORK_DEFAULTS } from '../../constants/networks'
 import { parseRpcUrl } from '../../helpers/utils'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 import { setSettingsAsync } from '../../slices/nodeSettings/nodeSettings.slice'
+
+// Define the steps for the wallet initialization process
+const WALLET_INIT_STEPS = [
+  { id: 'setup', label: 'Node Setup' },
+  { id: 'password', label: 'Password' },
+  { id: 'mnemonic', label: 'Recovery Phrase' },
+  { id: 'verify', label: 'Verification' },
+  { id: 'unlock', label: 'Unlock' },
+]
+
 // Separate interfaces for each step
 interface NodeSetupFields {
   name: string
@@ -46,8 +62,8 @@ export const Component = () => {
   const [mnemonic, setMnemonic] = useState<Array<string>>([])
   const [nodePassword, setNodePassword] = useState('')
 
-  const [init, initResponse] = nodeApi.endpoints.init.useLazyQuery()
-  const [unlock, unlockResponse] = nodeApi.endpoints.unlock.useLazyQuery()
+  const [init] = nodeApi.endpoints.init.useLazyQuery()
+  const [unlock] = nodeApi.endpoints.unlock.useLazyQuery()
   const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
 
   const dispatch = useAppDispatch()
@@ -84,6 +100,45 @@ export const Component = () => {
       setAdditionalErrors([])
     }
   }, [])
+
+  // Handle back navigation based on current step
+  const handleBackNavigation = () => {
+    switch (currentStep) {
+      case 'setup':
+        navigate(WALLET_SETUP_PATH)
+        break
+      case 'password':
+        handleStepChange('setup')
+        break
+      case 'mnemonic':
+        handleStepChange('password')
+        break
+      case 'verify':
+        handleStepChange('mnemonic')
+        break
+      case 'unlock':
+        handleStepChange('verify')
+        break
+    }
+  }
+
+  // Get back button text based on current step
+  const getBackButtonText = () => {
+    switch (currentStep) {
+      case 'setup':
+        return 'Back to node selection'
+      case 'password':
+        return 'Back to node setup'
+      case 'mnemonic':
+        return 'Back to password setup'
+      case 'verify':
+        return 'Back to recovery phrase'
+      case 'unlock':
+        return 'Back to verification'
+      default:
+        return 'Back'
+    }
+  }
 
   // Cleanup when changing steps
   const handleStepChange = (newStep: SetupStep) => {
@@ -503,20 +558,6 @@ export const Component = () => {
   }
 
   const renderCurrentStep = () => {
-    if (isStartingNode || initResponse.isLoading || unlockResponse.isLoading) {
-      return (
-        <div className="py-20 flex flex-col items-center space-y-4">
-          <Spinner />
-          <div className="text-center">
-            Initializing your node. This may take a few moments...
-          </div>
-        </div>
-      )
-    }
-
-    // Move variable declarations outside the switch
-    const rpcConfig = parseRpcUrl(nodeSetupForm.getValues('rpc_connection_url'))
-
     switch (currentStep) {
       case 'setup':
         return (
@@ -532,7 +573,6 @@ export const Component = () => {
             errors={additionalErrors}
             form={passwordForm}
             isPasswordVisible={isPasswordVisible}
-            onBack={() => handleStepChange('setup')}
             onSubmit={handlePasswordSetup}
             setIsPasswordVisible={setIsPasswordVisible}
           />
@@ -541,7 +581,6 @@ export const Component = () => {
         return (
           <MnemonicDisplay
             mnemonic={mnemonic}
-            onBack={() => handleStepChange('password')}
             onCopy={copyMnemonicToClipboard}
             onNext={() => handleStepChange('verify')}
           />
@@ -551,37 +590,96 @@ export const Component = () => {
           <MnemonicVerifyForm
             errors={additionalErrors}
             form={mnemonicForm}
-            onBack={() => handleStepChange('mnemonic')}
             onSubmit={handleMnemonicVerify}
           />
         )
       case 'unlock':
         return (
           <UnlockProgress
-            onBack={() => handleStepChange('verify')}
             onUnlockComplete={handleUnlockComplete}
             onUnlockError={handleUnlockError}
             unlockParams={{
-              bitcoind_rpc_host: rpcConfig.host,
-              bitcoind_rpc_password: rpcConfig.password,
-              bitcoind_rpc_port: rpcConfig.port,
-              bitcoind_rpc_username: rpcConfig.username,
+              bitcoind_rpc_host: parseRpcUrl(
+                nodeSetupForm.getValues('rpc_connection_url')
+              ).host,
+              bitcoind_rpc_password: 'password',
+              bitcoind_rpc_port: parseRpcUrl(
+                nodeSetupForm.getValues('rpc_connection_url')
+              ).port,
+              bitcoind_rpc_username: 'user',
               indexer_url: nodeSetupForm.getValues('indexer_url'),
               password: nodePassword,
               proxy_endpoint: nodeSetupForm.getValues('proxy_endpoint'),
             }}
           />
         )
+      default:
+        return null
     }
   }
 
   return (
     <Layout>
-      <div className="min-h-screen">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="bg-blue-darkest/80 backdrop-blur-sm rounded-3xl shadow-xl p-8 border border-white/5">
-            <div className="max-w-3xl mx-auto">{renderCurrentStep()}</div>
+      <div className="max-w-6xl mx-auto w-full p-6">
+        <div className="bg-blue-darkest/80 backdrop-blur-sm rounded-3xl shadow-xl p-8 md:p-12 border border-white/5">
+          {/* Main Header */}
+          <div className="flex items-center gap-4 mb-8">
+            <div className="p-4 rounded-xl bg-cyan/10 border border-cyan/20 text-cyan">
+              <Wallet className="w-6 h-6" />
+            </div>
+            <h1 className="text-3xl font-bold text-white">Initialize Wallet</h1>
           </div>
+
+          {/* Back Button */}
+          <div className="mb-8">
+            <button
+              className="text-cyan flex items-center gap-2 hover:text-cyan-600 
+                       transition-colors group"
+              disabled={isStartingNode}
+              onClick={handleBackNavigation}
+              type="button"
+            >
+              <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+              {getBackButtonText()}
+            </button>
+          </div>
+
+          {/* Step Indicator - full width */}
+          <div className="mb-8">
+            <StepIndicator
+              currentStep={currentStep}
+              steps={WALLET_INIT_STEPS}
+            />
+
+            {/* Step Description */}
+            <div className="mt-6 p-5 bg-blue-dark/40 rounded-xl border border-white/5 relative overflow-hidden">
+              {/* Decorative accent */}
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-cyan"></div>
+
+              <h3 className="text-sm font-medium text-cyan mb-2 pl-3">
+                {currentStep === 'setup' && 'Node Configuration'}
+                {currentStep === 'password' && 'Secure Your Wallet'}
+                {currentStep === 'mnemonic' && 'Backup Your Wallet'}
+                {currentStep === 'verify' && 'Verify Your Backup'}
+                {currentStep === 'unlock' && 'Access Your Wallet'}
+              </h3>
+              <p className="text-xs text-slate-400 leading-relaxed pl-3">
+                {currentStep === 'setup' &&
+                  'Configure your node settings to connect to the Bitcoin network.'}
+                {currentStep === 'password' &&
+                  'Create a strong password to protect your wallet from unauthorized access.'}
+                {currentStep === 'mnemonic' &&
+                  'Save your recovery phrase in a secure location to recover your wallet if needed.'}
+                {currentStep === 'verify' &&
+                  "Confirm you've correctly saved your recovery phrase for future wallet recovery."}
+                {currentStep === 'unlock' &&
+                  'Unlock your node to start using your wallet and access your funds.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Current Step Content */}
+          <div className="max-w-2xl mx-auto">{renderCurrentStep()}</div>
         </div>
       </div>
     </Layout>
@@ -598,7 +696,6 @@ interface NodeSetupFormProps {
 const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const network = form.watch('network')
-  const navigate = useNavigate()
 
   // Update form values when network changes
   useEffect(() => {
@@ -611,48 +708,32 @@ const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
   }, [network, form])
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-4">
-      {/* Back Button */}
-      <div className="mb-6">
-        <button
-          className="group px-3 py-1.5 rounded-xl border border-slate-700 
-                     hover:bg-slate-800/50 transition-all duration-200 
-                     flex items-center gap-2 text-slate-400 hover:text-white"
-          onClick={() => navigate(WALLET_SETUP_PATH)}
-          type="button"
-        >
-          <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-          Back
-        </button>
+    <div className="w-full">
+      {/* Header Section */}
+      <div className="flex items-center gap-4 mb-6">
+        <div className="p-3 rounded-xl bg-cyan/10 border border-cyan/20 text-cyan">
+          <Wallet className="w-5 h-5" />
+        </div>
+        <h2 className="text-2xl font-bold text-white">Configure Your Node</h2>
       </div>
 
-      {/* Header Section */}
-      <div className="text-center mb-8">
-        <h3
-          className="text-2xl font-bold mb-2 bg-gradient-to-r from-cyan to-purple 
-                       bg-clip-text text-transparent"
-        >
-          Set Up Your Kaleidoswap Node
-        </h3>
-        <p className="text-slate-400 max-w-md mx-auto text-sm leading-relaxed">
-          Configure your node settings to begin the initialization process.
-        </p>
-      </div>
+      <p className="text-slate-400 mb-6 leading-relaxed">
+        Set up your node configuration to connect to the Bitcoin network.
+      </p>
 
       {/* Form Section */}
       <form
-        className="max-w-md mx-auto bg-slate-900/50 p-6 rounded-2xl 
-                   border border-slate-800/50 backdrop-blur-sm"
+        className="bg-blue-dark/40 p-6 rounded-xl border border-white/5"
         onSubmit={form.handleSubmit(onSubmit)}
       >
-        <div className="space-y-6">
+        <div className="space-y-5">
           {/* Account Name Field */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">
               Account Name
             </label>
             <input
-              className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
+              className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
                         bg-slate-800/30 text-slate-300 
                         focus:border-cyan focus:ring-2 focus:ring-cyan/20 
                         outline-none transition-all placeholder:text-slate-600"
@@ -660,12 +741,12 @@ const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
               type="text"
               {...form.register('name', { required: 'Required' })}
             />
-            <p className="mt-2 text-sm text-slate-400">
+            <p className="mt-1.5 text-xs text-slate-400">
               This name will be used to create your account folder
             </p>
             {form.formState.errors.name && (
-              <p className="mt-2 text-red-400 text-sm flex items-center gap-1.5">
-                <AlertCircle className="w-4 h-4" />
+              <p className="mt-1.5 text-red-400 text-xs flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5" />
                 {form.formState.errors.name.message}
               </p>
             )}
@@ -673,12 +754,12 @@ const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
 
           {/* Network Selection */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">
               Network
             </label>
             <div className="relative">
               <select
-                className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
+                className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
                           bg-slate-800/30 text-slate-300 appearance-none
                           focus:border-cyan focus:ring-2 focus:ring-cyan/20 
                           outline-none transition-all"
@@ -698,7 +779,7 @@ const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
           {/* Advanced Settings Toggle */}
           <button
             className="flex items-center text-sm text-slate-400 hover:text-white 
-                     transition-colors w-full py-2"
+                     transition-colors w-full py-1.5"
             onClick={() => setShowAdvanced(!showAdvanced)}
             type="button"
           >
@@ -714,11 +795,11 @@ const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
             <div className="space-y-4 pt-2 border-t border-slate-700">
               {/* RPC Connection URL */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">
                   Bitcoind RPC Connection URL
                 </label>
                 <input
-                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
+                  className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
                             bg-slate-800/30 text-slate-300 
                             focus:border-cyan focus:ring-2 focus:ring-cyan/20 
                             outline-none transition-all placeholder:text-slate-600"
@@ -726,75 +807,79 @@ const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
                   type="text"
                   {...form.register('rpc_connection_url')}
                 />
-                <p className="mt-2 text-sm text-slate-400">
+                <p className="mt-1.5 text-xs text-slate-400">
                   Example: user:password@localhost:18443
                 </p>
               </div>
 
-              {/* Indexer URL */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Indexer URL (electrum server)
-                </label>
-                <input
-                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
-                            bg-slate-800/30 text-slate-300 
-                            focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                            outline-none transition-all placeholder:text-slate-600"
-                  placeholder="Enter the indexer URL"
-                  type="text"
-                  {...form.register('indexer_url')}
-                />
+              {/* Two-column layout for smaller fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Indexer URL */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                    Indexer URL
+                  </label>
+                  <input
+                    className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
+                              bg-slate-800/30 text-slate-300 
+                              focus:border-cyan focus:ring-2 focus:ring-cyan/20 
+                              outline-none transition-all placeholder:text-slate-600"
+                    placeholder="Electrum server URL"
+                    type="text"
+                    {...form.register('indexer_url')}
+                  />
+                </div>
+
+                {/* Proxy Endpoint */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                    RGB Proxy Endpoint
+                  </label>
+                  <input
+                    className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
+                              bg-slate-800/30 text-slate-300 
+                              focus:border-cyan focus:ring-2 focus:ring-cyan/20 
+                              outline-none transition-all placeholder:text-slate-600"
+                    placeholder="Proxy endpoint URL"
+                    type="text"
+                    {...form.register('proxy_endpoint')}
+                  />
+                </div>
               </div>
 
-              {/* Proxy Endpoint */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  RGB Proxy Endpoint
-                </label>
-                <input
-                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
-                            bg-slate-800/30 text-slate-300 
-                            focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                            outline-none transition-all placeholder:text-slate-600"
-                  placeholder="Enter the proxy endpoint"
-                  type="text"
-                  {...form.register('proxy_endpoint')}
-                />
-              </div>
+              {/* Two-column layout for port fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Daemon Listening Port */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                    Daemon Listening Port
+                  </label>
+                  <input
+                    className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
+                              bg-slate-800/30 text-slate-300 
+                              focus:border-cyan focus:ring-2 focus:ring-cyan/20 
+                              outline-none transition-all placeholder:text-slate-600"
+                    placeholder="Default: 3001"
+                    type="text"
+                    {...form.register('daemon_listening_port')}
+                  />
+                </div>
 
-              {/* Daemon Listening Port */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Daemon Listening Port
-                </label>
-                <input
-                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
-                            bg-slate-800/30 text-slate-300 
-                            focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                            outline-none transition-all placeholder:text-slate-600"
-                  placeholder="Enter the daemon listening port"
-                  type="text"
-                  {...form.register('daemon_listening_port')}
-                />
-                <p className="mt-2 text-sm text-slate-400">Default: 3001</p>
-              </div>
-
-              {/* LDK Peer Listening Port */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  LDK Peer Listening Port
-                </label>
-                <input
-                  className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
-                            bg-slate-800/30 text-slate-300 
-                            focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                            outline-none transition-all placeholder:text-slate-600"
-                  placeholder="Enter the LDK peer listening port"
-                  type="text"
-                  {...form.register('ldk_peer_listening_port')}
-                />
-                <p className="mt-2 text-sm text-slate-400">Default: 9735</p>
+                {/* LDK Peer Listening Port */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                    LDK Peer Listening Port
+                  </label>
+                  <input
+                    className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
+                              bg-slate-800/30 text-slate-300 
+                              focus:border-cyan focus:ring-2 focus:ring-cyan/20 
+                              outline-none transition-all placeholder:text-slate-600"
+                    placeholder="Default: 9735"
+                    type="text"
+                    {...form.register('ldk_peer_listening_port')}
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -802,11 +887,11 @@ const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
           {/* Error Display */}
           {errors.length > 0 && (
             <div
-              className="p-4 bg-red-500/10 border border-red-500/20 
-                          rounded-xl flex items-start gap-3"
+              className="p-3 bg-red-500/10 border border-red-500/20 
+                          rounded-lg flex items-start gap-3"
             >
-              <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-              <ul className="text-red-400 text-sm space-y-1">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+              <ul className="text-red-400 text-xs space-y-1">
                 {errors.map((error, index) => (
                   <li className="flex items-center gap-2" key={index}>
                     <span>•</span> {error}
@@ -818,8 +903,8 @@ const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
 
           {/* Submit Button */}
           <button
-            className="w-full mt-6 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan to-purple 
-                     text-white font-semibold hover:opacity-90 transition-all duration-200
+            className="w-full mt-4 px-6 py-3 rounded-xl bg-cyan text-blue-darkest 
+                     font-semibold hover:bg-cyan/90 transition-colors duration-200
                      focus:ring-2 focus:ring-cyan/20 focus:outline-none
                      flex items-center justify-center gap-2"
             type="submit"
