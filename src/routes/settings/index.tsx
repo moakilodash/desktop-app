@@ -39,6 +39,124 @@ import {
 
 import { TerminalLogDisplay } from './TerminalLogDisplay'
 
+// Define types for modal state
+const ModalType = {
+  ERROR: 'error',
+  NONE: 'none',
+  SUCCESS: 'success',
+  WARNING: 'warning',
+} as const
+
+// Define type for modal type values
+type ModalTypeValue = (typeof ModalType)[keyof typeof ModalType]
+
+// Define interface for StatusModal props
+interface StatusModalProps {
+  type: ModalTypeValue
+  title: string
+  message: string
+  details?: string
+  onClose: () => void
+  autoClose?: boolean
+  autoCloseDelay?: number
+  isOpen: boolean
+}
+
+// StatusModal component for consistent UI across the app
+const StatusModal: React.FC<StatusModalProps> = ({
+  type,
+  title,
+  message,
+  details = '',
+  onClose,
+  autoClose = false,
+  autoCloseDelay = 3000,
+  isOpen,
+}) => {
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    if (autoClose && isOpen) {
+      timer = setTimeout(() => {
+        onClose()
+      }, autoCloseDelay)
+    }
+    return () => {
+      if (timer) clearTimeout(timer)
+    }
+  }, [autoClose, isOpen, onClose, autoCloseDelay])
+
+  if (!isOpen) return null
+
+  // Define icon and colors based on modal type
+  const getModalConfig = () => {
+    switch (type) {
+      case ModalType.SUCCESS:
+        return {
+          bgColor: 'bg-green-900/20',
+          borderColor: 'border-green-600/30',
+          buttonColor: 'bg-green-600 hover:bg-green-700',
+          icon: <CheckCircle2 className="h-8 w-8 text-green-400" />,
+        }
+      case ModalType.ERROR:
+        return {
+          bgColor: 'bg-red-900/20',
+          borderColor: 'border-red-600/30',
+          buttonColor: 'bg-red-600 hover:bg-red-700',
+          icon: <XCircle className="h-8 w-8 text-red-400" />,
+        }
+      case ModalType.WARNING:
+        return {
+          bgColor: 'bg-yellow-900/20',
+          borderColor: 'border-yellow-600/30',
+          buttonColor: 'bg-yellow-600 hover:bg-yellow-700',
+          icon: <AlertTriangle className="h-8 w-8 text-yellow-400" />,
+        }
+      default:
+        return {
+          bgColor: 'bg-blue-900/20',
+          borderColor: 'border-blue-600/30',
+          buttonColor: 'bg-blue-600 hover:bg-blue-700',
+          icon: <CheckCircle2 className="h-8 w-8 text-blue-400" />,
+        }
+    }
+  }
+
+  const config = getModalConfig()
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div
+        className={`max-w-md w-full rounded-xl shadow-2xl ${config.bgColor} border ${config.borderColor} p-6 transform transition-all duration-300 ease-in-out animate-fade-in`}
+      >
+        <div className="flex items-start">
+          <div className="flex-shrink-0 mr-4">{config.icon}</div>
+          <div className="flex-1">
+            <h3 className="text-xl font-semibold text-white mb-2">{title}</h3>
+            <p className="text-gray-300 mb-3">{message}</p>
+
+            {details && (
+              <div className="mt-3 mb-4">
+                <div className="bg-black/30 rounded-lg p-3 max-h-48 overflow-y-auto text-sm text-gray-400 font-mono border border-gray-700">
+                  <p className="whitespace-pre-wrap break-words">{details}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end mt-4">
+              <button
+                className={`px-4 py-2 rounded-lg ${config.buttonColor} text-white font-medium transition-colors duration-200`}
+                onClick={onClose}
+              >
+                {type === ModalType.SUCCESS ? 'Continue' : 'Close'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 interface FormFields {
   bitcoinUnit: string
   nodeConnectionString: string
@@ -59,11 +177,28 @@ export const Component: React.FC = () => {
   const currentAccount = useAppSelector((state) => state.nodeSettings.data)
   const nodeSettings = useAppSelector((state) => state.nodeSettings.data)
 
-  const [showModal, setShowModal] = useState(false)
+  // Replace showModal with unified modal state
+  const [modal, setModal] = useState<{
+    type: ModalTypeValue
+    title: string
+    message: string
+    details: string
+    isOpen: boolean
+    autoClose: boolean
+  }>({
+    autoClose: false,
+    details: '',
+    isOpen: false,
+    message: '',
+    title: '',
+    type: ModalType.NONE,
+  })
+
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false)
   const [showShutdownConfirmation, setShowShutdownConfirmation] =
     useState(false)
   const [isShuttingDown, setIsShuttingDown] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
   const [shutdown] = nodeApi.endpoints.shutdown.useLazyQuery()
   const [lock] = nodeApi.endpoints.lock.useLazyQuery()
@@ -102,16 +237,53 @@ export const Component: React.FC = () => {
 
   const fetchNodeLogs = async () => {
     try {
-      const logs = await invoke<string[]>('get_node_logs')
-      setNodeLogs(logs)
+      // Use a non-blocking approach with a timeout
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Logs fetch timeout')), 5000)
+      )
+
+      const logsPromise = invoke<string[]>('get_node_logs')
+
+      // Race between the actual fetch and the timeout
+      const logs = (await Promise.race([
+        logsPromise,
+        timeoutPromise,
+      ])) as string[]
+
+      if (logs && Array.isArray(logs)) {
+        setNodeLogs(logs)
+      }
     } catch (error) {
       console.error('Failed to fetch node logs:', error)
+      // Don't update state on error to avoid UI flickering
     }
   }
 
+  // Add loading state for initial data loading
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Optimize the useEffect for data loading
   useEffect(() => {
-    fetchNodeLogs()
-  }, [])
+    const loadInitialData = async () => {
+      try {
+        setIsLoading(true)
+        await fetchNodeLogs()
+      } catch (error) {
+        console.error('Error loading initial data:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadInitialData()
+
+    // Set up polling with a cleanup function
+    const logsInterval = setInterval(fetchNodeLogs, 10000) // Poll logs every 10 seconds
+
+    return () => {
+      clearInterval(logsInterval)
+    }
+  }, []) // Empty dependency array to run only on mount
 
   useEffect(() => {
     reset({
@@ -128,39 +300,99 @@ export const Component: React.FC = () => {
     })
   }, [bitcoinUnit, nodeConnectionString, nodeSettings, reset])
 
-  const handleSave = async (data: FormFields) => {
+  const handleRestartNode = async () => {
     try {
-      dispatch(setBitcoinUnit(data.bitcoinUnit))
-      dispatch(setNodeConnectionString(data.nodeConnectionString))
+      setIsSaving(true)
 
-      await invoke('update_account', {
+      // First, stop the current node
+      await invoke('stop_node')
+      toast.info('Stopping current node...')
+
+      // Wait a moment for the node to fully stop
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
+      // Then start the node with the updated settings
+      toast.info('Starting node with new settings...')
+
+      await invoke('start_node', {
+        accountName: currentAccount.name,
         daemonListeningPort: currentAccount.daemon_listening_port,
         datapath: currentAccount.datapath,
-        defaultLspUrl: data.lspUrl,
-        defaultMakerUrl: data.defaultMakerUrl,
-        indexerUrl: data.indexerUrl,
         ldkPeerListeningPort: currentAccount.ldk_peer_listening_port,
-        makerUrls: data.makerUrls.join(','),
-        name: currentAccount.name,
         network: currentAccount.network,
-        nodeUrl: currentAccount.node_url,
-        proxyEndpoint: data.proxyEndpoint,
-        rpcConnectionUrl: data.rpcConnectionUrl,
       })
 
-      dispatch(
-        nodeSettingsActions.setNodeSettings({
-          ...currentAccount,
-          daemon_listening_port: currentAccount.daemon_listening_port,
-          default_lsp_url: data.lspUrl,
-          default_maker_url: data.defaultMakerUrl,
-          indexer_url: data.indexerUrl,
-          ldk_peer_listening_port: currentAccount.ldk_peer_listening_port,
-          maker_urls: data.makerUrls,
-          proxy_endpoint: data.proxyEndpoint,
-          rpc_connection_url: data.rpcConnectionUrl,
-        })
+      toast.success('Node restarted successfully with new settings')
+
+      // Show success modal
+      setModal({
+        autoClose: true,
+        details: '',
+        isOpen: true,
+        message: 'The node has been restarted with your new settings.',
+        title: 'Node Restarted',
+        type: ModalType.SUCCESS,
+      })
+    } catch (error) {
+      console.error('Failed to restart node:', error)
+      toast.error(
+        `Failed to restart node: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
+
+      // Show error modal
+      setModal({
+        autoClose: false,
+        details: error instanceof Error ? error.message : 'Unknown error',
+        isOpen: true,
+        message: 'There was a problem restarting the node.',
+        title: 'Node Restart Failed',
+        type: ModalType.ERROR,
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleSave = async (data: FormFields) => {
+    try {
+      setIsSaving(true)
+
+      // Batch state updates to reduce renders
+      const updates = async () => {
+        dispatch(setBitcoinUnit(data.bitcoinUnit))
+        dispatch(setNodeConnectionString(data.nodeConnectionString))
+
+        await invoke('update_account', {
+          daemonListeningPort: currentAccount.daemon_listening_port,
+          datapath: currentAccount.datapath,
+          defaultLspUrl: data.lspUrl,
+          defaultMakerUrl: data.defaultMakerUrl,
+          indexerUrl: data.indexerUrl,
+          ldkPeerListeningPort: currentAccount.ldk_peer_listening_port,
+          makerUrls: data.makerUrls.join(','),
+          name: currentAccount.name,
+          network: currentAccount.network,
+          nodeUrl: currentAccount.node_url,
+          proxyEndpoint: data.proxyEndpoint,
+          rpcConnectionUrl: data.rpcConnectionUrl,
+        })
+
+        dispatch(
+          nodeSettingsActions.setNodeSettings({
+            ...currentAccount,
+            daemon_listening_port: currentAccount.daemon_listening_port,
+            default_lsp_url: data.lspUrl,
+            default_maker_url: data.defaultMakerUrl,
+            indexer_url: data.indexerUrl,
+            ldk_peer_listening_port: currentAccount.ldk_peer_listening_port,
+            maker_urls: data.makerUrls,
+            proxy_endpoint: data.proxyEndpoint,
+            rpc_connection_url: data.rpcConnectionUrl,
+          })
+        )
+      }
+
+      await updates()
 
       // Update websocket connection if maker URL changed
       if (data.defaultMakerUrl !== nodeSettings.default_maker_url) {
@@ -175,27 +407,68 @@ export const Component: React.FC = () => {
         data.proxyEndpoint !== nodeSettings.proxy_endpoint
 
       if (nodeSettingsChanged) {
-        toast.warning(
-          'Node connection settings have changed. Please restart the node for changes to take effect.',
-          {
-            autoClose: 10000, // Keep the message visible longer
-            closeOnClick: true,
-            draggable: true,
-            pauseOnHover: true,
-            position: 'top-right',
-          }
-        )
+        // Show restart confirmation modal instead of just a toast
+        setModal({
+          autoClose: false,
+          details: '',
+          isOpen: true,
+          message:
+            'Node connection settings have changed. Would you like to restart the node now for changes to take effect?',
+          title: 'Node Settings Changed',
+          type: ModalType.WARNING,
+        })
+
+        // We'll handle the restart in the modal's action buttons
       } else {
         toast.success('Settings saved successfully')
-      }
 
-      setShowModal(true)
-      setTimeout(() => setShowModal(false), 2000)
+        // Show success modal
+        setModal({
+          autoClose: true,
+          details: '',
+          isOpen: true,
+          message: 'Your settings have been successfully saved.',
+          title: 'Settings Saved',
+          type: ModalType.SUCCESS,
+        })
+      }
     } catch (error) {
       console.error('Failed to save settings:', error)
-      toast.error('Failed to save settings')
+      toast.error(
+        `Failed to save settings: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
+
+      // Show error modal
+      setModal({
+        autoClose: false,
+        details: error instanceof Error ? error.message : 'Unknown error',
+        isOpen: true,
+        message: 'There was a problem saving your settings.',
+        title: 'Settings Save Failed',
+        type: ModalType.ERROR,
+      })
+    } finally {
+      setIsSaving(false)
     }
   }
+
+  const closeModal = () => {
+    // If it's a warning modal about node settings changed, we need to ask about restart
+    if (
+      modal.type === ModalType.WARNING &&
+      modal.title === 'Node Settings Changed'
+    ) {
+      setModal((prev) => ({ ...prev, isOpen: false }))
+
+      // Show restart confirmation modal
+      setShowRestartConfirmation(true)
+    } else {
+      setModal((prev) => ({ ...prev, isOpen: false }))
+    }
+  }
+
+  // Add state for restart confirmation
+  const [showRestartConfirmation, setShowRestartConfirmation] = useState(false)
 
   const handleLogout = async () => {
     setShowLogoutConfirmation(true)
@@ -283,25 +556,39 @@ export const Component: React.FC = () => {
 
   const isLocalNode = !!currentAccount.datapath
 
+  // Add useEffect for polling node info separately to avoid blocking
   const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
   const nodeInfoState = nodeApi.endpoints.nodeInfo.useQueryState()
   const isNodeRunning = nodeInfoState.isSuccess
 
-  // Add useEffect for polling
+  // Separate useEffect for node info polling
   useEffect(() => {
     // Initial fetch
     nodeInfo()
-    fetchNodeLogs()
 
     // Set up polling interval
     const interval = setInterval(() => {
       nodeInfo()
-      fetchNodeLogs()
-    }, 6000)
+    }, 10000) // Poll every 10 seconds
 
     // Cleanup on unmount
     return () => clearInterval(interval)
-  }, [nodeInfo, fetchNodeLogs])
+  }, [nodeInfo])
+
+  // If the page is loading, show a loading state
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen py-8 px-4">
+        <div className="w-16 h-16 mb-8">
+          <div className="w-full h-full border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+        </div>
+        <h2 className="text-2xl font-bold text-white mb-2">Loading Settings</h2>
+        <p className="text-gray-400">
+          Please wait while we load your settings...
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col min-h-screen py-8 px-4">
@@ -594,6 +881,7 @@ export const Component: React.FC = () => {
                   <div className="flex gap-4">
                     <button
                       className="flex-1 flex items-center justify-center px-6 py-3.5 bg-[#2A2D3A] text-white rounded-xl hover:bg-[#363A4B] focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200"
+                      disabled={isSaving}
                       onClick={handleUndo}
                       type="button"
                     >
@@ -601,11 +889,21 @@ export const Component: React.FC = () => {
                       Reset Changes
                     </button>
                     <button
-                      className="flex-1 flex items-center justify-center px-6 py-3.5 bg-[#4361EE] text-white rounded-xl hover:bg-[#3651DE] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                      className="flex-1 flex items-center justify-center px-6 py-3.5 bg-[#4361EE] text-white rounded-xl hover:bg-[#3651DE] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                      disabled={isSaving}
                       type="submit"
                     >
-                      <Save className="w-5 h-5 mr-2.5" />
-                      Save Settings
+                      {isSaving ? (
+                        <>
+                          <div className="w-5 h-5 mr-2.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-5 h-5 mr-2.5" />
+                          Save Settings
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -772,7 +1070,7 @@ export const Component: React.FC = () => {
                 </span>
               </div>
 
-              <div className="h-[500px]">
+              <div className="h-[500px] overflow-auto">
                 {nodeLogs.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-gray-500">
                     <span className="flex items-center gap-2">
@@ -805,15 +1103,51 @@ export const Component: React.FC = () => {
         showModal={showBackupModal}
       />
 
-      {showModal && (
+      {/* Replace old modal with StatusModal */}
+      <StatusModal
+        autoClose={modal.autoClose}
+        autoCloseDelay={3000}
+        details={modal.details}
+        isOpen={modal.isOpen}
+        message={modal.message}
+        onClose={closeModal}
+        title={modal.title}
+        type={modal.type}
+      />
+
+      {/* Add Restart Confirmation Modal */}
+      {showRestartConfirmation && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm">
-            <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-              Settings Saved
+          <div className="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-sm">
+            <div className="flex items-center justify-center text-yellow-500 mb-4">
+              <AlertTriangle size={48} />
+            </div>
+            <h2 className="text-2xl font-bold mb-4 text-center text-white">
+              Restart Node?
             </h2>
-            <p className="text-gray-600">
-              Your settings have been successfully saved.
+            <p className="text-gray-300 text-center mb-6">
+              Your node settings have changed. Would you like to restart the
+              node now for changes to take effect?
             </p>
+            <div className="flex justify-between space-x-4">
+              <button
+                className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                onClick={() => setShowRestartConfirmation(false)}
+                type="button"
+              >
+                Later
+              </button>
+              <button
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                onClick={() => {
+                  setShowRestartConfirmation(false)
+                  handleRestartNode()
+                }}
+                type="button"
+              >
+                Restart Now
+              </button>
+            </div>
           </div>
         </div>
       )}

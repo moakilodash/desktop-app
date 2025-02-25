@@ -1,8 +1,15 @@
 import { invoke } from '@tauri-apps/api'
 import { open } from '@tauri-apps/api/dialog'
-import { ChevronDown, ChevronLeft } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronLeft,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Folder,
+} from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { SubmitHandler, useForm } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
@@ -16,7 +23,26 @@ import { EyeIcon } from '../../icons/Eye'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 import { setSettingsAsync } from '../../slices/nodeSettings/nodeSettings.slice'
 
-interface Fields {
+// Define types for modal state
+const ModalType = {
+  ERROR: 'error',
+  NONE: 'none',
+  SUCCESS: 'success',
+  WARNING: 'warning',
+} as const
+
+type ModalTypeValues = (typeof ModalType)[keyof typeof ModalType]
+
+interface ModalState {
+  type: ModalTypeValues
+  title: string
+  message: string
+  details: string
+  isOpen: boolean
+  autoClose: boolean
+}
+
+interface FormData {
   name: string
   network: BitcoinNetwork
   rpc_connection_url: string
@@ -28,15 +54,127 @@ interface Fields {
   ldk_peer_listening_port: string
 }
 
+interface StatusModalProps {
+  type: ModalTypeValues
+  title: string
+  message: string
+  details?: string
+  onClose: () => void
+  autoClose?: boolean
+  autoCloseDelay?: number
+  isOpen: boolean
+}
+
+// Modal component for better reusability
+const StatusModal = ({
+  type,
+  title,
+  message,
+  details = '',
+  onClose,
+  autoClose = false,
+  autoCloseDelay = 3000,
+  isOpen,
+}: StatusModalProps) => {
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    if (autoClose && isOpen) {
+      timer = setTimeout(() => {
+        onClose()
+      }, autoCloseDelay)
+    }
+    return () => {
+      if (timer) clearTimeout(timer)
+    }
+  }, [autoClose, isOpen, onClose, autoCloseDelay])
+
+  if (!isOpen) return null
+
+  // Define icon and colors based on modal type
+  const getModalConfig = () => {
+    switch (type) {
+      case ModalType.SUCCESS:
+        return {
+          bgColor: 'bg-green-900/20',
+          borderColor: 'border-green-600/30',
+          buttonColor: 'bg-green-600 hover:bg-green-700',
+          icon: <CheckCircle className="h-8 w-8 text-green-400" />,
+        }
+      case ModalType.ERROR:
+        return {
+          bgColor: 'bg-red-900/20',
+          borderColor: 'border-red-600/30',
+          buttonColor: 'bg-red-600 hover:bg-red-700',
+          icon: <XCircle className="h-8 w-8 text-red-400" />,
+        }
+      case ModalType.WARNING:
+        return {
+          bgColor: 'bg-yellow-900/20',
+          borderColor: 'border-yellow-600/30',
+          buttonColor: 'bg-yellow-600 hover:bg-yellow-700',
+          icon: <AlertTriangle className="h-8 w-8 text-yellow-400" />,
+        }
+      default:
+        return {
+          bgColor: 'bg-blue-900/20',
+          borderColor: 'border-blue-600/30',
+          buttonColor: 'bg-blue-600 hover:bg-blue-700',
+          icon: <CheckCircle className="h-8 w-8 text-blue-400" />,
+        }
+    }
+  }
+
+  const config = getModalConfig()
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div
+        className={`max-w-md w-full rounded-xl shadow-2xl ${config.bgColor} border ${config.borderColor} p-6 transform transition-all duration-300 ease-in-out animate-fade-in`}
+      >
+        <div className="flex items-start">
+          <div className="flex-shrink-0 mr-4">{config.icon}</div>
+          <div className="flex-1">
+            <h3 className="text-xl font-semibold text-white mb-2">{title}</h3>
+            <p className="text-gray-300 mb-3">{message}</p>
+
+            {details && (
+              <div className="mt-3 mb-4">
+                <div className="bg-black/30 rounded-lg p-3 max-h-48 overflow-y-auto text-sm text-gray-400 font-mono border border-gray-700">
+                  <p className="whitespace-pre-wrap break-words">{details}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end mt-4">
+              <button
+                className={`px-4 py-2 rounded-lg ${config.buttonColor} text-white font-medium transition-colors duration-200`}
+                onClick={onClose}
+              >
+                {type === ModalType.SUCCESS ? 'Continue' : 'Close'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export const Component = () => {
-  const [isStartingNode, setIsStartingNode] = useState<boolean>(false)
+  const [isStartingNode, setIsStartingNode] = useState(false)
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
-  const [additionalErrors] = useState<Array<string>>([])
+  const [additionalErrors] = useState<string[]>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
-  const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [showErrorModal, setShowErrorModal] = useState(false)
-  const [errorMessage, setErrorMessage] = useState('')
-  const [errorDetails, setErrorDetails] = useState('')
+
+  // Unified modal state
+  const [modal, setModal] = useState<ModalState>({
+    autoClose: false,
+    details: '',
+    isOpen: false,
+    message: '',
+    title: '',
+    type: ModalType.NONE,
+  })
 
   const [restore, restoreResponse] = nodeApi.endpoints.restore.useLazyQuery()
   const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
@@ -44,11 +182,11 @@ export const Component = () => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
 
-  const form = useForm<Fields>({
+  const form = useForm<FormData>({
     defaultValues: {
       backup_path: '',
       name: 'Restored Account',
-      network: 'Regtest',
+      network: 'Regtest' as BitcoinNetwork,
       password: '',
       ...NETWORK_DEFAULTS['Regtest'],
     },
@@ -65,7 +203,38 @@ export const Component = () => {
     form.setValue('ldk_peer_listening_port', defaults.ldk_peer_listening_port)
   }, [network, form])
 
-  const onSubmit: SubmitHandler<Fields> = async (data) => {
+  const closeModal = () => {
+    setModal((prev) => ({ ...prev, isOpen: false }))
+
+    // Navigate if it was a success modal
+    if (modal.type === ModalType.SUCCESS) {
+      navigate(TRADE_PATH)
+    }
+  }
+
+  const showSuccessModal = () => {
+    setModal({
+      autoClose: true,
+      details: '',
+      isOpen: true,
+      message: 'Your wallet has been restored and is ready to use.',
+      title: 'Wallet Restored Successfully',
+      type: ModalType.SUCCESS,
+    })
+  }
+
+  const showErrorModal = (title: string, details: string) => {
+    setModal({
+      autoClose: false,
+      details,
+      isOpen: true,
+      message: 'There was a problem restoring your wallet.',
+      title,
+      type: ModalType.ERROR,
+    })
+  }
+
+  const onSubmit = async (data: FormData) => {
     if (isStartingNode) return
 
     let nodeInfoRes = await nodeInfo()
@@ -87,11 +256,10 @@ export const Component = () => {
         name: data.name,
       })
       if (accountExists) {
-        setErrorMessage('Account Already Exists')
-        setErrorDetails(
+        showErrorModal(
+          'Account Already Exists',
           'An account with this name already exists. Please choose a different name.'
         )
-        setShowErrorModal(true)
         return
       }
 
@@ -127,6 +295,7 @@ export const Component = () => {
           toast.success('Node started successfully!')
         } catch (error) {
           toast.error(`Could not start node: ${error}`)
+          throw new Error(`Could not start node: ${error}`)
         }
 
         // Wait for node to be ready
@@ -139,10 +308,12 @@ export const Component = () => {
 
         if (restoreResponse.isSuccess) {
           await invoke('insert_account', {
+            daemonListeningPort: data.daemon_listening_port,
             datapath: datapath,
             defaultLspUrl: NETWORK_DEFAULTS[data.network].default_lsp_url,
             defaultMakerUrl,
             indexerUrl: data.indexer_url,
+            ldkPeerListeningPort: data.ldk_peer_listening_port,
             makerUrls: defaultMakerUrl,
             name: data.name,
             network: data.network,
@@ -155,38 +326,31 @@ export const Component = () => {
             accountName: data.name,
           })
 
-          setShowSuccessModal(true)
-          setTimeout(() => {
-            setShowSuccessModal(false)
-            navigate(TRADE_PATH)
-          }, 3000)
+          showSuccessModal()
         } else {
-          setErrorMessage('Wallet Restore Failed')
-          setErrorDetails(
+          showErrorModal(
+            'Wallet Restore Failed',
             restoreResponse.error
               ? `Error restoring wallet: ${JSON.stringify(restoreResponse.error)}`
               : 'Failed to restore the wallet. Please check your backup file and password.'
           )
-          setShowErrorModal(true)
           await invoke('stop_node')
         }
       } catch (error) {
         console.error('Node operation failed:', error)
         await invoke('stop_node')
-        setErrorMessage('Node Operation Failed')
-        setErrorDetails(
+        showErrorModal(
+          'Node Operation Failed',
           `Failed to start or operate the node: ${error instanceof Error ? error.message : String(error)}`
         )
-        setShowErrorModal(true)
         return
       }
     } catch (error) {
       console.error('Restore failed:', error)
-      setErrorMessage('Unexpected Error')
-      setErrorDetails(
+      showErrorModal(
+        'Unexpected Error',
         `An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`
       )
-      setShowErrorModal(true)
       await invoke('stop_node')
     } finally {
       setIsStartingNode(false)
@@ -261,6 +425,7 @@ export const Component = () => {
               >
                 <div className="max-w-xl mx-auto w-full">
                   <div className="w-full max-w-md mx-auto space-y-6">
+                    {/* Account Name Field */}
                     <div>
                       <div className="text-sm font-medium mb-2 text-slate-300">
                         Account Name
@@ -281,6 +446,7 @@ export const Component = () => {
                       </div>
                     </div>
 
+                    {/* Network Selection */}
                     <div>
                       <div className="text-sm font-medium mb-2 text-slate-300">
                         Network
@@ -308,6 +474,7 @@ export const Component = () => {
                       </div>
                     </div>
 
+                    {/* Backup Path Field */}
                     <div>
                       <div className="text-sm font-medium mb-2 text-slate-300">
                         Backup Path
@@ -329,7 +496,7 @@ export const Component = () => {
                           Enter the path manually or select a file below
                         </div>
                         <button
-                          className="w-full px-4 py-2
+                          className="w-full px-4 py-3
                             bg-blue-600 hover:bg-blue-700
                             text-white font-medium
                             rounded-md
@@ -340,20 +507,8 @@ export const Component = () => {
                           onClick={handleFileSelect}
                           type="button"
                         >
+                          <Folder className="w-5 h-5" />
                           <span>Choose Backup File</span>
-                          <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                            />
-                          </svg>
                         </button>
                         <div className="text-sm text-red mt-2">
                           {form.formState.errors.backup_path?.message}
@@ -365,6 +520,7 @@ export const Component = () => {
                       </div>
                     </div>
 
+                    {/* Password Field */}
                     <div>
                       <div className="text-sm font-medium mb-2 text-slate-300">
                         Password
@@ -389,10 +545,6 @@ export const Component = () => {
 
                       <div className="text-sm text-red mt-2">
                         {form.formState.errors.password?.message}
-                      </div>
-
-                      <div className="text-sm text-red mt-2">
-                        {form.formState.errors.password?.message}
                         <ul>
                           {additionalErrors.map((e, i) => (
                             <li key={i}>{e}</li>
@@ -401,6 +553,7 @@ export const Component = () => {
                       </div>
                     </div>
 
+                    {/* Advanced Settings Toggle */}
                     <div className="pt-2">
                       <button
                         className="flex items-center text-sm text-slate-400 hover:text-white
@@ -417,8 +570,10 @@ export const Component = () => {
                       </button>
                     </div>
 
+                    {/* Advanced Settings Panel */}
                     {showAdvanced && (
                       <div className="space-y-6 pt-4 border-t border-slate-800">
+                        {/* RPC Connection URL */}
                         <div>
                           <div className="text-xs mb-3">
                             Bitcoind RPC Connection URL
@@ -446,6 +601,7 @@ export const Component = () => {
                           </div>
                         </div>
 
+                        {/* Indexer URL */}
                         <div>
                           <div className="text-xs mb-3">
                             Indexer URL (electrum server)
@@ -465,6 +621,7 @@ export const Component = () => {
                           </div>
                         </div>
 
+                        {/* RGB Proxy Endpoint */}
                         <div>
                           <div className="text-xs mb-3">RGB Proxy Endpoint</div>
                           <div className="relative">
@@ -482,6 +639,7 @@ export const Component = () => {
                           </div>
                         </div>
 
+                        {/* Daemon Listening Port */}
                         <div>
                           <div className="text-xs mb-3">
                             Daemon Listening Port
@@ -511,6 +669,7 @@ export const Component = () => {
                           </div>
                         </div>
 
+                        {/* LDK Peer Listening Port */}
                         <div>
                           <div className="text-xs mb-3">
                             LDK Peer Listening Port
@@ -542,6 +701,7 @@ export const Component = () => {
                       </div>
                     )}
 
+                    {/* Additional Errors Display */}
                     {additionalErrors.length > 0 && (
                       <div className="text-sm text-red-400 bg-red-500/10 p-4 rounded-lg border border-red-500/20">
                         <ul className="space-y-1">
@@ -555,6 +715,7 @@ export const Component = () => {
                     )}
                   </div>
 
+                  {/* Submit Button */}
                   <div className="flex justify-end mt-8">
                     <button
                       className="px-6 py-3 rounded-lg bg-gradient-to-r from-cyan to-purple
@@ -580,79 +741,17 @@ export const Component = () => {
             </>
           )}
 
-          {/* Success Modal */}
-          {showSuccessModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-              <div className="bg-blue-dark p-6 rounded-lg shadow-xl max-w-md w-full">
-                <div className="text-center">
-                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
-                    <svg
-                      className="h-6 w-6 text-green-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        d="M5 13l4 4L19 7"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                      />
-                    </svg>
-                  </div>
-                  <h3 className="mt-4 text-lg font-medium text-white">
-                    Wallet Restored Successfully
-                  </h3>
-                  <p className="mt-2 text-sm text-gray-400">
-                    Redirecting to trading page...
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Error Modal with detailed message */}
-          {showErrorModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-              <div className="bg-blue-dark p-6 rounded-lg shadow-xl max-w-md w-full">
-                <div className="text-center">
-                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
-                    <svg
-                      className="h-6 w-6 text-red-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        d="M6 18L18 6M6 6l12 12"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                      />
-                    </svg>
-                  </div>
-                  <h3 className="mt-4 text-lg font-medium text-white">
-                    {errorMessage}
-                  </h3>
-                  <div className="mt-2 text-sm text-red-400 max-h-40 overflow-y-auto">
-                    <p className="whitespace-pre-wrap break-words">
-                      {errorDetails}
-                    </p>
-                  </div>
-                  <button
-                    className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                    onClick={() => {
-                      setShowErrorModal(false)
-                      setErrorMessage('')
-                      setErrorDetails('')
-                    }}
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Unified Modal Component */}
+          <StatusModal
+            autoClose={modal.autoClose}
+            autoCloseDelay={3000}
+            details={modal.details}
+            isOpen={modal.isOpen}
+            message={modal.message}
+            onClose={closeModal}
+            title={modal.title}
+            type={modal.type}
+          />
         </div>
       </div>
     </Layout>
