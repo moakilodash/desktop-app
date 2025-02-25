@@ -183,15 +183,43 @@ const useAccounts = () => {
 
   const updateAccount = useCallback(async (updatedAccount: Account) => {
     try {
-      await invoke('update_account', { account: updatedAccount })
+      console.log('Updating account:', updatedAccount.name)
+
+      // Convert maker_urls to string if it's an array
+      const makerUrlsString = Array.isArray(updatedAccount.maker_urls)
+        ? updatedAccount.maker_urls.join(',')
+        : updatedAccount.maker_urls
+
+      // Use camelCase parameter names for Tauri command
+      const params = {
+        daemonListeningPort: updatedAccount.daemon_listening_port,
+        datapath: updatedAccount.datapath,
+        defaultLspUrl: updatedAccount.default_lsp_url,
+        defaultMakerUrl: updatedAccount.default_maker_url,
+        indexerUrl: updatedAccount.indexer_url,
+        ldkPeerListeningPort: updatedAccount.ldk_peer_listening_port,
+        makerUrls: makerUrlsString,
+        name: updatedAccount.name,
+        network: updatedAccount.network,
+        nodeUrl: updatedAccount.node_url,
+        proxyEndpoint: updatedAccount.proxy_endpoint,
+        rpcConnectionUrl: updatedAccount.rpc_connection_url,
+      }
+
+      console.log('Invoking update_account with params:', params)
+
+      await invoke('update_account', params)
+
       setAccounts((prev) =>
         prev.map((acc) =>
           acc.name === updatedAccount.name ? updatedAccount : acc
         )
       )
+
       toast.success(`Account "${updatedAccount.name}" updated successfully`)
     } catch (error) {
-      console.error(error)
+      console.error('Update account error:', error)
+      toast.error(`Failed to update account: ${error}`)
       throw error
     }
   }, [])
@@ -650,7 +678,6 @@ const EditAccountModalContent: React.FC<EditAccountModalContentProps> = ({
     setIsLoading(true)
     try {
       await onSave(formData)
-      toast.success('Account updated successfully')
       onClose()
     } catch (error) {
       console.error(error)
