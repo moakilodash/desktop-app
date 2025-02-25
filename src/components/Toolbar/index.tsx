@@ -36,7 +36,7 @@ interface ModalProps {
   children: React.ReactNode
 }
 
-interface AccountCardProps {
+interface NodeCardProps {
   account: Account
   isCollapsed: boolean
   isEditing: boolean
@@ -57,25 +57,40 @@ const Modal: React.FC<ModalProps> = ({ onClose, children }) => {
     return () => document.removeEventListener('keydown', handleEscape)
   }, [onClose])
 
+  // Prevent scrolling of the body when modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = 'auto'
+    }
+  }, [])
+
   return (
     <div
       aria-modal="true"
-      className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn"
       onClick={onClose}
       role="dialog"
     >
       <div
-        className="bg-gray-800 text-white p-8 rounded-xl shadow-xl max-w-lg w-full mx-4 overflow-auto max-h-[90vh]"
+        className="bg-gray-800 text-white p-8 rounded-xl shadow-xl max-w-lg w-full mx-4 overflow-auto max-h-[90vh] animate-scaleIn"
         onClick={(e) => e.stopPropagation()}
       >
+        <button
+          aria-label="Close modal"
+          className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
+          onClick={onClose}
+        >
+          <X size={20} />
+        </button>
         {children}
       </div>
     </div>
   )
 }
 
-// Account Card Component
-const AccountCard: React.FC<AccountCardProps> = ({
+// Node Card Component
+const NodeCard: React.FC<NodeCardProps> = ({
   account,
   isCollapsed,
   isEditing,
@@ -87,71 +102,140 @@ const AccountCard: React.FC<AccountCardProps> = ({
   const nodeType = account.datapath ? 'Local' : 'Remote'
   const nodeColor = account.datapath ? 'text-green-400' : 'text-cyan'
 
+  // Handle card click based on edit mode
+  const handleCardClick = () => {
+    if (isEditing) {
+      onEdit(account)
+    } else {
+      onSelect(account)
+    }
+  }
+
   return (
     <div
       className={`group bg-blue-darker/50 rounded-xl transition-all duration-200 
-        hover:bg-blue-darker relative overflow-hidden border border-divider/5
-        ${isCollapsed ? 'p-2' : 'p-4'}`}
+        hover:bg-blue-darker relative overflow-hidden border
+        ${isCollapsed ? 'p-2' : 'p-4'}
+        ${
+          isEditing
+            ? 'cursor-pointer border-cyan/30 hover:border-cyan/70 hover:shadow-[0_0_0_1px_rgba(56,189,248,0.4)]'
+            : 'border-divider/5'
+        }`}
+      onClick={handleCardClick}
     >
-      <button
-        aria-label={`Select account ${account.name}`}
-        className="w-full text-left"
-        onClick={() => !isEditing && onSelect(account)}
-      >
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <MinidenticonImg
-              className="rounded-lg flex-shrink-0"
-              height={isCollapsed ? '40' : '40'}
-              saturation="90"
-              username={account.name}
-              width={isCollapsed ? '40' : '40'}
-            />
-            {isCollapsed && (
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-blue-darkest flex items-center justify-center">
-                <NodeIcon className={`w-3 h-3 ${nodeColor}`} />
-              </div>
-            )}
-          </div>
+      {/* Account info section */}
+      <div className="flex items-center gap-4">
+        {/* Avatar with edit indicator */}
+        <div className="relative">
+          <MinidenticonImg
+            className={`rounded-lg flex-shrink-0 ${isEditing ? 'opacity-80' : ''}`}
+            height={isCollapsed ? '40' : '40'}
+            saturation="90"
+            username={account.name}
+            width={isCollapsed ? '40' : '40'}
+          />
 
-          {!isCollapsed && (
-            <div className="min-w-0">
-              <div className="font-medium text-white truncate">
-                {account.name}
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-darkest text-gray-400">
-                  {account.network}
-                </span>
-                <span className={`flex items-center ${nodeColor} text-sm`}>
-                  <NodeIcon className="w-3 h-3 mr-1" />
-                  {nodeType}
-                </span>
-              </div>
+          {/* Node type indicator for collapsed view */}
+          {isCollapsed && (
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-blue-darkest flex items-center justify-center">
+              <NodeIcon className={`w-3 h-3 ${nodeColor}`} />
+            </div>
+          )}
+
+          {/* Edit mode indicator for collapsed view */}
+          {isEditing && isCollapsed && (
+            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-cyan/80 flex items-center justify-center">
+              <Edit className="w-2.5 h-2.5 text-blue-darkest" />
             </div>
           )}
         </div>
-      </button>
 
-      {isEditing && !isCollapsed && (
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-          <button
-            aria-label={`Edit account ${account.name}`}
-            className="p-2 rounded-lg text-gray-400 hover:text-cyan hover:bg-blue-darkest/50
-              transition-colors duration-200"
-            onClick={() => onEdit(account)}
+        {/* Node details */}
+        {!isCollapsed && (
+          <div className="min-w-0 flex-grow">
+            <div className="font-medium text-white truncate">
+              {account.name}
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-darkest text-gray-400">
+                {account.network}
+              </span>
+              <span className={`flex items-center ${nodeColor} text-sm`}>
+                <NodeIcon className="w-3 h-3 mr-1" />
+                {nodeType}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Edit/Delete buttons - visible in expanded view */}
+        {isEditing && !isCollapsed && (
+          <div
+            className="flex items-center space-x-3"
+            onClick={(e) => e.stopPropagation()} // Prevent card click when clicking buttons
           >
-            <Edit size={16} />
-          </button>
-          <button
-            aria-label={`Delete account ${account.name}`}
-            className="p-2 rounded-lg text-gray-400 hover:text-red hover:bg-blue-darkest/50
-              transition-colors duration-200"
-            onClick={() => onDelete(account)}
+            <button
+              aria-label={`Edit node ${account.name}`}
+              className="p-2.5 rounded-lg text-gray-400 hover:text-cyan bg-blue-darkest/40 hover:bg-blue-darkest
+                transition-colors duration-200"
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit(account)
+              }}
+            >
+              <Edit size={18} />
+            </button>
+            <button
+              aria-label={`Delete node ${account.name}`}
+              className="p-2.5 rounded-lg text-gray-400 hover:text-red-500 bg-blue-darkest/40 hover:bg-blue-darkest
+                transition-colors duration-200"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete(account)
+              }}
+            >
+              <Trash2 size={18} />
+            </button>
+          </div>
+        )}
+
+        {/* Edit/Delete buttons for collapsed view */}
+        {isEditing && isCollapsed && (
+          <div
+            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-blue-darker/80 transition-opacity duration-200"
+            onClick={(e) => e.stopPropagation()} // Prevent card click when clicking buttons
           >
-            <Trash2 size={16} />
-          </button>
-        </div>
+            <div className="flex space-x-2">
+              <button
+                aria-label={`Edit node ${account.name}`}
+                className="p-1.5 rounded-lg text-cyan bg-blue-darkest/80 hover:bg-blue-darkest
+                  transition-colors duration-200"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onEdit(account)
+                }}
+              >
+                <Edit size={16} />
+              </button>
+              <button
+                aria-label={`Delete node ${account.name}`}
+                className="p-1.5 rounded-lg text-red-400 bg-blue-darkest/80 hover:bg-blue-darkest
+                  transition-colors duration-200"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDelete(account)
+                }}
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Edit mode indicator - left border */}
+      {isEditing && (
+        <div className="absolute top-0 left-0 h-full w-1 bg-cyan/60" />
       )}
     </div>
   )
@@ -254,14 +338,28 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
   const { accounts, isLoading, error, updateAccount, deleteAccount } =
     useAccounts()
 
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
-  const [accountToDelete, setAccountToDelete] = useState<Account | null>(null)
-  const [editingAccount, setEditingAccount] = useState<Account | null>(null)
+  const [selectedNode, setSelectedNode] = useState<Account | null>(null)
+  const [nodeToDelete, setNodeToDelete] = useState<Account | null>(null)
+  const [editingNode, setEditingNode] = useState<Account | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [isSwitching, setIsSwitching] = useState(false)
 
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
+
+  // Exit edit mode when toolbar is collapsed
+  useEffect(() => {
+    if (isCollapsed && isEditing) {
+      setIsEditing(false)
+    }
+  }, [isCollapsed, isEditing])
+
+  // Exit edit mode when there are no nodes
+  useEffect(() => {
+    if (accounts.length === 0 && isEditing) {
+      setIsEditing(false)
+    }
+  }, [accounts, isEditing])
 
   useEffect(() => {
     const unlisten = listen('node-started', () => {
@@ -276,16 +374,21 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
     }
   }, [])
 
-  const handleAccountChange = async (account: Account) => {
+  // Toggle edit mode
+  const toggleEditMode = () => {
+    setIsEditing(!isEditing)
+  }
+
+  const handleNodeChange = async (node: Account) => {
     try {
       setIsSwitching(true)
-      console.log('Starting account change for:', account.name)
+      console.log('Starting node change for:', node.name)
 
-      const currentAccount = await invoke<Account | null>('get_current_account')
-      console.log('Current account:', currentAccount)
+      const currentNode = await invoke<Account | null>('get_current_account')
+      console.log('Current node:', currentNode)
 
       const isNodeRunning = await invoke<boolean>('is_node_running', {
-        accountName: account.name,
+        accountName: node.name,
       })
       console.log('Is node running:', isNodeRunning)
 
@@ -294,12 +397,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
       )
       console.log('Running node account:', runningNodeAccount)
 
-      if (
-        currentAccount &&
-        currentAccount.name === account.name &&
-        isNodeRunning
-      ) {
-        console.log('Account already running, navigating to root')
+      if (currentNode && currentNode.name === node.name && isNodeRunning) {
+        console.log('Node already running, navigating to root')
         navigate(ROOT_PATH)
         return
       }
@@ -310,41 +409,40 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
         await new Promise((resolve) => setTimeout(resolve, 1000))
       }
 
-      console.log('Setting current account:', account.name)
-      await invoke('set_current_account', { accountName: account.name })
+      console.log('Setting current node:', node.name)
+      await invoke('set_current_account', { accountName: node.name })
 
-      console.log('Getting account from database:', account.name)
-      const dbAccount = await invoke<Account>('get_account_by_name', {
-        name: account.name,
+      console.log('Getting node from database:', node.name)
+      const dbNode = await invoke<Account>('get_account_by_name', {
+        name: node.name,
       })
 
-      if (!dbAccount) {
-        throw new Error('Account not found in database')
+      if (!dbNode) {
+        throw new Error('Node not found in database')
       }
 
-      console.log('Formatting account data')
-      const formattedAccount = {
-        ...dbAccount,
-        maker_urls: Array.isArray(dbAccount.maker_urls)
-          ? dbAccount.maker_urls
-          : dbAccount.maker_urls
-              ?.split(',')
-              .filter((url) => url.trim() !== '') || [],
+      console.log('Formatting node data')
+      const formattedNode = {
+        ...dbNode,
+        maker_urls: Array.isArray(dbNode.maker_urls)
+          ? dbNode.maker_urls
+          : dbNode.maker_urls?.split(',').filter((url) => url.trim() !== '') ||
+            [],
       }
 
-      console.log('Updating Redux state with account data')
-      await dispatch(setSettingsAsync(formattedAccount))
+      console.log('Updating Redux state with node data')
+      await dispatch(setSettingsAsync(formattedNode))
 
       if (
-        account.node_url.startsWith('http://localhost:') &&
-        account.datapath !== ''
+        node.node_url.startsWith('http://localhost:') &&
+        node.datapath !== ''
       ) {
         console.log('Starting local node with parameters:', {
-          accountName: account.name,
-          daemonListeningPort: account.daemon_listening_port,
-          datapath: account.datapath,
-          ldkPeerListeningPort: account.ldk_peer_listening_port,
-          network: account.network,
+          accountName: node.name,
+          daemonListeningPort: node.daemon_listening_port,
+          datapath: node.datapath,
+          ldkPeerListeningPort: node.ldk_peer_listening_port,
+          network: node.network,
         })
 
         toast.info('Starting local node...', {
@@ -354,11 +452,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
 
         try {
           await invoke('start_node', {
-            accountName: account.name,
-            daemonListeningPort: account.daemon_listening_port,
-            datapath: account.datapath,
-            ldkPeerListeningPort: account.ldk_peer_listening_port,
-            network: account.network,
+            accountName: node.name,
+            daemonListeningPort: node.daemon_listening_port,
+            datapath: node.datapath,
+            ldkPeerListeningPort: node.ldk_peer_listening_port,
+            network: node.network,
           })
           console.log('Node started successfully')
         } catch (error) {
@@ -373,7 +471,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
       await new Promise((resolve) => setTimeout(resolve, 1000))
       navigate(ROOT_PATH)
     } catch (error) {
-      console.error('Account change failed:', error)
+      console.error('Node change failed:', error)
       dispatch(nodeSettingsActions.resetNodeSettings())
       toast.error(
         error instanceof Error
@@ -382,14 +480,14 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
       )
     } finally {
       setIsSwitching(false)
-      setSelectedAccount(null)
+      setSelectedNode(null)
     }
   }
 
   if (error) {
     return (
       <div className="p-4 text-red-500">
-        Error loading accounts: {error.message}
+        Error loading nodes: {error.message}
       </div>
     )
   }
@@ -405,67 +503,106 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
   return (
     <>
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between p-4">
-          <h2
-            className={`text-xl font-semibold text-white transition-opacity duration-200
-            ${isCollapsed ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`}
-          >
-            Your Accounts
-          </h2>
-          <button
-            aria-label={isEditing ? 'Exit Edit Mode' : 'Enter Edit Mode'}
-            className={`p-2 rounded-lg text-gray-400 hover:text-white 
-              transition-colors duration-200 ${isEditing ? 'bg-blue-darker text-cyan' : ''}`}
-            onClick={() => setIsEditing(!isEditing)}
-          >
-            {isEditing ? <X size={18} /> : <Edit size={18} />}
-          </button>
+        <div
+          className={`flex items-center justify-between ${isCollapsed ? 'p-2' : 'p-4'}`}
+        >
+          {/* Title - completely hidden in collapsed state, no hover effect */}
+          {!isCollapsed && (
+            <h2 className="text-xl font-semibold text-white">Your Nodes</h2>
+          )}
+
+          {/* Only show edit button if there are nodes */}
+          {accounts.length > 0 && !isCollapsed && (
+            <button
+              aria-label={isEditing ? 'Exit Edit Mode' : 'Enter Edit Mode'}
+              className={`p-2 rounded-lg text-gray-400 hover:text-white 
+                transition-colors duration-200 ${isEditing ? 'bg-blue-darker text-cyan' : ''}`}
+              onClick={toggleEditMode}
+            >
+              {isEditing ? (
+                <>
+                  <X size={18} />
+                  <span className="ml-2 text-sm">Exit Edit Mode</span>
+                </>
+              ) : (
+                <>
+                  <Edit size={18} />
+                  <span className="ml-2 text-sm">Edit Nodes</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2">
-          {accounts.map((account) => (
-            <AccountCard
-              account={account}
-              isCollapsed={isCollapsed}
-              isEditing={isEditing}
-              key={account.name}
-              onDelete={setAccountToDelete}
-              onEdit={setEditingAccount}
-              onSelect={setSelectedAccount}
-            />
-          ))}
+        {/* Visual indication of edit mode - only show in expanded view */}
+        {isEditing && !isCollapsed && (
+          <div className="px-4 py-2 bg-cyan/10 border-y border-cyan/20">
+            <p className="text-sm text-cyan flex items-center">
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Mode: Click a node to edit, or use the edit/delete buttons
+            </p>
+          </div>
+        )}
+
+        <div
+          className={`flex-1 overflow-y-auto custom-scrollbar ${isCollapsed ? 'p-2' : 'p-4'} space-y-2`}
+        >
+          {accounts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center p-4">
+              {!isCollapsed && (
+                <div className={`bg-blue-darker/50 rounded-xl p-6 max-w-xs`}>
+                  <p className="text-gray-400 mb-2">No nodes found</p>
+                  <p className="text-sm text-gray-500">
+                    Create a new node to get started with Kaleidoswap
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            accounts.map((account) => (
+              <NodeCard
+                account={account}
+                isCollapsed={isCollapsed}
+                isEditing={isEditing}
+                key={account.name}
+                onDelete={setNodeToDelete}
+                onEdit={setEditingNode}
+                onSelect={setSelectedNode}
+              />
+            ))
+          )}
         </div>
       </div>
 
-      {/* Account Selection Modal */}
-      {selectedAccount && (
-        <Modal onClose={() => setSelectedAccount(null)}>
-          <AccountSelectionModalContent
-            account={selectedAccount}
+      {/* Node Selection Modal */}
+      {selectedNode && (
+        <Modal onClose={() => setSelectedNode(null)}>
+          <NodeSelectionModalContent
+            account={selectedNode}
             isLoading={isSwitching}
-            onCancel={() => setSelectedAccount(null)}
-            onConfirm={handleAccountChange}
+            onCancel={() => setSelectedNode(null)}
+            onConfirm={handleNodeChange}
           />
         </Modal>
       )}
 
       {/* Delete Confirmation Modal */}
-      {accountToDelete && (
-        <Modal onClose={() => setAccountToDelete(null)}>
-          <DeleteConfirmationModalContent
-            account={accountToDelete}
-            onCancel={() => setAccountToDelete(null)}
+      {nodeToDelete && (
+        <Modal onClose={() => setNodeToDelete(null)}>
+          <DeleteNodeModalContent
+            account={nodeToDelete}
+            onCancel={() => setNodeToDelete(null)}
             onConfirm={deleteAccount}
           />
         </Modal>
       )}
 
-      {/* Edit Account Modal */}
-      {editingAccount && (
-        <Modal onClose={() => setEditingAccount(null)}>
-          <EditAccountModalContent
-            account={editingAccount}
-            onClose={() => setEditingAccount(null)}
+      {/* Edit Node Modal */}
+      {editingNode && (
+        <Modal onClose={() => setEditingNode(null)}>
+          <EditNodeModalContent
+            account={editingNode}
+            onClose={() => setEditingNode(null)}
             onSave={updateAccount}
           />
         </Modal>
@@ -475,22 +612,25 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
 }
 
 // Modal Content Components
-interface AccountSelectionModalContentProps {
+interface NodeSelectionModalContentProps {
   account: Account
   isLoading: boolean
   onCancel: () => void
   onConfirm: (account: Account) => void
 }
 
-const AccountSelectionModalContent: React.FC<
-  AccountSelectionModalContentProps
-> = ({ account, isLoading, onCancel, onConfirm }) => {
+const NodeSelectionModalContent: React.FC<NodeSelectionModalContentProps> = ({
+  account,
+  isLoading,
+  onCancel,
+  onConfirm,
+}) => {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2">Switch Account</h2>
+        <h2 className="text-2xl font-bold mb-2">Switch Node</h2>
         <p className="text-gray-400">
-          Review the account details before switching
+          Review the node details before switching
         </p>
       </div>
 
@@ -567,29 +707,31 @@ const AccountSelectionModalContent: React.FC<
           onClick={() => onConfirm(account)}
           type="button"
         >
-          {isLoading ? <Spinner size={20} /> : 'Select Account'}
+          {isLoading ? <Spinner size={20} /> : 'Select Node'}
         </button>
       </div>
     </>
   )
 }
 
-interface DeleteConfirmationModalContentProps {
+interface DeleteNodeModalContentProps {
   account: Account
   onCancel: () => void
   onConfirm: (account: Account) => void
 }
 
-const DeleteConfirmationModalContent: React.FC<
-  DeleteConfirmationModalContentProps
-> = ({ account, onCancel, onConfirm }) => {
+const DeleteNodeModalContent: React.FC<DeleteNodeModalContentProps> = ({
+  account,
+  onCancel,
+  onConfirm,
+}) => {
   const handleDelete = async () => {
     try {
       await onConfirm(account)
       onCancel() // Close the modal after successful deletion
     } catch (error) {
       // Error is already handled in the parent component
-      console.error('Failed to delete account:', error)
+      console.error('Failed to delete node:', error)
     }
   }
 
@@ -597,12 +739,12 @@ const DeleteConfirmationModalContent: React.FC<
     <>
       <div className="flex flex-col items-center mb-6">
         <AlertTriangle className="text-yellow-500 w-16 h-16 mb-4" />
-        <h2 className="text-2xl font-bold">Delete Account</h2>
+        <h2 className="text-2xl font-bold">Delete Node</h2>
       </div>
 
       <div className="space-y-4 mb-8">
         <p className="text-gray-300">
-          Are you sure you want to delete the account "
+          Are you sure you want to delete the node "
           <span className="font-semibold text-white">{account.name}</span>"?
         </p>
 
@@ -659,19 +801,20 @@ const DeleteConfirmationModalContent: React.FC<
   )
 }
 
-interface EditAccountModalContentProps {
+interface EditNodeModalContentProps {
   account: Account
   onClose: () => void
   onSave: (updatedAccount: Account) => Promise<void>
 }
 
-const EditAccountModalContent: React.FC<EditAccountModalContentProps> = ({
+const EditNodeModalContent: React.FC<EditNodeModalContentProps> = ({
   account,
   onClose,
   onSave,
 }) => {
   const [formData, setFormData] = useState(account)
   const [isLoading, setIsLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState<'basic' | 'advanced'>('basic')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -679,86 +822,247 @@ const EditAccountModalContent: React.FC<EditAccountModalContentProps> = ({
     try {
       await onSave(formData)
       onClose()
+      toast.success(`Node "${formData.name}" updated successfully`)
     } catch (error) {
       console.error(error)
-      toast.error('Failed to update account')
+      toast.error('Failed to update node')
     } finally {
       setIsLoading(false)
     }
   }
 
+  const handleInputChange = (field: keyof Account, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
   return (
     <>
-      <h2 className="text-2xl font-bold mb-6">Edit Account</h2>
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        <div>
-          <label className="block text-gray-300 mb-2">Account Name</label>
-          <input
-            className="w-full bg-gray-700 rounded-lg px-4 py-2 text-white"
-            disabled
-            type="text"
-            value={formData.name}
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold">Edit Node</h2>
+        <div className="flex items-center">
+          <MinidenticonImg
+            className="rounded-lg mr-3"
+            height="32"
+            saturation="90"
+            username={account.name}
+            width="32"
           />
+          <span className="font-medium text-lg">{account.name}</span>
         </div>
+      </div>
 
-        <div>
-          <label className="block text-gray-300 mb-2">Node URL</label>
-          <input
-            className="w-full bg-gray-700 rounded-lg px-4 py-2 text-white"
-            onChange={(e) =>
-              setFormData({ ...formData, node_url: e.target.value })
-            }
-            type="text"
-            value={formData.node_url}
-          />
-        </div>
+      {/* Tabs */}
+      <div className="flex border-b border-gray-700 mb-6">
+        <button
+          className={`px-4 py-2 font-medium text-sm transition-colors relative
+            ${
+              activeTab === 'basic'
+                ? 'text-cyan'
+                : 'text-gray-400 hover:text-gray-200'
+            }`}
+          onClick={() => setActiveTab('basic')}
+          type="button"
+        >
+          Basic Settings
+          {activeTab === 'basic' && (
+            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-cyan" />
+          )}
+        </button>
+        <button
+          className={`px-4 py-2 font-medium text-sm transition-colors relative
+            ${
+              activeTab === 'advanced'
+                ? 'text-cyan'
+                : 'text-gray-400 hover:text-gray-200'
+            }`}
+          onClick={() => setActiveTab('advanced')}
+          type="button"
+        >
+          Advanced Settings
+          {activeTab === 'advanced' && (
+            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-cyan" />
+          )}
+        </button>
+      </div>
 
-        <div>
-          <label className="block text-gray-300 mb-2">RPC Connection URL</label>
-          <input
-            className="w-full bg-gray-700 rounded-lg px-4 py-2 text-white"
-            onChange={(e) =>
-              setFormData({ ...formData, rpc_connection_url: e.target.value })
-            }
-            type="text"
-            value={formData.rpc_connection_url}
-          />
-        </div>
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        {activeTab === 'basic' && (
+          <>
+            <div className="bg-blue-darker/30 p-4 rounded-lg border border-divider/10">
+              <h3 className="text-sm font-medium text-gray-300 mb-4">
+                Connection Settings
+              </h3>
 
-        <div>
-          <label className="block text-gray-300 mb-2">Indexer URL</label>
-          <input
-            className="w-full bg-gray-700 rounded-lg px-4 py-2 text-white"
-            onChange={(e) =>
-              setFormData({ ...formData, indexer_url: e.target.value })
-            }
-            type="text"
-            value={formData.indexer_url}
-          />
-        </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-gray-300 text-sm mb-1.5">
+                    Node Name
+                  </label>
+                  <div className="flex items-center">
+                    <input
+                      className="w-full bg-gray-700 rounded-lg px-4 py-2.5 text-white border border-gray-600 focus:border-cyan/50 focus:outline-none"
+                      disabled
+                      type="text"
+                      value={formData.name}
+                    />
+                  </div>
+                </div>
 
-        <div>
-          <label className="block text-gray-300 mb-2">RGB Proxy Endpoint</label>
-          <input
-            className="w-full bg-gray-700 rounded-lg px-4 py-2 text-white"
-            onChange={(e) =>
-              setFormData({ ...formData, proxy_endpoint: e.target.value })
-            }
-            type="text"
-            value={formData.proxy_endpoint}
-          />
-        </div>
+                <div>
+                  <label className="block text-gray-300 text-sm mb-1.5">
+                    Node URL
+                  </label>
+                  <div className="flex items-center">
+                    <input
+                      className="w-full bg-gray-700 rounded-lg px-4 py-2.5 text-white border border-gray-600 focus:border-cyan/50 focus:outline-none"
+                      onChange={(e) =>
+                        handleInputChange('node_url', e.target.value)
+                      }
+                      placeholder="http://localhost:3000"
+                      type="text"
+                      value={formData.node_url}
+                    />
+                  </div>
+                </div>
 
-        <div className="flex space-x-4 mt-8">
+                <div>
+                  <label className="block text-gray-300 text-sm mb-1.5">
+                    RPC Connection URL
+                  </label>
+                  <div className="flex items-center">
+                    <input
+                      className="w-full bg-gray-700 rounded-lg px-4 py-2.5 text-white border border-gray-600 focus:border-cyan/50 focus:outline-none"
+                      onChange={(e) =>
+                        handleInputChange('rpc_connection_url', e.target.value)
+                      }
+                      placeholder="http://localhost:3001/rpc"
+                      type="text"
+                      value={formData.rpc_connection_url}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'advanced' && (
+          <>
+            <div className="bg-blue-darker/30 p-4 rounded-lg border border-divider/10">
+              <h3 className="text-sm font-medium text-gray-300 mb-4">
+                Service Endpoints
+              </h3>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-gray-300 text-sm mb-1.5">
+                    Indexer URL
+                  </label>
+                  <div className="flex items-center">
+                    <input
+                      className="w-full bg-gray-700 rounded-lg px-4 py-2.5 text-white border border-gray-600 focus:border-cyan/50 focus:outline-none"
+                      onChange={(e) =>
+                        handleInputChange('indexer_url', e.target.value)
+                      }
+                      placeholder="http://localhost:3002/api"
+                      type="text"
+                      value={formData.indexer_url}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-gray-300 text-sm mb-1.5">
+                    RGB Proxy Endpoint
+                  </label>
+                  <div className="flex items-center">
+                    <input
+                      className="w-full bg-gray-700 rounded-lg px-4 py-2.5 text-white border border-gray-600 focus:border-cyan/50 focus:outline-none"
+                      onChange={(e) =>
+                        handleInputChange('proxy_endpoint', e.target.value)
+                      }
+                      placeholder="http://localhost:3003/proxy"
+                      type="text"
+                      value={formData.proxy_endpoint}
+                    />
+                  </div>
+                </div>
+
+                {account.datapath && (
+                  <div>
+                    <label className="block text-gray-300 text-sm mb-1.5">
+                      Data Path
+                    </label>
+                    <div className="flex items-center">
+                      <input
+                        className="w-full bg-gray-700 rounded-lg px-4 py-2.5 text-white border border-gray-600"
+                        disabled
+                        type="text"
+                        value={formData.datapath}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Data path cannot be changed after account creation
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-blue-darker/30 p-4 rounded-lg border border-divider/10">
+              <h3 className="text-sm font-medium text-gray-300 mb-4">
+                Maker Settings
+              </h3>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-gray-300 text-sm mb-1.5">
+                    Default Maker URL
+                  </label>
+                  <div className="flex items-center">
+                    <input
+                      className="w-full bg-gray-700 rounded-lg px-4 py-2.5 text-white border border-gray-600 focus:border-cyan/50 focus:outline-none"
+                      onChange={(e) =>
+                        handleInputChange('default_maker_url', e.target.value)
+                      }
+                      placeholder="http://localhost:3004/maker"
+                      type="text"
+                      value={formData.default_maker_url}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-gray-300 text-sm mb-1.5">
+                    Default LSP URL
+                  </label>
+                  <div className="flex items-center">
+                    <input
+                      className="w-full bg-gray-700 rounded-lg px-4 py-2.5 text-white border border-gray-600 focus:border-cyan/50 focus:outline-none"
+                      onChange={(e) =>
+                        handleInputChange('default_lsp_url', e.target.value)
+                      }
+                      placeholder="http://localhost:3005/lsp"
+                      type="text"
+                      value={formData.default_lsp_url}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        <div className="flex space-x-4 mt-8 pt-4 border-t border-gray-700">
           <button
-            className="flex-1 px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+            className="flex-1 px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors text-white font-medium"
             onClick={onClose}
             type="button"
           >
             Cancel
           </button>
           <button
-            className="flex-1 px-6 py-3 bg-cyan-500 hover:bg-cyan-600 rounded-lg transition-colors"
+            className="flex-1 px-6 py-3 bg-cyan-500 hover:bg-cyan-600 rounded-lg transition-colors text-white font-medium flex items-center justify-center"
             disabled={isLoading}
             type="submit"
           >
