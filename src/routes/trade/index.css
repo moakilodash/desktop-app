@@ -2,6 +2,26 @@ body {
   background-image: url('/bg-green.png'), url('/bg-blue.png');
   background-repeat: no-repeat, no-repeat;
   background-position:
-    20% 200px,
-    90% top;
+    15% 200px,
+    85% top;
+  background-size: 50%, 50%;
+}
+
+.container {
+  min-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding-top: 2rem;
+}
+
+/* Add responsive adjustments */
+@media (max-width: 768px) {
+  body {
+    background-position:
+      10% 300px,
+      90% top;
+    background-size: 70%, 70%;
+  }
 }

@@ -125,10 +125,10 @@ export const Component = () => {
     undefined,
     {
       // Add caching configuration
-      pollingInterval: 30000, 
+      pollingInterval: 30000,
       refetchOnFocus: false,
       // Poll every 30 seconds
-refetchOnMountOrArgChange: true,
+      refetchOnMountOrArgChange: true,
       refetchOnReconnect: false,
     }
   )
@@ -1245,7 +1245,7 @@ refetchOnMountOrArgChange: true,
   )
 
   const renderSwapForm = () => (
-    <div className="space-y-4 max-w-2xl w-full">
+    <div className="space-y-6 w-full max-w-3xl mx-auto">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-bold text-white">Trade</h2>
@@ -1265,10 +1265,10 @@ refetchOnMountOrArgChange: true,
       </div>
 
       <form
-        className="bg-slate-900/50 backdrop-blur-sm rounded-xl border border-slate-800/50 p-6"
+        className="bg-slate-900/60 backdrop-blur-sm rounded-xl border border-slate-800/50 p-6 shadow-lg"
         onSubmit={form.handleSubmit(onSubmit)}
       >
-        <div className="space-y-4">
+        <div className="space-y-5">
           <SwapInputField
             asset={form.getValues().fromAsset}
             assetOptions={getAssetOptions(form.getValues().toAsset)}
@@ -1292,9 +1292,9 @@ refetchOnMountOrArgChange: true,
             value={form.getValues().from}
           />
 
-          <div className="flex justify-center -my-1">
+          <div className="flex justify-center -my-2">
             <button
-              className={`p-2 rounded-lg bg-slate-800/50 border-2 
+              className={`p-2.5 rounded-lg bg-slate-800/70 border-2 transition-all transform hover:scale-110
                 ${
                   hasChannels && hasTradablePairs && !isSwapInProgress
                     ? 'border-blue-500/50 hover:border-blue-500 cursor-pointer'
@@ -1342,7 +1342,7 @@ refetchOnMountOrArgChange: true,
           )}
 
           {errorMessage && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mt-4">
               <div className="flex items-center justify-between">
                 <span className="text-red-500 text-sm">{errorMessage}</span>
                 <button
@@ -1389,7 +1389,7 @@ refetchOnMountOrArgChange: true,
   }
 
   return (
-    <>
+    <div className="container mx-auto px-4 py-6">
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <Loader />
@@ -1397,7 +1397,7 @@ refetchOnMountOrArgChange: true,
       ) : !hasValidChannelsForTrading ? (
         renderNoChannelsMessage()
       ) : !wsConnected || tradablePairs.length === 0 ? (
-        <div className="max-w-xl w-full bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
+        <div className="max-w-xl w-full mx-auto bg-slate-900/60 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8 shadow-lg">
           {renderHeader(true)}
           <NoTradingPairsMessage
             isLoading={isLoading}
@@ -1439,6 +1439,6 @@ refetchOnMountOrArgChange: true,
       )}
 
       {!showRecap && assets.length > 0 && <StatusToast assets={assets} />}
-    </>
+    </div>
   )
 }
