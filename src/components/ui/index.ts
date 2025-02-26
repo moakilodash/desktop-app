@@ -12,5 +12,6 @@ export * from './StepIndicator'
 export * from './Spinner'
 export * from './AdvancedSettings'
 export * from './NetworkSettings'
+export * from './Stepper'
 
 // Add any additional exports here as more components are created

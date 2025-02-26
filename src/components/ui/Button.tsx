@@ -95,16 +95,47 @@ export const Button: React.FC<ButtonProps> = ({
 export const ActionButton: React.FC<
   Omit<ButtonProps, 'variant'> & { color?: 'cyan' | 'red' | 'purple' | 'blue' }
 > = ({ children, color = 'blue', ...props }) => {
-  const colorStyles = {
-    blue: 'text-blue-500 hover:text-blue-400',
-    cyan: 'text-cyan hover:text-cyan-light',
-    purple: 'text-purple hover:text-purple-light',
-    red: 'text-red hover:text-red-light',
+  const colorMap = {
+    blue: {
+      bg: 'bg-blue-500/10',
+      bgHover: 'bg-blue-500/20',
+      border: 'border-blue-500/10',
+      borderHover: 'border-blue-500/30',
+      text: 'text-blue-500',
+    },
+    cyan: {
+      bg: 'bg-cyan/10',
+      bgHover: 'bg-cyan/20',
+      border: 'border-cyan/10',
+      borderHover: 'border-cyan/30',
+      text: 'text-cyan',
+    },
+    purple: {
+      bg: 'bg-purple/10',
+      bgHover: 'bg-purple/20',
+      border: 'border-purple/10',
+      borderHover: 'border-purple/30',
+      text: 'text-purple',
+    },
+    red: {
+      bg: 'bg-red/10',
+      bgHover: 'bg-red/20',
+      border: 'border-red/10',
+      borderHover: 'border-red/30',
+      text: 'text-red',
+    },
   }
+
+  const colorStyle = colorMap[color]
 
   return (
     <button
-      className={`underline font-bold ${colorStyles[color]} ${props.className || ''}`}
+      className={`
+        flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium
+        bg-blue-darker hover:bg-blue-dark transition-all duration-200
+        ${colorStyle.border} hover:${colorStyle.borderHover} border
+        ${props.className || ''}
+      `}
       {...props}
     >
       {children}
