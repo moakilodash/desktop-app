@@ -40,7 +40,6 @@ const TABS = [
 export const Component = () => {
   const location = useLocation()
   const [activeTab, setActiveTab] = useState(TABS[0])
-  const [tabIndicatorStyle, setTabIndicatorStyle] = useState({})
   const [isMobile, setIsMobile] = useState(false)
 
   // Set the active tab and update indicator position
@@ -77,7 +76,7 @@ export const Component = () => {
   }
 
   // Get the icon background color based on the tab
-  const getIconBgColor = (color) => {
+  const getIconBgColor = (color: string) => {
     switch (color) {
       case 'green':
         return 'bg-green-500/10 text-green-500'
@@ -159,7 +158,7 @@ export const Component = () => {
                   to={tab.path}
                 >
                   <div
-                    className={`rounded-full p-1 ${(isActive) => (isActive ? getIconBgColor(tab.color) : 'text-gray-400')}`}
+                    className={`rounded-full p-1 ${location.pathname.startsWith(tab.path) ? getIconBgColor(tab.color) : 'text-gray-400'}`}
                   >
                     {tab.icon}
                   </div>
@@ -177,11 +176,8 @@ export const Component = () => {
           </ul>
         </div>
 
-        {/* Dynamic indicator */}
-        <div
-          className="absolute bottom-0 h-0.5 bg-gradient-to-r rounded-full transition-all duration-300 hidden sm:block"
-          style={tabIndicatorStyle}
-        />
+        {/* Dynamic indicator - removed tabIndicatorStyle */}
+        <div className="absolute bottom-0 h-0.5 bg-gradient-to-r rounded-full transition-all duration-300 hidden sm:block" />
       </div>
 
       {/* Content Area */}

@@ -4,12 +4,14 @@ import { Button } from '../ui'
 
 interface UnlockingProgressProps {
   isUnlocking: boolean
+  errorMessage?: string
   onBack?: () => void
   onCancel?: () => void
 }
 
 export const UnlockingProgress = ({
   isUnlocking,
+  errorMessage,
   onBack,
   onCancel,
 }: UnlockingProgressProps) => {
@@ -29,24 +31,32 @@ export const UnlockingProgress = ({
           <div className="absolute inset-0 rounded-full border-4 border-cyan-500/20" />
 
           {/* Spinning gradient ring */}
-          <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-cyan-400 border-r-cyan-500 animate-[spin_3s_linear_infinite]" />
+          <div
+            className={`absolute inset-0 rounded-full border-4 border-transparent ${errorMessage ? 'border-t-red-400 border-r-red-500' : 'border-t-cyan-400 border-r-cyan-500'} animate-[spin_3s_linear_infinite]`}
+          />
 
           {/* Inner pulsing circle */}
           <div className="absolute inset-0 m-auto w-16 h-16">
-            <div className="w-full h-full rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite] shadow-lg shadow-cyan-500/30 flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-blue-900"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                />
-              </svg>
+            <div
+              className={`w-full h-full rounded-full ${errorMessage ? 'bg-gradient-to-br from-red-400 to-red-600 shadow-red-500/30' : 'bg-gradient-to-br from-cyan-400 to-blue-500 shadow-cyan-500/30'} animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite] shadow-lg flex items-center justify-center`}
+            >
+              {errorMessage ? (
+                <XCircle className="w-8 h-8 text-red-100" />
+              ) : (
+                <svg
+                  className="w-8 h-8 text-blue-900"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                  />
+                </svg>
+              )}
             </div>
           </div>
         </div>
@@ -54,12 +64,21 @@ export const UnlockingProgress = ({
         {/* Status Text and Steps */}
         <div className="text-center space-y-6 w-full">
           <h3 className="text-2xl font-medium text-white">
-            {isUnlocking
-              ? 'Unlocking wallet...'
-              : 'Verifying recovery phrase...'}
+            {errorMessage
+              ? 'Error Unlocking Wallet'
+              : isUnlocking
+                ? 'Unlocking wallet...'
+                : 'Verifying recovery phrase...'}
           </h3>
 
-          {isUnlocking && (
+          {/* Error Message Display */}
+          {errorMessage && (
+            <div className="p-4 rounded-lg bg-red-900/30 border border-red-500/20 text-red-200 animate-[fadeIn_0.5s_ease-out] max-w-2xl mx-auto">
+              <p>{errorMessage}</p>
+            </div>
+          )}
+
+          {isUnlocking && !errorMessage && (
             <div className="space-y-4 animate-[fadeIn_0.5s_ease-out] max-w-2xl mx-auto">
               <div className="grid grid-cols-2 gap-4">
                 {steps.map((step, index) => (
@@ -116,9 +135,9 @@ export const UnlockingProgress = ({
                   icon={<XCircle className="w-4 h-4" />}
                   iconPosition="left"
                   onClick={onCancel}
-                  variant="danger"
+                  variant={errorMessage ? 'outline' : 'danger'}
                 >
-                  Cancel
+                  {errorMessage ? 'Try Again' : 'Cancel'}
                 </Button>
               )}
             </div>

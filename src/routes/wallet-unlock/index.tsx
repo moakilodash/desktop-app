@@ -1,4 +1,3 @@
-import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import { invoke } from '@tauri-apps/api'
 import { ChevronDown, ArrowLeft, Eye, EyeOff, Lock } from 'lucide-react'
 import { useState, useEffect } from 'react'
@@ -9,7 +8,6 @@ import { toast } from 'react-toastify'
 import { TRADE_PATH, WALLET_SETUP_PATH } from '../../app/router/paths'
 import { useAppSelector } from '../../app/store/hooks'
 import { Layout } from '../../components/Layout'
-import { Modal } from '../../components/Modal'
 import { Button, Card, SetupLayout } from '../../components/ui'
 import { UnlockingProgress } from '../../components/UnlockingProgress'
 import { parseRpcUrl } from '../../helpers/utils'
@@ -419,7 +417,6 @@ export const Component = () => {
           <Card className="w-full max-w-3xl mx-auto p-6 bg-gray-900 border border-gray-800 rounded-xl">
             <UnlockingProgress
               errorMessage={unlockError || undefined}
-              hasError={!!unlockError}
               isUnlocking={isUnlocking}
               onBack={handleBack}
               onCancel={handleCancelUnlocking}
@@ -435,8 +432,4 @@ export const Component = () => {
       {showInitModal && <SimpleModal />}
     </Layout>
   )
-}
-
-function isFetchBaseQueryError(error: unknown): error is FetchBaseQueryError {
-  return typeof error === 'object' && error != null && 'status' in error
 }
