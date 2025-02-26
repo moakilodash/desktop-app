@@ -1,8 +1,18 @@
+import { ArrowLeft, XCircle } from 'lucide-react'
+
+import { Button } from '../ui'
+
 interface UnlockingProgressProps {
   isUnlocking: boolean
+  onBack?: () => void
+  onCancel?: () => void
 }
 
-export const UnlockingProgress = ({ isUnlocking }: UnlockingProgressProps) => {
+export const UnlockingProgress = ({
+  isUnlocking,
+  onBack,
+  onCancel,
+}: UnlockingProgressProps) => {
   const steps = [
     { title: 'Decrypting wallet' },
     { title: 'Synchronizing Bitcoin blockchain' },
@@ -11,8 +21,8 @@ export const UnlockingProgress = ({ isUnlocking }: UnlockingProgressProps) => {
   ]
 
   return (
-    <div className="min-h-[400px] flex items-center justify-center p-8">
-      <div className="w-full max-w-md flex flex-col items-center">
+    <div className="flex items-center justify-center p-4">
+      <div className="w-full max-w-3xl flex flex-col items-center">
         {/* Animated Progress Ring with Gradient */}
         <div className="relative w-32 h-32 mb-8">
           {/* Outer static ring */}
@@ -50,22 +60,24 @@ export const UnlockingProgress = ({ isUnlocking }: UnlockingProgressProps) => {
           </h3>
 
           {isUnlocking && (
-            <div className="space-y-4 animate-[fadeIn_0.5s_ease-out]">
-              {steps.map((step, index) => (
-                <div
-                  className="flex items-center space-x-3 p-3 rounded-lg bg-gradient-to-r from-transparent to-cyan-500/5 backdrop-blur-sm border border-cyan-500/10 animate-[slideInRight_0.5s_ease-out]"
-                  key={step.title}
-                  style={{ animationDelay: `${index * 150}ms` }}
-                >
-                  {/* Progress indicator */}
-                  <div className="w-2 h-2 rounded-full bg-cyan-400 animate-[pulse_2s_infinite]" />
+            <div className="space-y-4 animate-[fadeIn_0.5s_ease-out] max-w-2xl mx-auto">
+              <div className="grid grid-cols-2 gap-4">
+                {steps.map((step, index) => (
+                  <div
+                    className="flex items-center space-x-3 p-3 rounded-lg bg-gradient-to-r from-transparent to-cyan-500/5 backdrop-blur-sm border border-cyan-500/10 animate-[slideInRight_0.5s_ease-out]"
+                    key={step.title}
+                    style={{ animationDelay: `${index * 150}ms` }}
+                  >
+                    {/* Progress indicator */}
+                    <div className="w-2 h-2 rounded-full bg-cyan-400 animate-[pulse_2s_infinite]" />
 
-                  {/* Step title */}
-                  <span className="text-sm text-gray-200 font-medium">
-                    {step.title}
-                  </span>
-                </div>
-              ))}
+                    {/* Step title */}
+                    <span className="text-sm text-gray-200 font-medium">
+                      {step.title}
+                    </span>
+                  </div>
+                ))}
+              </div>
 
               {/* Note card */}
               <div
@@ -80,6 +92,35 @@ export const UnlockingProgress = ({ isUnlocking }: UnlockingProgressProps) => {
                   synchronization may take a few minutes.
                 </p>
               </div>
+            </div>
+          )}
+
+          {(onBack || onCancel) && (
+            <div
+              className="mt-6 flex justify-center gap-4 animate-[fadeIn_0.5s_ease-out]"
+              style={{ animationDelay: '800ms' }}
+            >
+              {onBack && (
+                <Button
+                  icon={<ArrowLeft className="w-4 h-4" />}
+                  iconPosition="left"
+                  onClick={onBack}
+                  variant="outline"
+                >
+                  Back to Setup
+                </Button>
+              )}
+
+              {onCancel && (
+                <Button
+                  icon={<XCircle className="w-4 h-4" />}
+                  iconPosition="left"
+                  onClick={onCancel}
+                  variant="danger"
+                >
+                  Cancel
+                </Button>
+              )}
             </div>
           )}
         </div>
