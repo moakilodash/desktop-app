@@ -63,30 +63,17 @@ export const LogoutModal: React.FC<LogoutModalProps> = ({
   )
 }
 
-// Simple component for logout button with support for custom styling
-export const LogoutWithSupport: React.FC<{ onLogout: () => void }> = ({
-  onLogout,
+// Simple component for logout button with icon
+export const LogoutButton: React.FC<{ onClick: () => void }> = ({
+  onClick,
 }) => {
-  const [showModal, setShowModal] = React.useState(false)
-
   return (
-    <>
-      <div
-        className="px-4 py-3 flex items-center space-x-3 cursor-pointer hover:bg-blue-darker transition-colors text-red-400"
-        onClick={() => setShowModal(true)}
-      >
-        <LogOut className="w-4 h-4" />
-        <span className="text-sm font-medium">Logout</span>
-      </div>
-
-      <LogoutModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        onConfirm={() => {
-          setShowModal(false)
-          onLogout()
-        }}
-      />
-    </>
+    <div
+      className="px-4 py-3 flex items-center space-x-3 cursor-pointer hover:bg-blue-darker transition-colors text-red-400"
+      onClick={onClick}
+    >
+      <LogOut className="w-4 h-4" />
+      <span className="text-sm font-medium">Logout</span>
+    </div>
   )
 }

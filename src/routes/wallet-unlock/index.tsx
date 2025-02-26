@@ -267,16 +267,7 @@ export const Component = () => {
       <div className="flex flex-col items-center pt-12 pb-6">
         {/* Key icon with blue background */}
         <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center mb-6">
-          <svg
-            className="w-10 h-10 text-white"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-          >
-            <path d="M15 7a8.001 8.001 0 01-7.022 7.95 2 2 0 00-1.95 1.93V21a2 2 0 002 2h4a2 2 0 002-2v-2.1a2 2 0 01.15-.777l.691-1.383a.995.995 0 01.886-.54h1.3a2 2 0 002-2v-3.283c0-.7-.192-1.387-.554-1.997L15 7z" />
-            <circle cx="18" cy="6" r="3" />
-          </svg>
+          <Lock className="w-10 h-10 text-white" />
         </div>
 
         <h2 className="text-2xl font-semibold text-white text-center">
@@ -313,6 +304,12 @@ export const Component = () => {
                 {...unlockForm.register('password', {
                   required: 'Password is required',
                 })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    unlockForm.handleSubmit(onSubmit)()
+                  }
+                }}
               />
 
               <button

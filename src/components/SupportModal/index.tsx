@@ -57,17 +57,16 @@ export const SupportModal = ({ isOpen, onClose }: SupportModalProps) => {
       solutions: [
         'Ensure you have sufficient Bitcoin balance',
         'Check that your peer is online and accepting channels',
-        'Verify your connection to the RGB proxy server',
-        'Wait for any pending blockchain confirmation',
+        'Verify you and your peer are connected to the same RGB proxy server',
+        'Wait for any pending blockchain confirmations',
       ],
       title: 'Channel creation failures',
     },
     {
       description: 'Problems sending or receiving RGB payments',
       solutions: [
-        'Verify you have sufficient channel capacity',
-        'Check that both you and your peer have the RGB asset issued',
-        'Ensure your channel has sufficient local balance',
+        'Verify you have sufficient outbound liquidity in your channels',
+        'Check that have enough colored UTXOs in your wallet',
         'Verify the invoice is correct and not expired',
       ],
       title: 'Payment failures',

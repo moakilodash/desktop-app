@@ -19,7 +19,6 @@ import {
   Clock,
   MessageCircle,
   Github,
-  LogOut,
 } from 'lucide-react'
 import React, { useEffect, useState, useRef } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
@@ -46,10 +45,12 @@ import { useOnClickOutside } from '../../hooks/useOnClickOutside'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 import { nodeSettingsActions } from '../../slices/nodeSettings/nodeSettings.slice'
 import { uiSliceActions } from '../../slices/ui/ui.slice'
-import { LogoutModal } from '../LogoutModal'
+import { LogoutModal, LogoutButton } from '../LogoutModal'
 import { ShutdownAnimation } from '../ShutdownAnimation'
 import { SupportModal } from '../SupportModal'
+
 import 'react-toastify/dist/ReactToastify.min.css'
+import { LayoutModal } from './Modal'
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -117,12 +118,20 @@ const CHANNEL_MENU_ITEMS = [
 const TRANSACTION_MENU_ITEMS = [
   {
     action: 'deposit',
-    icon: <ArrowDownLeft className="w-4 h-4" />,
+    icon: (
+      <div className="p-1 rounded-full bg-cyan/10 text-cyan">
+        <ArrowDownLeft className="w-4 h-4" />
+      </div>
+    ),
     label: 'Deposit',
   },
   {
     action: 'withdraw',
-    icon: <ArrowUpRight className="w-4 h-4" />,
+    icon: (
+      <div className="p-1 rounded-full bg-purple/10 text-purple">
+        <ArrowUpRight className="w-4 h-4" />
+      </div>
+    ),
     label: 'Withdraw',
   },
 ]
@@ -291,7 +300,7 @@ const DropdownMenu = ({
                 key={item.label || index}
                 onClick={() => handleItemClick(item)}
               >
-                <div className="text-cyan">{item.icon}</div>
+                {item.icon}
                 <span className="text-sm font-medium">{item.label}</span>
               </div>
             ))}
@@ -309,7 +318,6 @@ const UserProfile = ({
   onLogout,
 }: UserProfileProps) => {
   const [isOpen, setIsOpen] = useState(false)
-  const [showLogoutModal, setShowLogoutModal] = useState(false)
   const menuRef = useRef(null)
   const navigate = useNavigate()
   const nodeInfo = nodeApi.endpoints.nodeInfo.useQueryState()
@@ -399,26 +407,11 @@ const UserProfile = ({
             ))}
 
             <div className="border-t border-divider/20 mt-1">
-              <div
-                className="px-4 py-3 flex items-center space-x-3 cursor-pointer hover:bg-blue-darker transition-colors text-red-400"
-                onClick={() => {
-                  setIsOpen(false)
-                  setShowLogoutModal(true)
-                }}
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="text-sm font-medium">Logout</span>
-              </div>
+              <LogoutButton onClick={onLogout} />
             </div>
           </div>
         </div>
       )}
-
-      <LogoutModal
-        isOpen={showLogoutModal}
-        onClose={() => setShowLogoutModal(false)}
-        onConfirm={onLogout}
-      />
     </div>
   )
 }
@@ -626,7 +619,7 @@ export const Layout = (props: Props) => {
               <img
                 alt="KaleidoSwap"
                 className={`cursor-pointer transition-all duration-300 ${isSidebarCollapsed ? 'w-10 h-10' : 'h-8'}`}
-                onClick={() => navigate(WALLET_DASHBOARD_PATH)}
+                onClick={() => navigate(WALLET_SETUP_PATH)}
                 src={logo}
               />
 
@@ -666,22 +659,28 @@ export const Layout = (props: Props) => {
                     <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                       Quick Actions
                     </h3>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                       <button
-                        className="flex items-center justify-center space-x-1 bg-blue-darker hover:bg-blue-dark/70 
-                                 text-cyan rounded-lg py-2 transition-colors"
+                        className="flex items-center justify-center space-x-2 bg-blue-darker hover:bg-blue-dark
+                                 text-white rounded-lg py-2.5 px-3 transition-all duration-200
+                                 border border-cyan/10 hover:border-cyan/30 group"
                         onClick={() => handleTransactionAction('deposit')}
                       >
-                        <ArrowDownLeft className="w-4 h-4" />
-                        <span className="text-sm">Deposit</span>
+                        <div className="p-1 rounded-full bg-cyan/10 text-cyan group-hover:bg-cyan/20 transition-colors">
+                          <ArrowDownLeft className="w-4 h-4" />
+                        </div>
+                        <span className="font-medium text-sm">Deposit</span>
                       </button>
                       <button
-                        className="flex items-center justify-center space-x-1 bg-blue-darker hover:bg-blue-dark/70 
-                                 text-cyan rounded-lg py-2 transition-colors"
+                        className="flex items-center justify-center space-x-2 bg-blue-darker hover:bg-blue-dark
+                                 text-white rounded-lg py-2.5 px-3 transition-all duration-200
+                                 border border-purple/10 hover:border-purple/30 group"
                         onClick={() => handleTransactionAction('withdraw')}
                       >
-                        <ArrowUpRight className="w-4 h-4" />
-                        <span className="text-sm">Withdraw</span>
+                        <div className="p-1 rounded-full bg-purple/10 text-purple group-hover:bg-purple/20 transition-colors">
+                          <ArrowUpRight className="w-4 h-4" />
+                        </div>
+                        <span className="font-medium text-sm">Withdraw</span>
                       </button>
                     </div>
                   </div>
@@ -847,6 +846,9 @@ export const Layout = (props: Props) => {
         rtl={false}
         theme="dark"
       />
+
+      {/* Add LayoutModal for deposit/withdraw functionality */}
+      <LayoutModal />
     </div>
   )
 }

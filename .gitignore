@@ -33,3 +33,5 @@ bin
 .env
 
 rgb-lightning-node
+
+src-tauri/gen

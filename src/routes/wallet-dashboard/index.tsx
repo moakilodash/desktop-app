@@ -12,6 +12,9 @@ import {
   Blocks,
   Database,
   Users,
+  Download,
+  Upload,
+  History,
 } from 'lucide-react'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -33,7 +36,6 @@ import {
   InfoCard,
   InfoCardGrid,
   NetworkWarningAlert,
-  ActionButton,
   OverlayTooltip,
 } from '../../components/ui'
 import { UTXOManagementModal } from '../../components/UTXOManagementModal'
@@ -129,41 +131,58 @@ const AssetRow: React.FC<AssetRowProps> = ({
         )}
       </div>
 
-      <div className="text-sm py-3 pl-4 pr-6 flex justify-between">
-        <ActionButton
-          color="cyan"
-          onClick={() =>
-            dispatch(
-              uiSliceActions.setModal({
-                assetId: asset.asset_id,
-                type: 'deposit',
-              })
-            )
-          }
-        >
-          Deposit
-        </ActionButton>
+      <div className="text-sm py-3 pl-4 pr-6 flex justify-center">
+        <div className="flex items-center gap-3 relative">
+          <div className="relative group">
+            <button
+              className="p-2 rounded-lg border border-cyan/30 hover:border-cyan/60 hover:bg-cyan/10 transition-all duration-200"
+              onClick={() =>
+                dispatch(
+                  uiSliceActions.setModal({
+                    assetId: asset.asset_id,
+                    type: 'deposit',
+                  })
+                )
+              }
+            >
+              <Download className="w-4 h-4 text-cyan" />
+            </button>
+            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+              Deposit
+            </div>
+          </div>
 
-        <ActionButton
-          color="red"
-          onClick={() =>
-            dispatch(
-              uiSliceActions.setModal({
-                assetId: asset.asset_id,
-                type: 'withdraw',
-              })
-            )
-          }
-        >
-          Withdraw
-        </ActionButton>
+          <div className="relative group">
+            <button
+              className="p-2 rounded-lg border border-red/30 hover:border-red/60 hover:bg-red/10 transition-all duration-200"
+              onClick={() =>
+                dispatch(
+                  uiSliceActions.setModal({
+                    assetId: asset.asset_id,
+                    type: 'withdraw',
+                  })
+                )
+              }
+            >
+              <Upload className="w-4 h-4 text-red" />
+            </button>
+            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+              Withdraw
+            </div>
+          </div>
 
-        <ActionButton
-          color="purple"
-          onClick={() => navigate(WALLET_HISTORY_PATH)}
-        >
-          History
-        </ActionButton>
+          <div className="relative group">
+            <button
+              className="p-2 rounded-lg border border-purple/30 hover:border-purple/60 hover:bg-purple/10 transition-all duration-200"
+              onClick={() => navigate(WALLET_HISTORY_PATH)}
+            >
+              <History className="w-4 h-4 text-purple" />
+            </button>
+            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+              History
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
