@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux'
 import { twJoin } from 'tailwind-merge'
 
 import { RootState } from '../../../app/store'
+import { Button, Badge, IconButton } from '../../../components/ui'
 import { nodeApi } from '../../../slices/nodeApi/nodeApi.slice'
 
 const COL_CLASS_NAME = 'py-3 px-4'
@@ -66,21 +67,29 @@ const Withdrawal: React.FC<WithdrawalProps> = ({
   const displayAsset = asset === 'BTC' ? bitcoinUnit : asset
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-8 even:bg-blue-dark rounded items-center text-base sm:text-lg font-medium p-4 sm:p-0">
+    <div className="grid grid-cols-1 sm:grid-cols-8 border-b border-slate-700 items-center text-base font-medium p-4 sm:p-0 hover:bg-slate-800/30 transition-colors">
       <div className={twJoin(COL_CLASS_NAME, 'flex items-center')}>
         {type === 'on-chain' ? (
-          <Chain className="w-5 h-5 mr-2" />
+          <Badge
+            icon={<Chain className="w-4 h-4" />}
+            size="sm"
+            variant="primary"
+          >
+            On-chain
+          </Badge>
         ) : (
-          <Zap className="w-5 h-5 mr-2" />
+          <Badge icon={<Zap className="w-4 h-4" />} size="sm" variant="info">
+            Off-chain
+          </Badge>
         )}
-        <span className="hidden sm:inline">
-          {type === 'on-chain' ? 'On-chain' : 'Off-chain'}
-        </span>
       </div>
       <div className={COL_CLASS_NAME}>{displayAsset}</div>
       <div className={COL_CLASS_NAME}>{formattedAmount}</div>
       <div
-        className={twJoin(COL_CLASS_NAME, 'col-span-1 sm:col-span-5 truncate')}
+        className={twJoin(
+          COL_CLASS_NAME,
+          'col-span-1 sm:col-span-5 truncate text-slate-400'
+        )}
       >
         {txId}
       </div>
@@ -146,54 +155,61 @@ export const Component: React.FC = () => {
   )
 
   return (
-    <div className="bg-blue-dark p-6 rounded-lg">
+    <div>
       <div className="flex justify-between items-center flex-wrap gap-4 mb-6">
-        <h2 className="text-2xl font-bold">Withdrawal History</h2>
+        <h2 className="text-xl font-bold text-white">Withdrawal History</h2>
         <div className="flex space-x-2">
-          <button
-            className={`px-4 py-2 rounded ${filter === 'all' ? 'bg-cyan text-blue-dark' : 'bg-section-lighter text-white'}`}
+          <Button
             onClick={() => setFilter('all')}
+            size="sm"
+            variant={filter === 'all' ? 'primary' : 'outline'}
           >
             All
-          </button>
-          <button
-            className={`px-4 py-2 rounded ${filter === 'on-chain' ? 'bg-cyan text-blue-dark' : 'bg-section-lighter text-white'}`}
+          </Button>
+          <Button
             onClick={() => setFilter('on-chain')}
+            size="sm"
+            variant={filter === 'on-chain' ? 'primary' : 'outline'}
           >
             On-chain
-          </button>
-          <button
-            className={`px-4 py-2 rounded ${filter === 'off-chain' ? 'bg-cyan text-blue-dark' : 'bg-section-lighter text-white'}`}
+          </Button>
+          <Button
             onClick={() => setFilter('off-chain')}
+            size="sm"
+            variant={filter === 'off-chain' ? 'primary' : 'outline'}
           >
             Off-chain
-          </button>
-          <button
-            className="ml-4 p-2 rounded bg-section-lighter text-white hover:bg-cyan hover:text-blue-dark transition-colors"
+          </Button>
+          <IconButton
+            aria-label="Refresh"
             disabled={isRefreshing}
+            icon={
+              isRefreshing ? (
+                <Loader className="w-5 h-5 animate-spin" />
+              ) : (
+                <RefreshCw className="w-5 h-5" />
+              )
+            }
             onClick={handleRefresh}
-          >
-            {isRefreshing ? (
-              <Loader className="w-5 h-5 animate-spin" />
-            ) : (
-              <RefreshCw className="w-5 h-5" />
-            )}
-          </button>
+            variant="outline"
+          />
         </div>
       </div>
 
       {filteredWithdrawals.length === 0 ? (
-        <div className="text-center py-8 text-grey-light">
+        <div className="text-center py-8 text-slate-400 bg-slate-800/30 rounded-lg border border-slate-700">
           No withdrawals yet.
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto bg-slate-800/30 rounded-lg border border-slate-700">
           <div className="min-w-max">
-            <div className="grid grid-cols-8 font-medium text-grey-light">
+            <div className="grid grid-cols-1 sm:grid-cols-8 font-medium text-slate-400 border-b border-slate-700 py-2">
               <div className={COL_CLASS_NAME}>Type</div>
               <div className={COL_CLASS_NAME}>Asset</div>
               <div className={COL_CLASS_NAME}>Amount</div>
-              <div className={twJoin(COL_CLASS_NAME, 'col-span-5')}>
+              <div
+                className={twJoin(COL_CLASS_NAME, 'col-span-1 sm:col-span-5')}
+              >
                 Transaction ID
               </div>
             </div>

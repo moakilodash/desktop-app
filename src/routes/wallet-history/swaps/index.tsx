@@ -15,6 +15,7 @@ import { toast } from 'react-toastify'
 import { twJoin } from 'tailwind-merge'
 
 import { RootState } from '../../../app/store'
+import { Button, IconButton, Badge } from '../../../components/ui'
 import { nodeApi, SwapDetails } from '../../../slices/nodeApi/nodeApi.slice'
 
 const COL_CLASS_NAME = 'py-3 px-2'
@@ -98,31 +99,21 @@ const SwapRow: React.FC<{
   const isFromBtc = !swap.from_asset
   const isToBtc = !swap.to_asset
 
-  const statusConfig = {
-    Expired: {
-      bgColor: 'bg-gray-500/10',
-      color: 'text-gray-500',
-    },
-    Failed: {
-      bgColor: 'bg-red-500/10',
-      color: 'text-red-500',
-    },
-    Pending: {
-      bgColor: 'bg-yellow-500/10',
-      color: 'text-yellow-500',
-    },
-    Succeeded: {
-      bgColor: 'bg-green-500/10',
-      color: 'text-green-500',
-    },
-    Waiting: {
-      bgColor: 'bg-blue-500/10',
-      color: 'text-blue-500',
-    },
-  }[swap.status || 'Pending']
+  const statusVariant = {
+    Expired: 'default',
+    Failed: 'danger',
+    Pending: 'warning',
+    Succeeded: 'success',
+    Waiting: 'info',
+  }[swap.status || 'Pending'] as
+    | 'default'
+    | 'danger'
+    | 'warning'
+    | 'success'
+    | 'info'
 
   return (
-    <div className="grid grid-cols-12 even:bg-blue-dark rounded items-center text-sm font-medium">
+    <div className="grid grid-cols-12 border-b border-slate-700 items-center text-sm font-medium hover:bg-slate-800/30 transition-colors">
       <div className={ASSET_COL_CLASS}>
         <div className="flex items-center">
           <span className="font-medium">
@@ -173,7 +164,7 @@ const SwapRow: React.FC<{
             }}
             title="Click to copy"
           >
-            <span className="font-mono text-xs">
+            <span className="font-mono text-xs text-slate-400">
               {truncateHash(swap.payment_hash)}
             </span>
             <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -182,15 +173,9 @@ const SwapRow: React.FC<{
       )}
 
       <div className={twJoin(COL_CLASS_NAME, 'col-span-2 flex justify-center')}>
-        <span
-          className={twJoin(
-            'px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap',
-            statusConfig.color,
-            statusConfig.bgColor
-          )}
-        >
+        <Badge size="sm" variant={statusVariant}>
           {swap.status || 'Pending'}
-        </span>
+        </Badge>
       </div>
     </div>
   )
@@ -205,15 +190,15 @@ const ColumnSelector: React.FC<{
 
   return (
     <div className="relative">
-      <button
-        className="p-2 rounded bg-section-lighter text-white hover:bg-cyan hover:text-blue-dark transition-colors"
+      <IconButton
+        aria-label="Column Settings"
+        icon={<Settings2 className="w-5 h-5" />}
         onClick={() => setIsOpen(!isOpen)}
-      >
-        <Settings2 className="w-5 h-5" />
-      </button>
+        variant="outline"
+      />
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 bg-slate-800 rounded-lg shadow-lg p-4 z-10 min-w-[200px]">
+        <div className="absolute right-0 mt-2 bg-slate-800 rounded-lg shadow-lg p-4 z-10 min-w-[200px] border border-slate-700">
           <div className="space-y-2">
             <label className="flex items-center gap-2 text-sm">
               <input
@@ -403,7 +388,7 @@ export const Component: React.FC = () => {
           className={twJoin(
             'w-3 h-3 -mb-1',
             sortConfig.key === sortKey && sortConfig.direction === 'asc'
-              ? 'text-cyan'
+              ? 'text-blue-500'
               : 'text-slate-600'
           )}
         />
@@ -411,7 +396,7 @@ export const Component: React.FC = () => {
           className={twJoin(
             'w-3 h-3',
             sortConfig.key === sortKey && sortConfig.direction === 'desc'
-              ? 'text-cyan'
+              ? 'text-blue-500'
               : 'text-slate-600'
           )}
         />
@@ -420,26 +405,40 @@ export const Component: React.FC = () => {
   )
 
   if (swapsLoading || assetsLoading) {
-    return <div className="text-center py-8">Loading swap history...</div>
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <Loader className="w-12 h-12 animate-spin text-cyan" />
+        <p className="text-slate-400">Loading swap history...</p>
+      </div>
+    )
   }
 
   if (swapsError || assetsError) {
     return (
-      <div className="text-center py-8 text-red-500">
+      <div className="text-center py-8 text-red-500 bg-slate-800/30 rounded-lg border border-slate-700 p-6">
         Error loading swap history. Please try again later.
+        <div className="mt-4">
+          <Button
+            icon={<RefreshCw className="w-4 h-4" />}
+            onClick={handleRefresh}
+            variant="outline"
+          >
+            Try Again
+          </Button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-blue-dark p-4 rounded-lg">
+    <div>
       <div className="flex justify-between items-center flex-wrap gap-4 mb-6">
-        <h2 className="text-2xl font-bold">Swap History</h2>
-        <div className="flex items-center space-x-2">
+        <h2 className="text-xl font-bold text-white">Swap History</h2>
+        <div className="flex items-center space-x-2 flex-wrap gap-2">
           <div className="relative">
             <input
-              className="pl-9 pr-4 py-2 bg-slate-800 rounded-lg text-sm text-white placeholder-slate-400
-                       border border-slate-700 focus:border-cyan focus:outline-none"
+              className="pl-9 pr-4 py-2 bg-slate-800/50 rounded-lg text-sm text-white placeholder-slate-400
+                       border border-slate-700 focus:border-blue-500 focus:outline-none"
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search swaps..."
               type="text"
@@ -447,56 +446,49 @@ export const Component: React.FC = () => {
             />
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           </div>
-          <button
-            className={`px-4 py-2 rounded ${
-              filter === 'all'
-                ? 'bg-cyan text-blue-dark'
-                : 'bg-section-lighter text-white'
-            }`}
+          <Button
             onClick={() => setFilter('all')}
+            size="sm"
+            variant={filter === 'all' ? 'primary' : 'outline'}
           >
             All
-          </button>
-          <button
-            className={`px-4 py-2 rounded ${
-              filter === 'maker'
-                ? 'bg-cyan text-blue-dark'
-                : 'bg-section-lighter text-white'
-            }`}
+          </Button>
+          <Button
             onClick={() => setFilter('maker')}
+            size="sm"
+            variant={filter === 'maker' ? 'primary' : 'outline'}
           >
             Maker
-          </button>
-          <button
-            className={`px-4 py-2 rounded ${
-              filter === 'taker'
-                ? 'bg-cyan text-blue-dark'
-                : 'bg-section-lighter text-white'
-            }`}
+          </Button>
+          <Button
             onClick={() => setFilter('taker')}
+            size="sm"
+            variant={filter === 'taker' ? 'primary' : 'outline'}
           >
             Taker
-          </button>
+          </Button>
           <ColumnSelector
             columnVisibility={columnVisibility}
             onColumnToggle={handleColumnToggle}
           />
-          <button
-            className="p-2 rounded bg-section-lighter text-white hover:bg-cyan hover:text-blue-dark transition-colors"
+          <IconButton
+            aria-label="Refresh"
             disabled={isRefreshing}
+            icon={
+              isRefreshing ? (
+                <Loader className="w-5 h-5 animate-spin" />
+              ) : (
+                <RefreshCw className="w-5 h-5" />
+              )
+            }
             onClick={handleRefresh}
-          >
-            {isRefreshing ? (
-              <Loader className="w-5 h-5 animate-spin" />
-            ) : (
-              <RefreshCw className="w-5 h-5" />
-            )}
-          </button>
+            variant="outline"
+          />
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-slate-800">
-        <div className="grid grid-cols-12 bg-slate-800/50 text-xs font-medium text-grey-light sticky top-0">
+      <div className="overflow-x-auto bg-slate-800/30 rounded-lg border border-slate-700">
+        <div className="grid grid-cols-12 bg-slate-800/50 text-xs font-medium text-slate-400 border-b border-slate-700 py-2">
           <SortHeader
             className={ASSET_COL_CLASS}
             label="Asset"
@@ -558,7 +550,7 @@ export const Component: React.FC = () => {
           />
         </div>
 
-        <div className="divide-y divide-slate-800">
+        <div>
           {sortedAndFilteredSwaps.length === 0 ? (
             <div className="py-8 text-center text-slate-400">
               {searchTerm ? 'No swaps match your search' : 'No swaps found'}
