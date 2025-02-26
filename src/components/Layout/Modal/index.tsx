@@ -11,9 +11,11 @@ export const LayoutModal = () => {
   const modal = useAppSelector(uiSliceSeletors.modal)
   const modalRef = useRef(null)
 
-  useOnClickOutside(modalRef, () =>
+  const handleCloseModal = () => {
     dispatch(uiSliceActions.setModal({ type: 'none' }))
-  )
+  }
+
+  useOnClickOutside(modalRef, handleCloseModal)
 
   if (modal.type === 'none') return null
 
@@ -21,9 +23,29 @@ export const LayoutModal = () => {
     <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div
         className="w-full max-w-5xl bg-slate-900 rounded-3xl border border-slate-800/50 
-                   shadow-2xl shadow-black/20 overflow-hidden"
+                   shadow-2xl shadow-black/20 overflow-hidden relative"
         ref={modalRef}
       >
+        <button
+          aria-label="Close modal"
+          className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-800 transition-colors"
+          onClick={handleCloseModal}
+        >
+          <svg
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M18 6L6 18"></path>
+            <path d="M6 6l12 12"></path>
+          </svg>
+        </button>
         <div className="max-h-[85vh] overflow-y-auto px-8 py-10">
           <Content modal={modal} />
         </div>
