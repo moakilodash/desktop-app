@@ -2,60 +2,32 @@
   "build": {
     "beforeBuildCommand": "pnpm build",
     "beforeDevCommand": "pnpm dev",
-    "devPath": "http://localhost:1420",
-    "distDir": "../dist"
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420"
   },
-  "package": {
-    "productName": "KaleidoSwap",
-    "version": "0.0.1"
-  },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "clipboard": {
-        "readText": true,
-        "writeText": true
-      },
-      "dialog": {
-        "message": true,
-        "open": true,
-        "save": true
-      },
-      "fs": {
-        "all": true
-      },
-      "process": {
-        "all": true
-      },
-      "shell": {
-        "all": false,
-        "open": true
-      },
-      "window": {
-        "close": true
-      }
-    },
-    "bundle": {
-      "active": true,
-      "icon": [
-        "icons/logo.icns",
-        "icons/logo.ico",
-        "icons/128x128.png",
-        "icons/256x256.png",
-        "icons/512x512.png"        
-      ],
-      "identifier": "com.kaleidoswap.dev",
-      "resources": [
-        "../bin/rgb-lightning-node"
-      ],
-      "targets": "all",
+  "bundle": {
+    "active": true,
+    "icon": [
+      "icons/logo.icns",
+      "icons/logo.ico",
+      "icons/128x128.png",
+      "icons/256x256.png",
+      "icons/512x512.png"
+    ],
+    "targets": "all",
+    "resources": ["../bin/rgb-lightning-node"],
+    "linux": {
       "appimage": {
         "bundleMediaFramework": true
       }
-    },
-    "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://raw.githubusercontent.com; connect-src 'self' http://localhost:* http://127.0.0.1:* https://* http://* ws://localhost:* wss://* ws://*;"
-    },
+    }
+  },
+  "productName": "KaleidoSwap",
+  "mainBinaryName": "KaleidoSwap",
+  "version": "0.0.1",
+  "identifier": "com.kaleidoswap.dev",
+  "plugins": {},
+  "app": {
     "windows": [
       {
         "center": true,
@@ -69,7 +41,8 @@
         "resizable": true,
         "title": "KaleidoSwap",
         "visible": false,
-        "width": 1200
+        "width": 1200,
+        "useHttpsScheme": true
       },
       {
         "alwaysOnTop": false,
@@ -80,8 +53,14 @@
         "label": "splashscreen",
         "skipTaskbar": true,
         "url": "splashscreen.html",
-        "width": 600
+        "width": 600,
+        "useHttpsScheme": true,
+        "visible": true
       }
-    ]
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://raw.githubusercontent.com; connect-src ipc: http://ipc.localhost 'self' http://localhost:* http://127.0.0.1:* https://* http://* ws://localhost:* wss://* ws://*;"
+    }
   }
 }
+

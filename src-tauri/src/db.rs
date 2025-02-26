@@ -83,22 +83,22 @@ pub fn get_db_path() -> String {
             let home = env::var("HOME").expect("Failed to get HOME directory");
             PathBuf::from(home).join("Library/Application Support/com.kaleidoswap.dev")
         } else if cfg!(target_os = "windows") {
-            let local_app_data = env::var("LOCALAPPDATA")
-                .expect("Failed to get LOCALAPPDATA directory");
+            let local_app_data =
+                env::var("LOCALAPPDATA").expect("Failed to get LOCALAPPDATA directory");
             PathBuf::from(local_app_data).join("com.kaleidoswap.dev")
         } else {
             // Linux
             let home = env::var("HOME").expect("Failed to get HOME directory");
             PathBuf::from(home).join(".local/share/com.kaleidoswap.dev")
         };
-        
+
         // Create the directory if it doesn't exist
         fs::create_dir_all(&local_app_data).expect("Failed to create app data directory");
         local_app_data
     };
 
     let db_path = app_data_dir.join("db/database.sqlite");
-    
+
     // Ensure the parent directory exists
     if let Some(parent) = db_path.parent() {
         fs::create_dir_all(parent).expect("Failed to create database directory");
@@ -149,18 +149,18 @@ pub fn insert_account(
     ldk_peer_listening_port: String,
 ) -> Result<usize, rusqlite::Error> {
     let conn = Connection::open(get_db_path())?;
-    
+
     // Check if an account with the same name already exists
     let mut stmt = conn.prepare("SELECT COUNT(*) FROM Accounts WHERE name = ?")?;
     let count: i64 = stmt.query_row([&name], |row| row.get(0))?;
-    
+
     if count > 0 {
         return Err(rusqlite::Error::SqliteFailure(
             rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
             Some("Account with this name already exists".to_string()),
         ));
     }
-    
+
     conn.execute(
         "INSERT INTO Accounts (name, network, datapath, rpc_connection_url, node_url, indexer_url, proxy_endpoint, default_lsp_url, maker_urls, default_maker_url, daemon_listening_port, ldk_peer_listening_port) 
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
@@ -217,50 +217,55 @@ pub fn update_account(
 pub fn get_account_by_name(name: &str) -> Result<Option<Account>, rusqlite::Error> {
     let conn = Connection::open(get_db_path())?;
     let mut stmt = conn.prepare("SELECT * FROM Accounts WHERE name = ?")?;
-    let account = stmt.query_row([name], |row| {
-        Ok(Account {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            network: row.get(2)?,
-            datapath: row.get(3)?,
-            rpc_connection_url: row.get(4)?,
-            node_url: row.get(5)?,
-            indexer_url: row.get(6)?,
-            proxy_endpoint: row.get(7)?,
-            default_lsp_url: row.get(8)?,
-            maker_urls: row.get(9)?,
-            default_maker_url: row.get(10)?,
-            daemon_listening_port: row.get(11)?,
-            ldk_peer_listening_port: row.get(12)?,
+    let account = stmt
+        .query_row([name], |row| {
+            Ok(Account {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                network: row.get(2)?,
+                datapath: row.get(3)?,
+                rpc_connection_url: row.get(4)?,
+                node_url: row.get(5)?,
+                indexer_url: row.get(6)?,
+                proxy_endpoint: row.get(7)?,
+                default_lsp_url: row.get(8)?,
+                maker_urls: row.get(9)?,
+                default_maker_url: row.get(10)?,
+                daemon_listening_port: row.get(11)?,
+                ldk_peer_listening_port: row.get(12)?,
+            })
         })
-    }).optional()?;
-    
+        .optional()?;
+
     Ok(account)
 }
 
 pub fn delete_account(name: String) -> Result<usize, rusqlite::Error> {
     // First get the account to check its datapath
     let account = get_account_by_name(&name)?;
-    
+
     let conn = Connection::open(get_db_path())?;
     let result = conn.execute("DELETE FROM Accounts WHERE name = ?1", [name])?;
-    
+
     // If account exists and has a datapath, delete the directory
     if let Some(account) = account {
         if let Some(datapath) = account.datapath {
             if !datapath.is_empty() {
                 let full_path = PathBuf::from("../bin").join(datapath);
                 let full_path_str = full_path.to_string_lossy();
-                
+
                 println!("Attempting to delete account folder at: {}", full_path_str);
                 match std::fs::remove_dir_all(&full_path) {
                     Ok(_) => println!("Successfully deleted account folder at: {}", full_path_str),
-                    Err(e) => println!("Failed to delete account folder at {}: {}", full_path_str, e),
+                    Err(e) => println!(
+                        "Failed to delete account folder at {}: {}",
+                        full_path_str, e
+                    ),
                 }
             }
         }
     }
-    
+
     Ok(result)
 }
 

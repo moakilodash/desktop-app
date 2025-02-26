@@ -1,5 +1,5 @@
-import { open } from '@tauri-apps/api/dialog'
-import { exists } from '@tauri-apps/api/fs'
+import { open } from '@tauri-apps/plugin-dialog'
+import { exists } from '@tauri-apps/plugin-fs'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'react-toastify'

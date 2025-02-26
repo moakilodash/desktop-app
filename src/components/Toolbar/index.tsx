@@ -1,5 +1,5 @@
+import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { invoke } from '@tauri-apps/api/tauri'
 import { Trash2, Edit, X, Server, Cloud, AlertTriangle } from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'

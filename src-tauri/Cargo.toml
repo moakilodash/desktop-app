@@ -8,13 +8,13 @@ repository = "https://github.com/kaleidoswap/desktop-app"
 edition = "2021"
 
 [build-dependencies]
-tauri-build = { version = "1.5.1", features = [] }
+tauri-build = { version = "2", features = [] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 dotenv = "0.15.0"
 
 [dependencies]
-tauri = { version = "1.5.4", features = [ "process-all", "dialog-save", "clipboard-write-text", "clipboard-read-text", "dialog-message", "dialog-open", "fs-all", "window-close", "shell-open"] }
+tauri = { version = "2", features = [] }
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
 fs_extra = "1.2"
@@ -27,8 +27,14 @@ tokio = { version = "1.0", features = ["full"] }
 async-trait = "0.1"
 parking_lot = "0.12"
 
-tauri-plugin-log = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1", features = ["colored"] }
+tauri-plugin-log = { features = ["colored"] , version = "2" }
 log = { version = "0.4.22", features = ["release_max_level_info"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-process = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-clipboard-manager = "2"
+serde_json = "1.0"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem

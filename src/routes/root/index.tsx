@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api'
+import { invoke } from '@tauri-apps/api/core'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'

@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api'
+import { invoke } from '@tauri-apps/api/core'
 import { ChevronDown, ArrowLeft, Eye, EyeOff, Lock } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
