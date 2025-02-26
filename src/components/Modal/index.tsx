@@ -1,3 +1,6 @@
+import { X } from 'lucide-react'
+import React, { useEffect } from 'react'
+
 interface ModalProps {
   title: string
   message: string
@@ -11,24 +14,58 @@ export const Modal: React.FC<ModalProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  // Prevent scrolling of the body when modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = 'auto'
+    }
+  }, [])
+
+  // Handle escape key to close modal
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onCancel()
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [onCancel])
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-      <div className="bg-blue-dark p-6 rounded-lg max-w-md w-full">
-        <h3 className="text-xl font-bold mb-4">{title}</h3>
-        <p className="mb-6">{message}</p>
-        <div className="flex justify-end space-x-4">
+    <div
+      className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn"
+      onClick={onCancel}
+    >
+      <div
+        className="bg-blue-dark p-8 rounded-xl shadow-xl max-w-md w-full mx-4 border border-divider/20 animate-scaleIn"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="relative">
           <button
-            className="px-4 py-2 rounded border border-gray-500 hover:bg-gray-700"
+            aria-label="Close modal"
+            className="absolute top-0 right-0 p-2 rounded-full hover:bg-blue-darker text-gray-400 hover:text-white transition-colors"
             onClick={onCancel}
           >
-            Cancel
+            <X size={20} />
           </button>
-          <button
-            className="px-4 py-2 rounded bg-cyan text-blue-dark hover:bg-cyan-light"
-            onClick={onConfirm}
-          >
-            Initialize
-          </button>
+          <h3 className="text-xl font-bold mb-4 text-white">{title}</h3>
+          <p className="mb-6 text-gray-300">{message}</p>
+          <div className="flex justify-end space-x-4">
+            <button
+              className="px-4 py-2 rounded-lg border border-divider/20 hover:bg-blue-darker transition-colors"
+              onClick={onCancel}
+            >
+              Cancel
+            </button>
+            <button
+              className="px-4 py-2 rounded-lg bg-cyan text-blue-darkest hover:bg-cyan/90 transition-colors"
+              onClick={onConfirm}
+            >
+              Confirm
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -259,6 +259,14 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
 
   const onSubmit = useCallback(
     (data: FormFields) => {
+      if (addAsset && !data.assetId) {
+        toast.error('Please select an asset before proceeding.', {
+          autoClose: 5000,
+          position: 'bottom-right',
+        })
+        return
+      }
+
       const parsedCapacitySat = parseInt(
         data.capacitySat.replace(/[^0-9]/g, ''),
         10
