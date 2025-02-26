@@ -3,13 +3,12 @@ import {
   ArrowLeftRight,
   Cloud,
   Server,
-  AlertTriangle,
   ArrowRight,
   Zap,
-  ShieldCheck,
   ArrowLeft,
+  HelpCircle,
 } from 'lucide-react'
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import {
@@ -18,314 +17,227 @@ import {
   WALLET_RESTORE_PATH,
 } from '../../app/router/paths'
 import { Layout } from '../../components/Layout'
-
-interface NodeOptionProps {
-  title: string
-  description: string
-  icon: React.FC<React.SVGProps<SVGSVGElement>>
-  onClick: () => void
-  selected?: boolean
-}
-
-const CardBase = `
-  relative overflow-hidden transition-all duration-300
-  border-2 rounded-2xl backdrop-blur-sm
-  hover:shadow-lg hover:shadow-cyan/5 hover:-translate-y-0.5
-`
-
-const IconWrapper = `
-  p-4 rounded-xl backdrop-blur-sm bg-opacity-20
-  flex items-center justify-center
-`
-
-const NodeOption: React.FC<NodeOptionProps> = ({
-  title,
-  description,
-  icon: Icon,
-  onClick,
-  selected,
-}) => (
-  <button
-    className={`${CardBase} w-full text-left group
-      ${
-        selected
-          ? 'bg-gradient-to-br from-cyan/10 to-transparent border-cyan'
-          : 'bg-blue-dark/40 hover:bg-blue-dark/60 border-divider/20'
-      }`}
-    onClick={onClick}
-  >
-    <div className="p-8">
-      <div className="flex items-center gap-4 mb-4">
-        <div
-          className={`${IconWrapper}
-          ${selected ? 'bg-cyan/20 text-cyan' : 'bg-cyan/5 text-cyan/80'}`}
-        >
-          <Icon className="w-8 h-8" />
-        </div>
-        <h2
-          className={`text-2xl font-bold ${selected ? 'text-cyan' : 'text-white'}`}
-        >
-          {title}
-        </h2>
-      </div>
-      <p className="text-gray-400 text-sm leading-relaxed">{description}</p>
-    </div>
-  </button>
-)
-
-interface WalletActionProps {
-  title: string
-  description: string
-  icon: React.FC<React.SVGProps<SVGSVGElement>>
-  onClick: () => void
-  primary?: boolean
-}
-
-const WalletAction: React.FC<WalletActionProps> = ({
-  title,
-  description,
-  icon: Icon,
-  onClick,
-  primary,
-}) => (
-  <button
-    className={`${CardBase} w-full text-left group
-      ${
-        primary
-          ? 'bg-gradient-to-br from-cyan/10 to-transparent border-cyan/30'
-          : 'bg-blue-dark/40 hover:bg-blue-dark/60 border-divider/20'
-      }`}
-    onClick={onClick}
-  >
-    <div className="p-8">
-      <div className="flex items-center gap-4 mb-4">
-        <div
-          className={`${IconWrapper}
-          ${primary ? 'bg-cyan/20 text-cyan' : 'bg-cyan/5 text-cyan/80'}`}
-        >
-          <Icon className="w-8 h-8" />
-        </div>
-        <h2
-          className={`text-2xl font-bold ${primary ? 'text-cyan' : 'text-white'}`}
-        >
-          {title}
-        </h2>
-      </div>
-      <p className="text-gray-400 text-sm leading-relaxed mb-6">
-        {description}
-      </p>
-      <div
-        className={`flex items-center gap-2 text-sm font-medium
-        ${primary ? 'text-cyan' : 'text-gray-400'}`}
-      >
-        Get Started
-        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-      </div>
-    </div>
-  </button>
-)
-
-const LocalNodeWarning: React.FC = () => (
-  <div className={`${CardBase} bg-yellow-600/10 border-yellow-500/20 p-6 mb-8`}>
-    <div className="flex items-center gap-3 mb-2">
-      <div className={`${IconWrapper} bg-yellow-500/10`}>
-        <AlertTriangle className="text-yellow-500 w-5 h-5" />
-      </div>
-      <span className="text-yellow-500 font-semibold">
-        Running a Local Node
-      </span>
-    </div>
-    <p className="text-yellow-500/90 leading-relaxed text-sm">
-      Local nodes require 24/7 uptime for optimal performance. For most users,
-      we recommend using a remote node instead.
-    </p>
-  </div>
-)
-
-// const LocalNodeStatus: React.FC = () => {
-//   const nodeSettings = useSelector((state: RootState) => state.nodeSettings)
-//   const nodeInfo = nodeApi.endpoints.nodeInfo.useQueryState()
-
-//   if (!nodeInfo.isSuccess) return null
-
-//   return (
-//     <div className={`${CardBase} bg-blue-dark/60 border-divider/20 p-6 mb-8`}>
-//       <div className="flex items-center gap-3 mb-4">
-//         <div className={`${IconWrapper} bg-cyan/10`}>
-//           <Server className="w-5 h-5 text-cyan" />
-//         </div>
-//         <h3 className="text-white font-semibold">Current Local Node</h3>
-//       </div>
-//       <div className="grid grid-cols-2 gap-4 text-gray-300 text-sm">
-//         <div className="space-y-2">
-//           <p>Network: {nodeSettings.data.network}</p>
-//           <p>Data Path: {nodeSettings.data.datapath}</p>
-//           <p>Account: {nodeSettings.data.name}</p>
-//         </div>
-//       </div>
-//     </div>
-//   )
-// }
-
-const RemoteNodeInfo: React.FC = () => (
-  <div className="mb-6">
-    <div
-      className={`${CardBase} bg-blue-dark/40 border-divider/20 p-6 max-w-xl`}
-    >
-      <div className="flex items-start gap-3">
-        <div className={`${IconWrapper} bg-cyan/10 scale-90`}>
-          <ShieldCheck className="w-5 h-5 text-cyan" />
-        </div>
-        <div>
-          <h3 className="text-white font-semibold mb-1 text-sm">
-            Prerequisites
-          </h3>
-          <p className="text-gray-300 text-sm">
-            You'll need a running rgb-lightning-node instance to connect.
-          </p>
-          <a
-            className="inline-flex items-center gap-1.5 mt-2 text-cyan text-sm 
-              hover:text-cyan-400 transition-colors"
-            href="https://github.com/RGB-Tools/rgb-lightning-node"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            View Setup Guide
-            <ArrowRight className="w-3.5 h-3.5" />
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
-)
+import { SupportModal } from '../../components/SupportModal'
+import { Toolbar } from '../../components/Toolbar'
+import { Card, Button } from '../../components/ui'
+import {
+  NodeOption,
+  WalletAction,
+  LocalNodeWarning,
+  RemoteNodeInfo,
+  IconWrapper,
+} from '../../components/wallet-setup'
 
 export const Component = () => {
   const navigate = useNavigate()
   const [nodeType, setNodeType] = useState<'local' | 'remote' | null>(null)
+  const [isTransitioning, setIsTransitioning] = useState(false)
+  // State for support modal
+  const [showSupportModal, setShowSupportModal] = useState(false)
 
+  // Handle transitions
   const handleNodeTypeChange = (type: 'local' | 'remote' | null) => {
-    setNodeType(type)
+    if (type !== nodeType && !isTransitioning) {
+      setIsTransitioning(true)
+
+      // Apply fade-out class first
+      const content = document.getElementById('wallet-setup-content')
+      if (content) {
+        content.classList.remove('fade-in')
+        content.classList.add('fade-out')
+      }
+
+      // Short delay for transition
+      setTimeout(() => {
+        setNodeType(type)
+        setIsTransitioning(false)
+
+        // Re-add fade-in class
+        if (content) {
+          content.classList.remove('fade-out')
+          content.classList.add('fade-in')
+        }
+      }, 250)
+    }
   }
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto w-full p-6">
-        <div
-          className="bg-blue-darkest/80 backdrop-blur-sm rounded-3xl shadow-xl p-12 
-          border border-white/5"
-        >
-          {!nodeType ? (
-            <>
-              <div className="text-center mb-12">
-                <div
-                  className={`${IconWrapper} bg-cyan/10 border border-cyan/20 
-                  inline-flex rounded-2xl mb-6`}
-                >
-                  <Zap className="w-10 h-10 text-cyan" />
-                </div>
-                <h1 className="text-4xl font-bold mb-3 text-white">
-                  Connect to RGB Lightning Network
-                </h1>
-                <p className="text-gray-400 text-lg max-w-xl mx-auto">
-                  Choose your preferred way to connect
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <NodeOption
-                  description="Run a node on your computer. Ideal for developers and advanced users."
-                  icon={Server}
-                  onClick={() => handleNodeTypeChange('local')}
-                  title="Local Node"
-                />
-                <NodeOption
-                  description="Connect to an existing node. Best for most users."
-                  icon={Cloud}
-                  onClick={() => handleNodeTypeChange('remote')}
-                  title="Remote Node"
-                />
-              </div>
-            </>
-          ) : nodeType === 'local' ? (
-            <>
-              <button
-                className="text-cyan mb-8 flex items-center gap-2 hover:text-cyan-600 
-                  transition-colors group"
-                onClick={() => handleNodeTypeChange(null)}
-              >
-                <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-                Back to node selection
-              </button>
-              <div className="flex items-center gap-3 mb-8">
-                <div
-                  className={`${IconWrapper} bg-cyan/10 border border-cyan/20`}
-                >
-                  <Server className="w-6 h-6 text-cyan" />
-                </div>
-                <h2 className="text-3xl font-bold text-white">
-                  Local Node Setup
-                </h2>
-              </div>
-              <LocalNodeWarning />
-              {/* <LocalNodeStatus /> */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <WalletAction
-                  description="Create a fresh RGB Lightning wallet with a guided setup process."
-                  icon={Wallet}
-                  onClick={() => {
-                    handleNodeTypeChange(null)
-                    navigate(WALLET_INIT_PATH)
-                  }}
-                  primary
-                  title="New Wallet"
-                />
-                <WalletAction
-                  description="Import an existing wallet using your backup phrase."
-                  icon={ArrowLeftRight}
-                  onClick={() => {
-                    handleNodeTypeChange(null)
-                    navigate(WALLET_RESTORE_PATH)
-                  }}
-                  title="Restore Wallet"
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <button
-                className="text-cyan mb-8 flex items-center gap-2 hover:text-cyan-600 
-                  transition-colors group"
-                onClick={() => handleNodeTypeChange(null)}
-              >
-                <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-                Back to node selection
-              </button>
-              <div className="flex items-center gap-3 mb-8">
-                <div
-                  className={`${IconWrapper} bg-cyan/10 border border-cyan/20`}
-                >
-                  <Cloud className="w-6 h-6 text-cyan" />
-                </div>
-                <h2 className="text-3xl font-bold text-white">
-                  Remote Node Connection
-                </h2>
-              </div>
+      <div className="flex h-screen overflow-hidden">
+        {/* Sidebar with Toolbar */}
+        <div className="w-72 h-full bg-blue-darkest border-r border-divider/10 flex flex-col">
+          <div className="flex items-center p-4 border-b border-divider/10">
+            <img
+              alt="KaleidoSwap"
+              className="h-8 cursor-pointer"
+              onClick={() => {}}
+              src="/src/assets/logo.svg"
+            />
+          </div>
 
-              <RemoteNodeInfo />
+          {/* Toolbar */}
+          <div className="flex-1 overflow-hidden">
+            <Toolbar />
+          </div>
 
-              <WalletAction
-                description="Link to your existing RGB Lightning node securely."
-                icon={Cloud}
-                onClick={() => {
-                  handleNodeTypeChange(null)
-                  navigate(WALLET_REMOTE_PATH)
-                }}
-                primary
-                title="Connect Node"
-              />
-            </>
-          )}
+          {/* Support button at bottom of sidebar */}
+          <div className="p-4 border-t border-divider/10">
+            <button
+              className="w-full flex items-center justify-center space-x-2 px-4 py-2 
+                bg-blue-dark/50 hover:bg-blue-dark text-cyan rounded-lg 
+                transition-colors duration-200"
+              onClick={() => setShowSupportModal(true)}
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span>Get Help & Support</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 overflow-auto">
+          <div className="min-h-screen py-6 md:py-12 flex items-center justify-center p-3">
+            <Card className="p-5 md:p-8 w-full max-w-4xl backdrop-blur-md bg-blue-dark/30 border-divider/30 shadow-xl shadow-blue-darkest/30">
+              <div
+                className="fade-in content-container"
+                id="wallet-setup-content"
+              >
+                {!nodeType ? (
+                  <>
+                    <div className="text-center mb-10 slide-in">
+                      <div
+                        className={`${IconWrapper} bg-gradient-to-br from-cyan/30 to-cyan/5 border border-cyan/30 
+                        inline-flex rounded-2xl mb-5 shadow-lg shadow-cyan/5`}
+                      >
+                        <Zap className="w-8 h-8 text-cyan" />
+                      </div>
+                      <h1 className="text-2xl md:text-3xl font-bold mb-3 bg-gradient-to-r from-cyan to-blue-400 bg-clip-text text-transparent">
+                        Connect to RGB Lightning Network
+                      </h1>
+                      <p className="text-gray-400 text-sm md:text-base max-w-xl mx-auto">
+                        Choose your preferred way to connect to the network
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <NodeOption
+                        description="Connect to a hosted node or self-hosted instance. Recommended for most users and advanced setups."
+                        icon={<Cloud className="w-6 h-6" />}
+                        onClick={() => handleNodeTypeChange('remote')}
+                        recommended={true}
+                        title="Remote Node"
+                      />
+                      <NodeOption
+                        description="Run a node on your local machine. Ideal for developers and testing environments."
+                        icon={<Server className="w-6 h-6" />}
+                        onClick={() => handleNodeTypeChange('local')}
+                        title="Local Node"
+                      />
+                    </div>
+                  </>
+                ) : nodeType === 'local' ? (
+                  <>
+                    <div className="mb-6 slide-in">
+                      <Button
+                        className="hover:bg-blue-dark/60"
+                        icon={<ArrowLeft className="w-4 h-4" />}
+                        onClick={() => handleNodeTypeChange(null)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        Back to Connection Options
+                      </Button>
+                    </div>
+
+                    <div className="text-center mb-8 slide-in">
+                      <div
+                        className={`${IconWrapper} bg-gradient-to-br from-cyan/20 to-cyan/5 border border-cyan/20 
+                        inline-flex rounded-2xl mb-4 shadow-lg shadow-cyan/5`}
+                      >
+                        <Server className="w-7 h-7 text-cyan" />
+                      </div>
+                      <h1 className="text-2xl md:text-3xl font-bold mb-3 bg-gradient-to-r from-cyan to-blue-400 bg-clip-text text-transparent">
+                        Set Up Local Node
+                      </h1>
+                      <p className="text-gray-400 text-sm md:text-base max-w-xl mx-auto">
+                        Choose an option to get started with your local RGB
+                        Lightning node
+                      </p>
+                    </div>
+
+                    <LocalNodeWarning />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <WalletAction
+                        description="Create a new wallet with a fresh seed phrase and set up your node."
+                        icon={<Wallet className="w-6 h-6 text-white" />}
+                        onClick={() => navigate(WALLET_INIT_PATH)}
+                        primary
+                        title="Create New Wallet"
+                      />
+                      <WalletAction
+                        description="Restore a wallet using your existing encrypted backup."
+                        icon={<ArrowLeftRight className="w-6 h-6 text-white" />}
+                        onClick={() => navigate(WALLET_RESTORE_PATH)}
+                        title="Restore Wallet"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="mb-6 slide-in">
+                      <Button
+                        className="hover:bg-blue-dark/60"
+                        icon={<ArrowLeft className="w-4 h-4" />}
+                        onClick={() => handleNodeTypeChange(null)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        Back to Connection Options
+                      </Button>
+                    </div>
+
+                    <div className="text-center mb-8 slide-in">
+                      <div
+                        className={`${IconWrapper} bg-gradient-to-br from-cyan/20 to-cyan/5 border border-cyan/20 
+                        inline-flex rounded-2xl mb-4 shadow-lg shadow-cyan/5`}
+                      >
+                        <Cloud className="w-7 h-7 text-cyan" />
+                      </div>
+                      <h1 className="text-2xl md:text-3xl font-bold mb-3 bg-gradient-to-r from-cyan to-blue-400 bg-clip-text text-transparent">
+                        Connect to Remote Node
+                      </h1>
+                      <p className="text-gray-400 text-sm md:text-base max-w-xl mx-auto">
+                        Connect to an existing RGB Lightning node hosted by you
+                        or a provider
+                      </p>
+                    </div>
+
+                    <RemoteNodeInfo />
+
+                    <div className="flex justify-center mt-6 fade-in">
+                      <Button
+                        icon={<ArrowRight className="w-5 h-5 ml-1" />}
+                        iconPosition="right"
+                        onClick={() => navigate(WALLET_REMOTE_PATH)}
+                        size="lg"
+                        variant="primary"
+                      >
+                        Continue to Connection Setup
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </Card>
+          </div>
         </div>
       </div>
+
+      {/* Support Modal */}
+      <SupportModal
+        isOpen={showSupportModal}
+        onClose={() => setShowSupportModal(false)}
+      />
     </Layout>
   )
 }

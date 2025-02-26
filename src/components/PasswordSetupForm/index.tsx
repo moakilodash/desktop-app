@@ -2,6 +2,8 @@ import { Eye, EyeOff, AlertCircle, Loader2, ArrowRight } from 'lucide-react'
 import { useState } from 'react'
 import { UseFormReturn, SubmitHandler } from 'react-hook-form'
 
+import { Button, Card, Alert } from '../ui'
+
 export interface PasswordFields {
   password: string
   confirmPassword: string
@@ -36,25 +38,14 @@ export const PasswordSetupForm = ({
 
   return (
     <div className="w-full">
-      {/* Header Section */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="p-3 rounded-xl bg-cyan/10 border border-cyan/20 text-cyan">
-          <Eye className="w-5 h-5" />
-        </div>
-        <h2 className="text-2xl font-bold text-white">Create Password</h2>
-      </div>
-
       <p className="text-slate-400 mb-6 leading-relaxed">
         Set a strong password to secure your node. This password will be
         required to access your wallet.
       </p>
 
       {/* Form Section */}
-      <form
-        className="bg-blue-dark/40 p-6 rounded-xl border border-white/5"
-        onSubmit={form.handleSubmit(handleSubmit)}
-      >
-        <div className="space-y-5">
+      <Card className="p-6 bg-blue-dark/40 border border-white/5">
+        <form className="space-y-5" onSubmit={form.handleSubmit(handleSubmit)}>
           {/* Password Field */}
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1.5">
@@ -179,45 +170,41 @@ export const PasswordSetupForm = ({
 
           {/* Error Display */}
           {errors.length > 0 && (
-            <div
-              className="p-3 bg-red-500/10 border border-red-500/20 
-                          rounded-lg flex items-start gap-3"
+            <Alert
+              icon={<AlertCircle className="w-5 h-5" />}
+              title="Error"
+              variant="error"
             >
-              <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-              <ul className="text-red-400 text-xs space-y-1">
+              <ul className="text-sm space-y-1">
                 {errors.map((error, index) => (
                   <li className="flex items-center gap-2" key={index}>
                     <span>•</span> {error}
                   </li>
                 ))}
               </ul>
-            </div>
+            </Alert>
           )}
 
           {/* Submit Button */}
-          <button
-            className="w-full mt-4 px-6 py-2.5 rounded-lg bg-cyan text-blue-darkest 
-                     font-semibold hover:bg-cyan/90 transition-colors duration-200
-                     focus:ring-2 focus:ring-cyan/20 focus:outline-none
-                     flex items-center justify-center gap-2 text-sm
-                     disabled:opacity-50 disabled:cursor-not-allowed"
+          <Button
+            className="w-full mt-4"
             disabled={isSubmitting}
-            type="submit"
-          >
-            {isSubmitting ? (
-              <>
+            icon={
+              isSubmitting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Initializing...</span>
-              </>
-            ) : (
-              <>
-                <span>Initialize Node</span>
+              ) : (
                 <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
-        </div>
-      </form>
+              )
+            }
+            iconPosition="right"
+            size="lg"
+            type="submit"
+            variant="primary"
+          >
+            {isSubmitting ? 'Initializing...' : 'Initialize Node'}
+          </Button>
+        </form>
+      </Card>
     </div>
   )
 }

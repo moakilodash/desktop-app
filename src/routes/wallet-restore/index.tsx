@@ -1,15 +1,14 @@
 import { invoke } from '@tauri-apps/api'
 import { open } from '@tauri-apps/api/dialog'
 import {
-  ChevronDown,
-  ChevronLeft,
   CheckCircle,
   XCircle,
   AlertTriangle,
   Folder,
   ArrowLeftRight,
+  AlertCircle,
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
@@ -17,8 +16,21 @@ import { toast } from 'react-toastify'
 import { TRADE_PATH, WALLET_SETUP_PATH } from '../../app/router/paths'
 import { useAppDispatch } from '../../app/store/hooks'
 import { Layout } from '../../components/Layout'
+import { NetworkSelector } from '../../components/NetworkSelector'
 import { Spinner } from '../../components/Spinner'
 import { StepIndicator } from '../../components/StepIndicator'
+import {
+  Button,
+  Card,
+  Alert,
+  SetupLayout,
+  SetupSection,
+  FormField,
+  Input,
+  PasswordInput,
+  AdvancedSettings,
+  NetworkSettings,
+} from '../../components/ui'
 import { BitcoinNetwork } from '../../constants'
 import { NETWORK_DEFAULTS } from '../../constants/networks'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
@@ -170,9 +182,10 @@ const StatusModal = ({
 
 export const Component = () => {
   const [isStartingNode, setIsStartingNode] = useState(false)
-  const [additionalErrors] = useState<string[]>([])
-  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [additionalErrors, setAdditionalErrors] = useState<string[]>([])
   const [currentStep, setCurrentStep] = useState<string>('backup-selection')
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false)
+  const isSubmitting = useRef(false)
 
   // Unified modal state
   const [modalState, setModalState] = useState<ModalState>({
@@ -184,7 +197,7 @@ export const Component = () => {
     type: ModalType.NONE,
   })
 
-  const [restore, restoreResponse] = nodeApi.endpoints.restore.useLazyQuery()
+  const [restore] = nodeApi.endpoints.restore.useLazyQuery()
   const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
 
   const navigate = useNavigate()
@@ -217,6 +230,10 @@ export const Component = () => {
     // Navigate if it was a success modal
     if (modalState.type === ModalType.SUCCESS) {
       navigate(TRADE_PATH)
+    } else if (modalState.type === ModalType.ERROR) {
+      // On error, go back to the first step
+      setCurrentStep('backup-selection')
+      setIsStartingNode(false)
     }
   }
 
@@ -244,15 +261,32 @@ export const Component = () => {
   }
 
   const onSubmit = async (data: FormData) => {
-    if (isStartingNode) return
+    // Prevent multiple submissions
+    if (isStartingNode || isSubmitting.current) return
 
-    let nodeInfoRes = await nodeInfo()
-    if (nodeInfoRes.isSuccess) {
-      navigate(TRADE_PATH)
-      return
-    }
+    isSubmitting.current = true
+    setAdditionalErrors([])
 
     try {
+      let nodeInfoRes = await nodeInfo()
+      if (nodeInfoRes.isSuccess) {
+        navigate(TRADE_PATH)
+        return
+      }
+
+      // Validate required fields
+      if (!data.backup_path) {
+        setAdditionalErrors(['Please select a backup file'])
+        isSubmitting.current = false
+        return
+      }
+
+      if (!data.password) {
+        setAdditionalErrors(['Password is required'])
+        isSubmitting.current = false
+        return
+      }
+
       const formattedName = data.name
         .toLowerCase()
         .replace(/[^a-z0-9]/g, '-')
@@ -269,6 +303,7 @@ export const Component = () => {
           'Account Already Exists',
           'An account with this name already exists. Please choose a different name.'
         )
+        isSubmitting.current = false
         return
       }
 
@@ -353,7 +388,6 @@ export const Component = () => {
           'Node Operation Failed',
           `Failed to start or operate the node: ${error instanceof Error ? error.message : String(error)}`
         )
-        return
       }
     } catch (error) {
       console.error('Restore failed:', error)
@@ -364,13 +398,14 @@ export const Component = () => {
       await invoke('stop_node')
     } finally {
       setIsStartingNode(false)
+      isSubmitting.current = false
     }
   }
 
-  const handleFileSelect = async () => {
+  const handleSelectBackupFile = async () => {
     try {
-      // Open file dialog and get the selected path
-      const filePath = await open({
+      const selected = await open({
+        directory: false,
         filters: [
           {
             extensions: ['enc'],
@@ -379,378 +414,173 @@ export const Component = () => {
         ],
         multiple: false,
       })
-
-      if (filePath && typeof filePath === 'string') {
-        console.log('Selected file path:', filePath)
-
-        // Update the form value with the real file path
-        form.setValue('backup_path', filePath, {
-          shouldDirty: true,
-          shouldTouch: true,
-          shouldValidate: true,
-        })
-
-        console.log('Form value after setting:', form.getValues('backup_path'))
+      if (selected && typeof selected === 'string') {
+        form.setValue('backup_path', selected)
       }
     } catch (error) {
-      console.error('Error selecting file:', error)
+      console.error('Error selecting backup file:', error)
       toast.error('Failed to select backup file')
     }
   }
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto w-full p-6">
-        <div className="bg-blue-darkest/80 backdrop-blur-sm rounded-3xl shadow-xl p-12 border border-white/5">
-          <button
-            className="text-cyan mb-8 flex items-center gap-2 hover:text-cyan-600 
-              transition-colors group"
-            onClick={() => navigate(WALLET_SETUP_PATH)}
-          >
-            <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-            Back to node selection
-          </button>
+      <SetupLayout
+        fullHeight
+        icon={<ArrowLeftRight />}
+        maxWidth="xl"
+        onBack={() => navigate(WALLET_SETUP_PATH)}
+        subtitle="Restore your wallet from a backup file"
+        title="Restore Wallet"
+      >
+        <div className="mb-8">
+          <StepIndicator currentStep={currentStep} steps={steps} />
+        </div>
 
-          <div className="flex items-center gap-4 mb-8">
-            <div className="p-4 rounded-xl bg-cyan/10 border border-cyan/20 text-cyan">
-              <ArrowLeftRight className="w-6 h-6" />
-            </div>
-            <h1 className="text-3xl font-bold text-white">Restore Wallet</h1>
-          </div>
+        {currentStep === 'backup-selection' && (
+          <div className="max-w-2xl mx-auto">
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <Card className="p-6 mb-6">
+                <div className="space-y-6">
+                  {additionalErrors.length > 0 && (
+                    <Alert
+                      icon={<AlertCircle className="w-5 h-5" />}
+                      title="Error"
+                      variant="error"
+                    >
+                      <ul className="text-sm space-y-1">
+                        {additionalErrors.map((error, index) => (
+                          <li className="flex items-center gap-2" key={index}>
+                            <span>•</span> {error}
+                          </li>
+                        ))}
+                      </ul>
+                    </Alert>
+                  )}
 
-          {/* Step Indicator */}
-          <div className="mb-8">
-            <StepIndicator currentStep={currentStep} steps={steps} />
-          </div>
+                  <FormField
+                    description="This name will be used to create your account folder"
+                    error={form.formState.errors.name?.message}
+                    htmlFor="name"
+                    label="Account Name"
+                  >
+                    <Input
+                      id="name"
+                      placeholder="Enter a name for your account"
+                      {...form.register('name', {
+                        required: 'Account name is required',
+                      })}
+                      error={!!form.formState.errors.name}
+                    />
+                  </FormField>
 
-          {restoreResponse.isLoading || isStartingNode ? (
-            <div className="py-20 flex flex-col items-center space-y-4">
-              <Spinner size={30} />
-              <div className="text-center">
-                <div className="mb-2">Restoring your wallet...</div>
-                <div className="text-sm text-gray-400">
-                  This process may take a few moments
-                </div>
-              </div>
-            </div>
-          ) : (
-            <>
-              <form
-                className="flex items-center justify-center flex-col"
-                onSubmit={form.handleSubmit(onSubmit)}
-              >
-                <div className="max-w-xl mx-auto w-full">
-                  <div className="bg-blue-dark/40 p-8 rounded-xl border border-white/5 space-y-6">
-                    {/* Account Name Field */}
-                    <div>
-                      <div className="text-sm font-medium mb-2 text-slate-300">
-                        Account Name
-                      </div>
-                      <div className="relative">
-                        <input
-                          className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
-                                    bg-slate-800/30 text-slate-300 
-                                    focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                                    outline-none transition-all placeholder:text-slate-600"
-                          placeholder="Enter a name for your account"
-                          type="text"
-                          {...form.register('name', { required: 'Required' })}
-                        />
-                      </div>
-                      <div className="text-sm text-slate-400 mt-2">
-                        This name will be used to create your account folder
-                      </div>
-                      {form.formState.errors.name && (
-                        <p className="mt-2 text-red-400 text-sm flex items-center gap-1.5">
-                          <AlertTriangle className="w-4 h-4" />
-                          {form.formState.errors.name.message}
-                        </p>
-                      )}
-                    </div>
+                  <NetworkSelector
+                    className="mb-2"
+                    onChange={(network) => form.setValue('network', network)}
+                    selectedNetwork={form.watch('network')}
+                  />
 
-                    {/* Network Selection */}
-                    <div>
-                      <div className="text-sm font-medium mb-2 text-slate-300">
-                        Network
-                      </div>
-                      <div className="relative">
-                        <select
-                          className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
-                                    bg-slate-800/30 text-slate-300 appearance-none
-                                    focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                                    outline-none transition-all"
-                          {...form.register('network', {
-                            required: 'Required',
-                          })}
-                        >
-                          <option value="Testnet">Testnet</option>
-                          <option value="Signet">Signet</option>
-                          <option value="Regtest">Regtest</option>
-                        </select>
-                        <ChevronDown
-                          className="absolute right-3 top-1/2 -translate-y-1/2 
-                                    w-5 h-5 text-slate-400 pointer-events-none"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Backup File Selection */}
-                    <div>
-                      <div className="text-sm font-medium mb-2 text-slate-300">
-                        Backup File
-                      </div>
-                      <div className="relative">
-                        <input
-                          className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
-                                    bg-slate-800/30 text-slate-300 
-                                    focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                                    outline-none transition-all placeholder:text-slate-600"
-                          placeholder="Select your backup file"
-                          readOnly
-                          type="text"
-                          {...form.register('backup_path', {
-                            required: 'Backup file is required',
-                          })}
-                        />
-                        <button
-                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5
-                                   text-slate-400 hover:text-white rounded-lg
-                                   hover:bg-slate-700/50 transition-colors"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            handleFileSelect()
-                          }}
-                          type="button"
-                        >
-                          <Folder className="w-5 h-5" />
-                        </button>
-                      </div>
-                      {form.formState.errors.backup_path && (
-                        <p className="mt-2 text-red-400 text-sm flex items-center gap-1.5">
-                          <AlertTriangle className="w-4 h-4" />
-                          {form.formState.errors.backup_path.message}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Password Field */}
-                    <div>
-                      <div className="text-sm font-medium mb-2 text-slate-300">
-                        Password
-                      </div>
-                      <div className="relative">
-                        <input
-                          className="w-full px-4 py-3 rounded-xl border-2 border-slate-700/50 
-                                    bg-slate-800/30 text-slate-300 
-                                    focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                                    outline-none transition-all placeholder:text-slate-600"
-                          placeholder="Enter your backup password"
-                          type="password"
-                          {...form.register('password', {
-                            required: 'Password is required',
-                          })}
-                        />
-                      </div>
-                      {form.formState.errors.password && (
-                        <p className="mt-2 text-red-400 text-sm flex items-center gap-1.5">
-                          <AlertTriangle className="w-4 h-4" />
-                          {form.formState.errors.password.message}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Advanced Settings Toggle */}
-                    <div className="pt-2">
-                      <button
-                        className="flex items-center text-sm text-slate-400 hover:text-white
-                                 px-4 py-2 rounded-lg hover:bg-slate-800/50 transition-all w-full"
-                        onClick={() => setShowAdvanced(!showAdvanced)}
+                  <FormField
+                    description="Select the backup file for your wallet"
+                    error={form.formState.errors.backup_path?.message}
+                    htmlFor="backup_path"
+                    label="Backup File"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Input
+                        error={!!form.formState.errors.backup_path}
+                        id="backup_path"
+                        placeholder="Select your backup file"
+                        readOnly
+                        value={form.watch('backup_path')}
+                      />
+                      <Button
+                        className="flex-shrink-0"
+                        onClick={handleSelectBackupFile}
                         type="button"
+                        variant="outline"
                       >
-                        <ChevronDown
-                          className={`h-4 w-4 mr-2 transform transition-transform ${
-                            showAdvanced ? 'rotate-180' : ''
-                          }`}
-                        />
-                        Advanced Settings
-                      </button>
+                        <Folder className="w-5 h-5" />
+                      </Button>
                     </div>
+                  </FormField>
 
-                    {/* Advanced Settings Panel */}
-                    {showAdvanced && (
-                      <div className="space-y-6 pt-4 border-t border-slate-800">
-                        {/* RPC Connection URL */}
-                        <div>
-                          <div className="text-xs mb-3">
-                            Bitcoind RPC Connection URL
-                          </div>
-                          <div className="relative">
-                            <input
-                              className="w-full px-4 py-3 bg-blue-dark/40 border border-divider/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan transition-all"
-                              placeholder="username:password@host:port"
-                              type="text"
-                              {...form.register('rpc_connection_url', {
-                                pattern: {
-                                  message:
-                                    'Invalid RPC URL format. Expected: username:password@host:port',
-                                  value: /^[^:]+:[^@]+@[^:]+:\d+$/,
-                                },
-                                required: 'Required',
-                              })}
-                            />
-                          </div>
-                          <div className="text-sm text-gray-400">
-                            Example: user:password@localhost:18443
-                          </div>
-                          <div className="text-sm text-red mt-2">
-                            {form.formState.errors.rpc_connection_url?.message}
-                          </div>
-                        </div>
+                  <FormField
+                    description="Enter the password for your backup file"
+                    error={form.formState.errors.password?.message}
+                    htmlFor="password"
+                    label="Password"
+                  >
+                    <PasswordInput
+                      id="password"
+                      isVisible={isPasswordVisible}
+                      onToggleVisibility={() =>
+                        setIsPasswordVisible(!isPasswordVisible)
+                      }
+                      placeholder="Enter your password"
+                      {...form.register('password', {
+                        required: 'Password is required',
+                      })}
+                      error={!!form.formState.errors.password}
+                    />
+                  </FormField>
 
-                        {/* Indexer URL */}
-                        <div>
-                          <div className="text-xs mb-3">
-                            Indexer URL (electrum server)
-                          </div>
-                          <div className="relative">
-                            <input
-                              className="w-full px-4 py-3 bg-blue-dark/40 border border-divider/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan transition-all"
-                              placeholder="Enter the indexer URL"
-                              type="text"
-                              {...form.register('indexer_url', {
-                                required: 'Required',
-                              })}
-                            />
-                          </div>
-                          <div className="text-sm text-red mt-2">
-                            {form.formState.errors.indexer_url?.message}
-                          </div>
-                        </div>
+                  <AdvancedSettings>
+                    <NetworkSettings form={form} />
+                  </AdvancedSettings>
+                </div>
 
-                        {/* RGB Proxy Endpoint */}
-                        <div>
-                          <div className="text-xs mb-3">RGB Proxy Endpoint</div>
-                          <div className="relative">
-                            <input
-                              className="w-full px-4 py-3 bg-blue-dark/40 border border-divider/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan transition-all"
-                              placeholder="Enter the proxy endpoint"
-                              type="text"
-                              {...form.register('proxy_endpoint', {
-                                required: 'Required',
-                              })}
-                            />
-                          </div>
-                          <div className="text-sm text-red mt-2">
-                            {form.formState.errors.proxy_endpoint?.message}
-                          </div>
-                        </div>
-
-                        {/* Daemon Listening Port */}
-                        <div>
-                          <div className="text-xs mb-3">
-                            Daemon Listening Port
-                          </div>
-                          <div className="relative">
-                            <input
-                              className="w-full px-4 py-3 bg-blue-dark/40 border border-divider/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan transition-all"
-                              placeholder="Enter the daemon listening port"
-                              type="text"
-                              {...form.register('daemon_listening_port', {
-                                pattern: {
-                                  message: 'Please enter a valid port number',
-                                  value: /^\d+$/,
-                                },
-                                required: 'Required',
-                              })}
-                            />
-                          </div>
-                          <div className="text-sm text-gray-400">
-                            Default: 3001
-                          </div>
-                          <div className="text-sm text-red mt-2">
-                            {
-                              form.formState.errors.daemon_listening_port
-                                ?.message
-                            }
-                          </div>
-                        </div>
-
-                        {/* LDK Peer Listening Port */}
-                        <div>
-                          <div className="text-xs mb-3">
-                            LDK Peer Listening Port
-                          </div>
-                          <div className="relative">
-                            <input
-                              className="w-full px-4 py-3 bg-blue-dark/40 border border-divider/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan transition-all"
-                              placeholder="Enter the LDK peer listening port"
-                              type="text"
-                              {...form.register('ldk_peer_listening_port', {
-                                pattern: {
-                                  message: 'Please enter a valid port number',
-                                  value: /^\d+$/,
-                                },
-                                required: 'Required',
-                              })}
-                            />
-                          </div>
-                          <div className="text-sm text-gray-400">
-                            Default: 9735
-                          </div>
-                          <div className="text-sm text-red mt-2">
-                            {
-                              form.formState.errors.ldk_peer_listening_port
-                                ?.message
-                            }
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Additional Errors Display */}
-                    {additionalErrors.length > 0 && (
-                      <div className="text-sm text-red-400 bg-red-500/10 p-4 rounded-lg border border-red-500/20">
-                        <ul className="space-y-1">
-                          {additionalErrors.map((error, index) => (
-                            <li className="flex items-center gap-2" key={index}>
-                              <span>•</span> {error}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Submit Button */}
-                  <button
-                    className="w-full mt-6 px-6 py-3 rounded-xl bg-cyan text-blue-darkest 
-                             font-semibold hover:bg-cyan/90 transition-colors duration-200
-                             focus:ring-2 focus:ring-cyan/20 focus:outline-none
-                             flex items-center justify-center gap-2
-                             disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={form.formState.isSubmitting}
+                <div className="pt-6">
+                  <Button
+                    className="w-full"
+                    disabled={isStartingNode || isSubmitting.current}
+                    size="lg"
                     type="submit"
                   >
-                    Restore Wallet
-                  </button>
+                    {isStartingNode ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Spinner size="sm" />
+                        Restoring...
+                      </span>
+                    ) : (
+                      'Restore Wallet'
+                    )}
+                  </Button>
                 </div>
-              </form>
-            </>
-          )}
+              </Card>
+            </form>
+          </div>
+        )}
 
-          {/* Unified Modal Component */}
-          <StatusModal
-            autoClose={modalState.autoClose}
-            autoCloseDelay={3000}
-            details={modalState.details}
-            isOpen={modalState.isOpen}
-            message={modalState.message}
-            onClose={closeModal}
-            title={modalState.title}
-            type={modalState.type}
-          />
-        </div>
-      </div>
+        {currentStep === 'restoration' && (
+          <SetupSection>
+            <div className="text-center py-12">
+              <div className="flex justify-center mb-6">
+                <Spinner size="lg" />
+              </div>
+              <h3 className="text-xl font-medium mb-2">
+                Restoring Your Wallet
+              </h3>
+              <p className="text-gray-400">
+                Please wait while we restore your wallet from the backup file.
+                This may take a few minutes.
+              </p>
+            </div>
+          </SetupSection>
+        )}
+
+        {/* Unified Modal Component */}
+        <StatusModal
+          autoClose={modalState.autoClose}
+          autoCloseDelay={3000}
+          details={modalState.details}
+          isOpen={modalState.isOpen}
+          message={modalState.message}
+          onClose={closeModal}
+          title={modalState.title}
+          type={modalState.type}
+        />
+      </SetupLayout>
     </Layout>
   )
 }

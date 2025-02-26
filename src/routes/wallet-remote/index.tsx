@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api'
-import { ChevronDown, ChevronLeft, Cloud } from 'lucide-react'
+import { Cloud, ArrowRight, AlertTriangle } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
@@ -12,7 +12,20 @@ import {
 } from '../../app/router/paths'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { Layout } from '../../components/Layout'
-import { Spinner } from '../../components/Spinner'
+import { NetworkSelector } from '../../components/NetworkSelector'
+import {
+  Button,
+  Card,
+  Alert,
+  SetupLayout,
+  SetupSection,
+  FormField,
+  Input,
+  PasswordInput,
+  Spinner,
+  AdvancedSettings,
+  NetworkSettings,
+} from '../../components/ui'
 import { BitcoinNetwork } from '../../constants'
 import { NETWORK_DEFAULTS } from '../../constants/networks'
 import {
@@ -35,7 +48,10 @@ interface Fields {
 }
 
 export const Component = () => {
-  const [isStartingNode] = useState(false)
+  const [isConnecting, setIsConnecting] = useState(false)
+  const [isNodeError, setIsNodeError] = useState(false)
+  const [nodeErrorMessage, setNodeErrorMessage] = useState('')
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false)
 
   const dispatch = useAppDispatch()
 
@@ -86,18 +102,29 @@ export const Component = () => {
   }, [form])
 
   const onSubmit: SubmitHandler<Fields> = async (data) => {
+    setIsConnecting(true)
+    setIsNodeError(false)
+
     // Check if account with the same name already exists
     try {
       const accountExists = await invoke('check_account_exists', {
         name: data.name,
       })
       if (accountExists) {
+        setIsNodeError(true)
+        setNodeErrorMessage('An account with this name already exists')
         toast.error('An account with this name already exists')
+        setIsConnecting(false)
         return
       }
     } catch (error) {
       console.error('Failed to check account existence:', error)
+      setIsNodeError(true)
+      setNodeErrorMessage(
+        'Failed to check account existence. Please try again.'
+      )
       toast.error('Failed to check account existence. Please try again.')
+      setIsConnecting(false)
       return
     }
 
@@ -178,273 +205,157 @@ export const Component = () => {
     }
   }
 
-  const [showAdvanced, setShowAdvanced] = useState(false)
-
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto w-full p-6">
-        <div className="bg-blue-darkest/80 backdrop-blur-sm rounded-3xl shadow-xl p-12 border border-white/5">
-          <button
-            className="text-cyan mb-8 flex items-center gap-2 hover:text-cyan-600 
-              transition-colors group"
-            onClick={() => navigate(WALLET_SETUP_PATH)}
+      <SetupLayout
+        centered
+        fullHeight
+        icon={<Cloud />}
+        maxWidth="3xl"
+        onBack={() => navigate(WALLET_SETUP_PATH)}
+        subtitle="Enter the details of your remote RGB Lightning node"
+        title="Connect to Remote Node"
+      >
+        {isNodeError && (
+          <Alert
+            className="mb-4"
+            icon={<AlertTriangle className="w-4 h-4" />}
+            title="Connection Error"
+            variant="error"
           >
-            <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-            Back to node selection
-          </button>
+            <p className="text-sm">{nodeErrorMessage}</p>
+          </Alert>
+        )}
 
-          <div className="flex items-center gap-4 mb-8">
-            <div className="p-4 rounded-xl bg-cyan/10 border border-cyan/20 text-cyan">
-              <Cloud className="w-6 h-6" />
-            </div>
-            <h1 className="text-3xl font-bold text-white">
-              Connect Remote Node
-            </h1>
-          </div>
+        <div className="w-full">
+          <p className="text-slate-400 mb-6 leading-relaxed">
+            Configure your remote node connection settings. Enter the details of
+            your existing RGB Lightning node.
+          </p>
 
-          {isStartingNode ? (
-            <div className="py-20 flex flex-col items-center space-y-4">
-              <Spinner />
-              <div className="text-center text-gray-300">
-                Connecting to your node. This may take a few moments...
-              </div>
-            </div>
-          ) : (
-            <>
-              <form onSubmit={form.handleSubmit(onSubmit)}>
-                <div className="max-w-3xl mx-auto">
-                  <div className="max-w-xl mx-auto w-full">
-                    <div className="w-full max-w-md mx-auto space-y-6">
-                      <div>
-                        <div className="text-sm font-medium mb-2 text-slate-300">
-                          Account Name
-                        </div>
-                        <div className="relative">
-                          <input
-                            className="w-full px-4 py-3 bg-blue-dark/40 border border-divider/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan transition-all"
-                            type="text"
-                            {...form.register('name', {
-                              required: 'Required',
-                            })}
-                          />
-                        </div>
-                        <div className="text-sm text-red mt-2">
-                          {form.formState.errors.name?.message}
-                        </div>
-                      </div>
+          <Card className="p-6 bg-blue-dark/40 border border-white/5">
+            <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+              <SetupSection>
+                <FormField
+                  description="This name will be used to identify your remote node connection"
+                  error={form.formState.errors.name?.message}
+                  htmlFor="name"
+                  label="Account Name"
+                >
+                  <Input
+                    id="name"
+                    placeholder="My Remote Node"
+                    {...form.register('name', {
+                      required: 'Account name is required',
+                    })}
+                    error={!!form.formState.errors.name}
+                  />
+                </FormField>
 
-                      <div>
-                        <div className="text-sm font-medium mb-2 text-slate-300">
-                          RGB Lightning Node URL
-                        </div>
-                        <div className="relative">
-                          <input
-                            className="w-full px-4 py-3 bg-blue-dark/40 border border-divider/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan transition-all"
-                            type="text"
-                            {...form.register('node_url', {
-                              required: 'Required',
-                            })}
-                          />
-                        </div>
-                        <div className="text-sm text-red mt-2">
-                          {form.formState.errors.node_url?.message}
-                        </div>
-                      </div>
+                <NetworkSelector
+                  className="mb-2"
+                  onChange={(network) => form.setValue('network', network)}
+                  selectedNetwork={form.watch('network')}
+                />
 
-                      <div>
-                        <div className="text-sm font-medium mb-2 text-slate-300">
-                          Network
-                        </div>
-                        <div className="relative">
-                          <select
-                            className="w-full px-4 py-3 appearance-none
-                                       bg-blue-dark/40 border border-divider/20 rounded-lg 
-                                       focus:outline-none focus:ring-2 focus:ring-cyan 
-                                       text-slate-300 cursor-pointer
-                                       transition-all"
-                            {...form.register('network', {
-                              required: 'Required',
-                            })}
-                          >
-                            <option
-                              className="bg-blue-darkest text-slate-300"
-                              value="Testnet"
-                            >
-                              Testnet
-                            </option>
-                            <option
-                              className="bg-blue-darkest text-slate-300"
-                              value="Regtest"
-                            >
-                              Regtest
-                            </option>
-                            <option
-                              className="bg-blue-darkest text-slate-300"
-                              value="Signet"
-                            >
-                              Signet
-                            </option>
-                          </select>
-                          <div
-                            className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none
-                                          text-slate-400 border-l border-divider/20"
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </div>
-                        </div>
-                        <div className="text-sm text-red mt-2">
-                          {form.formState.errors.network?.message}
-                        </div>
-                      </div>
+                <FormField
+                  description="The URL of your remote RGB Lightning node"
+                  error={form.formState.errors.node_url?.message}
+                  htmlFor="node_url"
+                  label="Node URL"
+                >
+                  <Input
+                    id="node_url"
+                    placeholder="http://your-node-url:3000"
+                    {...form.register('node_url', {
+                      required: 'Node URL is required',
+                    })}
+                    error={!!form.formState.errors.node_url}
+                  />
+                </FormField>
 
-                      <div className="flex items-center space-x-3 px-1">
-                        <input
-                          className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-cyan focus:ring-cyan/20"
-                          id="useAuth"
-                          type="checkbox"
-                          {...form.register('useAuth')}
-                        />
-                        <label
-                          className="text-sm text-slate-300"
-                          htmlFor="useAuth"
-                        >
-                          Use Authentication for Remote Node
-                        </label>
-                      </div>
+                <FormField
+                  error={form.formState.errors.password?.message}
+                  htmlFor="password"
+                  label="Node Password"
+                >
+                  <PasswordInput
+                    id="password"
+                    isVisible={isPasswordVisible}
+                    onToggleVisibility={() =>
+                      setIsPasswordVisible(!isPasswordVisible)
+                    }
+                    placeholder="Password"
+                    {...form.register('password', {
+                      required: 'Password is required',
+                    })}
+                    error={!!form.formState.errors.password}
+                  />
+                </FormField>
+              </SetupSection>
 
-                      {form.watch('useAuth') && (
-                        <div>
-                          <div className="text-sm font-medium mb-2 text-slate-300">
-                            Authentication Token
-                          </div>
-                          <div className="relative">
-                            <input
-                              className="w-full px-4 py-3 bg-blue-dark/40 border border-divider/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan transition-all"
-                              placeholder="Enter your auth token"
-                              type="password"
-                              {...form.register('authToken', {
-                                required: form.watch('useAuth')
-                                  ? 'Required when using authentication'
-                                  : false,
-                              })}
-                            />
-                          </div>
-                          <div className="text-sm text-slate-400 mt-1">
-                            Token will be used to authenticate with the remote
-                            node
-                          </div>
-                          <div className="text-sm text-red mt-2">
-                            {form.formState.errors.authToken?.message}
-                          </div>
-                        </div>
-                      )}
+              <AdvancedSettings>
+                <NetworkSettings form={form} />
 
-                      <div className="pt-2">
-                        <button
-                          className="flex items-center text-sm text-slate-400 hover:text-white
-                                   px-4 py-2 rounded-lg hover:bg-slate-800/50 transition-all w-full"
-                          onClick={() => setShowAdvanced(!showAdvanced)}
-                          type="button"
-                        >
-                          <ChevronDown
-                            className={`h-4 w-4 mr-2 transform transition-transform ${
-                              showAdvanced ? 'rotate-180' : ''
-                            }`}
-                          />
-                          Advanced Settings
-                        </button>
-                      </div>
-
-                      {showAdvanced && (
-                        <div className="space-y-6 pt-4 border-t border-slate-800">
-                          <div>
-                            <div className="text-sm font-medium mb-2 text-slate-300">
-                              RPC Connection URL
-                            </div>
-                            <div className="relative">
-                              <input
-                                className="w-full px-4 py-3 bg-blue-dark/40 border border-divider/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan transition-all"
-                                type="text"
-                                {...form.register('rpc_connection_url', {
-                                  required: 'Required',
-                                })}
-                              />
-                            </div>
-                            <div className="text-sm text-slate-400 mt-1">
-                              Example: user:password@localhost:18443
-                            </div>
-                            <div className="text-sm text-red mt-2">
-                              {
-                                form.formState.errors.rpc_connection_url
-                                  ?.message
-                              }
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-sm font-medium mb-2 text-slate-300">
-                              Indexer URL (electrum server)
-                            </div>
-                            <div className="relative">
-                              <input
-                                className="w-full px-4 py-3 bg-blue-dark/40 border border-divider/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan transition-all"
-                                type="text"
-                                {...form.register('indexer_url', {
-                                  required: 'Required',
-                                })}
-                              />
-                            </div>
-                            <div className="text-sm text-slate-400 mt-1">
-                              Example: 127.0.0.1:50001
-                            </div>
-                            <div className="text-sm text-red mt-2">
-                              {form.formState.errors.indexer_url?.message}
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="text-sm font-medium mb-2 text-slate-300">
-                              RGB Proxy Endpoint
-                            </div>
-                            <div className="relative">
-                              <input
-                                className="w-full px-4 py-3 bg-blue-dark/40 border border-divider/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan transition-all"
-                                type="text"
-                                {...form.register('proxy_endpoint', {
-                                  required: 'Required',
-                                })}
-                              />
-                            </div>
-                            <div className="text-sm text-slate-400 mt-1">
-                              Example: rpc://127.0.0.1:3000/json-rpc
-                            </div>
-                            <div className="text-sm text-red mt-2">
-                              {form.formState.errors.proxy_endpoint?.message}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex justify-end mt-8">
-                      <button
-                        className="px-6 py-3 rounded-lg bg-cyan text-blue-darkest font-semibold 
-                          hover:bg-cyan/90 transition-colors duration-200
-                          focus:ring-2 focus:ring-cyan/20 focus:outline-none
-                          flex items-center justify-center gap-2 min-w-[160px]
-                          disabled:opacity-50 disabled:cursor-not-allowed"
-                        type="submit"
-                      >
-                        Connect
-                      </button>
-                    </div>
+                <div className="p-2.5 bg-blue-dark/40 rounded-lg border border-slate-700/30 mt-4">
+                  <div className="flex items-center mb-2.5">
+                    <input
+                      className="w-3.5 h-3.5 text-cyan bg-blue-dark border-gray-600 rounded focus:ring-cyan"
+                      id="useAuth"
+                      type="checkbox"
+                      {...form.register('useAuth')}
+                    />
+                    <label
+                      className="ml-2 text-xs font-medium text-gray-300"
+                      htmlFor="useAuth"
+                    >
+                      Use Authentication Token
+                    </label>
                   </div>
+
+                  {form.watch('useAuth') && (
+                    <FormField
+                      error={form.formState.errors.authToken?.message}
+                      htmlFor="authToken"
+                      label="Authentication Token"
+                    >
+                      <Input
+                        id="authToken"
+                        {...form.register('authToken', {
+                          required: form.watch('useAuth')
+                            ? 'Authentication token is required'
+                            : false,
+                        })}
+                        error={!!form.formState.errors.authToken}
+                      />
+                    </FormField>
+                  )}
                 </div>
-              </form>
-            </>
-          )}
+              </AdvancedSettings>
+
+              <div className="pt-3">
+                <Button
+                  className="w-full"
+                  disabled={isConnecting}
+                  icon={
+                    isConnecting ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      <ArrowRight className="w-4 h-4" />
+                    )
+                  }
+                  iconPosition="right"
+                  size="lg"
+                  type="submit"
+                  variant="primary"
+                >
+                  {isConnecting ? 'Connecting...' : 'Connect to Node'}
+                </Button>
+              </div>
+            </form>
+          </Card>
         </div>
-      </div>
+      </SetupLayout>
     </Layout>
   )
 }

@@ -5,10 +5,9 @@ import {
   ArrowDownRight,
   Info,
   Plus,
-  Loader,
+  Loader as LoaderIcon,
   Wallet,
   Link as ChainIcon,
-  Copy,
   Network,
   Blocks,
   Database,
@@ -20,13 +19,23 @@ import { toast } from 'react-toastify'
 
 import {
   CREATE_NEW_CHANNEL_PATH,
-  CREATEUTXOS_PATH,
   WALLET_HISTORY_PATH,
 } from '../../app/router/paths'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { ChannelCard } from '../../components/ChannelCard'
 import { IssueAssetModal } from '../../components/IssueAssetModal'
 import { PeerManagementModal } from '../../components/PeerManagementModal'
+import {
+  Button,
+  Card,
+  HoverCard,
+  LoadingPlaceholder,
+  InfoCard,
+  InfoCardGrid,
+  NetworkWarningAlert,
+  ActionButton,
+  OverlayTooltip,
+} from '../../components/ui'
 import { UTXOManagementModal } from '../../components/UTXOManagementModal'
 import { BitcoinNetwork, DEFAULT_RGB_ICON } from '../../constants'
 import { formatBitcoinAmount } from '../../helpers/number'
@@ -61,10 +70,6 @@ const AssetIcon: React.FC<AssetIconProps> = ({
     />
   )
 }
-
-const LoadingPlaceholder = ({ width = 'w-20' }: { width?: string }) => (
-  <div className={`${width} h-6 bg-slate-700/50 animate-pulse rounded`}></div>
-)
 
 const AssetRow: React.FC<AssetRowProps> = ({
   asset,
@@ -125,8 +130,8 @@ const AssetRow: React.FC<AssetRowProps> = ({
       </div>
 
       <div className="text-sm py-3 pl-4 pr-6 flex justify-between">
-        <button
-          className="text-cyan underline font-bold"
+        <ActionButton
+          color="cyan"
           onClick={() =>
             dispatch(
               uiSliceActions.setModal({
@@ -137,10 +142,10 @@ const AssetRow: React.FC<AssetRowProps> = ({
           }
         >
           Deposit
-        </button>
+        </ActionButton>
 
-        <button
-          className="text-red underline font-bold"
+        <ActionButton
+          color="red"
           onClick={() =>
             dispatch(
               uiSliceActions.setModal({
@@ -151,14 +156,14 @@ const AssetRow: React.FC<AssetRowProps> = ({
           }
         >
           Withdraw
-        </button>
+        </ActionButton>
 
-        <button
-          className="text-purple underline font-bold"
+        <ActionButton
+          color="purple"
           onClick={() => navigate(WALLET_HISTORY_PATH)}
         >
           History
-        </button>
+        </ActionButton>
       </div>
     </div>
   )
@@ -172,7 +177,6 @@ const OnChainDetailsOverlay = ({
   onChainColoredFutureBalance,
   onChainColoredSpendableBalance,
   bitcoinUnit,
-  onCreateUtxos,
 }: {
   onChainBalance: number
   onChainFutureBalance: number
@@ -181,15 +185,79 @@ const OnChainDetailsOverlay = ({
   onChainColoredFutureBalance: number
   onChainColoredSpendableBalance: number
   bitcoinUnit: string
-  onCreateUtxos: () => void
 }) => {
-  const [showOverlay, setShowOverlay] = useState(false)
-
   return (
-    <div
-      className="relative"
-      onMouseEnter={() => setShowOverlay(true)}
-      onMouseLeave={() => setShowOverlay(false)}
+    <OverlayTooltip
+      content={
+        <div className="grid grid-cols-2 gap-3">
+          {/* Normal Balance */}
+          <div className="bg-[#151C2E] rounded-lg p-2.5 border border-slate-700/30">
+            <h4 className="text-sm font-medium text-white mb-2">
+              Normal Balance
+            </h4>
+            <div className="space-y-1.5">
+              <div className="bg-[#0B101B] rounded-lg p-1.5">
+                <div className="text-xs text-gray-400">Settled</div>
+                <div className="text-xs font-medium text-white truncate">
+                  {formatBitcoinAmount(onChainBalance, bitcoinUnit)}{' '}
+                  {bitcoinUnit}
+                </div>
+              </div>
+              <div className="bg-[#0B101B] rounded-lg p-1.5">
+                <div className="text-xs text-gray-400">Future</div>
+                <div className="text-xs font-medium text-white truncate">
+                  {formatBitcoinAmount(onChainFutureBalance, bitcoinUnit)}{' '}
+                  {bitcoinUnit}
+                </div>
+              </div>
+              <div className="bg-[#0B101B] rounded-lg p-1.5">
+                <div className="text-xs text-gray-400">Spendable</div>
+                <div className="text-xs font-medium text-white truncate">
+                  {formatBitcoinAmount(onChainSpendableBalance, bitcoinUnit)}{' '}
+                  {bitcoinUnit}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Colored Balance */}
+          <div className="bg-[#151C2E] rounded-lg p-2.5 border border-slate-700/30">
+            <h4 className="text-sm font-medium text-white mb-2">
+              Colored Balance
+            </h4>
+            <div className="space-y-1.5">
+              <div className="bg-[#0B101B] rounded-lg p-1.5">
+                <div className="text-xs text-gray-400">Settled</div>
+                <div className="text-xs font-medium text-white truncate">
+                  {formatBitcoinAmount(onChainColoredBalance, bitcoinUnit)}{' '}
+                  {bitcoinUnit}
+                </div>
+              </div>
+              <div className="bg-[#0B101B] rounded-lg p-1.5">
+                <div className="text-xs text-gray-400">Future</div>
+                <div className="text-xs font-medium text-white truncate">
+                  {formatBitcoinAmount(
+                    onChainColoredFutureBalance,
+                    bitcoinUnit
+                  )}{' '}
+                  {bitcoinUnit}
+                </div>
+              </div>
+              <div className="bg-[#0B101B] rounded-lg p-1.5">
+                <div className="text-xs text-gray-400">Spendable</div>
+                <div className="text-xs font-medium text-white truncate">
+                  {formatBitcoinAmount(
+                    onChainColoredSpendableBalance,
+                    bitcoinUnit
+                  )}{' '}
+                  {bitcoinUnit}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+      title="On-chain Details"
     >
       <div>
         <span className="text-sm text-gray-400 flex items-center gap-2">
@@ -204,97 +272,7 @@ const OnChainDetailsOverlay = ({
           {bitcoinUnit}
         </div>
       </div>
-
-      {showOverlay && (
-        <div
-          className="absolute inset-0 bg-[#0B101B]/95 backdrop-blur-sm rounded-lg
-                     flex flex-col p-4 sm:p-6 z-10"
-        >
-          {/* Header */}
-          <div className="flex justify-between items-center mb-4 sm:mb-6">
-            <h3 className="text-base font-medium text-white">
-              On-chain Details
-            </h3>
-            <button
-              className="p-1.5 sm:p-2 bg-blue-500/10 hover:bg-blue-500/20 
-                        text-blue-500 rounded-lg transition-all duration-200"
-              onClick={onCreateUtxos}
-            >
-              <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
-            </button>
-          </div>
-
-          {/* Balance Details */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Normal Balance */}
-            <div className="bg-[#151C2E] rounded-lg p-2.5 border border-slate-700/30">
-              <h4 className="text-sm font-medium text-white mb-2">
-                Normal Balance
-              </h4>
-              <div className="space-y-1.5">
-                <div className="bg-[#0B101B] rounded-lg p-1.5">
-                  <div className="text-xs text-gray-400">Settled</div>
-                  <div className="text-xs font-medium text-white truncate">
-                    {formatBitcoinAmount(onChainBalance, bitcoinUnit)}{' '}
-                    {bitcoinUnit}
-                  </div>
-                </div>
-                <div className="bg-[#0B101B] rounded-lg p-1.5">
-                  <div className="text-xs text-gray-400">Future</div>
-                  <div className="text-xs font-medium text-white truncate">
-                    {formatBitcoinAmount(onChainFutureBalance, bitcoinUnit)}{' '}
-                    {bitcoinUnit}
-                  </div>
-                </div>
-                <div className="bg-[#0B101B] rounded-lg p-1.5">
-                  <div className="text-xs text-gray-400">Spendable</div>
-                  <div className="text-xs font-medium text-white truncate">
-                    {formatBitcoinAmount(onChainSpendableBalance, bitcoinUnit)}{' '}
-                    {bitcoinUnit}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Colored Balance */}
-            <div className="bg-[#151C2E] rounded-lg p-2.5 border border-slate-700/30">
-              <h4 className="text-sm font-medium text-white mb-2">
-                Colored Balance
-              </h4>
-              <div className="space-y-1.5">
-                <div className="bg-[#0B101B] rounded-lg p-1.5">
-                  <div className="text-xs text-gray-400">Settled</div>
-                  <div className="text-xs font-medium text-white truncate">
-                    {formatBitcoinAmount(onChainColoredBalance, bitcoinUnit)}{' '}
-                    {bitcoinUnit}
-                  </div>
-                </div>
-                <div className="bg-[#0B101B] rounded-lg p-1.5">
-                  <div className="text-xs text-gray-400">Future</div>
-                  <div className="text-xs font-medium text-white truncate">
-                    {formatBitcoinAmount(
-                      onChainColoredFutureBalance,
-                      bitcoinUnit
-                    )}{' '}
-                    {bitcoinUnit}
-                  </div>
-                </div>
-                <div className="bg-[#0B101B] rounded-lg p-1.5">
-                  <div className="text-xs text-gray-400">Spendable</div>
-                  <div className="text-xs font-medium text-white truncate">
-                    {formatBitcoinAmount(
-                      onChainColoredSpendableBalance,
-                      bitcoinUnit
-                    )}{' '}
-                    {bitcoinUnit}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    </OverlayTooltip>
   )
 }
 
@@ -313,17 +291,9 @@ const LiquidityCard = ({
   tooltipDescription: string
   isLoading?: boolean
 }) => {
-  const [showTooltip, setShowTooltip] = useState(false)
-
   return (
-    <div
-      className="relative bg-slate-800/50 hover:bg-slate-800/70 rounded-xl 
-                 border border-slate-700 hover:border-slate-600 p-6 
-                 transition-all duration-200"
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-    >
-      <div className="relative z-0">
+    <OverlayTooltip content={tooltipDescription} title={title}>
+      <HoverCard>
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-base font-medium text-slate-300">{title}</h2>
           {icon}
@@ -335,41 +305,8 @@ const LiquidityCard = ({
             `${formatBitcoinAmount(amount, bitcoinUnit)} ${bitcoinUnit}`
           )}
         </div>
-      </div>
-
-      {/* Tooltip */}
-      {showTooltip && (
-        <div
-          className="absolute inset-0 bg-[#0B101B]/95 backdrop-blur-sm rounded-lg
-                     flex flex-col justify-between p-6 cursor-help z-10
-                     transition-opacity duration-200"
-        >
-          {/* Header section */}
-          <div>
-            <div className="flex items-center gap-2 mb-6">
-              <div className="p-2 bg-blue-500/20 rounded-lg">
-                <Info className="w-5 h-5 text-blue-500" />
-              </div>
-              <h4 className="text-2xl font-medium text-white bg-[#0B101B]/80 px-3 py-1 rounded-lg">
-                {title}
-              </h4>
-            </div>
-
-            {/* Description with background for better readability */}
-            <div className="bg-[#0B101B]/80 p-4 rounded-xl">
-              <p className="text-xl leading-relaxed text-slate-300">
-                {tooltipDescription}
-              </p>
-            </div>
-          </div>
-
-          {/* Footer with background */}
-          <div className="text-base text-blue-400 mt-6 bg-[#0B101B]/80 px-3 py-1 rounded-lg self-start">
-            Hover away to close
-          </div>
-        </div>
-      )}
-    </div>
+      </HoverCard>
+    </OverlayTooltip>
   )
 }
 
@@ -500,13 +437,6 @@ export const Component = () => {
     refreshData()
   }
 
-  const handleCopyPubkey = () => {
-    if (nodeInfoResponse.data?.pubkey) {
-      navigator.clipboard.writeText(nodeInfoResponse.data.pubkey)
-      toast.success('Node public key copied to clipboard')
-    }
-  }
-
   const isLoading =
     btcBalanceResponse.isLoading || listChannelsResponse.isLoading
 
@@ -514,37 +444,16 @@ export const Component = () => {
     <div className="w-full bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
       {(networkInfoResponse.data?.network as unknown as BitcoinNetwork) !==
         'Mainnet' && (
-        <div className="mb-8 bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-center gap-3">
-          <div className="p-2 bg-amber-500/20 rounded-lg">
-            <Info className="w-5 h-5 text-amber-500" />
-          </div>
-          <div>
-            <h4 className="text-amber-500 font-medium mb-1">
-              Test Network Warning
-            </h4>
-            <p className="text-amber-400/80 text-sm">
-              You are currently on{' '}
-              {networkInfoResponse.data?.network || 'Testnet'}. Any tokens on
-              this network have no real value and are for testing purposes only.
-              {(networkInfoResponse.data
-                ?.network as unknown as BitcoinNetwork) === 'Signet' && (
-                <>
-                  {' '}
-                  <br />
-                  You can request test coins from the{' '}
-                  <a
-                    className="text-blue-400 hover:text-blue-300 underline"
-                    href="https://faucet.mutinynet.com/"
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    Mutinynet Faucet
-                  </a>
-                  .
-                </>
-              )}
-            </p>
-          </div>
+        <div className="mb-8">
+          <NetworkWarningAlert
+            faucetUrl={
+              (networkInfoResponse.data
+                ?.network as unknown as BitcoinNetwork) === 'Signet'
+                ? 'https://faucet.mutinynet.com/'
+                : undefined
+            }
+            network={networkInfoResponse.data?.network || 'Testnet'}
+          />
         </div>
       )}
 
@@ -562,134 +471,96 @@ export const Component = () => {
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
-          <button
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 
-                     text-white rounded-xl font-medium transition-colors"
+          <Button
+            icon={<Zap className="w-5 h-5" />}
             onClick={() => navigate(CREATE_NEW_CHANNEL_PATH)}
+            size="lg"
           >
-            <Zap className="w-5 h-5" />
             Open Channel
-          </button>
+          </Button>
 
-          <button
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 
-                     text-white rounded-xl font-medium transition-colors"
+          <Button
+            icon={<Database className="w-5 h-5" />}
             onClick={() => setShowUTXOModal(true)}
+            size="lg"
           >
-            <Database className="w-5 h-5" />
             Manage UTXOs
-          </button>
+          </Button>
 
-          <button
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 
-                     text-white rounded-xl font-medium transition-colors"
+          <Button
+            icon={<Users className="w-5 h-5" />}
             onClick={() => setShowPeerModal(true)}
+            size="lg"
           >
-            <Users className="w-5 h-5" />
             Peers
-          </button>
+          </Button>
 
-          <button
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 
-                     text-blue-500 rounded-lg font-medium transition-colors"
+          <Button
             disabled={isRefreshing}
+            icon={
+              isRefreshing ? (
+                <LoaderIcon className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )
+            }
             onClick={refreshData}
+            size="md"
+            variant="outline"
           >
-            {isRefreshing ? (
-              <Loader className="w-4 h-4 animate-spin" />
-            ) : (
-              <RefreshCw className="w-4 h-4" />
-            )}
             {isRefreshing ? 'Refreshing...' : 'Refresh'}
-          </button>
-
-          {showUTXOModal && (
-            <UTXOManagementModal
-              bitcoinUnit={bitcoinUnit}
-              onClose={() => setShowUTXOModal(false)}
-            />
-          )}
-
-          {showPeerModal && (
-            <PeerManagementModal onClose={() => setShowPeerModal(false)} />
-          )}
+          </Button>
         </div>
 
-        <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-700/50 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/10 rounded-lg">
-                <ChainIcon className="w-5 h-5 text-blue-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider block">
-                  Node Public Key
-                </span>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-sm text-slate-300 font-medium truncate">
-                    {nodeInfoResponse.data?.pubkey || '...'}
-                  </span>
-                  <button
-                    className="shrink-0 p-1.5 hover:bg-slate-700/50 rounded-lg transition-colors"
-                    onClick={handleCopyPubkey}
-                    title="Copy public key"
-                  >
-                    <Copy className="w-4 h-4 text-slate-400 hover:text-white" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+        <InfoCardGrid>
+          <InfoCard
+            copySuccessMessage="Node public key copied to clipboard"
+            copyText={nodeInfoResponse.data?.pubkey}
+            copyable
+            icon={<ChainIcon className="w-5 h-5 text-blue-500" />}
+            label="Node Public Key"
+            value={nodeInfoResponse.data?.pubkey || '...'}
+          />
 
-          <div className="bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-700/50 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/10 rounded-lg">
-                <Network className="w-5 h-5 text-blue-500" />
+          <InfoCard
+            icon={<Network className="w-5 h-5 text-blue-500" />}
+            label="Network"
+            value={
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-500" />
+                <span>{networkInfoResponse.data?.network || 'Unknown'}</span>
               </div>
-              <div>
-                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider block">
-                  Network
-                </span>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="w-2 h-2 rounded-full bg-green-500" />
-                  <span className="text-sm text-slate-300 font-medium">
-                    {networkInfoResponse.data?.network || 'Unknown'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+            }
+          />
 
-          <div className="bg-slate-800/80 backdrop-blur-sm rounded-xl border border-slate-700/50 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/10 rounded-lg">
-                <Blocks className="w-5 h-5 text-blue-500" />
-              </div>
-              <div>
-                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider block">
-                  Block Height
-                </span>
-                <div className="text-sm text-slate-300 font-medium mt-1">
-                  #{networkInfoResponse.data?.height || '...'}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+          <InfoCard
+            icon={<Blocks className="w-5 h-5 text-blue-500" />}
+            label="Block Height"
+            value={`#${networkInfoResponse.data?.height || '...'}`}
+          />
+        </InfoCardGrid>
+
+        {showUTXOModal && (
+          <UTXOManagementModal
+            bitcoinUnit={bitcoinUnit}
+            onClose={() => setShowUTXOModal(false)}
+          />
+        )}
+
+        {showPeerModal && (
+          <PeerManagementModal onClose={() => setShowPeerModal(false)} />
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="col-span-2 bg-slate-800/50 rounded-xl border border-slate-700 p-6">
+        <Card className="col-span-2">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-sm font-medium text-slate-400">
               Total Balance
             </h2>
             <div className="flex gap-2">
-              <button
-                className="group px-4 py-2 bg-cyan/10 hover:bg-cyan/20
-                         text-cyan hover:text-cyan-light rounded-lg 
-                         transition-all duration-200 flex items-center gap-2 text-sm
-                         border border-cyan/20 hover:border-cyan/30"
+              <Button
+                icon={<ArrowDownRight className="w-4 h-4" />}
                 onClick={() =>
                   dispatch(
                     uiSliceActions.setModal({
@@ -698,15 +569,13 @@ export const Component = () => {
                     })
                   )
                 }
+                size="sm"
+                variant="success"
               >
-                <ArrowDownRight className="w-4 h-4" />
                 Deposit
-              </button>
-              <button
-                className="group px-4 py-2 bg-red/10 hover:bg-red/20
-                         text-red hover:text-red-light rounded-lg 
-                         transition-all duration-200 flex items-center gap-2 text-sm
-                         border border-red/20 hover:border-red/30"
+              </Button>
+              <Button
+                icon={<ArrowUpRight className="w-4 h-4" />}
                 onClick={() =>
                   dispatch(
                     uiSliceActions.setModal({
@@ -715,10 +584,11 @@ export const Component = () => {
                     })
                   )
                 }
+                size="sm"
+                variant="danger"
               >
-                <ArrowUpRight className="w-4 h-4" />
                 Withdraw
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -740,7 +610,6 @@ export const Component = () => {
                 onChainColoredSpendableBalance={onChainColoredSpendableBalance}
                 onChainFutureBalance={onChainFutureBalance}
                 onChainSpendableBalance={onChainSpendableBalance}
-                onCreateUtxos={() => navigate(CREATEUTXOS_PATH)}
               />
             </div>
 
@@ -758,7 +627,7 @@ export const Component = () => {
               </div>
             </div>
           </div>
-        </div>
+        </Card>
 
         <div className="space-y-6">
           <LiquidityCard
@@ -781,19 +650,18 @@ export const Component = () => {
         </div>
       </div>
 
-      <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6 mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white">Assets</h2>
-          <button
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white 
-                     rounded-xl font-medium transition-colors flex items-center gap-2"
+      <Card
+        action={
+          <Button
+            icon={<Plus className="w-4 h-4" />}
             onClick={() => setShowIssueAssetModal(true)}
           >
-            <Plus className="w-4 h-4" />
             Issue Asset
-          </button>
-        </div>
-
+          </Button>
+        }
+        className="mb-8"
+        title="Assets"
+      >
         <div className="rounded-lg overflow-hidden">
           <div className="grid grid-cols-4 text-grey-light">
             <div className="py-3 px-4">Asset</div>
@@ -812,13 +680,9 @@ export const Component = () => {
             />
           ))}
         </div>
-      </div>
+      </Card>
 
-      <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6 mb-8">
-        <h2 className="text-xl font-bold text-white mb-6">
-          Lightning Channels
-        </h2>
-
+      <Card className="mb-8" title="Lightning Channels">
         {channels.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {channels.map((channel) => {
@@ -836,17 +700,16 @@ export const Component = () => {
         ) : (
           <div className="text-center py-8">
             <div className="text-slate-400 mb-4">No channels found</div>
-            <button
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl 
-                       font-medium transition-colors flex items-center gap-2 mx-auto"
+            <Button
+              className="mx-auto"
+              icon={<Plus className="w-5 h-5" />}
               onClick={() => navigate(CREATE_NEW_CHANNEL_PATH)}
             >
-              <Plus className="w-5 h-5" />
               Open Your First Channel
-            </button>
+            </Button>
           </div>
         )}
-      </div>
+      </Card>
 
       <div
         className="flex items-center gap-2 text-sm text-slate-400 mt-6 p-4 

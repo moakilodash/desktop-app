@@ -9,6 +9,62 @@
 
   body {
     @apply bg-background text-white font-sans;
+    /* Apply custom scrollbar to the entire app */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(30, 31, 40, 0.8) rgba(30, 31, 40, 0.3);
+  }
+
+  /* Global scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(30, 31, 40, 0.3);
+    border-radius: 8px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(30, 31, 40, 0.8);
+    border-radius: 8px;
+    border: 1px solid rgba(143, 213, 234, 0.1);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(143, 213, 234, 0.2);
+  }
+
+  /* Ensure app fits on smaller screens */
+  @media (max-height: 768px) {
+    .compact-text {
+      font-size: 0.875rem;
+    }
+    .compact-heading {
+      font-size: 1.25rem;
+    }
+    .compact-spacing {
+      margin-bottom: 0.5rem;
+    }
+    .compact-padding {
+      padding: 0.75rem;
+    }
+  }
+
+  /* Ensure app fits on very small screens */
+  @media (max-height: 640px) {
+    .compact-text {
+      font-size: 0.75rem;
+    }
+    .compact-heading {
+      font-size: 1.125rem;
+    }
+    .compact-spacing {
+      margin-bottom: 0.25rem;
+    }
+    .compact-padding {
+      padding: 0.5rem;
+    }
   }
 }
 
@@ -31,29 +87,53 @@
     @apply px-4 py-2 bg-blue-darker text-white font-semibold rounded-lg
            hover:bg-blue-dark transition-all duration-200;
   }
-}
 
-/* Custom Scrollbar */
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(143, 213, 234, 0.2) transparent;
-}
+  /* Responsive layout classes */
+  .app-container {
+    @apply h-screen flex flex-col overflow-hidden;
+  }
 
-.custom-scrollbar::-webkit-scrollbar {
-  width: 5px;
-}
+  .app-content {
+    @apply flex-1 overflow-auto;
+  }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  @apply bg-transparent;
-}
+  .setup-container {
+    @apply h-full flex items-center justify-center p-3;
+  }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-cyan/20 rounded-full hover:bg-cyan/30 transition-colors;
+  .setup-card {
+    @apply p-4 md:p-5 w-full max-w-4xl overflow-auto;
+  }
+
+  /* Custom scrollbar class for specific elements */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(30, 31, 40, 0.8) rgba(30, 31, 40, 0.3);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(30, 31, 40, 0.3);
+    border-radius: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(30, 31, 40, 0.8);
+    border-radius: 8px;
+    border: 1px solid rgba(143, 213, 234, 0.1);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(143, 213, 234, 0.2);
+  }
 }
 
 /* Animations */
 .fade-in {
-  animation: fadeIn 0.2s ease-out;
+  animation: fadeIn 0.3s ease-out;
 }
 
 @keyframes fadeIn {
@@ -79,5 +159,16 @@
   to {
     transform: translateX(0);
     opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

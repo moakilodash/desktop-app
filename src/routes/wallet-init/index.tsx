@@ -1,11 +1,14 @@
 import { invoke } from '@tauri-apps/api'
 import { listen } from '@tauri-apps/api/event'
 import {
-  ChevronDown,
-  ChevronLeft,
   AlertCircle,
   ArrowRight,
   Wallet,
+  Lock,
+  FileText,
+  CheckCircle,
+  AlertTriangle,
+  Zap,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { SubmitHandler, UseFormReturn, useForm } from 'react-hook-form'
@@ -20,12 +23,24 @@ import {
   MnemonicVerifyForm,
   MnemonicVerifyFields,
 } from '../../components/MnemonicVerifyForm'
+import { NetworkSelector } from '../../components/NetworkSelector'
 import {
   PasswordSetupForm,
   PasswordFields,
 } from '../../components/PasswordSetupForm'
 import { StepIndicator } from '../../components/StepIndicator'
-import { UnlockProgress } from '../../components/UnlockProgress'
+import {
+  Button,
+  Card,
+  Alert,
+  SetupSection,
+  FormField,
+  Input,
+  SetupLayout,
+  AdvancedSettings,
+  NetworkSettings,
+} from '../../components/ui'
+import { UnlockingProgress } from '../../components/UnlockingProgress'
 import { BitcoinNetwork } from '../../constants'
 import { NETWORK_DEFAULTS } from '../../constants/networks'
 import { parseRpcUrl } from '../../helpers/utils'
@@ -56,11 +71,14 @@ type SetupStep = 'setup' | 'password' | 'mnemonic' | 'verify' | 'unlock'
 
 export const Component = () => {
   const [currentStep, setCurrentStep] = useState<SetupStep>('setup')
-  const [isStartingNode, setIsStartingNode] = useState(false)
+  const [mnemonic, setMnemonic] = useState<string[]>([])
+  const [isNodeError, setIsNodeError] = useState(false)
+  const [nodeErrorMessage, setNodeErrorMessage] = useState('')
+  const [isUnlocking, setIsUnlocking] = useState(false)
+  const [errors, setErrors] = useState<string[]>([])
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
-  const [additionalErrors, setAdditionalErrors] = useState<Array<string>>([])
-  const [mnemonic, setMnemonic] = useState<Array<string>>([])
   const [nodePassword, setNodePassword] = useState('')
+  const [isCancellingUnlock, setIsCancellingUnlock] = useState(false)
 
   const [init] = nodeApi.endpoints.init.useLazyQuery()
   const [unlock] = nodeApi.endpoints.unlock.useLazyQuery()
@@ -97,7 +115,7 @@ export const Component = () => {
       nodeSetupForm.reset()
       passwordForm.reset()
       mnemonicForm.reset()
-      setAdditionalErrors([])
+      setErrors([])
     }
   }, [])
 
@@ -122,27 +140,9 @@ export const Component = () => {
     }
   }
 
-  // Get back button text based on current step
-  const getBackButtonText = () => {
-    switch (currentStep) {
-      case 'setup':
-        return 'Back to node selection'
-      case 'password':
-        return 'Back to node setup'
-      case 'mnemonic':
-        return 'Back to password setup'
-      case 'verify':
-        return 'Back to recovery phrase'
-      case 'unlock':
-        return 'Back to verification'
-      default:
-        return 'Back'
-    }
-  }
-
   // Cleanup when changing steps
   const handleStepChange = (newStep: SetupStep) => {
-    setAdditionalErrors([]) // Clear additional errors
+    setErrors([]) // Clear additional errors
 
     // Reset form errors based on step
     switch (newStep) {
@@ -180,7 +180,7 @@ export const Component = () => {
         name: data.name,
       })
       if (accountExists) {
-        setAdditionalErrors(['An account with this name already exists'])
+        setErrors(['An account with this name already exists'])
         return
       }
       const defaultMakerUrl = NETWORK_DEFAULTS[data.network].default_maker_url
@@ -390,7 +390,6 @@ export const Component = () => {
   }
 
   const handlePasswordSetup: SubmitHandler<PasswordFields> = async (data) => {
-    setIsStartingNode(true)
     const accountName = nodeSetupForm.getValues('name')
     const network = nodeSetupForm.getValues('network')
     const datapath = getDatapath(accountName)
@@ -400,11 +399,14 @@ export const Component = () => {
       await checkAndStopExistingNode()
 
       // Step 2: Start the local node
+      toast.info(
+        `Starting RLN node on port ${nodeSetupForm.getValues('daemon_listening_port')}...`,
+        {
+          autoClose: 2000,
+          position: 'bottom-right',
+        }
+      )
       await startLocalNode(accountName, network, datapath)
-      toast.info('Starting local node...', {
-        autoClose: 2000,
-        position: 'bottom-right',
-      })
 
       // Step 3: Initialize or unlock the node
       try {
@@ -433,8 +435,6 @@ export const Component = () => {
       toast.error(
         error instanceof Error ? error.message : 'Failed to initialize node'
       )
-    } finally {
-      setIsStartingNode(false)
     }
   }
 
@@ -487,10 +487,28 @@ export const Component = () => {
   ) => {
     try {
       if (mnemonic.join(' ') !== data.mnemonic.trim()) {
-        setAdditionalErrors(['Mnemonic does not match'])
+        setErrors(['Mnemonic does not match'])
         return
       }
+
+      // Clear any previous errors
+      setErrors([])
+      setIsNodeError(false)
+      setNodeErrorMessage('')
+
+      // Move to unlock step
       handleStepChange('unlock')
+
+      // Start the unlock process
+      setIsUnlocking(true)
+
+      try {
+        await handleUnlockComplete()
+      } catch (error) {
+        console.error('Unlock failed:', error)
+        // Error handling is done in handleUnlockComplete
+        // We don't need to do anything here as the UI will show the error
+      }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'An unexpected error occurred'
@@ -507,11 +525,13 @@ export const Component = () => {
 
   const handleUnlockComplete = async () => {
     try {
+      setIsUnlocking(true)
+
       const rpcConfig = parseRpcUrl(
         nodeSetupForm.getValues('rpc_connection_url')
       )
 
-      await unlock({
+      const unlockResult = await unlock({
         bitcoind_rpc_host: rpcConfig.host,
         bitcoind_rpc_password: rpcConfig.password,
         bitcoind_rpc_port: rpcConfig.port,
@@ -521,6 +541,16 @@ export const Component = () => {
         proxy_endpoint: nodeSetupForm.getValues('proxy_endpoint'),
       }).unwrap()
 
+      if (unlockResult === undefined) {
+        throw new Error('Failed to unlock the node')
+      }
+
+      // Verify node status after unlock
+      const nodeInfoResult = await nodeInfo()
+      if (!nodeInfoResult.isSuccess) {
+        throw new Error('Failed to verify node status after unlock')
+      }
+
       // Format settings before dispatching
       const network = nodeSetupForm.getValues('network')
       const defaultMakerUrl = NETWORK_DEFAULTS[network].default_maker_url
@@ -529,7 +559,7 @@ export const Component = () => {
           daemon_listening_port: nodeSetupForm.getValues(
             'daemon_listening_port'
           ),
-          datapath: `kaleidoswap-${nodeSetupForm.getValues('name')}`,
+          datapath: `kaleidoswap-${formatAccountName(nodeSetupForm.getValues('name'))}`,
           default_lsp_url: NETWORK_DEFAULTS[network].default_lsp_url,
           default_maker_url: defaultMakerUrl,
           indexer_url: nodeSetupForm.getValues('indexer_url'),
@@ -545,145 +575,188 @@ export const Component = () => {
         })
       )
 
+      // Show success message
+      toast.success('Wallet unlocked successfully!')
+
+      // Navigate to trade path
       navigate(TRADE_PATH)
     } catch (error) {
       console.error('Unlock failed:', error)
+      setIsNodeError(true)
+      setNodeErrorMessage(
+        error instanceof Error ? error.message : 'Failed to unlock node'
+      )
       throw error
+    } finally {
+      setIsUnlocking(false)
     }
   }
 
-  const handleUnlockError = (error: Error) => {
-    // Don't navigate back to verify anymore
-    setAdditionalErrors([error.message])
+  const handleCancelUnlocking = async () => {
+    setIsCancellingUnlock(true)
+    try {
+      // Stop the node
+      await invoke('stop_node')
+      toast.info('Node unlocking cancelled')
+      handleStepChange('verify')
+    } catch (error) {
+      console.error('Error cancelling unlock:', error)
+      toast.error('Failed to cancel unlocking')
+    } finally {
+      setIsUnlocking(false)
+      setIsCancellingUnlock(false)
+    }
   }
 
   const renderCurrentStep = () => {
+    // Common layout with StepIndicator
+    const renderStepLayout = (
+      title: string,
+      subtitle: string,
+      icon: React.ReactNode,
+      content: React.ReactNode,
+      onBack?: () => void,
+      maxWidth:
+        | 'sm'
+        | 'md'
+        | 'lg'
+        | 'xl'
+        | '2xl'
+        | '3xl'
+        | '4xl'
+        | '5xl'
+        | '6xl' = '3xl',
+      centered: boolean = false
+    ) => (
+      <SetupLayout
+        centered={centered}
+        fullHeight
+        icon={icon}
+        maxWidth={maxWidth}
+        onBack={onBack}
+        subtitle={subtitle}
+        title={title}
+      >
+        <div className="mb-5">
+          <StepIndicator currentStep={currentStep} steps={WALLET_INIT_STEPS} />
+        </div>
+
+        <div className="flex-1">{content}</div>
+      </SetupLayout>
+    )
+
     switch (currentStep) {
       case 'setup':
-        return (
-          <NodeSetupForm
-            errors={additionalErrors}
-            form={nodeSetupForm}
-            onSubmit={handleNodeSetup}
-          />
+        return renderStepLayout(
+          'Create New Wallet',
+          'Set up your local node to create a new RGB Lightning wallet',
+          <Wallet />,
+          <div className="w-full">
+            <NodeSetupForm
+              errors={errors}
+              form={nodeSetupForm}
+              onSubmit={handleNodeSetup}
+            />
+          </div>,
+          () => navigate(WALLET_SETUP_PATH)
         )
+
       case 'password':
-        return (
-          <PasswordSetupForm
-            errors={additionalErrors}
-            form={passwordForm}
-            isPasswordVisible={isPasswordVisible}
-            onSubmit={handlePasswordSetup}
-            setIsPasswordVisible={setIsPasswordVisible}
-          />
+        return renderStepLayout(
+          'Create Password',
+          'Set a strong password to secure your node',
+          <Lock />,
+          <div className="w-full">
+            <PasswordSetupForm
+              errors={errors}
+              form={passwordForm}
+              isPasswordVisible={isPasswordVisible}
+              onSubmit={handlePasswordSetup}
+              setIsPasswordVisible={setIsPasswordVisible}
+            />
+          </div>,
+          () => handleBackNavigation()
         )
+
       case 'mnemonic':
-        return (
-          <MnemonicDisplay
-            mnemonic={mnemonic}
-            onCopy={copyMnemonicToClipboard}
-            onNext={() => handleStepChange('verify')}
-          />
+        return renderStepLayout(
+          'Recovery Phrase',
+          'Save your recovery phrase in a secure location',
+          <FileText />,
+          <div className="w-full">
+            <MnemonicDisplay
+              mnemonic={mnemonic}
+              onCopy={copyMnemonicToClipboard}
+              onNext={() => handleStepChange('verify')}
+            />
+          </div>,
+          () => handleBackNavigation()
         )
+
       case 'verify':
-        return (
-          <MnemonicVerifyForm
-            errors={additionalErrors}
-            form={mnemonicForm}
-            onSubmit={handleMnemonicVerify}
-          />
+        return renderStepLayout(
+          'Verify Recovery Phrase',
+          "Confirm you've saved your recovery phrase correctly",
+          <CheckCircle />,
+          <div className="w-full">
+            <MnemonicVerifyForm
+              errors={errors}
+              form={mnemonicForm}
+              onSubmit={handleMnemonicVerify}
+            />
+          </div>,
+          () => handleBackNavigation()
         )
+
       case 'unlock':
-        return (
-          <UnlockProgress
-            onUnlockComplete={handleUnlockComplete}
-            onUnlockError={handleUnlockError}
-            unlockParams={{
-              bitcoind_rpc_host: parseRpcUrl(
-                nodeSetupForm.getValues('rpc_connection_url')
-              ).host,
-              bitcoind_rpc_password: 'password',
-              bitcoind_rpc_port: parseRpcUrl(
-                nodeSetupForm.getValues('rpc_connection_url')
-              ).port,
-              bitcoind_rpc_username: 'user',
-              indexer_url: nodeSetupForm.getValues('indexer_url'),
-              password: nodePassword,
-              proxy_endpoint: nodeSetupForm.getValues('proxy_endpoint'),
-            }}
-          />
+        return renderStepLayout(
+          isNodeError ? 'Node Error' : 'Starting Node',
+          isNodeError
+            ? 'There was an error initializing your node'
+            : 'Your node is being initialized',
+          isNodeError ? <AlertTriangle /> : <Zap />,
+          isNodeError ? (
+            <Alert
+              className="mb-4"
+              icon={<AlertTriangle className="w-4 h-4" />}
+              title="Node Error"
+              variant="error"
+            >
+              <p className="text-sm">{nodeErrorMessage}</p>
+              <div className="mt-4">
+                <Button
+                  onClick={() => handleStepChange('verify')}
+                  size="sm"
+                  variant="outline"
+                >
+                  Back to Verification
+                </Button>
+              </div>
+            </Alert>
+          ) : (
+            <div className="w-full">
+              <UnlockingProgress
+                isUnlocking={isUnlocking}
+                onBack={() => handleBackNavigation()}
+                onCancel={
+                  isUnlocking && !isCancellingUnlock
+                    ? handleCancelUnlocking
+                    : undefined
+                }
+              />
+            </div>
+          ),
+          isNodeError ? () => handleStepChange('verify') : undefined,
+          '3xl',
+          false
         )
+
       default:
         return null
     }
   }
 
-  return (
-    <Layout>
-      <div className="max-w-6xl mx-auto w-full p-6">
-        <div className="bg-blue-darkest/80 backdrop-blur-sm rounded-3xl shadow-xl p-8 md:p-12 border border-white/5">
-          {/* Main Header */}
-          <div className="flex items-center gap-4 mb-8">
-            <div className="p-4 rounded-xl bg-cyan/10 border border-cyan/20 text-cyan">
-              <Wallet className="w-6 h-6" />
-            </div>
-            <h1 className="text-3xl font-bold text-white">Initialize Wallet</h1>
-          </div>
-
-          {/* Back Button */}
-          <div className="mb-8">
-            <button
-              className="text-cyan flex items-center gap-2 hover:text-cyan-600 
-                       transition-colors group"
-              disabled={isStartingNode}
-              onClick={handleBackNavigation}
-              type="button"
-            >
-              <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-              {getBackButtonText()}
-            </button>
-          </div>
-
-          {/* Step Indicator - full width */}
-          <div className="mb-8">
-            <StepIndicator
-              currentStep={currentStep}
-              steps={WALLET_INIT_STEPS}
-            />
-
-            {/* Step Description */}
-            <div className="mt-6 p-5 bg-blue-dark/40 rounded-xl border border-white/5 relative overflow-hidden">
-              {/* Decorative accent */}
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-cyan"></div>
-
-              <h3 className="text-sm font-medium text-cyan mb-2 pl-3">
-                {currentStep === 'setup' && 'Node Configuration'}
-                {currentStep === 'password' && 'Secure Your Wallet'}
-                {currentStep === 'mnemonic' && 'Backup Your Wallet'}
-                {currentStep === 'verify' && 'Verify Your Backup'}
-                {currentStep === 'unlock' && 'Access Your Wallet'}
-              </h3>
-              <p className="text-xs text-slate-400 leading-relaxed pl-3">
-                {currentStep === 'setup' &&
-                  'Configure your node settings to connect to the Bitcoin network.'}
-                {currentStep === 'password' &&
-                  'Create a strong password to protect your wallet from unauthorized access.'}
-                {currentStep === 'mnemonic' &&
-                  'Save your recovery phrase in a secure location to recover your wallet if needed.'}
-                {currentStep === 'verify' &&
-                  "Confirm you've correctly saved your recovery phrase for future wallet recovery."}
-                {currentStep === 'unlock' &&
-                  'Unlock your node to start using your wallet and access your funds.'}
-              </p>
-            </div>
-          </div>
-
-          {/* Current Step Content */}
-          <div className="max-w-2xl mx-auto">{renderCurrentStep()}</div>
-        </div>
-      </div>
-    </Layout>
-  )
+  return <Layout>{renderCurrentStep()}</Layout>
 }
 
 // Form Components Implementation
@@ -694,226 +767,85 @@ interface NodeSetupFormProps {
 }
 
 const NodeSetupForm = ({ form, onSubmit, errors }: NodeSetupFormProps) => {
-  const [showAdvanced, setShowAdvanced] = useState(false)
-  const network = form.watch('network')
+  const selectedNetwork = form.watch('network')
 
-  // Update form values when network changes
+  // Update effect to use network defaults
   useEffect(() => {
-    const defaults = NETWORK_DEFAULTS[network]
+    const defaults = NETWORK_DEFAULTS[selectedNetwork]
+    form.setValue('daemon_listening_port', defaults.daemon_listening_port)
+    form.setValue('ldk_peer_listening_port', defaults.ldk_peer_listening_port)
     form.setValue('rpc_connection_url', defaults.rpc_connection_url)
     form.setValue('indexer_url', defaults.indexer_url)
     form.setValue('proxy_endpoint', defaults.proxy_endpoint)
-    form.setValue('daemon_listening_port', defaults.daemon_listening_port)
-    form.setValue('ldk_peer_listening_port', defaults.ldk_peer_listening_port)
-  }, [network, form])
+  }, [selectedNetwork, form])
 
   return (
     <div className="w-full">
-      {/* Header Section */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="p-3 rounded-xl bg-cyan/10 border border-cyan/20 text-cyan">
-          <Wallet className="w-5 h-5" />
-        </div>
-        <h2 className="text-2xl font-bold text-white">Configure Your Node</h2>
-      </div>
-
       <p className="text-slate-400 mb-6 leading-relaxed">
-        Set up your node configuration to connect to the Bitcoin network.
+        Configure your node settings to create a new RGB Lightning wallet.
+        Choose a name and network for your wallet.
       </p>
 
-      {/* Form Section */}
-      <form
-        className="bg-blue-dark/40 p-6 rounded-xl border border-white/5"
-        onSubmit={form.handleSubmit(onSubmit)}
-      >
-        <div className="space-y-5">
-          {/* Account Name Field */}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">
-              Account Name
-            </label>
-            <input
-              className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
-                        bg-slate-800/30 text-slate-300 
-                        focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                        outline-none transition-all placeholder:text-slate-600"
-              placeholder="Enter a name for your account"
-              type="text"
-              {...form.register('name', { required: 'Required' })}
-            />
-            <p className="mt-1.5 text-xs text-slate-400">
-              This name will be used to create your account folder
-            </p>
-            {form.formState.errors.name && (
-              <p className="mt-1.5 text-red-400 text-xs flex items-center gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5" />
-                {form.formState.errors.name.message}
-              </p>
-            )}
-          </div>
-
-          {/* Network Selection */}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">
-              Network
-            </label>
-            <div className="relative">
-              <select
-                className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
-                          bg-slate-800/30 text-slate-300 appearance-none
-                          focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                          outline-none transition-all"
-                {...form.register('network', { required: 'Required' })}
-              >
-                <option value="Testnet">Testnet</option>
-                <option value="Signet">Signet</option>
-                <option value="Regtest">Regtest</option>
-              </select>
-              <ChevronDown
-                className="absolute right-3 top-1/2 -translate-y-1/2 
-                                    w-5 h-5 text-slate-400 pointer-events-none"
-              />
-            </div>
-          </div>
-
-          {/* Advanced Settings Toggle */}
-          <button
-            className="flex items-center text-sm text-slate-400 hover:text-white 
-                     transition-colors w-full py-1.5"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            type="button"
-          >
-            <ChevronDown
-              className={`w-4 h-4 mr-2 transition-transform 
-                         ${showAdvanced ? 'rotate-180' : ''}`}
-            />
-            Advanced Settings
-          </button>
-
-          {/* Advanced Settings Section */}
-          {showAdvanced && (
-            <div className="space-y-4 pt-2 border-t border-slate-700">
-              {/* RPC Connection URL */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                  Bitcoind RPC Connection URL
-                </label>
-                <input
-                  className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
-                            bg-slate-800/30 text-slate-300 
-                            focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                            outline-none transition-all placeholder:text-slate-600"
-                  placeholder="username:password@host:port"
-                  type="text"
-                  {...form.register('rpc_connection_url')}
-                />
-                <p className="mt-1.5 text-xs text-slate-400">
-                  Example: user:password@localhost:18443
-                </p>
-              </div>
-
-              {/* Two-column layout for smaller fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Indexer URL */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                    Indexer URL
-                  </label>
-                  <input
-                    className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
-                              bg-slate-800/30 text-slate-300 
-                              focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                              outline-none transition-all placeholder:text-slate-600"
-                    placeholder="Electrum server URL"
-                    type="text"
-                    {...form.register('indexer_url')}
-                  />
-                </div>
-
-                {/* Proxy Endpoint */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                    RGB Proxy Endpoint
-                  </label>
-                  <input
-                    className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
-                              bg-slate-800/30 text-slate-300 
-                              focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                              outline-none transition-all placeholder:text-slate-600"
-                    placeholder="Proxy endpoint URL"
-                    type="text"
-                    {...form.register('proxy_endpoint')}
-                  />
-                </div>
-              </div>
-
-              {/* Two-column layout for port fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Daemon Listening Port */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                    Daemon Listening Port
-                  </label>
-                  <input
-                    className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
-                              bg-slate-800/30 text-slate-300 
-                              focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                              outline-none transition-all placeholder:text-slate-600"
-                    placeholder="Default: 3001"
-                    type="text"
-                    {...form.register('daemon_listening_port')}
-                  />
-                </div>
-
-                {/* LDK Peer Listening Port */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                    LDK Peer Listening Port
-                  </label>
-                  <input
-                    className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
-                              bg-slate-800/30 text-slate-300 
-                              focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                              outline-none transition-all placeholder:text-slate-600"
-                    placeholder="Default: 9735"
-                    type="text"
-                    {...form.register('ldk_peer_listening_port')}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Error Display */}
+      <Card className="p-6 bg-blue-dark/40 border border-white/5">
+        <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
           {errors.length > 0 && (
-            <div
-              className="p-3 bg-red-500/10 border border-red-500/20 
-                          rounded-lg flex items-start gap-3"
+            <Alert
+              icon={<AlertCircle className="w-4 h-4" />}
+              title="Error"
+              variant="error"
             >
-              <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-              <ul className="text-red-400 text-xs space-y-1">
+              <ul className="text-xs space-y-1">
                 {errors.map((error, index) => (
-                  <li className="flex items-center gap-2" key={index}>
+                  <li className="flex items-center gap-1.5" key={index}>
                     <span>•</span> {error}
                   </li>
                 ))}
               </ul>
-            </div>
+            </Alert>
           )}
 
-          {/* Submit Button */}
-          <button
-            className="w-full mt-4 px-6 py-3 rounded-xl bg-cyan text-blue-darkest 
-                     font-semibold hover:bg-cyan/90 transition-colors duration-200
-                     focus:ring-2 focus:ring-cyan/20 focus:outline-none
-                     flex items-center justify-center gap-2"
-            type="submit"
-          >
-            Continue to Password Setup
-            <ArrowRight className="w-5 h-5" />
-          </button>
-        </div>
-      </form>
+          <SetupSection>
+            <FormField
+              description="This name will be used to identify your wallet"
+              error={form.formState.errors.name?.message}
+              htmlFor="name"
+              label="Account Name"
+            >
+              <Input
+                id="name"
+                placeholder="My Bitcoin Wallet"
+                {...form.register('name', {
+                  required: 'Account name is required',
+                })}
+                error={!!form.formState.errors.name}
+              />
+            </FormField>
+
+            <NetworkSelector
+              className="mb-2"
+              onChange={(network) => form.setValue('network', network)}
+              selectedNetwork={selectedNetwork}
+            />
+          </SetupSection>
+
+          <AdvancedSettings>
+            <NetworkSettings form={form} />
+          </AdvancedSettings>
+
+          <div className="pt-3">
+            <Button
+              className="w-full"
+              icon={<ArrowRight className="w-4 h-4" />}
+              iconPosition="right"
+              size="lg"
+              type="submit"
+              variant="primary"
+            >
+              Continue
+            </Button>
+          </div>
+        </form>
+      </Card>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import { invoke } from '@tauri-apps/api'
+import { ChevronDown, ArrowLeft, Eye, EyeOff, Lock } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { SubmitHandler, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
@@ -8,83 +9,14 @@ import { toast } from 'react-toastify'
 import { TRADE_PATH, WALLET_SETUP_PATH } from '../../app/router/paths'
 import { useAppSelector } from '../../app/store/hooks'
 import { Layout } from '../../components/Layout'
-import { MnemonicDisplay } from '../../components/MnemonicDisplay'
-import {
-  MnemonicVerifyForm,
-  MnemonicVerifyFields,
-} from '../../components/MnemonicVerifyForm'
 import { Modal } from '../../components/Modal'
-import {
-  PasswordSetupForm,
-  PasswordFields,
-} from '../../components/PasswordSetupForm'
+import { Button, Card, SetupLayout } from '../../components/ui'
 import { UnlockingProgress } from '../../components/UnlockingProgress'
 import { parseRpcUrl } from '../../helpers/utils'
-import { ChevronDownIcon } from '../../icons/ChevronDown'
-import { EyeIcon } from '../../icons/Eye'
 import { nodeApi, NodeApiError } from '../../slices/nodeApi/nodeApi.slice'
 
 interface Fields {
   password: string
-}
-
-type UnlockStep = 'unlock' | 'init-password' | 'mnemonic' | 'verify'
-
-const ConnectionDetails = ({
-  host,
-  port,
-  indexerUrl,
-  proxyEndpoint,
-}: {
-  host: string
-  port: number
-  indexerUrl: string
-  proxyEndpoint: string
-}) => {
-  const [isExpanded, setIsExpanded] = useState(false)
-
-  const toggleExpanded = (e: React.MouseEvent) => {
-    e.preventDefault()
-    setIsExpanded(!isExpanded)
-  }
-
-  return (
-    <div className="mt-4 mb-6">
-      <button
-        className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors rounded-lg border border-gray-600 hover:border-gray-500"
-        onClick={toggleExpanded}
-        type="button"
-      >
-        <span>Connection Details</span>
-        <ChevronDownIcon
-          className={`w-4 h-4 transform transition-transform ${
-            isExpanded ? 'rotate-180' : ''
-          }`}
-        />
-      </button>
-
-      {isExpanded && (
-        <div className="mt-2 p-4 rounded-lg border border-gray-600 bg-blue-darker space-y-2 text-sm">
-          <div>
-            <span className="text-gray-400">Node Host:</span>
-            <span className="ml-2 text-white">{host}</span>
-          </div>
-          <div>
-            <span className="text-gray-400">Port:</span>
-            <span className="ml-2 text-white">{port}</span>
-          </div>
-          <div>
-            <span className="text-gray-400">Indexer URL:</span>
-            <span className="ml-2 text-white break-all">{indexerUrl}</span>
-          </div>
-          <div>
-            <span className="text-gray-400">Proxy Endpoint:</span>
-            <span className="ml-2 text-white break-all">{proxyEndpoint}</span>
-          </div>
-        </div>
-      )}
-    </div>
-  )
 }
 
 export const Component = () => {
@@ -96,16 +28,12 @@ export const Component = () => {
 
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const [isUnlocking, setIsUnlocking] = useState(false)
-  const [currentStep, setCurrentStep] = useState<UnlockStep>('unlock')
-  const [mnemonic, setMnemonic] = useState<Array<string>>([])
-  const [nodePassword, setNodePassword] = useState('')
-
-  const [init] = nodeApi.endpoints.init.useLazyQuery()
-
   const [showInitModal, setShowInitModal] = useState(false)
+  const [errors, setErrors] = useState<string[]>([])
+  const [unlockError, setUnlockError] = useState<string | null>(null)
+  const [isConnectionDetailsOpen, setIsConnectionDetailsOpen] = useState(false)
 
-  const [isVerifying, setIsVerifying] = useState(false)
-
+  // Check if the node is already unlocked when the component mounts
   useEffect(() => {
     const checkNodeStatus = async () => {
       const nodeInfoRes = await nodeInfo()
@@ -122,25 +50,14 @@ export const Component = () => {
     },
   })
 
-  const passwordSetupForm = useForm<PasswordFields>({
-    defaultValues: {
-      confirmPassword: '',
-      password: '',
-    },
-  })
-
-  const mnemonicVerifyForm = useForm<MnemonicVerifyFields>({
-    defaultValues: {
-      mnemonic: '',
-    },
-  })
-
   const onSubmit: SubmitHandler<Fields> = async (data) => {
     let shouldRetry = true
     let pollingInterval = 2000
     let doubleFetchErrorFlag = false
 
     setIsUnlocking(true)
+    setErrors([])
+    setUnlockError(null)
 
     while (shouldRetry) {
       try {
@@ -168,6 +85,10 @@ export const Component = () => {
 
         const nodeInfoRes = await nodeInfo()
         if (nodeInfoRes.isSuccess) {
+          toast.success('Wallet unlocked successfully!', {
+            autoClose: 3000,
+            position: 'bottom-right',
+          })
           navigate(TRADE_PATH)
         } else {
           throw new Error('Failed to get node info after unlock')
@@ -181,18 +102,18 @@ export const Component = () => {
           error?.status === 'FETCH_ERROR'
         ) {
           if (doubleFetchErrorFlag) {
-            toast.error(error.data.error, {
+            const errorMessage =
+              error.data?.error || 'Connection error occurred'
+            setUnlockError(errorMessage)
+            toast.error(errorMessage, {
               autoClose: 5000,
-              closeOnClick: false,
-              draggable: false,
-              hideProgressBar: false,
-              pauseOnHover: false,
               position: 'top-right',
             })
             shouldRetry = false
             continue
           } else {
             console.warn('Fetch error, retrying immediately...')
+            doubleFetchErrorFlag = true
             continue
           }
         }
@@ -217,108 +138,27 @@ export const Component = () => {
         ) {
           setShowInitModal(true)
           shouldRetry = false
-        }
-
-        if (error.data?.error === 'Node has already been unlocked') {
+        } else if (error.data?.error === 'Node has already been unlocked') {
+          toast.info('Node is already unlocked', {
+            autoClose: 3000,
+            position: 'bottom-right',
+          })
           navigate(TRADE_PATH)
           shouldRetry = false
+        } else {
+          const errorMessage = error.data?.error || 'An error occurred'
+          setUnlockError(errorMessage)
+          toast.error(errorMessage, {
+            autoClose: 5000,
+            position: 'top-right',
+          })
+          shouldRetry = false
         }
-
-        toast.error(error.data.error, {
-          autoClose: 5000,
-          closeOnClick: false,
-          draggable: false,
-          hideProgressBar: false,
-          pauseOnHover: false,
-          position: 'top-right',
-        })
-        shouldRetry = false
       }
     }
 
-    setIsUnlocking(false)
-  }
-
-  const handleInitPassword: SubmitHandler<PasswordFields> = async (data) => {
-    setIsUnlocking(true)
-    try {
-      const initResponse = await init({ password: data.password })
-      if (!initResponse.isSuccess) {
-        throw new Error(
-          initResponse.error && 'data' in initResponse.error
-            ? (initResponse.error.data as { error: string }).error
-            : 'Initialization failed'
-        )
-      }
-
-      setNodePassword(data.password)
-      setMnemonic(initResponse.data.mnemonic.split(' '))
-      setCurrentStep('mnemonic')
-      toast.success('Node initialized successfully!')
-    } catch (error) {
-      console.error('Initialization failed:', error)
-      toast.error('Failed to initialize node. Please try again.', {
-        autoClose: 5000,
-        closeOnClick: false,
-        draggable: false,
-        hideProgressBar: false,
-        pauseOnHover: false,
-        position: 'top-right',
-      })
-    } finally {
+    if (!shouldRetry && !showInitModal) {
       setIsUnlocking(false)
-    }
-  }
-
-  const handleMnemonicVerify: SubmitHandler<MnemonicVerifyFields> = async (
-    data
-  ) => {
-    setIsVerifying(true)
-    try {
-      if (mnemonic.join(' ') !== data.mnemonic.trim()) {
-        toast.error('Mnemonic does not match')
-        return
-      }
-
-      const rpcConfig = parseRpcUrl(nodeSettings.rpc_connection_url)
-      const unlockResponse = await unlock({
-        bitcoind_rpc_host: rpcConfig.host,
-        bitcoind_rpc_password: rpcConfig.password,
-        bitcoind_rpc_port: rpcConfig.port,
-        bitcoind_rpc_username: rpcConfig.username,
-        indexer_url: nodeSettings.indexer_url,
-        password: nodePassword,
-        proxy_endpoint: nodeSettings.proxy_endpoint,
-      })
-
-      if (unlockResponse.isSuccess) {
-        const nodeInfoRes = await nodeInfo()
-        if (nodeInfoRes.isSuccess) {
-          navigate(TRADE_PATH)
-        }
-      } else {
-        if ('error' in unlockResponse && unlockResponse.error) {
-          const errorData = isFetchBaseQueryError(unlockResponse.error)
-            ? (unlockResponse.error.data as { error?: string })?.error ||
-              'Unknown error'
-            : unlockResponse.error.message || 'Unknown error'
-          throw new Error(errorData)
-        }
-        throw new Error('Failed to unlock the node')
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'An unexpected error occurred'
-      toast.error(errorMessage, {
-        autoClose: 5000,
-        closeOnClick: false,
-        draggable: false,
-        hideProgressBar: false,
-        pauseOnHover: false,
-        position: 'top-right',
-      })
-    } finally {
-      setIsVerifying(false)
     }
   }
 
@@ -337,117 +177,262 @@ export const Component = () => {
     navigate(WALLET_SETUP_PATH)
   }
 
-  return (
-    <Layout>
-      <div className="max-w-md w-full bg-blue-dark py-12 px-8 rounded-lg shadow-lg">
-        {isUnlocking || isVerifying ? (
-          <UnlockingProgress isUnlocking={isUnlocking} />
-        ) : currentStep === 'unlock' ? (
-          <form
-            className="space-y-6"
-            onSubmit={unlockForm.handleSubmit(onSubmit)}
-          >
-            <div className="mb-8">
-              <button
-                className="px-4 py-2 rounded-full border text-sm border-gray-500 hover:bg-gray-700 transition-colors"
-                onClick={handleBack}
-                type="button"
-              >
-                ← Back
-              </button>
-            </div>
-            <div className="text-center mb-10">
-              <h3 className="text-3xl font-bold mb-2">Unlock your Wallet</h3>
-              <p className="text-gray-400">Enter your password to continue</p>
-            </div>
+  const handleCancelUnlocking = () => {
+    setIsUnlocking(false)
+    setUnlockError(null)
+    toast.info('Unlocking process cancelled', {
+      autoClose: 3000,
+      position: 'bottom-right',
+    })
+  }
 
-            <ConnectionDetails
-              host={parseRpcUrl(nodeSettings.rpc_connection_url).host}
-              indexerUrl={nodeSettings.indexer_url}
-              port={parseRpcUrl(nodeSettings.rpc_connection_url).port}
-              proxyEndpoint={nodeSettings.proxy_endpoint}
-            />
+  // Simplified Connection Details Component
+  const SimpleConnectionDetails = () => {
+    const rpcConfig = parseRpcUrl(nodeSettings.rpc_connection_url)
 
-            <div>
-              <label
-                className="block text-sm font-medium mb-2"
-                htmlFor="password"
-              >
-                Your Password
-              </label>
-              <div className="relative">
-                <input
-                  className="border border-gray-600 rounded-lg bg-blue-dark px-4 py-3 w-full outline-none focus:ring-2 focus:ring-cyan transition-shadow"
-                  id="password"
-                  type={isPasswordVisible ? 'text' : 'password'}
-                  {...unlockForm.register('password', {
-                    required: 'Password is required',
-                  })}
-                />
-                <button
-                  className="absolute top-0 right-3 h-full flex items-center text-gray-400 hover:text-white transition-colors"
-                  onClick={() => setIsPasswordVisible((prev) => !prev)}
-                  type="button"
-                >
-                  <EyeIcon />
-                </button>
+    return (
+      <div className="mb-6">
+        <button
+          className="w-full flex items-center justify-between p-3 bg-transparent text-gray-300 border border-gray-700/50 rounded-lg"
+          onClick={() => setIsConnectionDetailsOpen(!isConnectionDetailsOpen)}
+        >
+          <span className="flex items-center">
+            <svg
+              className="w-5 h-5 mr-2 text-blue-500"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <rect
+                height="18"
+                rx="2"
+                stroke="currentColor"
+                strokeWidth="2"
+                width="18"
+                x="3"
+                y="3"
+              />
+              <line
+                stroke="currentColor"
+                strokeWidth="2"
+                x1="8"
+                x2="16"
+                y1="10"
+                y2="10"
+              />
+              <line
+                stroke="currentColor"
+                strokeWidth="2"
+                x1="8"
+                x2="16"
+                y1="14"
+                y2="14"
+              />
+            </svg>
+            Connection Details
+          </span>
+          <ChevronDown
+            className={`w-5 h-5 transition-transform duration-200 ${
+              isConnectionDetailsOpen ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+
+        {isConnectionDetailsOpen && (
+          <div className="mt-2 p-4 bg-gray-800/50 border border-gray-700/50 rounded-lg text-gray-300 text-sm space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-gray-500 mb-1">Node Host</p>
+                <p>{rpcConfig.host}</p>
               </div>
-              {unlockForm.formState.errors.password && (
-                <p className="mt-2 text-sm text-red-500">
-                  {unlockForm.formState.errors.password.message}
-                </p>
-              )}
+              <div>
+                <p className="text-gray-500 mb-1">Port</p>
+                <p>{rpcConfig.port}</p>
+              </div>
             </div>
-
             <div>
-              <button
-                className="w-full px-6 py-3 rounded-lg bg-cyan text-blue-dark text-lg font-bold hover:bg-cyan-light transition-colors"
-                disabled={isUnlocking}
-                type="submit"
-              >
-                {isUnlocking ? 'Unlocking...' : 'Unlock Wallet'}
-              </button>
+              <p className="text-gray-500 mb-1">Indexer URL</p>
+              <p className="break-all">{nodeSettings.indexer_url}</p>
             </div>
-          </form>
-        ) : currentStep === 'init-password' ? (
-          <PasswordSetupForm
-            errors={[]}
-            form={passwordSetupForm}
-            isPasswordVisible={isPasswordVisible}
-            onSubmit={handleInitPassword}
-            setIsPasswordVisible={setIsPasswordVisible}
-          />
-        ) : currentStep === 'mnemonic' ? (
-          <MnemonicDisplay
-            mnemonic={mnemonic}
-            onCopy={() => {
-              navigator.clipboard
-                .writeText(mnemonic.join(' '))
-                .then(() => toast.success('Mnemonic copied to clipboard'))
-                .catch(() => toast.error('Failed to copy mnemonic'))
-            }}
-            onNext={() => setCurrentStep('verify')}
-          />
-        ) : (
-          <MnemonicVerifyForm
-            errors={[]}
-            form={mnemonicVerifyForm}
-            onSubmit={handleMnemonicVerify}
-          />
+            <div>
+              <p className="text-gray-500 mb-1">Proxy Endpoint</p>
+              <p className="break-all">{nodeSettings.proxy_endpoint}</p>
+            </div>
+          </div>
         )}
       </div>
+    )
+  }
 
-      {showInitModal && (
-        <Modal
-          message="Wallet is not initialized. Would you like to initialize it now?"
-          onCancel={() => setShowInitModal(false)}
-          onConfirm={() => {
-            setShowInitModal(false)
-            setCurrentStep('init-password')
-          }}
-          title="Initialize Wallet"
-        />
+  // Render the unlock form card with matched styling from screenshot
+  const renderUnlockForm = () => (
+    <Card className="w-full max-w-md mx-auto bg-gray-900 rounded-lg overflow-hidden border border-gray-800">
+      <div className="flex flex-col items-center pt-12 pb-6">
+        {/* Key icon with blue background */}
+        <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center mb-6">
+          <svg
+            className="w-10 h-10 text-white"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+          >
+            <path d="M15 7a8.001 8.001 0 01-7.022 7.95 2 2 0 00-1.95 1.93V21a2 2 0 002 2h4a2 2 0 002-2v-2.1a2 2 0 01.15-.777l.691-1.383a.995.995 0 01.886-.54h1.3a2 2 0 002-2v-3.283c0-.7-.192-1.387-.554-1.997L15 7z" />
+            <circle cx="18" cy="6" r="3" />
+          </svg>
+        </div>
+
+        <h2 className="text-2xl font-semibold text-white text-center">
+          Unlock Your Wallet
+        </h2>
+        <p className="text-gray-400 text-center mt-2">
+          Enter your password to access your wallet
+        </p>
+      </div>
+
+      <div className="px-6 pb-8">
+        <form
+          className="space-y-6"
+          onSubmit={unlockForm.handleSubmit(onSubmit)}
+        >
+          {/* Connection details dropdown */}
+          <SimpleConnectionDetails />
+
+          {/* Password field */}
+          <div className="space-y-2">
+            <label
+              className="block text-sm font-medium text-gray-300"
+              htmlFor="password"
+            >
+              Password
+            </label>
+
+            <div className="relative">
+              <input
+                className="w-full px-4 py-3 bg-gray-800/70 border border-gray-700 rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
+                id="password"
+                placeholder="Enter your wallet password"
+                type={isPasswordVisible ? 'text' : 'password'}
+                {...unlockForm.register('password', {
+                  required: 'Password is required',
+                })}
+              />
+
+              <button
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+                type="button"
+              >
+                {isPasswordVisible ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </button>
+            </div>
+
+            {unlockForm.formState.errors.password && (
+              <p className="text-sm text-red-400">
+                {unlockForm.formState.errors.password.message}
+              </p>
+            )}
+          </div>
+
+          {/* Error messages */}
+          {errors.length > 0 && (
+            <div className="p-3 bg-red-900/30 border border-red-700/50 rounded-lg">
+              <div className="text-sm text-red-300">
+                {errors.map((error, index) => (
+                  <p key={index}>{error}</p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="pt-2 space-y-4">
+            <Button
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg flex items-center justify-center"
+              disabled={isUnlocking}
+              type="submit"
+            >
+              Unlock Wallet
+            </Button>
+
+            <button
+              className="w-full flex items-center justify-center text-gray-400 hover:text-white py-2 bg-transparent"
+              onClick={handleBack}
+              type="button"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Wallet Setup
+            </button>
+          </div>
+        </form>
+      </div>
+    </Card>
+  )
+
+  const SimpleModal = () => (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-md bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+        <div className="p-6">
+          <h3 className="text-xl font-semibold text-white mb-2">
+            Initialize Wallet
+          </h3>
+          <p className="text-gray-300 mb-6">
+            Wallet is not initialized. Would you like to initialize it now?
+          </p>
+          <div className="flex justify-end gap-3">
+            <Button
+              className="border-gray-600 text-gray-300"
+              onClick={() => setShowInitModal(false)}
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-blue-600 text-white"
+              onClick={() => {
+                setShowInitModal(false)
+                navigate(WALLET_SETUP_PATH)
+              }}
+            >
+              Initialize
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </div>
+  )
+
+  return (
+    <Layout className="min-h-screen bg-gradient-to-b from-gray-900 to-black">
+      {isUnlocking ? (
+        <SetupLayout
+          centered={true}
+          fullHeight
+          icon={<Lock />}
+          maxWidth="xl"
+          subtitle="Please wait while we access your wallet"
+          title="Unlocking Wallet"
+        >
+          <Card className="w-full max-w-3xl mx-auto p-6 bg-gray-900 border border-gray-800 rounded-xl">
+            <UnlockingProgress
+              errorMessage={unlockError || undefined}
+              hasError={!!unlockError}
+              isUnlocking={isUnlocking}
+              onBack={handleBack}
+              onCancel={handleCancelUnlocking}
+            />
+          </Card>
+        </SetupLayout>
+      ) : (
+        <div className="flex items-center justify-center min-h-screen px-4 py-12">
+          {renderUnlockForm()}
+        </div>
       )}
+
+      {showInitModal && <SimpleModal />}
     </Layout>
   )
 }

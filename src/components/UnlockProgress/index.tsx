@@ -1,274 +1,214 @@
-import { Loader2, AlertCircle, ChevronDown, ArrowLeft } from 'lucide-react'
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import {
+  ArrowLeft,
+  XCircle,
+  Shield,
+  AlertCircle,
+  CheckCircle,
+} from 'lucide-react'
+import { useState, useEffect } from 'react'
 
-import { UnlockRequest } from '../../slices/nodeApi/nodeApi.slice'
+import { Button } from '../ui'
 
-interface UnlockProgressProps {
-  unlockParams: UnlockRequest
-  onUnlockComplete: () => void
-  onUnlockError: (error: Error) => void
+interface UnlockingProgressProps {
+  isUnlocking: boolean
   onBack?: () => void
+  onCancel?: () => void
+  hasError?: boolean
+  errorMessage?: string
 }
 
-export const UnlockProgress = ({
-  unlockParams: initialUnlockParams,
-  onUnlockComplete,
-  onUnlockError,
+export const UnlockingProgress = ({
+  isUnlocking,
   onBack,
-}: UnlockProgressProps) => {
-  const [isUnlocking, setIsUnlocking] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [showAdvanced, setShowAdvanced] = useState(false)
-  const [isEditing, setIsEditing] = useState(false)
+  onCancel,
+  hasError = false,
+  errorMessage,
+}: UnlockingProgressProps) => {
+  const [currentStep, setCurrentStep] = useState(0)
+  const [completedSteps, setCompletedSteps] = useState<number[]>([])
 
-  const form = useForm<UnlockRequest>({
-    defaultValues: initialUnlockParams,
-  })
+  const steps = [
+    { icon: Shield, title: 'Decrypting wallet' },
+    { icon: Shield, title: 'Synchronizing Bitcoin blockchain' },
+    { icon: Shield, title: 'Connecting to RGB proxy' },
+    { icon: Shield, title: 'Connecting to Lightning' },
+  ]
 
-  const startUnlock = async () => {
-    setIsUnlocking(true)
-    setError(null)
+  // Simulate step progression for the demo
+  useEffect(() => {
+    if (!isUnlocking || hasError) return
 
-    try {
-      await onUnlockComplete()
-    } catch (error) {
-      setError(
-        error instanceof Error ? error.message : 'Failed to unlock wallet'
-      )
-      onUnlockError(
-        error instanceof Error ? error : new Error('Failed to unlock wallet')
-      )
-      setIsEditing(true) // Enable editing on error
-    } finally {
-      setIsUnlocking(false)
-    }
-  }
+    const interval = setInterval(() => {
+      setCurrentStep((prev) => {
+        if (prev < steps.length - 1) {
+          setCompletedSteps((completed) => [...completed, prev])
+          return prev + 1
+        }
+        clearInterval(interval)
+        return prev
+      })
+    }, 2000)
+
+    return () => clearInterval(interval)
+  }, [isUnlocking, hasError, steps.length])
 
   return (
-    <div className="w-full">
-      {/* Header Section */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="p-3 rounded-xl bg-cyan/10 border border-cyan/20 text-cyan">
-          {isUnlocking ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
+    <div className="flex items-center justify-center p-4">
+      <div className="w-full max-w-3xl flex flex-col items-center">
+        {/* Animated Progress Ring with Gradient */}
+        <div className="relative w-32 h-32 mb-8">
+          {/* Outer static ring */}
+          <div className="absolute inset-0 rounded-full border-4 border-cyan-500/20" />
+
+          {/* Spinning gradient ring - different animation if there's an error */}
+          {hasError ? (
+            <div className="absolute inset-0 rounded-full border-4 border-red-500 animate-pulse" />
           ) : (
-            <Loader2 className="w-5 h-5" />
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-cyan-400 border-r-cyan-500 animate-[spin_3s_linear_infinite]" />
           )}
-        </div>
-        <h2 className="text-2xl font-bold text-white">Unlock Your Node</h2>
-      </div>
 
-      <p className="text-slate-400 mb-6 leading-relaxed">
-        {isUnlocking
-          ? 'Your node is being unlocked with the provided configuration. This may take a moment.'
-          : 'Click the button below to unlock your node and start using your wallet.'}
-      </p>
-
-      <form className="space-y-5" onSubmit={form.handleSubmit(startUnlock)}>
-        {/* Connection Parameters Summary */}
-        <div className="bg-blue-dark/40 rounded-lg p-5 border border-white/5">
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="text-base font-medium">Connection Details</h4>
-            {error && (
-              <button
-                className="text-xs text-cyan hover:text-cyan/80 transition-colors"
-                onClick={() => setIsEditing(!isEditing)}
-                type="button"
-              >
-                {isEditing ? 'Cancel Editing' : 'Edit Parameters'}
-              </button>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            {isEditing ? (
-              // Editable fields when there's an error
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                    Bitcoin Node Host
-                  </label>
-                  <input
-                    {...form.register('bitcoind_rpc_host')}
-                    className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
-                              bg-slate-800/30 text-slate-300 
-                              focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                              outline-none transition-all"
-                    disabled={isUnlocking}
-                  />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      Bitcoin Node Port
-                    </label>
-                    <input
-                      {...form.register('bitcoind_rpc_port')}
-                      className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
-                                bg-slate-800/30 text-slate-300 
-                                focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                                outline-none transition-all"
-                      disabled={isUnlocking}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      RPC Username
-                    </label>
-                    <input
-                      {...form.register('bitcoind_rpc_username')}
-                      className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
-                                bg-slate-800/30 text-slate-300 
-                                focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                                outline-none transition-all"
-                      disabled={isUnlocking}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                    Indexer URL
-                  </label>
-                  <input
-                    {...form.register('indexer_url')}
-                    className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
-                              bg-slate-800/30 text-slate-300 
-                              focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                              outline-none transition-all"
-                    disabled={isUnlocking}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                    RGB Proxy Endpoint
-                  </label>
-                  <input
-                    {...form.register('proxy_endpoint')}
-                    className="w-full px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
-                              bg-slate-800/30 text-slate-300 
-                              focus:border-cyan focus:ring-2 focus:ring-cyan/20 
-                              outline-none transition-all"
-                    disabled={isUnlocking}
-                  />
-                </div>
-              </>
+          {/* Inner pulsing circle */}
+          <div className="absolute inset-0 m-auto w-16 h-16">
+            {hasError ? (
+              <div className="w-full h-full rounded-full bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center animate-pulse">
+                <AlertCircle className="w-8 h-8 text-white" />
+              </div>
             ) : (
-              // Read-only summary view
-              <div className="p-3 bg-slate-800/30 rounded-lg">
-                <button
-                  className="flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors w-full"
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                  type="button"
+              <div className="w-full h-full rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite] shadow-lg shadow-cyan-500/30 flex items-center justify-center">
+                <svg
+                  className="w-8 h-8 text-blue-900"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <ChevronDown
-                    className={`w-3.5 h-3.5 transition-transform ${
-                      showAdvanced ? 'rotate-180' : ''
-                    }`}
+                  <path
+                    d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
                   />
-                  {showAdvanced ? 'Hide' : 'Show'} Connection Details
-                </button>
-
-                {showAdvanced && (
-                  <div className="mt-3 space-y-2 pt-3 border-t border-gray-700">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400 text-xs">
-                        Bitcoin Node
-                      </span>
-                      <span className="font-mono text-xs truncate ml-4 max-w-[300px]">
-                        {initialUnlockParams.bitcoind_rpc_host}:
-                        {initialUnlockParams.bitcoind_rpc_port}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400 text-xs">
-                        RPC Username
-                      </span>
-                      <span className="font-mono text-xs truncate ml-4 max-w-[300px]">
-                        {initialUnlockParams.bitcoind_rpc_username}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400 text-xs">Indexer URL</span>
-                      <span className="font-mono text-xs truncate ml-4 max-w-[300px]">
-                        {initialUnlockParams.indexer_url}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400 text-xs">RGB Proxy</span>
-                      <span className="font-mono text-xs truncate ml-4 max-w-[300px]">
-                        {initialUnlockParams.proxy_endpoint}
-                      </span>
-                    </div>
-                  </div>
-                )}
+                </svg>
               </div>
             )}
           </div>
         </div>
 
-        {/* Error Display */}
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-3">
-            <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-red-400 text-xs">{error}</p>
-            </div>
-          </div>
-        )}
+        {/* Status Text and Steps */}
+        <div className="text-center space-y-6 w-full">
+          <h3 className="text-2xl font-medium text-white">
+            {hasError
+              ? 'Error unlocking wallet'
+              : isUnlocking
+                ? 'Unlocking wallet...'
+                : 'Verifying recovery phrase...'}
+          </h3>
 
-        {/* Action Buttons */}
-        <div className="flex justify-end gap-3">
-          {/* Back Button - Only show if onBack is provided */}
-          {onBack && (
-            <button
-              className="px-4 py-2.5 rounded-lg border-2 border-slate-700/50 
-                       text-slate-300 hover:bg-slate-700/30 transition-all duration-200
-                       focus:ring-2 focus:ring-slate-700/20 focus:outline-none
-                       flex items-center justify-center gap-2 text-sm"
-              disabled={isUnlocking}
-              onClick={onBack}
-              type="button"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back</span>
-            </button>
+          {hasError && errorMessage && (
+            <div className="p-4 rounded-lg bg-red-900/30 border border-red-500/20 text-red-300 text-sm animate-[fadeIn_0.5s_ease-out] max-w-2xl mx-auto">
+              <p>{errorMessage}</p>
+            </div>
           )}
 
-          {/* Unlock Button */}
-          <button
-            className="flex-1 px-6 py-2.5 rounded-lg bg-cyan text-blue-darkest 
-                     font-semibold hover:bg-cyan/90 transition-colors duration-200
-                     focus:ring-2 focus:ring-cyan/20 focus:outline-none
-                     flex items-center justify-center gap-2 text-sm
-                     disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={isUnlocking}
-            type="submit"
-          >
-            {isUnlocking ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Unlocking Node...
-              </>
-            ) : (
-              'Unlock Node'
-            )}
-          </button>
-        </div>
-      </form>
+          {isUnlocking && !hasError && (
+            <div className="space-y-4 animate-[fadeIn_0.5s_ease-out] max-w-2xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {steps.map((step, index) => {
+                  const isActive = currentStep === index
+                  const isCompleted = completedSteps.includes(index)
+                  const StepIcon = step.icon
 
-      {/* Full-screen Loading Overlay */}
-      {isUnlocking && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-blue-dark p-6 rounded-xl max-w-md w-full text-center">
-            <Loader2 className="w-10 h-10 text-cyan animate-spin mx-auto mb-4" />
-            <h4 className="text-lg font-bold mb-2">Unlocking Your Node</h4>
-            <p className="text-gray-400 text-sm">
-              Please wait while we unlock your node. This may take a moment.
-            </p>
-          </div>
+                  return (
+                    <div
+                      className={`flex items-center space-x-3 p-3 rounded-lg border transition-all duration-300 ${
+                        isActive
+                          ? 'bg-gradient-to-r from-cyan-950/50 to-cyan-800/20 border-cyan-500/30 shadow-md shadow-cyan-500/10'
+                          : isCompleted
+                            ? 'bg-gradient-to-r from-green-950/30 to-green-900/10 border-green-500/20'
+                            : 'bg-gradient-to-r from-transparent to-cyan-500/5 border-cyan-500/10'
+                      } backdrop-blur-sm animate-[slideInRight_0.5s_ease-out]`}
+                      key={step.title}
+                      style={{ animationDelay: `${index * 150}ms` }}
+                    >
+                      {/* Progress indicator */}
+                      <div
+                        className={`flex items-center justify-center w-6 h-6 rounded-full ${
+                          isActive
+                            ? 'bg-cyan-400 animate-[pulse_2s_infinite]'
+                            : isCompleted
+                              ? 'bg-green-500'
+                              : 'bg-gray-700'
+                        }`}
+                      >
+                        {isCompleted ? (
+                          <CheckCircle className="w-4 h-4 text-white" />
+                        ) : (
+                          <StepIcon className="w-3 h-3 text-white" />
+                        )}
+                      </div>
+
+                      {/* Step title */}
+                      <span
+                        className={`text-sm font-medium ${
+                          isActive
+                            ? 'text-cyan-100'
+                            : isCompleted
+                              ? 'text-green-300'
+                              : 'text-gray-400'
+                        }`}
+                      >
+                        {step.title}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Note card */}
+              <div
+                className="mt-6 p-4 rounded-lg bg-blue-900/30 border border-cyan-500/10 text-sm text-gray-400 animate-[fadeIn_0.5s_ease-out]"
+                style={{ animationDelay: '600ms' }}
+              >
+                <p>
+                  Please keep the application open while we complete the setup.
+                </p>
+                <p className="mt-2">
+                  Note: If your node has been offline for some time,
+                  synchronization may take a few minutes.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {(onBack || onCancel) && (
+            <div
+              className="mt-8 flex justify-center gap-4 animate-[fadeIn_0.5s_ease-out]"
+              style={{ animationDelay: '800ms' }}
+            >
+              {onBack && (
+                <Button
+                  className="border-gray-700 hover:bg-gray-800 hover:border-gray-600 transition-colors"
+                  onClick={onBack}
+                  variant="outline"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Setup
+                </Button>
+              )}
+
+              {onCancel && (
+                <Button
+                  className="bg-red-600/80 hover:bg-red-500 transition-colors"
+                  onClick={onCancel}
+                  variant="danger"
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+              )}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }

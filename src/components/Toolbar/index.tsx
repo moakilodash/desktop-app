@@ -113,13 +113,13 @@ const NodeCard: React.FC<NodeCardProps> = ({
 
   return (
     <div
-      className={`group bg-blue-darker/50 rounded-xl transition-all duration-200 
+      className={`group bg-blue-darker/50 rounded-xl transition-all duration-300 
         hover:bg-blue-darker relative overflow-hidden border
         ${isCollapsed ? 'p-2' : 'p-4'}
         ${
           isEditing
-            ? 'cursor-pointer border-cyan/30 hover:border-cyan/70 hover:shadow-[0_0_0_1px_rgba(56,189,248,0.4)]'
-            : 'border-divider/5'
+            ? 'cursor-pointer border-cyan/30 hover:border-cyan/70 hover:shadow-[0_0_0_1px_rgba(56,189,248,0.4)] hover:-translate-y-0.5'
+            : 'border-divider/5 hover:border-divider/20 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-cyan/5'
         }`}
       onClick={handleCardClick}
     >
@@ -128,7 +128,7 @@ const NodeCard: React.FC<NodeCardProps> = ({
         {/* Avatar with edit indicator */}
         <div className="relative">
           <MinidenticonImg
-            className={`rounded-lg flex-shrink-0 ${isEditing ? 'opacity-80' : ''}`}
+            className={`rounded-lg flex-shrink-0 transition-opacity duration-200 ${isEditing ? 'opacity-80' : ''}`}
             height={isCollapsed ? '40' : '40'}
             saturation="90"
             username={account.name}
@@ -137,14 +137,14 @@ const NodeCard: React.FC<NodeCardProps> = ({
 
           {/* Node type indicator for collapsed view */}
           {isCollapsed && (
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-blue-darkest flex items-center justify-center">
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-blue-darkest flex items-center justify-center shadow-sm">
               <NodeIcon className={`w-3 h-3 ${nodeColor}`} />
             </div>
           )}
 
           {/* Edit mode indicator for collapsed view */}
           {isEditing && isCollapsed && (
-            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-cyan/80 flex items-center justify-center">
+            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-cyan/80 flex items-center justify-center shadow-sm">
               <Edit className="w-2.5 h-2.5 text-blue-darkest" />
             </div>
           )}
@@ -177,7 +177,7 @@ const NodeCard: React.FC<NodeCardProps> = ({
             <button
               aria-label={`Edit node ${account.name}`}
               className="p-2.5 rounded-lg text-gray-400 hover:text-cyan bg-blue-darkest/40 hover:bg-blue-darkest
-                transition-colors duration-200"
+                transition-colors duration-200 hover:shadow-md"
               onClick={(e) => {
                 e.stopPropagation()
                 onEdit(account)
@@ -188,7 +188,7 @@ const NodeCard: React.FC<NodeCardProps> = ({
             <button
               aria-label={`Delete node ${account.name}`}
               className="p-2.5 rounded-lg text-gray-400 hover:text-red-500 bg-blue-darkest/40 hover:bg-blue-darkest
-                transition-colors duration-200"
+                transition-colors duration-200 hover:shadow-md"
               onClick={(e) => {
                 e.stopPropagation()
                 onDelete(account)
@@ -202,14 +202,14 @@ const NodeCard: React.FC<NodeCardProps> = ({
         {/* Edit/Delete buttons for collapsed view */}
         {isEditing && isCollapsed && (
           <div
-            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-blue-darker/80 transition-opacity duration-200"
+            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-blue-darker/80 backdrop-blur-sm transition-opacity duration-200"
             onClick={(e) => e.stopPropagation()} // Prevent card click when clicking buttons
           >
             <div className="flex space-x-2">
               <button
                 aria-label={`Edit node ${account.name}`}
                 className="p-1.5 rounded-lg text-cyan bg-blue-darkest/80 hover:bg-blue-darkest
-                  transition-colors duration-200"
+                  transition-colors duration-200 hover:scale-110"
                 onClick={(e) => {
                   e.stopPropagation()
                   onEdit(account)
@@ -220,7 +220,7 @@ const NodeCard: React.FC<NodeCardProps> = ({
               <button
                 aria-label={`Delete node ${account.name}`}
                 className="p-1.5 rounded-lg text-red-400 bg-blue-darkest/80 hover:bg-blue-darkest
-                  transition-colors duration-200"
+                  transition-colors duration-200 hover:scale-110"
                 onClick={(e) => {
                   e.stopPropagation()
                   onDelete(account)
@@ -235,7 +235,7 @@ const NodeCard: React.FC<NodeCardProps> = ({
 
       {/* Edit mode indicator - left border */}
       {isEditing && (
-        <div className="absolute top-0 left-0 h-full w-1 bg-cyan/60" />
+        <div className="absolute top-0 left-0 h-full w-1 bg-gradient-to-b from-cyan/80 to-cyan/40" />
       )}
     </div>
   )

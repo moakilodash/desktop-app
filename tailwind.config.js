@@ -39,6 +39,21 @@ export default {
       fontFamily: {
         sans: ['Mulish', 'sans-serif'],
       },
+      spacing: {
+        'screen-90': '90vh',
+        'screen-80': '80vh',
+        'screen-70': '70vh',
+      },
+      maxHeight: {
+        'screen-90': '90vh',
+        'screen-80': '80vh',
+        'screen-70': '70vh',
+      },
+      minHeight: {
+        'screen-90': '90vh',
+        'screen-80': '80vh',
+        'screen-70': '70vh',
+      },
       animation: {
         'spin-slow': 'spin 3s linear infinite',
         'fadeIn': 'fadeIn 0.5s ease-in forwards',

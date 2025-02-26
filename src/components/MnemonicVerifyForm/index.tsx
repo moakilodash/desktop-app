@@ -5,6 +5,7 @@ import { toast } from 'react-toastify'
 
 // Import the wordlist
 import wordlistRaw from '../../assets/bip39-english.txt?raw'
+import { Button } from '../ui/Button'
 
 export interface MnemonicVerifyFields {
   mnemonic: string
@@ -112,16 +113,6 @@ export const MnemonicVerifyForm = ({
 
   return (
     <div className="w-full">
-      {/* Header Section */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="p-3 rounded-xl bg-cyan/10 border border-cyan/20 text-cyan">
-          <AlertCircle className="w-5 h-5" />
-        </div>
-        <h2 className="text-2xl font-bold text-white">
-          Verify Recovery Phrase
-        </h2>
-      </div>
-
       <p className="text-slate-400 mb-6 leading-relaxed">
         For your security, please enter your recovery phrase to confirm you've
         saved it correctly. This step cannot be skipped.
@@ -254,27 +245,25 @@ export const MnemonicVerifyForm = ({
           </div>
 
           {/* Submit Button */}
-          <button
-            className="w-full mt-4 px-6 py-2.5 rounded-lg bg-cyan text-blue-darkest 
-                     font-semibold hover:bg-cyan/90 transition-colors duration-200
-                     focus:ring-2 focus:ring-cyan/20 focus:outline-none
-                     flex items-center justify-center gap-2 text-sm
-                     disabled:opacity-50 disabled:cursor-not-allowed"
+
+          {/* Submit Button */}
+          <Button
+            className="w-full mt-4"
             disabled={isSubmitting}
-            type="submit"
-          >
-            {isSubmitting ? (
-              <>
+            icon={
+              isSubmitting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Verifying...</span>
-              </>
-            ) : (
-              <>
-                <span>Confirm Recovery Phrase</span>
+              ) : (
                 <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
+              )
+            }
+            iconPosition="right"
+            size="lg"
+            type="submit"
+            variant="primary"
+          >
+            {isSubmitting ? 'Verifying...' : 'Confirm Recovery Phrase'}
+          </Button>
         </div>
       </form>
     </div>
