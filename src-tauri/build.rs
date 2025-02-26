@@ -111,7 +111,7 @@ impl TauriConfig {
 
     // Adds a resource (path to a file) to the `tauri.bundle.resources` array
     fn add_resource(&mut self, resource: &str) {
-        if let Some(resources) = self.config["tauri"]["bundle"]["resources"].as_array_mut() {
+        if let Some(resources) = self.config["bundle"]["resources"].as_array_mut() {
             if !resources.contains(&Value::String(resource.to_string())) {
                 resources.push(resource.into());
             }
@@ -120,7 +120,7 @@ impl TauriConfig {
 
     // Removes a resource (path) from the `tauri.bundle.resources` array
     fn remove_resource(&mut self, resource: &str) {
-        if let Some(resources) = self.config["tauri"]["bundle"]["resources"].as_array_mut() {
+        if let Some(resources) = self.config["bundle"]["resources"].as_array_mut() {
             resources.retain(|r| r != resource);
         }
     }

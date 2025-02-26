@@ -8,9 +8,8 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
-use tauri::AppHandle;
 use tauri::Manager;
-use tauri::Window;
+use tauri::{AppHandle, Emitter, WebviewWindow};
 
 const SHUTDOWN_TIMEOUT_SECS: u64 = 5;
 
@@ -25,7 +24,7 @@ pub struct NodeProcess {
     control_receiver: Arc<Mutex<Receiver<ControlMessage>>>,
     is_running: Arc<AtomicBool>,
     logs: Arc<Mutex<Vec<String>>>,
-    window: Arc<Mutex<Option<Window>>>,
+    window: Arc<Mutex<Option<WebviewWindow>>>,
     shutdown_timeout: Duration,
     current_account: Arc<Mutex<Option<String>>>,
     app_handle: Arc<Mutex<Option<AppHandle>>>,
@@ -47,9 +46,9 @@ impl NodeProcess {
         }
     }
 
-    pub fn set_window(&self, window: Window) {
+    pub fn set_window(&self, window: WebviewWindow) {
         *self.window.lock().unwrap() = Some(window.clone());
-        *self.app_handle.lock().unwrap() = Some(window.app_handle());
+        *self.app_handle.lock().unwrap() = Some(window.app_handle().clone());
     }
 
     /// Check if a port is available
@@ -448,9 +447,9 @@ impl NodeProcess {
             })?;
 
             let resource_dir = app_handle
-                .path_resolver()
+                .path()
                 .resource_dir()
-                .ok_or_else(|| "Failed to get resource directory".to_string())?;
+                .or_else(|_| Err("Failed to get resource directory".to_string()))?;
 
             // Platform-specific binary path resolution
             let binary_path = if cfg!(target_os = "macos") {

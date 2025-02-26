@@ -15,9 +15,7 @@
       "icons/512x512.png"
     ],
     "targets": "all",
-    "resources": [
-      "../bin/rgb-lightning-node"
-    ],
+    "resources": ["../bin/rgb-lightning-node"],
     "linux": {
       "appimage": {
         "bundleMediaFramework": true
@@ -56,7 +54,8 @@
         "skipTaskbar": true,
         "url": "splashscreen.html",
         "width": 600,
-        "useHttpsScheme": true
+        "useHttpsScheme": true,
+        "visible": true
       }
     ],
     "security": {
@@ -64,3 +63,4 @@
     }
   }
 }
+
