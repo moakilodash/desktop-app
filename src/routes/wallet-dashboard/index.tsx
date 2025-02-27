@@ -434,7 +434,7 @@ export const Component = () => {
 
   const channels = listChannelsResponse?.data?.channels || []
   const offChainBalance = channels.reduce(
-    (sum, channel) => sum + channel.local_balance_msat / 1000,
+    (sum, channel) => sum + channel.local_balance_sat,
     0
   )
   const totalBalance =
