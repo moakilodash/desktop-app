@@ -278,12 +278,6 @@ export const Step1 = ({ onNext, formData, onFormUpdate }: Props) => {
 
         <div className="flex justify-center space-x-6">
           <button
-            className="flex items-center space-x-2 p-4 rounded-lg border border-gray-700 hover:border-gray-600 transition-colors opacity-50 cursor-not-allowed"
-            disabled
-          >
-            <BitFinexBoxIcon />
-          </button>
-          <button
             className="flex items-center space-x-2 p-4 rounded-lg border border-gray-700 hover:border-blue-500 transition-colors"
             disabled={isLoading}
             onClick={fetchLspInfo}
