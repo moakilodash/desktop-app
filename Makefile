@@ -35,6 +35,11 @@ debug: check_dependencies check_cargo_env update_repo
 
 build: debug
 
+build-app: 
+	npm run tauri build
+
+
+
 run: release
 	$(BIN_DIR)/$(PROJECT_NAME)
 

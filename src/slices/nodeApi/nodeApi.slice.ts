@@ -79,7 +79,7 @@ export interface Channel {
   status: ChannelStatus
   ready: boolean
   capacity_sat: number
-  local_balance_msat: number
+  local_balance_sat: number
   outbound_balance_msat: number
   inbound_balance_msat: number
   next_outbound_htlc_limit_msat: number
@@ -98,8 +98,19 @@ interface NodeInfoResponse {
   pubkey: string
   num_channels: number
   num_usable_channels: number
-  local_balance_msat: number
+  local_balance_sat: number
+  pending_outbound_payments_sat: number
   num_peers: number
+  onchain_pubkey: string
+  max_media_upload_size_mb: number
+  rgb_htlc_min_msat: number
+  rgb_channel_capacity_min_sat: number
+  channel_capacity_min_sat: number
+  channel_capacity_max_sat: number
+  channel_asset_min_amount: number
+  channel_asset_max_amount: number
+  network_nodes: number
+  network_channels: number
 }
 
 interface ConnectPeerRequest {
@@ -268,6 +279,26 @@ interface ListPaymentsResponse {
 
 interface TakerRequest {
   swapstring: string
+}
+
+interface MakerInitRequest {
+  qty_from: number
+  qty_to: number
+  from_asset: string
+  to_asset: string
+  timeout_sec: number
+}
+
+interface MakerInitResponse {
+  payment_hash: string
+  payment_secret: string
+  swapstring: string
+}
+
+interface MakerExecuteRequest {
+  swapstring: string
+  payment_secret: string
+  taker_pubkey: string
 }
 
 interface ListUnspentsResponse {
@@ -637,8 +668,22 @@ export const nodeApi = createApi({
     networkInfo: builder.query<NetworkInfoResponse, void>({
       query: () => '/networkinfo',
     }),
+    makerInit: builder.mutation<MakerInitResponse, MakerInitRequest>({
+      query: (body) => ({
+        body,
+        method: 'POST',
+        url: '/makerinit',
+      }),
+    }),
     nodeInfo: builder.query<NodeInfoResponse, void>({
       query: () => '/nodeinfo',
+    }),
+    makerExecute: builder.mutation<void, MakerExecuteRequest>({
+      query: (body) => ({
+        body,
+        method: 'POST',
+        url: '/makerexecute',
+      }),
     }),
     openChannel: builder.query<OpenChannelResponse, OpenChannelRequest>({
       query: (body) => {

@@ -5,7 +5,6 @@ import { Controller, SubmitHandler, useForm } from 'react-hook-form'
 
 import { Spinner } from '../../components/Spinner'
 import { NETWORK_DEFAULTS } from '../../constants/networks'
-import { BitFinexBoxIcon } from '../../icons/BitFinexBox'
 import { KaleidoswapBoxIcon } from '../../icons/KaleidoswapBox'
 import {
   NewChannelFormSchema,
