@@ -90,7 +90,7 @@ const InfoModal: React.FC<InfoModalProps> = ({
     },
     {
       label: 'Local Balance',
-      value: `${formatBitcoinAmount(channel.local_balance_msat / 1000, bitcoinUnit)} ${bitcoinUnit}`,
+      value: `${formatBitcoinAmount(channel.local_balance_sat, bitcoinUnit)} ${bitcoinUnit}`,
     },
     {
       label: 'Next HTLC Limit',
