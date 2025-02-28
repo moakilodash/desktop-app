@@ -22,7 +22,7 @@ import {
   ORDER_CHANNEL_PATH,
 } from '../../app/router/paths'
 import { ChannelCard } from '../../components/ChannelCard'
-import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
+import { nodeApi, Channel } from '../../slices/nodeApi/nodeApi.slice'
 
 interface StatCardProps {
   title: string
@@ -70,27 +70,6 @@ const StatCard: React.FC<StatCardProps> = ({
 interface Asset {
   precision: number
   ticker: string
-}
-
-interface Channel {
-  channel_id: string
-  peer_pubkey: string
-  asset_id: string
-  outbound_balance_msat: number
-  inbound_balance_msat: number
-  capacity_sat: number
-  public: boolean
-  ready: boolean
-  asset_local_amount?: number
-  asset_remote_amount?: number
-  peer_alias?: string
-  funding_txid?: string
-  short_channel_id?: number | string
-  status?: string
-  local_balance_sat?: number
-  next_outbound_htlc_limit_msat?: number
-  next_outbound_htlc_minimum_msat?: number
-  is_usable?: boolean
 }
 
 // Define sorting options

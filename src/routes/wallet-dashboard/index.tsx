@@ -208,28 +208,29 @@ const OnChainDetailsOverlay = ({
   return (
     <OverlayTooltip
       content={
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {/* Normal Balance */}
-          <div className="bg-[#151C2E] rounded-lg p-2.5 border border-slate-700/30">
-            <h4 className="text-sm font-medium text-white mb-2">
+          <div className="bg-[#151C2E] rounded-lg p-2 border border-slate-700/30">
+            <h4 className="text-xs font-medium text-white mb-1.5 flex items-center">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1.5"></div>
               Normal Balance
             </h4>
-            <div className="space-y-1.5">
-              <div className="bg-[#0B101B] rounded-lg p-1.5">
+            <div className="space-y-1">
+              <div className="bg-[#0B101B] rounded-md p-1">
                 <div className="text-xs text-gray-400">Settled</div>
                 <div className="text-xs font-medium text-white truncate">
                   {formatBitcoinAmount(onChainBalance, bitcoinUnit)}{' '}
                   {bitcoinUnit}
                 </div>
               </div>
-              <div className="bg-[#0B101B] rounded-lg p-1.5">
+              <div className="bg-[#0B101B] rounded-md p-1">
                 <div className="text-xs text-gray-400">Future</div>
                 <div className="text-xs font-medium text-white truncate">
                   {formatBitcoinAmount(onChainFutureBalance, bitcoinUnit)}{' '}
                   {bitcoinUnit}
                 </div>
               </div>
-              <div className="bg-[#0B101B] rounded-lg p-1.5">
+              <div className="bg-[#0B101B] rounded-md p-1">
                 <div className="text-xs text-gray-400">Spendable</div>
                 <div className="text-xs font-medium text-white truncate">
                   {formatBitcoinAmount(onChainSpendableBalance, bitcoinUnit)}{' '}
@@ -240,19 +241,20 @@ const OnChainDetailsOverlay = ({
           </div>
 
           {/* Colored Balance */}
-          <div className="bg-[#151C2E] rounded-lg p-2.5 border border-slate-700/30">
-            <h4 className="text-sm font-medium text-white mb-2">
+          <div className="bg-[#151C2E] rounded-lg p-2 border border-slate-700/30">
+            <h4 className="text-xs font-medium text-white mb-1.5 flex items-center">
+              <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mr-1.5"></div>
               Colored Balance
             </h4>
-            <div className="space-y-1.5">
-              <div className="bg-[#0B101B] rounded-lg p-1.5">
+            <div className="space-y-1">
+              <div className="bg-[#0B101B] rounded-md p-1">
                 <div className="text-xs text-gray-400">Settled</div>
                 <div className="text-xs font-medium text-white truncate">
                   {formatBitcoinAmount(onChainColoredBalance, bitcoinUnit)}{' '}
                   {bitcoinUnit}
                 </div>
               </div>
-              <div className="bg-[#0B101B] rounded-lg p-1.5">
+              <div className="bg-[#0B101B] rounded-md p-1">
                 <div className="text-xs text-gray-400">Future</div>
                 <div className="text-xs font-medium text-white truncate">
                   {formatBitcoinAmount(
@@ -262,7 +264,7 @@ const OnChainDetailsOverlay = ({
                   {bitcoinUnit}
                 </div>
               </div>
-              <div className="bg-[#0B101B] rounded-lg p-1.5">
+              <div className="bg-[#0B101B] rounded-md p-1">
                 <div className="text-xs text-gray-400">Spendable</div>
                 <div className="text-xs font-medium text-white truncate">
                   {formatBitcoinAmount(
@@ -283,7 +285,7 @@ const OnChainDetailsOverlay = ({
           <ChainIcon className="w-4 h-4 text-blue-500" />
           On-chain
         </span>
-        <div className="text-lg sm:text-2xl font-medium text-white">
+        <div className="text-lg font-medium text-white">
           {formatBitcoinAmount(
             onChainBalance + onChainColoredBalance,
             bitcoinUnit
@@ -302,6 +304,8 @@ const LiquidityCard = ({
   icon,
   tooltipDescription,
   isLoading,
+  totalCapacity,
+  type,
 }: {
   title: string
   amount: number
@@ -309,21 +313,62 @@ const LiquidityCard = ({
   icon: React.ReactNode
   tooltipDescription: string
   isLoading?: boolean
+  totalCapacity?: number
+  type: 'inbound' | 'outbound'
 }) => {
+  // Calculate percentage of liquidity relative to total capacity
+  const percentage =
+    totalCapacity && totalCapacity > 0
+      ? Math.min(100, Math.round((amount / totalCapacity) * 100))
+      : 0
+
+  // Determine color based on percentage and type - using more subtle colors
+  const getStatusColor = () => {
+    if (percentage < 20) {
+      return 'bg-red-500/60'
+    } else if (percentage < 40) {
+      return 'bg-amber-500/60'
+    } else {
+      return type === 'inbound' ? 'bg-blue-500/60' : 'bg-amber-500/60'
+    }
+  }
+
+  const statusColor = getStatusColor()
+  const iconColor = type === 'inbound' ? 'text-blue-400' : 'text-amber-400'
+
   return (
     <OverlayTooltip content={tooltipDescription} title={title}>
-      <HoverCard>
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-base font-medium text-slate-300">{title}</h2>
-          {icon}
+      <HoverCard className="border border-slate-700/30 hover:border-slate-700/50 transition-all duration-200 p-2.5">
+        <div className="flex justify-between items-center mb-1.5">
+          <h2 className="text-xs font-medium text-slate-300">{title}</h2>
+          <div className={iconColor}>{icon}</div>
         </div>
-        <div className="text-2xl font-bold text-white mb-1">
+        <div className="text-base font-bold text-white mb-1.5">
           {isLoading ? (
-            <LoadingPlaceholder width="w-28" />
+            <LoadingPlaceholder width="w-20" />
           ) : (
             `${formatBitcoinAmount(amount, bitcoinUnit)} ${bitcoinUnit}`
           )}
         </div>
+
+        {!isLoading && totalCapacity && totalCapacity > 0 && (
+          <div className="mt-1">
+            <div className="flex justify-between items-center mb-0.5">
+              <span className="text-xs text-slate-400">
+                {percentage}% of capacity
+              </span>
+              {percentage < 20 && (
+                <span className="text-xs text-red-300">Low</span>
+              )}
+            </div>
+            <div className="w-full bg-slate-800/80 rounded-full h-1 overflow-hidden shadow-inner">
+              <div
+                className={`${statusColor} h-full rounded-full transition-all duration-300`}
+                style={{ width: `${percentage}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
       </HoverCard>
     </OverlayTooltip>
   )
@@ -448,6 +493,12 @@ export const Component = () => {
     0
   )
 
+  // Calculate total channel capacity for liquidity percentage
+  const totalChannelCapacity = channels.reduce(
+    (sum, channel) => sum + channel.capacity_sat,
+    0
+  )
+
   const handleCloseChannel = async (channelId: string, peerPubkey: string) => {
     await closeChannel({
       channel_id: channelId,
@@ -460,10 +511,10 @@ export const Component = () => {
     btcBalanceResponse.isLoading || listChannelsResponse.isLoading
 
   return (
-    <div className="w-full bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
+    <div className="w-full bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-6">
       {(networkInfoResponse.data?.network as unknown as BitcoinNetwork) !==
         'Mainnet' && (
-        <div className="mb-8">
+        <div className="mb-6">
           <NetworkWarningAlert
             faucetUrl={
               (networkInfoResponse.data
@@ -483,33 +534,33 @@ export const Component = () => {
         />
       )}
 
-      <div className="flex flex-col items-center mb-8">
-        <div className="flex items-center gap-3 mb-6">
-          <Wallet className="w-10 h-10 text-blue-500" />
-          <h3 className="text-2xl font-bold text-white">Wallet Dashboard</h3>
+      <div className="flex flex-col items-center mb-6">
+        <div className="flex items-center gap-3 mb-4">
+          <Wallet className="w-8 h-8 text-blue-500" />
+          <h3 className="text-xl font-bold text-white">Wallet Dashboard</h3>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-4">
           <Button
-            icon={<Zap className="w-5 h-5" />}
+            icon={<Zap className="w-4 h-4" />}
             onClick={() => navigate(CREATE_NEW_CHANNEL_PATH)}
-            size="lg"
+            size="md"
           >
             Open Channel
           </Button>
 
           <Button
-            icon={<Database className="w-5 h-5" />}
+            icon={<Database className="w-4 h-4" />}
             onClick={() => setShowUTXOModal(true)}
-            size="lg"
+            size="md"
           >
             Manage UTXOs
           </Button>
 
           <Button
-            icon={<Users className="w-5 h-5" />}
+            icon={<Users className="w-4 h-4" />}
             onClick={() => setShowPeerModal(true)}
-            size="lg"
+            size="md"
           >
             Peers
           </Button>
@@ -524,25 +575,25 @@ export const Component = () => {
               )
             }
             onClick={refreshData}
-            size="md"
+            size="sm"
             variant="outline"
           >
             {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
         </div>
 
-        <InfoCardGrid>
+        <InfoCardGrid className="grid-cols-3 gap-3">
           <InfoCard
             copySuccessMessage="Node public key copied to clipboard"
             copyText={nodeInfoResponse.data?.pubkey}
             copyable
-            icon={<ChainIcon className="w-5 h-5 text-blue-500" />}
+            icon={<ChainIcon className="w-4 h-4 text-blue-500" />}
             label="Node Public Key"
             value={nodeInfoResponse.data?.pubkey || '...'}
           />
 
           <InfoCard
-            icon={<Network className="w-5 h-5 text-blue-500" />}
+            icon={<Network className="w-4 h-4 text-blue-500" />}
             label="Network"
             value={
               <div className="flex items-center gap-2">
@@ -553,7 +604,7 @@ export const Component = () => {
           />
 
           <InfoCard
-            icon={<Blocks className="w-5 h-5 text-blue-500" />}
+            icon={<Blocks className="w-4 h-4 text-blue-500" />}
             label="Block Height"
             value={`#${networkInfoResponse.data?.height || '...'}`}
           />
@@ -571,15 +622,24 @@ export const Component = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <Card className="col-span-2">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-sm font-medium text-slate-400">
-              Total Balance
-            </h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <Card className="md:col-span-2">
+          <div className="flex justify-between items-center mb-2">
+            <div>
+              <h2 className="text-sm font-medium text-slate-400">
+                Total Balance
+              </h2>
+              <div className="text-lg font-bold text-white">
+                {isLoading ? (
+                  <LoadingPlaceholder width="w-32" />
+                ) : (
+                  `${formatBitcoinAmount(totalBalance, bitcoinUnit)} ${bitcoinUnit}`
+                )}
+              </div>
+            </div>
             <div className="flex gap-2">
               <Button
-                icon={<ArrowDownRight className="w-4 h-4" />}
+                icon={<ArrowDownRight className="w-3.5 h-3.5" />}
                 onClick={() =>
                   dispatch(
                     uiSliceActions.setModal({
@@ -594,7 +654,7 @@ export const Component = () => {
                 Deposit
               </Button>
               <Button
-                icon={<ArrowUpRight className="w-4 h-4" />}
+                icon={<ArrowUpRight className="w-3.5 h-3.5" />}
                 onClick={() =>
                   dispatch(
                     uiSliceActions.setModal({
@@ -611,16 +671,8 @@ export const Component = () => {
             </div>
           </div>
 
-          <div className="text-2xl font-bold text-white mb-4">
-            {isLoading ? (
-              <LoadingPlaceholder width="w-32" />
-            ) : (
-              `${formatBitcoinAmount(totalBalance, bitcoinUnit)} ${bitcoinUnit}`
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-[#0B101B]/80 rounded-lg p-3 sm:p-4 hover:bg-[#0B101B] transition-all duration-200">
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            <div className="bg-[#0B101B]/80 rounded-lg p-2.5 hover:bg-[#0B101B] transition-all duration-200">
               <OnChainDetailsOverlay
                 bitcoinUnit={bitcoinUnit}
                 onChainBalance={onChainBalance}
@@ -632,39 +684,56 @@ export const Component = () => {
               />
             </div>
 
-            <div className="bg-slate-900/50 rounded-lg p-4">
+            <div className="bg-slate-900/50 rounded-lg p-2.5">
               <span className="text-sm text-slate-400 flex items-center gap-2">
                 <Zap className="w-4 h-4 text-blue-500" />
                 Off-chain
               </span>
-              <div className="text-lg text-white font-medium">
+              <div className="text-base text-white font-medium">
                 {isLoading ? (
                   <LoadingPlaceholder />
                 ) : (
                   `${formatBitcoinAmount(offChainBalance, bitcoinUnit)} ${bitcoinUnit}`
                 )}
               </div>
+
+              <div className="mt-1.5 flex items-center text-xs text-slate-400">
+                <div className="flex items-center mr-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1"></div>
+                  <span>{channels.length} Channels</span>
+                </div>
+                {channels.length > 0 && (
+                  <div className="flex items-center">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1"></div>
+                    <span>{channels.filter((c) => c.ready).length} Active</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </Card>
 
-        <div className="space-y-6">
+        <div className="space-y-2">
           <LiquidityCard
             amount={totalInboundLiquidity}
             bitcoinUnit={bitcoinUnit}
-            icon={<ArrowDownRight className="h-5 w-5 text-blue-500" />}
+            icon={<ArrowDownRight className="h-4 w-4 text-blue-500" />}
             isLoading={isLoading}
             title="Inbound Liquidity"
             tooltipDescription={`Maximum amount of ${bitcoinUnit} that you can receive through Lightning Network channels. This represents the total amount others can send to you.`}
+            totalCapacity={totalChannelCapacity}
+            type="inbound"
           />
 
           <LiquidityCard
             amount={totalOutboundLiquidity}
             bitcoinUnit={bitcoinUnit}
-            icon={<ArrowUpRight className="h-5 w-5 text-blue-500" />}
+            icon={<ArrowUpRight className="h-4 w-4 text-blue-500" />}
             isLoading={isLoading}
             title="Outbound Liquidity"
             tooltipDescription={`Maximum amount of ${bitcoinUnit} that you can send through Lightning Network channels. This represents your available balance for making payments.`}
+            totalCapacity={totalChannelCapacity}
+            type="outbound"
           />
         </div>
       </div>
@@ -674,19 +743,20 @@ export const Component = () => {
           <Button
             icon={<Plus className="w-4 h-4" />}
             onClick={() => setShowIssueAssetModal(true)}
+            size="sm"
           >
             Issue Asset
           </Button>
         }
-        className="mb-8"
+        className="mb-6"
         title="Assets"
       >
         <div className="rounded-lg overflow-hidden">
-          <div className="grid grid-cols-4 text-grey-light">
-            <div className="py-3 px-4">Asset</div>
-            <div className="py-3 px-4">Off Chain</div>
-            <div className="py-3 px-4">On Chain</div>
-            <div className="py-3 px-4">Actions</div>
+          <div className="grid grid-cols-4 text-grey-light text-xs">
+            <div className="py-2 px-4">Asset</div>
+            <div className="py-2 px-4">Off Chain</div>
+            <div className="py-2 px-4">On Chain</div>
+            <div className="py-2 px-4">Actions</div>
           </div>
 
           {assetsResponse.data?.nia.map((asset) => (
@@ -701,9 +771,9 @@ export const Component = () => {
         </div>
       </Card>
 
-      <Card className="mb-8" title="Lightning Channels">
+      <Card className="mb-6" title="Lightning Channels">
         {channels.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {channels.map((channel) => {
               const asset = assetsMap[channel.asset_id]
               return (
@@ -717,12 +787,13 @@ export const Component = () => {
             })}
           </div>
         ) : (
-          <div className="text-center py-8">
-            <div className="text-slate-400 mb-4">No channels found</div>
+          <div className="text-center py-6">
+            <div className="text-slate-400 mb-3">No channels found</div>
             <Button
               className="mx-auto"
-              icon={<Plus className="w-5 h-5" />}
+              icon={<Plus className="w-4 h-4" />}
               onClick={() => navigate(CREATE_NEW_CHANNEL_PATH)}
+              size="md"
             >
               Open Your First Channel
             </Button>
@@ -731,10 +802,10 @@ export const Component = () => {
       </Card>
 
       <div
-        className="flex items-center gap-2 text-sm text-slate-400 mt-6 p-4 
+        className="flex items-center gap-2 text-xs text-slate-400 mt-4 p-3 
                     bg-slate-800/30 rounded-xl border border-slate-700"
       >
-        <Info className="h-4 w-4 text-blue-500" />
+        <Info className="h-4 w-4 text-blue-500 flex-shrink-0" />
         <p>
           Channel liquidity changes as you send and receive payments. Keep your
           channels balanced for optimal performance.

@@ -284,8 +284,8 @@ interface TakerRequest {
 interface MakerInitRequest {
   qty_from: number
   qty_to: number
-  from_asset: string
-  to_asset: string
+  from_asset?: string // Omitted for BTC, RGB asset ID for other assets
+  to_asset?: string // Omitted for BTC, RGB asset ID for other assets
   timeout_sec: number
 }
 
@@ -665,8 +665,12 @@ export const nodeApi = createApi({
         url: '/lock',
       }),
     }),
-    networkInfo: builder.query<NetworkInfoResponse, void>({
-      query: () => '/networkinfo',
+    makerExecute: builder.mutation<void, MakerExecuteRequest>({
+      query: (body) => ({
+        body,
+        method: 'POST',
+        url: '/makerexecute',
+      }),
     }),
     makerInit: builder.mutation<MakerInitResponse, MakerInitRequest>({
       query: (body) => ({
@@ -675,15 +679,11 @@ export const nodeApi = createApi({
         url: '/makerinit',
       }),
     }),
+    networkInfo: builder.query<NetworkInfoResponse, void>({
+      query: () => '/networkinfo',
+    }),
     nodeInfo: builder.query<NodeInfoResponse, void>({
       query: () => '/nodeinfo',
-    }),
-    makerExecute: builder.mutation<void, MakerExecuteRequest>({
-      query: (body) => ({
-        body,
-        method: 'POST',
-        url: '/makerexecute',
-      }),
     }),
     openChannel: builder.query<OpenChannelResponse, OpenChannelRequest>({
       query: (body) => {
