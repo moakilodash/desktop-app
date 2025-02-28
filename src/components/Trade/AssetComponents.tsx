@@ -13,7 +13,7 @@ interface AssetOptionProps {
   label: string
 }
 
-const AssetOption = React.memo(({ value, label }: AssetOptionProps) => {
+export const AssetOption = React.memo(({ value, label }: AssetOptionProps) => {
   const [imgSrc, setImgSrc] = useAssetIcon(value)
 
   return (
@@ -35,7 +35,7 @@ interface SelectProps {
   options: Array<{ value: string; label: string }>
   onSelect: (value: string) => void
   theme: 'light' | 'dark'
-  disabled?: boolean // Add the disabled prop
+  disabled?: boolean
 }
 
 const Select: React.FC<SelectProps> = (props) => {
@@ -54,7 +54,7 @@ const Select: React.FC<SelectProps> = (props) => {
           props.theme === 'dark' ? 'bg-blue-dark' : 'bg-section-lighter',
           props.disabled ? 'opacity-50 cursor-not-allowed' : ''
         )}
-        onClick={() => setIsOpen((state) => !state)}
+        onClick={() => !props.disabled && setIsOpen((state) => !state)}
       >
         <AssetOption
           label={active?.label || 'None'}
@@ -63,25 +63,27 @@ const Select: React.FC<SelectProps> = (props) => {
         <ArrowDownIcon />
       </div>
 
-      <ul
-        className={twJoin(
-          'absolute top-full bg-section-lighter divide-y divide-divider rounded',
-          !isOpen ? 'hidden' : undefined
-        )}
-      >
-        {props.options.map((option) => (
-          <li
-            className="px-4 py-3 cursor-pointer hover:bg-divider first:rounded-t last:rounded-b"
-            key={option.value}
-            onClick={() => {
-              props.onSelect(option.value)
-              setIsOpen(false)
-            }}
-          >
-            <AssetOption label={option.label} value={option.value} />
-          </li>
-        ))}
-      </ul>
+      {!props.disabled && (
+        <ul
+          className={twJoin(
+            'absolute top-full bg-section-lighter divide-y divide-divider rounded',
+            !isOpen ? 'hidden' : undefined
+          )}
+        >
+          {props.options.map((option) => (
+            <li
+              className="px-4 py-3 cursor-pointer hover:bg-divider first:rounded-t last:rounded-b"
+              key={option.value}
+              onClick={() => {
+                props.onSelect(option.value)
+                setIsOpen(false)
+              }}
+            >
+              <AssetOption label={option.label} value={option.value} />
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
@@ -94,14 +96,14 @@ interface AssetSelectProps {
   options: Array<{ value: string; label: string }>
   value: string
   onChange: (value: string) => void
-  disabled?: boolean // Add the disabled prop
+  disabled?: boolean
 }
 
-const AssetSelect: React.FC<AssetSelectProps> = ({
+export const AssetSelect: React.FC<AssetSelectProps> = ({
   options,
   value,
   onChange,
-  disabled = false, // Add a default value
+  disabled = false,
 }) => (
   <Select
     active={value}
@@ -111,6 +113,7 @@ const AssetSelect: React.FC<AssetSelectProps> = ({
     theme="dark"
   />
 )
+
 interface ExchangeRateDisplayProps {
   fromAsset: string
   toAsset: string
@@ -121,13 +124,12 @@ interface ExchangeRateDisplayProps {
   getAssetPrecision: (asset: string) => number
 }
 
-const ExchangeRateDisplay: React.FC<ExchangeRateDisplayProps> = ({
+export const ExchangeRateDisplay: React.FC<ExchangeRateDisplayProps> = ({
   fromAsset,
   toAsset,
   price,
   selectedPair,
   bitcoinUnit,
-  formatAmount,
   getAssetPrecision,
 }) => {
   const calculateAndFormatRate = useCallback(
@@ -199,7 +201,7 @@ const ExchangeRateDisplay: React.FC<ExchangeRateDisplayProps> = ({
         </div>
       )
     },
-    [bitcoinUnit, formatAmount]
+    [bitcoinUnit, getAssetPrecision]
   )
 
   const displayRate = calculateAndFormatRate(
@@ -211,14 +213,3 @@ const ExchangeRateDisplay: React.FC<ExchangeRateDisplayProps> = ({
 
   return <div className="flex-1 text-base">{displayRate}</div>
 }
-
-export { NoChannelsMessage } from './NoChannelsMessage'
-export { NoTradingPairsMessage } from './NoTradingPairsMessage'
-export { Header } from './Header'
-export { SizeButtons } from './SizeButtons'
-export { SwapInputField } from './SwapInputField'
-export { ExchangeRateSection } from './ExchangeRateSection'
-export { SwapButton } from './SwapButton'
-export { MakerSelector } from './MakerSelector'
-export { AssetOption, AssetSelect, ExchangeRateDisplay }
-export { ManualSwapForm } from './ManualSwapForm'

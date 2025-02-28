@@ -11,10 +11,10 @@ export const SizeButtons: React.FC<SizeButtonsProps> = ({
   disabled,
   onSizeClick,
 }) => (
-  <div className="grid grid-cols-4 gap-2">
+  <div className="flex space-x-1">
     {[25, 50, 75, 100].map((size) => (
       <button
-        className={`py-1.5 px-3 rounded-lg border text-sm transition-all duration-200
+        className={`py-0.5 px-1.5 rounded-md border text-xs transition-all duration-200
           ${
             selectedSize === size
               ? 'border-blue-500 bg-blue-500/10 text-blue-500'

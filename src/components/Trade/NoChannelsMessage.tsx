@@ -18,36 +18,36 @@ export const NoChannelsMessage: React.FC<NoChannelsMessageProps> = ({
   onMakerChange,
 }) => {
   return (
-    <div className="max-w-xl w-full bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
-      <div className="flex flex-col items-center space-y-4">
-        <div className="w-full flex justify-end mb-2">
+    <div className="max-w-xl w-full bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-6">
+      <div className="flex flex-col items-center space-y-3">
+        <div className="w-full flex justify-end mb-1">
           <MakerSelector hasNoPairs onMakerChange={onMakerChange} />
         </div>
-        <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center">
-          <Link className="w-8 h-8 text-blue-500" />
+        <div className="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center">
+          <Link className="w-6 h-6 text-blue-500" />
         </div>
-        <h2 className="text-2xl font-bold text-white">
+        <h2 className="text-xl font-bold text-white">
           No Trading Channels Available
         </h2>
-        <p className="text-slate-400 text-center">
+        <p className="text-slate-400 text-center text-sm">
           To start trading, you need a direct channel with a{' '}
           <span className="relative inline-block group">
             supported asset
-            <HelpCircle className="inline-block ml-1 w-4 h-4 text-blue-500" />
-            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-sm text-white bg-gray-800 rounded-lg w-48 invisible group-hover:visible">
+            <HelpCircle className="inline-block ml-1 w-3 h-3 text-blue-500" />
+            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-gray-800 rounded-lg w-48 invisible group-hover:visible">
               An asset listed from the maker
             </span>
           </span>{' '}
           with the maker
         </p>
 
-        <div className="flex gap-4 pt-4">
+        <div className="flex gap-3 pt-3">
           <button
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl 
-                     font-medium transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl 
+                     font-medium transition-colors flex items-center gap-2 text-sm"
             onClick={() => onNavigate(CREATE_NEW_CHANNEL_PATH)}
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4" />
             Open Channel
           </button>
           <button

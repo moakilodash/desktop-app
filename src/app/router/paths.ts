@@ -20,6 +20,10 @@ export const WALLET_UNLOCK_PATH = makePath(['wallet-unlock'])
 
 export const TRADE_PATH = makePath(['trade'])
 
+export const TRADE_MARKET_MAKER_PATH = makePath(['market-maker'])
+export const TRADE_MANUAL_PATH = makePath(['manual'])
+export const TRADE_NOSTR_P2P_PATH = makePath(['nostr-p2p'])
+
 export const WALLET_DASHBOARD_PATH = makePath(['wallet-dashboard'])
 
 export const SETTINGS_PATH = makePath(['settings'])

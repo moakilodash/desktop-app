@@ -29,25 +29,25 @@ export const ExchangeRateSection: React.FC<ExchangeRateSectionProps> = ({
   if (!selectedPair) return null
 
   return (
-    <>
-      <div className="text-center text-xs text-slate-400 flex items-center justify-center gap-2">
-        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+    <div className="exchange-rate-section">
+      <div className="text-center text-xs text-slate-400 flex items-center justify-center gap-1 mb-1">
+        <div className="w-1 h-1 rounded-full bg-emerald-500" />
         Best Exchange Rate Available
       </div>
-      <div className="bg-slate-800/50 rounded-lg p-4 space-y-3">
+      <div className="bg-slate-800/50 rounded-lg p-2 space-y-1.5">
         <div className="flex justify-between items-center text-xs text-slate-400">
           <span>Exchange Rate</span>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500/50 animate-pulse" />
+          <div className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/50 animate-pulse" />
             Live Price
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-2">
           {isPriceLoading ? (
             <div
-              className="flex-1 px-4 py-2.5 bg-slate-900/50 rounded-lg border border-slate-700 
-                         text-slate-400 min-h-[42px] flex items-center"
+              className="flex-1 px-3 py-1.5 bg-slate-900/50 rounded-lg border border-slate-700 
+                         text-slate-400 min-h-[32px] flex items-center text-sm"
             >
               Loading exchange rate...
             </div>
@@ -69,6 +69,6 @@ export const ExchangeRateSection: React.FC<ExchangeRateSectionProps> = ({
           )}
         </div>
       </div>
-    </>
+    </div>
   )
 }

@@ -16,6 +16,7 @@ import {
   WALLET_REMOTE_PATH,
   WALLET_RESTORE_PATH,
 } from '../../app/router/paths'
+import logo from '../../assets/logo.svg'
 import { Layout } from '../../components/Layout'
 import { SupportModal } from '../../components/SupportModal'
 import { Toolbar } from '../../components/Toolbar'
@@ -71,7 +72,7 @@ export const Component = () => {
               alt="KaleidoSwap"
               className="h-8 cursor-pointer"
               onClick={() => {}}
-              src="/src/assets/logo.svg"
+              src={logo}
             />
           </div>
 

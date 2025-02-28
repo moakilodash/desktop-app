@@ -1,0 +1,76 @@
+/* Role toggle animations */
+.role-selector button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease-in-out;
+}
+
+.role-selector button::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: translateX(-100%);
+}
+
+.role-selector button:not(:disabled):hover::after {
+  animation: buttonShimmer 1.5s infinite;
+}
+
+/* Role indicator animation */
+.role-selector button:disabled {
+  position: relative;
+  overflow: hidden;
+}
+
+.role-selector button:disabled::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: buttonPulse 2s infinite;
+}
+
+@keyframes buttonPulse {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+/* Smooth transition between maker and taker views */
+.swap-form > div {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Maker specific styles */
+.bg-blue-600 {
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+}
+
+/* Taker specific styles */
+.bg-emerald-600 {
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}

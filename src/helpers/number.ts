@@ -124,3 +124,132 @@ export const formatNumberInput = (value: string, precision: number): string => {
     return cleanValue
   }
 }
+
+/**
+ * Gets the precision for a given asset based on its ticker and bitcoin unit setting
+ * @param asset The asset ticker
+ * @param bitcoinUnit The bitcoin unit (BTC or SAT)
+ * @param assets List of assets with precision information
+ * @returns The precision value for the asset
+ */
+export const getAssetPrecision = (
+  asset: string,
+  bitcoinUnit: string,
+  assets?: NiaAsset[]
+): number => {
+  if (asset === 'BTC') {
+    return bitcoinUnit === 'BTC' ? 8 : 0
+  }
+
+  if (!assets) {
+    return 8 // Default precision if assets list not provided
+  }
+
+  const assetInfo = assets.find((a) => a.ticker === asset)
+  return assetInfo ? assetInfo.precision : 8
+}
+
+/**
+ * Formats an amount for a specific asset with proper precision
+ * @param amount The amount to format
+ * @param asset The asset ticker
+ * @param bitcoinUnit The bitcoin unit (BTC or SAT)
+ * @param assets List of assets with precision information
+ * @returns Formatted amount string
+ */
+export const formatAssetAmountWithPrecision = (
+  amount: number,
+  asset: string,
+  bitcoinUnit: string,
+  assets?: NiaAsset[]
+): string => {
+  const precision = getAssetPrecision(asset, bitcoinUnit, assets)
+  const divisor = Math.pow(10, precision)
+  const formattedAmount = (amount / divisor).toFixed(precision)
+
+  return new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: precision,
+    minimumFractionDigits: precision,
+    useGrouping: true,
+  }).format(parseFloat(formattedAmount))
+}
+
+/**
+ * Parses a string amount for a specific asset with proper precision
+ * @param amount The amount string to parse
+ * @param asset The asset ticker
+ * @param bitcoinUnit The bitcoin unit (BTC or SAT)
+ * @param assets List of assets with precision information
+ * @returns Parsed amount as a number
+ */
+export const parseAssetAmountWithPrecision = (
+  amount: string | undefined | null,
+  asset: string,
+  bitcoinUnit: string,
+  assets?: NiaAsset[]
+): number => {
+  const precision = getAssetPrecision(asset, bitcoinUnit, assets)
+  const multiplier = Math.pow(10, precision)
+
+  // Handle undefined, null or empty string
+  if (!amount) {
+    return 0
+  }
+
+  try {
+    const cleanAmount = amount.replace(/[^\d.-]/g, '')
+    const parsedAmount = parseFloat(cleanAmount)
+
+    // Handle NaN or invalid numbers
+    if (isNaN(parsedAmount)) {
+      return 0
+    }
+
+    return Math.round(parsedAmount * multiplier)
+  } catch (error) {
+    console.error('Error parsing amount:', error)
+    return 0
+  }
+}
+
+/**
+ * Calculates the exchange rate between two assets
+ * @param price The price from the feed
+ * @param size The size from the feed
+ * @param isInverted Whether the pair is inverted from the user's perspective
+ * @returns The calculated exchange rate
+ */
+export const calculateExchangeRate = (
+  price: number,
+  size: number,
+  isInverted: boolean
+): number => {
+  const rate = price / size
+  return isInverted ? 1 / rate : rate
+}
+
+/**
+ * Formats an exchange rate with appropriate precision
+ * @param rate The exchange rate to format
+ * @param precision The precision to use for formatting
+ * @returns Formatted exchange rate string
+ */
+export const formatExchangeRate = (rate: number, precision: number): string => {
+  const adjustedPrecision = precision > 4 ? precision : 4
+
+  return new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: adjustedPrecision,
+    minimumFractionDigits: precision,
+    useGrouping: true,
+  }).format(rate)
+}
+
+/**
+ * Gets the display asset name based on the asset ticker and bitcoin unit
+ * @param asset The asset ticker
+ * @param bitcoinUnit The bitcoin unit (BTC or SAT)
+ * @returns The display asset name
+ */
+export const getDisplayAsset = (asset: string, bitcoinUnit: string): string => {
+  return asset === 'BTC' && bitcoinUnit === 'SAT' ? 'SAT' : asset
+}

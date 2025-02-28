@@ -12,13 +12,15 @@ import {
   ArrowDownLeft,
   FileText,
   Activity,
-  Gift,
+  ShoppingCart,
   Bell,
   HelpCircle,
   User,
   Clock,
   MessageCircle,
   Github,
+  Store,
+  Users,
 } from 'lucide-react'
 import React, { useEffect, useState, useRef } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
@@ -26,6 +28,9 @@ import { toast, ToastContainer } from 'react-toastify'
 
 import {
   TRADE_PATH,
+  TRADE_MARKET_MAKER_PATH,
+  TRADE_MANUAL_PATH,
+  TRADE_NOSTR_P2P_PATH,
   WALLET_HISTORY_DEPOSITS_PATH,
   WALLET_HISTORY_PATH,
   WALLET_SETUP_PATH,
@@ -70,16 +75,34 @@ const HIDE_NAVBAR_PATHS = [
 // Define main navigation items with icons
 const MAIN_NAV_ITEMS = [
   {
+    icon: <Zap className="w-5 h-5" />,
+    label: 'Trade',
+    matchPath: TRADE_PATH,
+    subMenu: [
+      {
+        icon: <Store className="w-4 h-4" />,
+        label: 'Market Maker',
+        to: TRADE_MARKET_MAKER_PATH,
+      },
+      {
+        icon: <Zap className="w-4 h-4" />,
+        label: 'Manual Swaps',
+        to: TRADE_MANUAL_PATH,
+      },
+      {
+        disabled: true,
+        icon: <Users className="w-4 h-4" />,
+        label: 'Nostr P2P',
+        to: TRADE_NOSTR_P2P_PATH,
+      },
+    ],
+    to: TRADE_PATH,
+  },
+  {
     icon: <Home className="w-5 h-5" />,
     label: 'Dashboard',
     matchPath: WALLET_DASHBOARD_PATH,
     to: WALLET_DASHBOARD_PATH,
-  },
-  {
-    icon: <Zap className="w-5 h-5" />,
-    label: 'Trade',
-    matchPath: TRADE_PATH,
-    to: TRADE_PATH,
   },
   {
     icon: <Clock className="w-5 h-5" />,
@@ -103,7 +126,7 @@ const CHANNEL_MENU_ITEMS = [
     to: CREATE_NEW_CHANNEL_PATH,
   },
   {
-    icon: <Gift className="w-4 h-4" />,
+    icon: <ShoppingCart className="w-4 h-4" />,
     label: 'Buy a Channel',
     to: ORDER_CHANNEL_PATH,
   },
@@ -146,7 +169,7 @@ const USER_MENU_ITEMS = [
   {
     action: 'support',
     icon: <HelpCircle className="w-4 h-4" />,
-    label: 'Help & Support', // Changed from 'to' to 'action' to trigger the support modal
+    label: 'Help & Support',
   },
 ]
 
@@ -186,6 +209,13 @@ interface NavItem {
   matchPath?: string
   action?: string
   url?: string
+  subMenu?: {
+    icon: React.ReactNode
+    label: string
+    to?: string
+    mode?: string
+    disabled?: boolean
+  }[]
 }
 
 // Define types for modal actions
@@ -217,23 +247,79 @@ interface UserProfileProps {
 }
 
 // NavItem component for sidebar
-const NavItem = ({ item, isCollapsed }: NavItemProps) => {
+const SidebarNavItem = ({ item, isCollapsed }: NavItemProps) => {
+  const [isSubMenuOpen, setIsSubMenuOpen] = useState(false)
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  // Check if this is the Trade section and if we have a trading mode in the URL
+  const hasSubMenu = item.subMenu && item.subMenu.length > 0
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (hasSubMenu) {
+      e.preventDefault()
+      setIsSubMenuOpen(!isSubMenuOpen)
+    }
+  }
+
+  const handleSubMenuClick = (subItem: any) => {
+    if (subItem.disabled) return
+    if (subItem.to) {
+      navigate(subItem.to)
+    }
+  }
+
   return (
-    <NavLink
-      className={({ isActive }) => `
-        flex items-center py-3 px-4 rounded-lg transition-all duration-200
-        ${
-          isActive
-            ? 'bg-cyan/10 text-cyan font-medium'
-            : 'text-gray-400 hover:text-white hover:bg-blue-darker'
-        }
-        ${isCollapsed ? 'justify-center' : 'justify-start space-x-3'}
-      `}
-      to={item.to}
-    >
-      <div>{item.icon}</div>
-      {!isCollapsed && <span>{item.label}</span>}
-    </NavLink>
+    <div className="relative">
+      <NavLink
+        className={({ isActive }) => `
+          flex items-center py-3 px-4 rounded-lg transition-all duration-200
+          ${
+            isActive
+              ? 'bg-cyan/10 text-cyan font-medium'
+              : 'text-gray-400 hover:text-white hover:bg-blue-darker'
+          }
+          ${isCollapsed ? 'justify-center' : hasSubMenu ? 'justify-between' : 'justify-start space-x-3'}
+        `}
+        onClick={handleClick}
+        to={item.to}
+      >
+        <div className={`flex items-center ${!isCollapsed && 'space-x-3'}`}>
+          <div>{item.icon}</div>
+          {!isCollapsed && <span>{item.label}</span>}
+        </div>
+        {hasSubMenu && !isCollapsed && (
+          <ChevronRight
+            className={`w-4 h-4 transition-transform duration-200 ${isSubMenuOpen ? 'rotate-90' : ''}`}
+          />
+        )}
+      </NavLink>
+
+      {hasSubMenu && isSubMenuOpen && !isCollapsed && (
+        <div className="pl-4 mt-1 space-y-1">
+          {item.subMenu &&
+            item.subMenu.map((subItem, index) => (
+              <div
+                className={`
+                flex items-center space-x-3 px-4 py-2 rounded-lg text-sm cursor-pointer
+                ${subItem.disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-darker hover:text-white'}
+                ${location.pathname === subItem.to ? 'bg-cyan/10 text-cyan font-medium' : 'text-gray-400'}
+              `}
+                key={index}
+                onClick={() => handleSubMenuClick(subItem)}
+              >
+                <div>{subItem.icon}</div>
+                <span>{subItem.label}</span>
+                {subItem.disabled && (
+                  <span className="text-[0.6rem] bg-blue-500/20 text-blue-300 px-0.5 py-px rounded ml-0.5">
+                    Soon
+                  </span>
+                )}
+              </div>
+            ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -300,7 +386,7 @@ const DropdownMenu = ({
                 key={item.label || index}
                 onClick={() => handleItemClick(item)}
               >
-                {item.icon}
+                <div className="text-cyan">{item.icon}</div>
                 <span className="text-sm font-medium">{item.label}</span>
               </div>
             ))}
@@ -549,7 +635,7 @@ export const Layout = (props: Props) => {
     }
 
     checkDeposits()
-  }, [data, error, shouldPoll, lastDeposit])
+  }, [data, error, shouldPoll, lastDeposit, isFetching])
 
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -615,7 +701,7 @@ export const Layout = (props: Props) => {
                       ${isSidebarCollapsed ? 'w-20' : 'w-64'}`}
           >
             {/* Logo and collapse button */}
-            <div className="flex items-center justify-between p-4 border-b border-divider/10">
+            <div className="flex items-center justify-between py-3 px-4 border-b border-divider/10">
               <img
                 alt="KaleidoSwap"
                 className={`cursor-pointer transition-all duration-300 ${isSidebarCollapsed ? 'w-10 h-10' : 'h-8'}`}
@@ -642,7 +728,7 @@ export const Layout = (props: Props) => {
                 {MAIN_NAV_ITEMS.map((item) => {
                   const isActive = location.pathname.startsWith(item.to)
                   return (
-                    <NavItem
+                    <SidebarNavItem
                       isActive={isActive}
                       isCollapsed={isSidebarCollapsed}
                       item={item}
@@ -688,7 +774,7 @@ export const Layout = (props: Props) => {
                   {/* Channel management section */}
                   <div className="mb-6">
                     <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                      Channel Management
+                      Channels
                     </h3>
                     <div className="space-y-1">
                       {CHANNEL_MENU_ITEMS.map((item) => (
@@ -731,13 +817,44 @@ export const Layout = (props: Props) => {
                       ${isSidebarCollapsed ? 'ml-20' : 'ml-64'}`}
           >
             {/* Top bar with notifications */}
-            <div className="sticky top-0 z-20 bg-blue-darkest/80 backdrop-blur-sm border-b border-divider/10 px-6 py-3">
+            <div className="sticky top-0 z-20 bg-blue-darkest/80 backdrop-blur-sm border-b border-divider/10 px-6 py-2">
               <div className="flex justify-between items-center">
-                <h1 className="text-xl font-semibold text-white">
-                  {MAIN_NAV_ITEMS.find((item) =>
-                    location.pathname.startsWith(item.to)
-                  )?.label || 'Dashboard'}
-                </h1>
+                <div className="flex items-center">
+                  {(() => {
+                    // Get the current page icon and title
+                    const mainNavItem = MAIN_NAV_ITEMS.find((item) =>
+                      location.pathname.startsWith(item.to)
+                    )
+
+                    let icon = mainNavItem?.icon
+                    let title = ''
+
+                    // Check for channel management pages
+                    if (location.pathname === CREATE_NEW_CHANNEL_PATH) {
+                      icon = <Plus className="w-5 h-5" />
+                      title = 'Create New Channel'
+                    } else if (location.pathname === ORDER_CHANNEL_PATH) {
+                      icon = <ShoppingCart className="w-5 h-5" />
+                      title = 'Buy a Channel'
+                    } else if (location.pathname === CHANNELS_PATH) {
+                      title = 'Channels'
+                    } else if (location.pathname === SETTINGS_PATH) {
+                      icon = <Settings className="w-5 h-5" />
+                      title = 'Settings'
+                    } else {
+                      title = mainNavItem?.label || 'Dashboard'
+                    }
+
+                    return (
+                      <>
+                        <div className="text-cyan mr-3">{icon}</div>
+                        <h1 className="text-xl font-semibold text-white">
+                          {title}
+                        </h1>
+                      </>
+                    )
+                  })()}
+                </div>
 
                 <div className="flex items-center space-x-4">
                   {/* Support button in header */}
@@ -804,7 +921,7 @@ export const Layout = (props: Props) => {
                         }
                       }}
                       setIsOpen={setIsSupportMenuOpen}
-                      title="Support"
+                      title="Help & Support"
                     />
                   </div>
                 </div>
@@ -812,7 +929,9 @@ export const Layout = (props: Props) => {
             </div>
 
             {/* Main content area */}
-            <div className="p-6">{props.children}</div>
+            <div className="p-3 h-[calc(100vh-56px)] overflow-auto">
+              {props.children}
+            </div>
           </main>
         </div>
       ) : (
