@@ -175,7 +175,7 @@ export const Component: React.FC = () => {
     displayedChannels = displayedChannels.filter((channel) => {
       // Check if channel matches any of the filter criteria
       return filterOptions.every((filter) => {
-        let isPublic, isPrivate, total, localPercentage, remotePercentage
+        let total, localPercentage, remotePercentage
         let totalBal, localPct, remotePct
 
         switch (filter.value) {

@@ -256,63 +256,19 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
   const isReady = channel.ready
   const isPublic = channel.public
 
-  // Get background style based on channel type
-  const getCardBackground = () => {
-    if (isRgbChannel) {
-      return 'bg-gradient-to-br from-gray-900 via-gray-900 to-purple-950/30'
-    }
-    return 'bg-gradient-to-br from-gray-900 via-gray-900 to-blue-950/30'
-  }
-
-  // Get border style based on channel type and status
-  const getBorderStyle = () => {
-    if (!isReady) {
-      return 'border-2 border-yellow-500/40'
-    }
-
-    if (isRgbChannel) {
-      return 'border-2 border-purple-500/40'
-    }
-
-    return 'border-2 border-blue-500/40'
-  }
-
   return (
-    <div
-      className={`${getCardBackground()} text-white rounded-xl shadow-lg p-5 ${getBorderStyle()} hover:shadow-xl transition-all duration-200 relative overflow-hidden group`}
-    >
-      {/* Status indicator dot */}
-      <div
-        className={`absolute top-3 right-3 h-2 w-2 rounded-full ${isReady ? 'bg-green-500' : 'bg-yellow-500'} shadow-md shadow-green-500/20 pointer-events-none`}
-      ></div>
-
-      {/* Subtle background pattern for RGB channels */}
-      {isRgbChannel && (
-        <div className="absolute inset-0 opacity-5 pointer-events-none">
-          <div className="absolute right-0 top-0 w-32 h-32 bg-purple-500 rounded-full filter blur-3xl -mr-16 -mt-16"></div>
-          <div className="absolute left-0 bottom-0 w-32 h-32 bg-indigo-500 rounded-full filter blur-3xl -ml-16 -mb-16"></div>
-        </div>
-      )}
-
-      {/* Left accent bar based on channel type */}
-      <div
-        className={`absolute left-0 top-0 bottom-0 w-1 ${
-          !isReady
-            ? 'bg-yellow-500'
-            : isRgbChannel
-              ? 'bg-purple-500'
-              : 'bg-blue-500'
-        } pointer-events-none`}
-      ></div>
+    <div className="bg-slate-900/70 hover:bg-slate-800/80 text-white rounded-lg shadow-md p-4 border border-slate-700/30 transition-all duration-200 relative">
+      {/* Status indicator */}
+      <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-slate-600/40 to-transparent"></div>
 
       {/* Channel header */}
-      <div className="flex justify-between items-center mb-3 relative">
-        <div className="flex items-center space-x-2">
-          <span className="font-bold text-lg truncate max-w-[120px]">
+      <div className="flex justify-between items-center mb-3">
+        <div className="flex items-center">
+          <span className="font-medium text-base truncate max-w-[120px] text-white">
             {channel.peer_alias || channel.peer_pubkey.slice(0, 8)}
           </span>
           <button
-            className="p-1 hover:bg-gray-700/70 active:bg-gray-600/70 rounded-full transition-colors relative z-10"
+            className="ml-1 p-1 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-full transition-colors"
             onClick={(e) => {
               e.stopPropagation()
               setIsInfoModalOpen(true)
@@ -320,60 +276,62 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
             title="Channel Information"
             type="button"
           >
-            <Info size={16} />
+            <Info size={14} />
           </button>
         </div>
         <div className="flex items-center space-x-2">
           <span
-            className={`text-xs px-2 py-0.5 rounded-md ${isReady ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300'} border ${isReady ? 'border-green-500/30' : 'border-yellow-500/30'}`}
+            className={`text-xs px-1.5 py-0.5 rounded-md ${
+              isReady
+                ? 'bg-emerald-900/30 text-emerald-300 border border-emerald-800/20'
+                : 'bg-amber-900/30 text-amber-300 border border-amber-800/20'
+            }`}
           >
             {isReady ? 'Open' : 'Pending'}
           </span>
           {isPublic ? (
-            <Unlock className="text-gray-400" size={14} />
+            <Unlock className="text-slate-400" size={12} />
           ) : (
-            <Lock className="text-gray-400" size={14} />
+            <Lock className="text-slate-400" size={12} />
           )}
         </div>
       </div>
 
-      {/* Capacity section with improved styling */}
-      <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-800/50">
-        <div className="text-sm text-gray-400">Capacity</div>
-        <div className="font-semibold flex items-center">
-          {formatBitcoinAmount(channel.capacity_sat, bitcoinUnit)} {bitcoinUnit}
+      {/* Capacity section */}
+      <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-700/30">
+        <div className="text-xs text-slate-400">Capacity</div>
+        <div className="font-medium flex items-center text-sm">
+          {formatBitcoinAmount(channel.capacity_sat, bitcoinUnit)}{' '}
+          <span className="text-xs text-slate-400 ml-1">{bitcoinUnit}</span>
           {asset && (
-            <div className="ml-2 flex items-center bg-gray-800/80 rounded-full px-2 py-0.5 border border-gray-700/50">
-              <AssetIcon className="h-4 w-4 mr-1" ticker={asset.ticker} />
-              <span className="text-xs">{asset.ticker}</span>
+            <div className="ml-2 flex items-center bg-slate-800/60 rounded-full px-1.5 py-0.5 text-xs">
+              <AssetIcon className="h-3 w-3 mr-1" ticker={asset.ticker} />
+              <span className="text-slate-300">{asset.ticker}</span>
             </div>
           )}
         </div>
       </div>
 
       {/* Bitcoin liquidity section */}
-      <div className="mb-4 p-2 rounded-lg bg-gray-800/30 hover:bg-gray-800/50 transition-colors">
-        <div className="flex justify-between items-center mb-1">
-          <div className="text-xs font-medium text-gray-400 flex items-center">
-            <AssetIcon
-              className="h-3.5 w-3.5 mr-1.5 text-yellow-400"
-              ticker="BTC"
-            />
-            <span>Bitcoin Liquidity</span>
+      <div className="mb-3 rounded-md bg-slate-800/50 p-3 hover:bg-slate-800/60 transition-all duration-200">
+        <div className="flex justify-between items-center mb-2">
+          <div className="text-xs text-slate-300 flex items-center">
+            <AssetIcon className="h-3 w-3 mr-1 text-amber-400" ticker="BTC" />
+            <span className="font-medium">Bitcoin Liquidity</span>
           </div>
-          <div className="flex text-xs space-x-3">
-            <div className="flex items-center">
-              <ArrowUpRight className="mr-1 text-blue-400" size={12} />
-              <span>
+          <div className="flex text-xs space-x-3 text-slate-300">
+            <div className="flex items-center bg-slate-900/70 px-1.5 py-0.5 rounded">
+              <ArrowUpRight className="mr-1 text-amber-400" size={10} />
+              <span className="font-medium">
                 {formatBitcoinAmount(
                   channel.outbound_balance_msat / 1000,
                   bitcoinUnit
                 )}
               </span>
             </div>
-            <div className="flex items-center">
-              <ArrowDownRight className="mr-1 text-green-400" size={12} />
-              <span>
+            <div className="flex items-center bg-slate-900/70 px-1.5 py-0.5 rounded">
+              <ArrowDownRight className="mr-1 text-blue-400" size={10} />
+              <span className="font-medium">
                 {formatBitcoinAmount(
                   channel.inbound_balance_msat / 1000,
                   bitcoinUnit
@@ -391,20 +349,24 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
 
       {/* RGB Asset liquidity section - only show if it's an RGB channel */}
       {isRgbChannel && asset && (
-        <div className="mb-4 p-2 rounded-lg bg-purple-950/20 hover:bg-purple-950/30 transition-colors border border-purple-900/30">
-          <div className="flex justify-between items-center mb-1">
-            <div className="text-xs font-medium text-gray-300 flex items-center">
-              <AssetIcon className="h-3.5 w-3.5 mr-1" ticker={asset.ticker} />
-              <span>{asset.ticker} Liquidity</span>
+        <div className="mb-3 rounded-md bg-slate-800/50 p-3 hover:bg-slate-800/60 transition-all duration-200">
+          <div className="flex justify-between items-center mb-2">
+            <div className="text-xs text-slate-300 flex items-center">
+              <AssetIcon className="h-3 w-3 mr-1" ticker={asset.ticker} />
+              <span className="font-medium">{asset.ticker} Liquidity</span>
             </div>
-            <div className="flex text-xs space-x-3">
-              <div className="flex items-center">
-                <ArrowUpRight className="mr-1 text-indigo-400" size={12} />
-                <span>{formatAssetAmount(channel.asset_local_amount)}</span>
+            <div className="flex text-xs space-x-3 text-slate-300">
+              <div className="flex items-center bg-slate-900/70 px-1.5 py-0.5 rounded">
+                <ArrowUpRight className="mr-1 text-indigo-400" size={10} />
+                <span className="font-medium">
+                  {formatAssetAmount(channel.asset_local_amount)}
+                </span>
               </div>
-              <div className="flex items-center">
-                <ArrowDownRight className="mr-1 text-purple-400" size={12} />
-                <span>{formatAssetAmount(channel.asset_remote_amount)}</span>
+              <div className="flex items-center bg-slate-900/70 px-1.5 py-0.5 rounded">
+                <ArrowDownRight className="mr-1 text-fuchsia-400" size={10} />
+                <span className="font-medium">
+                  {formatAssetAmount(channel.asset_remote_amount)}
+                </span>
               </div>
             </div>
           </div>
@@ -416,32 +378,35 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
         </div>
       )}
 
-      {/* Action buttons with improved styling */}
-      <div className="flex space-x-2 mt-4 relative z-10">
+      {/* Action buttons */}
+      <div className="flex space-x-2 mt-3">
         <button
-          className="flex-1 py-2 px-3 bg-gray-800 hover:bg-gray-700 active:bg-gray-600 transition-colors rounded-lg font-medium text-sm text-white border border-gray-700/50 shadow-sm"
+          className="flex-1 py-1.5 px-3 bg-slate-800/70 hover:bg-slate-700/80 transition-colors rounded-md text-xs text-slate-300 border border-slate-700/30"
           onClick={(e) => {
             e.stopPropagation()
             setIsInfoModalOpen(true)
           }}
           type="button"
         >
-          Details
+          <div className="flex items-center justify-center">
+            <Info className="w-3 h-3 mr-1" />
+            Details
+          </div>
         </button>
         <button
-          className="flex-1 py-2 px-3 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 transition-colors rounded-lg font-medium text-sm text-white shadow-sm shadow-orange-900/30"
+          className="flex-1 py-1.5 px-3 bg-red-900/20 hover:bg-red-900/30 transition-colors rounded-md text-xs text-red-300 border border-red-900/20"
           onClick={(e) => {
             e.stopPropagation()
             setIsModalOpen(true)
           }}
           type="button"
         >
-          Close Channel
+          <div className="flex items-center justify-center">
+            <X className="w-3 h-3 mr-1" />
+            Close
+          </div>
         </button>
       </div>
-
-      {/* Subtle hover effect indicator */}
-      <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-white/20 to-transparent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 pointer-events-none"></div>
 
       <InfoModal
         asset={asset}

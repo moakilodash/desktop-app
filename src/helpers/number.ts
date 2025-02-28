@@ -2,8 +2,8 @@ import Decimal from 'decimal.js'
 
 import { NiaAsset } from '../slices/nodeApi/nodeApi.slice'
 
-const SATOSHIS_PER_BTC = 100000000
-const MSATS_PER_SAT = 1000
+export const SATOSHIS_PER_BTC = 100000000
+export const MSATS_PER_SAT = 1000
 
 export const msatToSat = (msats: number): number => msats / MSATS_PER_SAT
 export const satToMsat = (sats: number): number => sats * MSATS_PER_SAT
