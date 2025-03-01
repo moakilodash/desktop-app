@@ -9,7 +9,7 @@ import { ExchangeRateDisplay } from './ExchangeRateSection'
 
 interface SelectProps {
   active?: string
-  options: Array<{ value: string; label: string; ticker?: string }>
+  options: Array<{ value: string; ticker?: string }>
   onSelect: (value: string) => void
   theme: 'light' | 'dark'
   disabled?: boolean // Add the disabled prop
@@ -65,7 +65,7 @@ Select.defaultProps = {
 }
 
 interface AssetSelectProps {
-  options: Array<{ value: string; label: string; ticker?: string }>
+  options: Array<{ value: string; ticker?: string }>
   value: string
   onChange: (value: string) => void
   disabled?: boolean // Add the disabled prop

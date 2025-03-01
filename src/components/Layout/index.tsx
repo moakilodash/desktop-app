@@ -525,7 +525,6 @@ export const Layout = (props: Props) => {
   const location = useLocation()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
-  const accountName = useAppSelector((state) => state.nodeSettings.data.name)
 
   // Get the lock endpoint from nodeApi
   const [lock] = nodeApi.endpoints.lock.useLazyQuery()

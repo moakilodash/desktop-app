@@ -17,7 +17,7 @@ interface SwapInputFieldProps {
   disabled: boolean
   value: string
   asset: string
-  assetOptions: { label: string; value: string }[]
+  assetOptions: { ticker: string; value: string }[]
   onAmountChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   onAssetChange: (value: string) => void
   onRefresh?: () => void
