@@ -44,7 +44,7 @@ import {
   CREATE_NEW_CHANNEL_PATH,
   ORDER_CHANNEL_PATH,
 } from '../../app/router/paths'
-import { useAppDispatch } from '../../app/store/hooks'
+import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import logo from '../../assets/logo.svg'
 import { useOnClickOutside } from '../../hooks/useOnClickOutside'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
@@ -407,6 +407,7 @@ const UserProfile = ({
   const menuRef = useRef(null)
   const navigate = useNavigate()
   const nodeInfo = nodeApi.endpoints.nodeInfo.useQueryState()
+  const accountName = useAppSelector((state) => state.nodeSettings.data.name)
 
   useOnClickOutside(menuRef, () => setIsOpen(false))
 
@@ -442,7 +443,7 @@ const UserProfile = ({
             <>
               <div className="flex flex-col">
                 <span className="text-sm font-medium text-white">
-                  My Wallet
+                  {accountName || 'My Wallet'}
                 </span>
                 <span className="text-xs text-gray-400">
                   {nodeInfo.isSuccess ? 'Connected' : 'Disconnected'}
@@ -467,7 +468,9 @@ const UserProfile = ({
                 <User className="w-5 h-5 text-white" />
               </div>
               <div>
-                <div className="text-sm font-medium text-white">My Wallet</div>
+                <div className="text-sm font-medium text-white">
+                  {accountName || 'My Wallet'}
+                </div>
                 <div className="text-xs text-gray-400 flex items-center space-x-1">
                   <div
                     className={`w-2 h-2 rounded-full ${nodeInfo.isSuccess ? 'bg-green' : 'bg-red'}`}
@@ -522,6 +525,7 @@ export const Layout = (props: Props) => {
   const location = useLocation()
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
+  const accountName = useAppSelector((state) => state.nodeSettings.data.name)
 
   // Get the lock endpoint from nodeApi
   const [lock] = nodeApi.endpoints.lock.useLazyQuery()
