@@ -11,17 +11,24 @@ interface AssetOptionProps {
 }
 
 export const AssetOption = React.memo(({ ticker }: AssetOptionProps) => {
-  const [imgSrc, setImgSrc] = useAssetIcon(ticker || '')
+  const displayTicker = ticker || 'None'
+  const iconTicker =
+    displayTicker === 'SAT'
+      ? 'BTC'
+      : displayTicker === 'None'
+        ? ''
+        : displayTicker
+  const [imgSrc, setImgSrc] = useAssetIcon(iconTicker)
 
   return (
     <div className="flex items-center">
       <img
-        alt={ticker || ''}
+        alt={displayTicker}
         className="w-5 h-5 mr-2"
         onError={() => setImgSrc(DEFAULT_RGB_ICON)}
-        src={ticker === 'None' ? DEFAULT_RGB_ICON : imgSrc}
+        src={!ticker || ticker === 'None' ? DEFAULT_RGB_ICON : imgSrc}
       />
-      {ticker}
+      {displayTicker}
     </div>
   )
 })

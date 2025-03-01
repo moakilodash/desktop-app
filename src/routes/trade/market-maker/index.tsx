@@ -1221,7 +1221,7 @@ export const Component = () => {
             availableAssets.includes(asset)
         )
         .map((asset) => ({
-          label: displayAsset(asset),
+          ticker: displayAsset(asset),
           value: asset,
         }))
     },

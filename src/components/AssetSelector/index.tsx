@@ -17,13 +17,13 @@ interface AssetInfo {
   max_channel_amount: number
 }
 
-interface AssetOptionProps {
+interface AssetSelectorOptionProps {
   assetInfo: AssetInfo
   assetId: string
   onSelect: (value: string) => void
 }
 
-const AssetOption: React.FC<AssetOptionProps> = ({
+const AssetSelectorOption: React.FC<AssetSelectorOptionProps> = ({
   assetInfo,
   assetId,
   onSelect,
@@ -96,7 +96,7 @@ export const AssetSelector: React.FC<AssetSelectorProps> = ({
             {isOpen && (
               <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto">
                 {Object.entries(assetMap).map(([assetId, assetInfo]) => (
-                  <AssetOption
+                  <AssetSelectorOption
                     assetId={assetId}
                     assetInfo={assetInfo}
                     key={assetId}
