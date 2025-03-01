@@ -10,10 +10,9 @@ import {
 import React, { useCallback } from 'react'
 
 import { AssetOption } from '../../components/Trade'
+import { SATOSHIS_PER_BTC } from '../../helpers/number'
 import { TradingPair } from '../../slices/makerApi/makerApi.slice'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
-
-const SATOSHIS_PER_BTC = 100000000
 
 export interface SwapDetails {
   price: number
@@ -280,7 +279,7 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
                     <span className="text-lg font-semibold text-white break-all">
                       {fromAmount}
                     </span>
-                    <AssetOption label={displayFromAsset} value={fromAsset} />
+                    <AssetOption ticker={displayFromAsset} />
                   </div>
                 </div>
                 <ArrowRight className="text-slate-500 mx-3 w-5 h-5 flex-shrink-0" />
@@ -290,7 +289,7 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
                     <span className="text-lg font-semibold text-white break-all">
                       {toAmount}
                     </span>
-                    <AssetOption label={displayToAsset} value={toAsset} />
+                    <AssetOption ticker={displayToAsset} />
                   </div>
                 </div>
               </div>

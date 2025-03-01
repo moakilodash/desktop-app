@@ -60,10 +60,7 @@ export const SwapConfirmation: React.FC<SwapConfirmationProps> = ({
               <div className="text-sm text-slate-400">You Send</div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <AssetOption
-                    label={getDisplayAsset(fromAsset)}
-                    value={fromAsset}
-                  />
+                  <AssetOption ticker={getDisplayAsset(fromAsset)} />
                   <span className="text-2xl font-medium text-white">
                     {fromAmount}
                   </span>
@@ -75,10 +72,7 @@ export const SwapConfirmation: React.FC<SwapConfirmationProps> = ({
               <div className="text-sm text-slate-400">You Receive</div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <AssetOption
-                    label={getDisplayAsset(toAsset)}
-                    value={toAsset}
-                  />
+                  <AssetOption ticker={getDisplayAsset(toAsset)} />
                   <span className="text-2xl font-medium text-white">
                     {toAmount}
                   </span>
@@ -93,20 +87,14 @@ export const SwapConfirmation: React.FC<SwapConfirmationProps> = ({
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5">
                   <span className="text-white font-medium">1</span>
-                  <AssetOption
-                    label={getDisplayAsset(fromAsset)}
-                    value={fromAsset}
-                  />
+                  <AssetOption ticker={getDisplayAsset(fromAsset)} />
                 </div>
                 <span className="text-slate-400">=</span>
                 <div className="flex items-center gap-1.5">
                   <span className="text-white font-medium">
                     {formatAmount(exchangeRate, toAsset)}
                   </span>
-                  <AssetOption
-                    label={getDisplayAsset(toAsset)}
-                    value={toAsset}
-                  />
+                  <AssetOption ticker={getDisplayAsset(toAsset)} />
                 </div>
               </div>
             </div>

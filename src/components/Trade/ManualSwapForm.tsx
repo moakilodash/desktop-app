@@ -10,6 +10,8 @@ import {
   formatBitcoinAmount,
   parseBitcoinAmount,
   MSATS_PER_SAT,
+  SATOSHIS_PER_BTC,
+  getDisplayAsset,
 } from '../../helpers/number'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 
@@ -36,18 +38,16 @@ interface FormValues {
   takerPubkey: string
 }
 
-export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({
-  assets,
-  getDisplayAsset,
-  getAssetPrecision,
-}) => {
+export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({ assets }) => {
   const [swapString, setSwapString] = useState<string>('')
   const [paymentSecret, setPaymentSecret] = useState<string>('')
   const [swapInitiated, setSwapInitiated] = useState(false)
   const [copied, setCopied] = useState(false)
   const [isExecuting, setIsExecuting] = useState(false)
   const [isInitiating, setIsInitiating] = useState(false)
-  const [assetBalances, setAssetBalances] = useState<Record<string, number>>({})
+  const [assetBalances, setAssetBalances] = useState<
+    Record<string, { outbound: number; inbound?: number }>
+  >({})
   const [isLoadingBalances, setIsLoadingBalances] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [maxOutboundHtlc, setMaxOutboundHtlc] = useState<number | null>(null)
@@ -59,11 +59,8 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({
     defaultValues: {
       fromAmount: '',
       fromAsset: '',
-      // Default 1 hour
       takerPubkey: '',
-
-      timeoutSec: '3600',
-
+      timeoutSec: '3600', // Default 1 hour
       toAmount: '',
       toAsset: '',
     },
@@ -109,7 +106,8 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({
 
     setIsLoadingBalances(true)
     setIsRefreshing(true)
-    const newBalances: Record<string, number> = { ...assetBalances }
+    const newBalances: Record<string, { outbound: number; inbound?: number }> =
+      { ...assetBalances }
 
     try {
       // Fetch node info to get max HTLC size for BTC
@@ -118,28 +116,45 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({
         const maxHtlc = Math.max(
           ...(channels.data?.channels.map(
             (c) => c.next_outbound_htlc_limit_msat
-          ) || [])
+          ) || [0])
         )
-        setMaxOutboundHtlc(maxHtlc)
+        setMaxOutboundHtlc(maxHtlc || 0)
 
         // For BTC, use maxOutboundHtlc as the balance
         if (maxHtlc) {
-          // If using SAT unit, convert from msat to sat (divide by 1000)
-          // If using BTC unit, keep as is (will be converted to BTC in display functions)
-          newBalances['BTC'] = maxHtlc
+          newBalances['BTC'] = {
+            // For BTC, inbound is the sum of inbound_balance_msat across all channels
+inbound:
+              channels.data?.channels.reduce(
+                (sum, c) => sum + (c.inbound_balance_msat || 0),
+                0
+              ) || 0,
+            
+            outbound: maxHtlc,
+          }
         }
       }
 
       // Fetch from asset balance if needed (only for non-BTC assets)
       if (fromAsset && fromAsset !== 'BTC') {
         const balance = await assetBalance({ asset_id: fromAsset })
-        newBalances[fromAsset] = balance.data?.offchain_outbound || 0
+        if (balance.data) {
+          newBalances[fromAsset] = {
+            inbound: balance.data.offchain_inbound || 0,
+            outbound: balance.data.offchain_outbound || 0,
+          }
+        }
       }
 
       // Fetch to asset balance if needed (only for non-BTC assets)
       if (toAsset && toAsset !== 'BTC') {
         const balance = await assetBalance({ asset_id: toAsset })
-        newBalances[toAsset] = balance.data?.offchain_outbound || 0
+        if (balance.data) {
+          newBalances[toAsset] = {
+            inbound: balance.data.offchain_inbound || 0,
+            outbound: balance.data.offchain_outbound || 0,
+          }
+        }
       }
 
       setAssetBalances(newBalances)
@@ -159,14 +174,19 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({
   }, [fromAsset, toAsset])
 
   // Prepare asset options using ticker for display
-  const assetOptions = assets.map((asset) => ({
-    label: asset.ticker || asset.name,
-    value: asset.asset_id,
-  }))
+  const assetOptions = assets.map((asset) => {
+    const ticker = asset.ticker || asset.name
+    return {
+      label: ticker,
+      ticker: ticker,
+      value: asset.asset_id,
+    }
+  })
 
   // Add BTC option
   assetOptions.unshift({
     label: 'BTC',
+    ticker: 'BTC',
     value: 'BTC',
   })
 
@@ -182,10 +202,15 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({
 
   const handleFromAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
+
+    // Get the correct precision for this asset
     const precision = getLocalAssetPrecision(fromAsset)
 
     try {
+      // Use formatNumberInput for user-friendly input formatting
       const formattedValue = formatNumberInput(value, precision)
+
+      // Apply thousands separators for better readability
       setValue('fromAmount', formattedValue)
     } catch (error) {
       console.error('Error handling amount change:', error)
@@ -195,10 +220,15 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({
 
   const handleToAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
+
+    // Get the correct precision for this asset
     const precision = getLocalAssetPrecision(toAsset)
 
     try {
+      // Use formatNumberInput for user-friendly input formatting
       const formattedValue = formatNumberInput(value, precision)
+
+      // Apply thousands separators for better readability
       setValue('toAmount', formattedValue)
     } catch (error) {
       console.error('Error handling amount change:', error)
@@ -213,79 +243,100 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({
   }
 
   const handleMaxAmount = (asset: string, type: 'from' | 'to') => {
+    if (!asset) return
     if (asset === 'BTC' && !maxOutboundHtlc) return
-    if (asset !== 'BTC' && !assetBalances[asset]) return
+    if (
+      asset !== 'BTC' &&
+      (!assetBalances[asset] ||
+        (type === 'from' && assetBalances[asset].outbound <= 0) ||
+        (type === 'to' && (assetBalances[asset].inbound || 0) <= 0))
+    )
+      return
 
-    let maxAmount
+    // For BTC, always use maxOutboundHtlc as the max amount for 'from'
+    // and inbound balance for 'to'
+    if (asset === 'BTC') {
+      if (type === 'from' && maxOutboundHtlc !== null) {
+        // Convert from msat to sat first
+        const satoshis = msatToSat(maxOutboundHtlc)
 
-    // For BTC, always use maxOutboundHtlc as the max amount
-    if (asset === 'BTC' && maxOutboundHtlc !== null) {
-      // Convert from msat to sat first
-      const satoshis = msatToSat(maxOutboundHtlc)
+        // Format based on bitcoin unit
+        const formattedAmount =
+          bitcoinUnit === 'BTC'
+            ? (satoshis / SATOSHIS_PER_BTC).toFixed(8)
+            : satoshis.toString()
 
-      if (bitcoinUnit === 'BTC') {
-        // Format as string with 8 decimal places
-        return setValue(
-          type === 'from' ? 'fromAmount' : 'toAmount',
-          formatBitcoinAmount(satoshis, 'BTC', 8)
-        )
-      } else {
-        // Format as string with 0 decimal places
-        return setValue(
-          type === 'from' ? 'fromAmount' : 'toAmount',
-          formatBitcoinAmount(satoshis, 'SAT', 0)
-        )
+        setValue('fromAmount', formattedAmount)
+      } else if (type === 'to' && assetBalances[asset]?.inbound) {
+        // For 'to', use inbound balance
+        const satoshis = msatToSat(assetBalances[asset].inbound || 0)
+
+        // Format based on bitcoin unit
+        const formattedAmount =
+          bitcoinUnit === 'BTC'
+            ? (satoshis / SATOSHIS_PER_BTC).toFixed(8)
+            : satoshis.toString()
+
+        setValue('toAmount', formattedAmount)
       }
     } else {
-      // For other assets, use the regular balance
-      maxAmount = assetBalances[asset] / Math.pow(10, getAssetPrecision(asset))
-      const formattedMax = maxAmount.toFixed(getLocalAssetPrecision(asset))
+      // For other assets, get the precision and format accordingly
+      const assetInfo = assets.find((a) => a.asset_id === asset)
+      const precision = assetInfo ? assetInfo.precision : 8
 
-      if (type === 'from') {
-        setValue('fromAmount', formattedMax)
-      } else {
-        setValue('toAmount', formattedMax)
-      }
+      // Convert raw balance to display format
+      const rawBalance =
+        type === 'from'
+          ? assetBalances[asset].outbound
+          : assetBalances[asset].inbound || 0
+
+      const displayBalance = (rawBalance / Math.pow(10, precision)).toFixed(
+        precision
+      )
+
+      setValue(type === 'from' ? 'fromAmount' : 'toAmount', displayBalance)
     }
   }
 
-  // Parse amount string to raw number for API
+  // Parse amount string to raw number for API using the utility function
   const parseAssetAmount = (amountStr: string, asset: string): number => {
     if (!amountStr || amountStr === '') return 0
 
+    // For BTC, use parseBitcoinAmount
     if (asset === 'BTC') {
-      // Use the utility function to parse BTC/SAT amounts
       return parseBitcoinAmount(amountStr, bitcoinUnit as 'BTC' | 'SAT')
     }
 
-    // For other assets
+    // For other assets, find the asset precision and convert to raw units
+    const assetInfo = assets.find((a) => a.asset_id === asset)
+    const precision = assetInfo ? assetInfo.precision : 8
+
+    // Clean the input and convert to raw units
     const cleanAmount = amountStr.replace(/[^\d.-]/g, '')
-    return parseFloat(cleanAmount)
+    return Math.round(parseFloat(cleanAmount) * Math.pow(10, precision))
   }
 
   // Check if amount exceeds balance
   const isAmountExceedingBalance = (amount: string, asset: string): boolean => {
-    if (!asset || !amount || !assetBalances[asset]) return false
+    if (!asset || !amount || amount === '' || !assetBalances[asset])
+      return false
 
-    let parsedAmount: number
-    let maxAmount: number
+    // Parse the input amount to raw units for comparison
+    const parsedAmount = parseAssetAmount(amount, asset)
 
-    // For BTC, always use maxOutboundHtlc as the max amount
-    if (asset === 'BTC' && maxOutboundHtlc !== null) {
-      // Convert maxOutboundHtlc from msat to sat
-      const satoshis = msatToSat(maxOutboundHtlc)
+    // For BTC, compare with maxOutboundHtlc for outbound (from) transactions
+    if (asset === 'BTC') {
+      if (maxOutboundHtlc !== null) {
+        // Convert maxOutboundHtlc from msat to sat for comparison
+        const satoshis = msatToSat(maxOutboundHtlc)
 
-      // Parse the input amount based on bitcoin unit
-      parsedAmount = parseBitcoinAmount(amount, bitcoinUnit as 'BTC' | 'SAT')
-
-      // Compare in satoshis
-      return parsedAmount > satoshis
+        // If using BTC unit, parsedAmount is already in satoshis
+        return parsedAmount > satoshis
+      }
+      return false
     } else {
-      // For other assets, use the regular balance
-      parsedAmount = parseFloat(amount)
-      maxAmount = assetBalances[asset] / Math.pow(10, getAssetPrecision(asset))
-
-      return parsedAmount > maxAmount
+      // For other assets, compare raw values directly with outbound balance
+      return parsedAmount > assetBalances[asset].outbound
     }
   }
 
@@ -293,13 +344,18 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({
     try {
       setIsInitiating(true)
 
-      // Parse amounts for API
+      // Parse amounts for API - this should convert from display format to raw numbers
       let fromAmountValue = parseAssetAmount(data.fromAmount, data.fromAsset)
       let toAmountValue = parseAssetAmount(data.toAmount, data.toAsset)
 
-      // For BTC, the API expects values in millisatoshis
-      // For BTC assets, the field should be completely omitted from the request
-      // as defined in the OpenAPI specification
+      console.log('Parsed amounts for API:', {
+        fromAmount: data.fromAmount,
+        fromAmountValue,
+        fromAsset: data.fromAsset,
+        toAmount: data.toAmount,
+        toAmountValue,
+        toAsset: data.toAsset,
+      })
 
       // Prepare request object with required fields
       const requestPayload: {
@@ -332,6 +388,7 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({
         requestPayload.to_asset = data.toAsset
       }
 
+      console.log('Sending swap request:', requestPayload)
       const response = await makerInit(requestPayload).unwrap()
 
       setSwapString(response.swapstring)
@@ -379,33 +436,51 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({
     }
   }
 
-  // Format balance for display
-  const formatBalanceDisplay = (asset: string, balance: number) => {
-    if (!asset) return '0'
+  // Format balance for display using the utility function
+  const formatBalanceDisplay = (asset: string, balance: number | undefined) => {
+    if (!asset || balance === undefined || balance === null) return '0'
 
-    // For BTC, use maxOutboundHtlc value directly
-    if (asset === 'BTC' && maxOutboundHtlc !== null) {
+    // For BTC, handle formatting
+    if (asset === 'BTC') {
+      // Convert from msat to sat
+      const satoshis = msatToSat(balance)
+
+      // Format based on bitcoin unit with thousands separators
       if (bitcoinUnit === 'BTC') {
-        // Convert from msat to BTC
-        const satoshis = msatToSat(maxOutboundHtlc)
-        return formatBitcoinAmount(satoshis, 'BTC', 8)
+        return new Intl.NumberFormat('en-US', {
+          maximumFractionDigits: 8,
+          minimumFractionDigits: 8,
+          useGrouping: true,
+        }).format(satoshis / SATOSHIS_PER_BTC)
       } else {
-        // Convert from msat to SAT
-        const satoshis = msatToSat(maxOutboundHtlc)
-        return formatBitcoinAmount(satoshis, 'SAT', 0)
+        return new Intl.NumberFormat('en-US', {
+          maximumFractionDigits: 0,
+          useGrouping: true,
+        }).format(satoshis)
       }
     }
 
-    // For other assets, use the regular balance
-    const formattedBalance = balance / Math.pow(10, getAssetPrecision(asset))
-    return formattedBalance.toLocaleString(undefined, {
-      maximumFractionDigits: getAssetPrecision(asset),
-      minimumFractionDigits: 0, // Don't show unnecessary zeros
-    })
+    // For other assets, convert raw balance to display format
+    try {
+      const assetInfo = assets.find((a) => a.asset_id === asset)
+      const precision = assetInfo ? assetInfo.precision : 8
+
+      // Convert raw balance to display format with proper precision and thousands separators
+      return new Intl.NumberFormat('en-US', {
+        maximumFractionDigits: precision,
+        minimumFractionDigits: precision,
+        useGrouping: true,
+      }).format(balance / Math.pow(10, precision))
+    } catch (error) {
+      console.error('Error formatting balance:', error)
+      return '0'
+    }
   }
 
   // Get asset ticker for display
   const getAssetTicker = (assetId: string) => {
+    if (!assetId) return ''
+
     if (assetId === 'BTC') {
       return bitcoinUnit === 'BTC' ? 'BTC' : 'SAT'
     }
@@ -415,10 +490,34 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({
 
   // Override getAssetPrecision to handle BTC/SAT units
   const getLocalAssetPrecision = (asset: string): number => {
+    if (!asset) return 8
+
+    // For BTC, use the bitcoinUnit setting to determine precision
     if (asset === 'BTC') {
-      return bitcoinUnit === 'BTC' ? 8 : 0 // 8 decimals for BTC, 0 for SAT
+      return bitcoinUnit === 'BTC' ? 8 : 0
     }
-    return getAssetPrecision(asset)
+
+    // For other assets, find the asset in the list and use its precision
+    const assetInfo = assets.find((a) => a.asset_id === asset)
+    return assetInfo ? assetInfo.precision : 8
+  }
+
+  // Get the appropriate balance for display based on asset and direction
+  const getBalanceForDisplay = (asset: string, isFromAsset: boolean) => {
+    if (!asset || !assetBalances[asset]) return '0'
+
+    if (isFromAsset) {
+      // For "from" asset, show outbound balance (what you can send)
+      return formatBalanceDisplay(asset, assetBalances[asset].outbound)
+    } else {
+      // For "to" asset, show inbound balance (what you can receive)
+      return formatBalanceDisplay(asset, assetBalances[asset].inbound || 0)
+    }
+  }
+
+  // Get the appropriate balance label based on direction
+  const getBalanceLabel = (isFromAsset: boolean) => {
+    return isFromAsset ? 'Available:' : 'Can receive up to:'
   }
 
   return (
@@ -458,25 +557,28 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({
 
         <form className="space-y-6" onSubmit={handleSubmit(onInitSwap)}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* From Asset Column */}
             <div className="space-y-4">
               <div className="flex flex-col gap-1.5">
                 <div className="flex justify-between items-center">
                   <label className="text-sm font-medium text-slate-300">
                     From Asset
                   </label>
-                  {fromAsset && assetBalances[fromAsset] && (
+                  {fromAsset && (
                     <div className="flex items-center gap-1 text-xs text-slate-400 asset-balance">
                       <Wallet className="w-3 h-3" />
-                      <span>Balance: </span>
+                      <span>{getBalanceLabel(true)} </span>
                       <span className="font-medium text-slate-300">
                         {isLoadingBalances
                           ? 'Loading...'
-                          : `${formatBalanceDisplay(fromAsset, assetBalances[fromAsset])} ${getAssetTicker(fromAsset)}`}
+                          : assetBalances[fromAsset] !== undefined
+                            ? `${getBalanceForDisplay(fromAsset, true)} ${getAssetTicker(fromAsset)}`
+                            : '0 ' + getAssetTicker(fromAsset)}
                       </span>
                     </div>
                   )}
                 </div>
-                <div className="relative focus-within:z-10">
+                <div className="relative focus-within:z-20">
                   <AssetSelect
                     onChange={handleFromAssetChange}
                     options={assetOptions}
@@ -494,9 +596,9 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({
                 <label className="text-sm font-medium text-slate-300">
                   Amount to Send
                 </label>
-                <div className="relative">
+                <div className="relative h-[50px]">
                   <input
-                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500 input-animate"
+                    className="w-full h-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500 input-animate"
                     placeholder="0.00"
                     type="text"
                     {...register('fromAmount', { required: true })}
@@ -537,31 +639,34 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({
                       msatToSat(maxOutboundHtlc),
                       bitcoinUnit
                     )}{' '}
-                    {getDisplayAsset('BTC')}
+                    {getDisplayAsset('BTC', bitcoinUnit)}
                   </p>
                 )}
               </div>
             </div>
 
+            {/* To Asset Column */}
             <div className="space-y-4">
               <div className="flex flex-col gap-1.5">
                 <div className="flex justify-between items-center">
                   <label className="text-sm font-medium text-slate-300">
                     To Asset
                   </label>
-                  {toAsset && assetBalances[toAsset] && (
+                  {toAsset && (
                     <div className="flex items-center gap-1 text-xs text-slate-400 asset-balance">
                       <Wallet className="w-3 h-3" />
-                      <span>Balance: </span>
+                      <span>{getBalanceLabel(false)} </span>
                       <span className="font-medium text-slate-300">
                         {isLoadingBalances
                           ? 'Loading...'
-                          : `${formatBalanceDisplay(toAsset, assetBalances[toAsset])} ${getAssetTicker(toAsset)}`}
+                          : assetBalances[toAsset] !== undefined
+                            ? `${getBalanceForDisplay(toAsset, false)} ${getAssetTicker(toAsset)}`
+                            : '0 ' + getAssetTicker(toAsset)}
                       </span>
                     </div>
                   )}
                 </div>
-                <div className="relative focus-within:z-10">
+                <div className="relative focus-within:z-20">
                   <AssetSelect
                     disabled={fromAsset ? false : true}
                     onChange={handleToAssetChange}
@@ -582,9 +687,9 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({
                 <label className="text-sm font-medium text-slate-300">
                   Amount to Receive
                 </label>
-                <div className="relative">
+                <div className="relative h-[50px]">
                   <input
-                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500 input-animate"
+                    className="w-full h-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500 input-animate"
                     placeholder="0.00"
                     type="text"
                     {...register('toAmount', { required: true })}
