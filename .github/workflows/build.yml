@@ -33,14 +33,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-1 librsvg2-dev patchelf libglib2.0-dev libgtk-3-dev 
 
-      - name: Import GPG key
-        uses: crazy-max/ghaction-import-gpg@v6
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.GPG_PASSPHRASE }}
-          git_user_signingkey: true
-          git_commit_gpgsign: true
-          
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
@@ -69,8 +61,6 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         id: tauri_build
         with:
           tagName: app-v__VERSION__
@@ -82,51 +72,10 @@ jobs:
             - Built from build branch
             - Includes macOS (Intel + Apple Silicon) and Linux builds
             
-            SHA256 checksums:
-            ```
-            ${sha256}
-            ```
-            
-            This release is signed with GPG key: ${{ secrets.GPG_KEY_ID }}
+            SHA256 checksums will be provided separately.
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
-
-      - name: Sign artifacts
-        run: |
-          # Set target-specific directory
-          if [[ "${{ matrix.platform }}" == "macos-latest" ]]; then
-            if [[ "${{ matrix.args }}" == "--target aarch64-apple-darwin" ]]; then
-              BUNDLE_DIR="src-tauri/target/aarch64-apple-darwin/release/bundle"
-            else
-              BUNDLE_DIR="src-tauri/target/x86_64-apple-darwin/release/bundle"
-            fi
-          else
-            BUNDLE_DIR="src-tauri/target/release/bundle"
-          fi
-          
-          cd "$BUNDLE_DIR"
-          
-          # Sign macOS artifacts
-          if [ -d "macos" ]; then
-            find macos -type f -name "*.app" -o -name "*.dmg" | while read file; do
-              gpg --detach-sign --armor "$file"
-            done
-          fi
-          
-          # Sign Linux artifacts
-          if [ -f "appimage/kaleidoswap_amd64.AppImage" ]; then
-            gpg --detach-sign --armor "appimage/kaleidoswap_amd64.AppImage"
-          fi
-          
-          if [ -f "deb/kaleidoswap_amd64.deb" ]; then
-            gpg --detach-sign --armor "deb/kaleidoswap_amd64.deb"
-          fi
-          
-          # Generate SHA256 checksums for all artifacts
-          echo "Generating checksums..."
-          find . -type f \( -name "*.dmg" -o -name "*.app.tar.gz" -o -name "*.AppImage" -o -name "*.deb" \) -exec sha256sum {} \; > SHA256SUMS
-          gpg --detach-sign --armor SHA256SUMS
 
       - name: Install GitHub CLI
         run: |
@@ -139,37 +88,4 @@ jobs:
             && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
             && sudo apt update \
             && sudo apt install gh -y
-          fi
-
-      - name: Upload signatures to release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Get the version from Cargo.toml
-          VERSION=$(grep '^version =' src-tauri/Cargo.toml | head -n1 | cut -d'"' -f2)
-          
-          # Set target-specific directory
-          if [[ "${{ matrix.platform }}" == "macos-latest" ]]; then
-            if [[ "${{ matrix.args }}" == "--target aarch64-apple-darwin" ]]; then
-              BUNDLE_DIR="src-tauri/target/aarch64-apple-darwin/release/bundle"
-            else
-              BUNDLE_DIR="src-tauri/target/x86_64-apple-darwin/release/bundle"
-            fi
-          else
-            BUNDLE_DIR="src-tauri/target/release/bundle"
-          fi
-          
-          cd "$BUNDLE_DIR"
-          
-          # Upload all signature files
-          for sig in $(find . -type f -name "*.asc"); do
-            gh release upload "app-v${VERSION}" "$sig" --clobber || true
-          done
-          
-          # Upload SHA256SUMS and its signature
-          if [ -f "SHA256SUMS" ]; then
-            gh release upload "app-v${VERSION}" "SHA256SUMS" --clobber || true
-          fi
-          if [ -f "SHA256SUMS.asc" ]; then
-            gh release upload "app-v${VERSION}" "SHA256SUMS.asc" --clobber || true
           fi 
