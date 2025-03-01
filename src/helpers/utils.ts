@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 
-import { DEFAULT_RGB_ICON, COIN_ICON_URL } from '../constants'
+import defaultRgbIcon from '../assets/rgb-symbol-color.svg'
+import { COIN_ICON_URL } from '../constants'
 
 export const parseRpcUrl = (url: string) => {
   try {
@@ -19,8 +20,15 @@ export const parseRpcUrl = (url: string) => {
   }
 }
 
-export const loadAssetIcon = async (assetTicker: string): Promise<string> => {
+export const loadAssetIcon = async (
+  assetTicker: string,
+  defaultIcon = defaultRgbIcon
+): Promise<string> => {
   try {
+    if (!assetTicker || assetTicker === 'None') {
+      return defaultIcon
+    }
+
     const iconUrl = `${COIN_ICON_URL}${assetTicker.toLowerCase()}.png`
     const response = await fetch(iconUrl)
     if (response.ok) {
@@ -29,18 +37,20 @@ export const loadAssetIcon = async (assetTicker: string): Promise<string> => {
     throw new Error('Icon not found')
   } catch (error) {
     console.warn(`Failed to load icon for ${assetTicker}, using default.`)
-    return DEFAULT_RGB_ICON
+    return defaultIcon
   }
 }
 
-export const useAssetIcon = (
-  ticker: string,
-  defaultIcon = DEFAULT_RGB_ICON
-) => {
-  const [imgSrc, setImgSrc] = useState<string>('')
+export const useAssetIcon = (ticker: string, defaultIcon = defaultRgbIcon) => {
+  const [imgSrc, setImgSrc] = useState<string>(defaultIcon)
 
   useEffect(() => {
-    loadAssetIcon(ticker)
+    if (!ticker || ticker === 'None') {
+      setImgSrc(defaultIcon)
+      return
+    }
+
+    loadAssetIcon(ticker, defaultIcon)
       .then(setImgSrc)
       .catch(() => setImgSrc(defaultIcon))
   }, [ticker, defaultIcon])

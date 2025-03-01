@@ -45,6 +45,7 @@ export const TakerSwapForm: React.FC<TakerSwapFormProps> = ({
 
   const [assetBalance] = nodeApi.endpoints.assetBalance.useLazyQuery()
   const [executeTaker] = nodeApi.endpoints.taker.useLazyQuery()
+  const { data: nodeInfoData } = nodeApi.endpoints.nodeInfo.useQuery()
 
   // Manual decode function for swap strings
   const decodeSwapString = (swapString: string) => {
@@ -434,6 +435,52 @@ export const TakerSwapForm: React.FC<TakerSwapFormProps> = ({
                   will be exchanged automatically once they execute the swap.
                 </p>
               </div>
+
+              {nodeInfoData?.pubkey && (
+                <div className="mt-3 p-2 bg-slate-800/50 rounded border border-slate-700/50">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-slate-400">
+                      Your Node Public Key (needed by maker):
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs text-emerald-300 font-mono bg-slate-900/50 p-1.5 rounded flex-1 overflow-x-auto">
+                        {nodeInfoData.pubkey}
+                      </code>
+                      <button
+                        className="p-1.5 rounded bg-slate-700 hover:bg-slate-600 transition-colors"
+                        onClick={() => {
+                          navigator.clipboard.writeText(nodeInfoData.pubkey)
+                          toast.success('Public key copied to clipboard')
+                        }}
+                        title="Copy to clipboard"
+                      >
+                        <svg
+                          className="text-slate-300"
+                          fill="none"
+                          height="14"
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                          width="14"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <rect
+                            height="14"
+                            rx="2"
+                            ry="2"
+                            width="14"
+                            x="8"
+                            y="8"
+                          />
+                          <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

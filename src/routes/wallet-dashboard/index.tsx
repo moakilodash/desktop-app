@@ -25,6 +25,7 @@ import {
   WALLET_HISTORY_PATH,
 } from '../../app/router/paths'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
+import defaultRgbIcon from '../../assets/rgb-symbol-color.svg'
 import { ChannelCard } from '../../components/ChannelCard'
 import { IssueAssetModal } from '../../components/IssueAssetModal'
 import { PeerManagementModal } from '../../components/PeerManagementModal'
@@ -39,7 +40,7 @@ import {
   OverlayTooltip,
 } from '../../components/ui'
 import { UTXOManagementModal } from '../../components/UTXOManagementModal'
-import { BitcoinNetwork, DEFAULT_RGB_ICON } from '../../constants'
+import { BitcoinNetwork } from '../../constants'
 import { formatBitcoinAmount } from '../../helpers/number'
 import { useAssetIcon } from '../../helpers/utils'
 import { nodeApi, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
@@ -61,13 +62,13 @@ const AssetIcon: React.FC<AssetIconProps> = ({
   ticker,
   className = 'h-6 w-6 mr-2',
 }) => {
-  const [imgSrc, setImgSrc] = useAssetIcon(ticker)
+  const [imgSrc, setImgSrc] = useAssetIcon(ticker, defaultRgbIcon)
 
   return (
     <img
       alt={`${ticker} icon`}
       className={className}
-      onError={() => setImgSrc(DEFAULT_RGB_ICON)}
+      onError={() => setImgSrc(defaultRgbIcon)}
       src={imgSrc}
     />
   )

@@ -1,10 +1,11 @@
 import React, { useState, useRef } from 'react'
 import { twJoin } from 'tailwind-merge'
 
-import { DEFAULT_RGB_ICON } from '../../constants'
+import defaultIcon from '../../assets/rgb-symbol-color.svg'
 import { useAssetIcon } from '../../helpers/utils'
 import { useOnClickOutside } from '../../hooks/useOnClickOutside'
 import { ArrowDownIcon } from '../../icons/ArrowDown'
+
 
 interface AssetOptionProps {
   ticker?: string
@@ -15,18 +16,19 @@ export const AssetOption = React.memo(({ ticker }: AssetOptionProps) => {
   const iconTicker =
     displayTicker === 'SAT'
       ? 'BTC'
-      : displayTicker === 'None'
+      : displayTicker === 'None' || !displayTicker
         ? ''
         : displayTicker
-  const [imgSrc, setImgSrc] = useAssetIcon(iconTicker)
+
+  const [imgSrc, setImgSrc] = useAssetIcon(iconTicker, defaultIcon)
 
   return (
     <div className="flex items-center">
       <img
         alt={displayTicker}
         className="w-5 h-5 mr-2"
-        onError={() => setImgSrc(DEFAULT_RGB_ICON)}
-        src={!ticker || ticker === 'None' ? DEFAULT_RGB_ICON : imgSrc}
+        onError={() => setImgSrc(defaultIcon)}
+        src={!iconTicker ? defaultIcon : imgSrc}
       />
       {displayTicker}
     </div>

@@ -9,10 +9,10 @@ import {
 import React, { useState } from 'react'
 
 import { useAppSelector } from '../../app/store/hooks'
-import { DEFAULT_RGB_ICON } from '../../constants'
+import defaultRgbIcon from '../../assets/rgb-symbol-color.svg'
 import { formatBitcoinAmount } from '../../helpers/number'
 import { useAssetIcon } from '../../helpers/utils'
-import { LiquidityBar } from '../LiquidityBar' // Import LiquidityBar
+import { LiquidityBar } from '../LiquidityBar'
 
 interface ModalProps {
   isOpen: boolean
@@ -214,13 +214,13 @@ const AssetIcon: React.FC<{ ticker: string; className?: string }> = ({
   ticker,
   className = 'h-6 w-6 mr-2',
 }) => {
-  const [imgSrc, setImgSrc] = useAssetIcon(ticker)
+  const [imgSrc, setImgSrc] = useAssetIcon(ticker, defaultRgbIcon)
 
   return (
     <img
       alt={`${ticker} icon`}
       className={className}
-      onError={() => setImgSrc(DEFAULT_RGB_ICON)}
+      onError={() => setImgSrc(defaultRgbIcon)}
       src={imgSrc}
     />
   )
