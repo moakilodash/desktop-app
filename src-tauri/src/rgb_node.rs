@@ -210,7 +210,7 @@ impl NodeProcess {
 
         println!("Node started successfully for account: {}", account_name);
 
-        // Optionally emit an event so your UI knows a node started
+        // Emit an event so your UI knows a node started
         if let Some(window) = &*self.window.lock().unwrap() {
             let _ = window.emit("node-started", ());
         }

@@ -57,7 +57,6 @@ export const Component = () => {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
 
-  // Add these utility functions at the top level of the component
   const usePrevious = (value: any) => {
     const ref = useRef()
     useEffect(() => {
@@ -107,7 +106,6 @@ export const Component = () => {
   )
   const [showConfirmation, setShowConfirmation] = useState(false)
 
-  // Selectors
   const makerConnectionUrl = useAppSelector(
     (state) => state.nodeSettings.data.default_maker_url
   )
@@ -122,7 +120,6 @@ export const Component = () => {
       ]
   )
 
-  // API hooks
   const [listChannels] = nodeApi.endpoints.listChannels.useLazyQuery()
   const [nodeInfo] = nodeApi.endpoints.nodeInfo.useLazyQuery()
   const [taker] = nodeApi.endpoints.taker.useLazyQuery()
@@ -133,16 +130,13 @@ export const Component = () => {
   const { data: assetsData } = nodeApi.endpoints.listAssets.useQuery(
     undefined,
     {
-      // Add caching configuration
       pollingInterval: 30000,
       refetchOnFocus: false,
-      // Poll every 30 seconds
       refetchOnMountOrArgChange: true,
       refetchOnReconnect: false,
     }
   )
 
-  // Create a wrapper for getAssetPrecision that matches the expected signature in components
   const getAssetPrecisionWrapper = useCallback(
     (asset: string): number => {
       return getAssetPrecision(asset, bitcoinUnit, assets)
@@ -150,7 +144,6 @@ export const Component = () => {
     [assets, bitcoinUnit]
   )
 
-  // Use the imported getDisplayAsset function instead of local implementation
   const displayAsset = useCallback(
     (asset: string) => {
       return getDisplayAsset(asset, bitcoinUnit)
@@ -169,7 +162,6 @@ export const Component = () => {
     [selectedPair]
   )
 
-  // Use the imported formatAssetAmountWithPrecision function instead of local formatAmount
   const formatAmount = useCallback(
     (amount: number, asset: string) => {
       return formatAssetAmountWithPrecision(amount, asset, bitcoinUnit, assets)
@@ -177,7 +169,6 @@ export const Component = () => {
     [assets, bitcoinUnit]
   )
 
-  // Use the imported parseAssetAmountWithPrecision function instead of local parseAssetAmount
   const parseAssetAmount = useCallback(
     (amount: string | undefined | null, asset: string): number => {
       return parseAssetAmountWithPrecision(amount, asset, bitcoinUnit, assets)
@@ -303,7 +294,6 @@ export const Component = () => {
     calculateRate,
   ])
 
-  // Replace the handleFromAmountChange function
   const handleFromAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     const fromAsset = form.getValues().fromAsset
@@ -336,7 +326,6 @@ export const Component = () => {
     }
   }
 
-  // Replace the handleToAmountChange function
   const handleToAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     const toAsset = form.getValues().toAsset
@@ -707,7 +696,6 @@ export const Component = () => {
           setAssets(assetsData.nia)
         }
 
-        // Move pairs fetching to a separate function
         await fetchAndSetPairs()
 
         logger.info('Initial data fetched successfully')
@@ -724,7 +712,6 @@ export const Component = () => {
     setup()
   }, [nodeInfo, listChannels, assetsData, dispatch, form, formatAmount])
 
-  // Add a new function to fetch and set pairs
   const getAvailableAssets = useCallback(() => {
     // Get unique assets from channels that are ready and usable
     const channelAssets = new Set(
@@ -1077,7 +1064,6 @@ export const Component = () => {
       toast.dismiss()
       setErrorMessage(errorMessage)
 
-      // Create a new persistent error toast with improved UI
       toast.error(
         <div
           className="flex flex-col gap-2"

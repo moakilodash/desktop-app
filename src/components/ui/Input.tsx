@@ -10,7 +10,7 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 /**
- * Standard input component with consistent styling
+ * Standard input component
  */
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   (
@@ -138,7 +138,7 @@ export const PasswordInput = forwardRef<
 PasswordInput.displayName = 'PasswordInput'
 
 /**
- * Textarea component with consistent styling
+ * Textarea component
  */
 export const Textarea = forwardRef<
   HTMLTextAreaElement,

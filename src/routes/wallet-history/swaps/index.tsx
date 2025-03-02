@@ -56,7 +56,6 @@ const formatAmount = (
   }
 }
 
-// Add interface for column visibility
 interface ColumnVisibility {
   requestedAt: boolean
   initiatedAt: boolean
@@ -64,18 +63,15 @@ interface ColumnVisibility {
   paymentHash: boolean
 }
 
-// Add formatDate helper
 const formatDate = (timestamp: number | null) => {
   if (!timestamp) return '-'
   return new Date(timestamp * 1000).toLocaleString()
 }
 
-// Add helper function to truncate hash
 const truncateHash = (hash: string) => {
   return `${hash.slice(0, 16)}...`
 }
 
-// Update SwapRow component
 const SwapRow: React.FC<{
   swap: SwapDetails
   assetInfo: Record<string, AssetInfo>
@@ -181,7 +177,6 @@ const SwapRow: React.FC<{
   )
 }
 
-// Add ColumnSelector component
 const ColumnSelector: React.FC<{
   columnVisibility: ColumnVisibility
   onColumnToggle: (column: keyof ColumnVisibility) => void
@@ -243,7 +238,6 @@ const ColumnSelector: React.FC<{
   )
 }
 
-// Add interfaces for sorting
 interface SortConfig {
   key: keyof SwapDetails | 'type'
   direction: 'asc' | 'desc'
@@ -264,7 +258,6 @@ export const Component: React.FC = () => {
     requestedAt: true,
   })
 
-  // API queries
   const {
     data: swapsData,
     isLoading: swapsLoading,
@@ -361,7 +354,6 @@ export const Component: React.FC = () => {
     }))
   }
 
-  // Add sort handler
   const handleSort = (key: SortConfig['key']) => {
     setSortConfig((prev) => ({
       direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
@@ -369,7 +361,6 @@ export const Component: React.FC = () => {
     }))
   }
 
-  // Add SortHeader component
   const SortHeader: React.FC<{
     label: string
     sortKey: SortConfig['key']

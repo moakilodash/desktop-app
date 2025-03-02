@@ -88,7 +88,7 @@ export const SetupLayout: React.FC<SetupLayoutProps> = ({
 }
 
 /**
- * A section component for setup screens with consistent styling
+ * A section component for setup screens
  */
 export const SetupSection: React.FC<{
   children: ReactNode
@@ -118,7 +118,7 @@ export const SetupSection: React.FC<{
 }
 
 /**
- * A form field wrapper with consistent styling
+ * A form field wrapper
  */
 export const FormField: React.FC<{
   children: ReactNode

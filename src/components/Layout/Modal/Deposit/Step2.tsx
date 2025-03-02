@@ -1,4 +1,3 @@
-// Step2.tsx - Main deposit component with improved UI
 import {
   CircleCheckBig,
   CircleX,
@@ -49,11 +48,9 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
     setAmount('')
   }, [network])
 
-  // Add new state and query for asset info
   const [assetTicker, setAssetTicker] = useState<string>('')
   const { data: assetList } = nodeApi.endpoints.listAssets.useQuery()
 
-  // Add useEffect to set asset ticker when assetList is loaded
   useEffect(() => {
     if (assetList?.nia && assetId !== BTC_ASSET_ID) {
       const asset = assetList.nia.find((a) => a.asset_id === assetId)
@@ -63,14 +60,12 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
     }
   }, [assetList, assetId])
 
-  // Add effect to clear address when amount changes for lightning
   useEffect(() => {
     if (network === 'lightning' && address) {
       setAddress(undefined)
     }
   }, [amount, network])
 
-  // Add new state for recipient ID
   const [recipientId, setRecipientId] = useState<string>()
 
   const generateAddress = async () => {
@@ -245,7 +240,6 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
           </div>
         )}
 
-        {/* Generate Button or Address Display */}
         {!address ? (
           <button
             className="w-full py-4 px-6 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-900

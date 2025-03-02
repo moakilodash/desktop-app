@@ -163,7 +163,6 @@ export const TakerSwapForm: React.FC<TakerSwapFormProps> = ({
     setIsWhitelisting(true)
     try {
       // Use the taker endpoint to whitelist the maker
-      // Note: According to the API, we only need to pass the swapstring
       await executeTaker({
         swapstring: swapString,
       })
@@ -192,7 +191,7 @@ export const TakerSwapForm: React.FC<TakerSwapFormProps> = ({
     const formattedBalance = balance / Math.pow(10, precision)
     return formattedBalance.toLocaleString(undefined, {
       maximumFractionDigits: precision,
-      minimumFractionDigits: 0, // Don't show unnecessary zeros
+      minimumFractionDigits: 0,
     })
   }
 

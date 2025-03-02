@@ -47,7 +47,6 @@ import { parseRpcUrl } from '../../helpers/utils'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 import { setSettingsAsync } from '../../slices/nodeSettings/nodeSettings.slice'
 
-// Define the steps for the wallet initialization process
 const WALLET_INIT_STEPS = [
   { id: 'setup', label: 'Node Setup' },
   { id: 'password', label: 'Password' },
@@ -56,7 +55,6 @@ const WALLET_INIT_STEPS = [
   { id: 'unlock', label: 'Unlock' },
 ]
 
-// Separate interfaces for each step
 interface NodeSetupFields {
   name: string
   network: BitcoinNetwork
@@ -188,7 +186,6 @@ export const Component = () => {
         setSettingsAsync({
           daemon_listening_port: data.daemon_listening_port,
           datapath: datapath,
-          // Use formatted name-based datapath
           default_lsp_url: NETWORK_DEFAULTS[data.network].default_lsp_url,
           default_maker_url: defaultMakerUrl,
           indexer_url: data.indexer_url,
@@ -232,7 +229,6 @@ export const Component = () => {
       console.log('Stopping existing node for account:', runningNodeAccount)
 
       try {
-        // Create a promise that will resolve when the node is stopped
         const nodeStoppedPromise = new Promise<void>((resolve, reject) => {
           let unlistenFn: (() => void) | null = null
 
@@ -285,7 +281,6 @@ export const Component = () => {
     })
 
     try {
-      // Create a promise that will resolve when the node is ready
       const nodeStartedPromise = new Promise<void>((resolve, reject) => {
         let unlistenFn: (() => void) | null = null
 
@@ -506,8 +501,6 @@ export const Component = () => {
         await handleUnlockComplete()
       } catch (error) {
         console.error('Unlock failed:', error)
-        // Error handling is done in handleUnlockComplete
-        // We don't need to do anything here as the UI will show the error
       }
     } catch (error) {
       const errorMessage =
@@ -609,7 +602,6 @@ export const Component = () => {
   }
 
   const renderCurrentStep = () => {
-    // Common layout with StepIndicator
     const renderStepLayout = (
       title: string,
       subtitle: string,
@@ -759,7 +751,6 @@ export const Component = () => {
   return <Layout>{renderCurrentStep()}</Layout>
 }
 
-// Form Components Implementation
 interface NodeSetupFormProps {
   form: UseFormReturn<NodeSetupFields>
   onSubmit: SubmitHandler<NodeSetupFields>

@@ -34,7 +34,6 @@ export const SupportModal = ({ isOpen, onClose }: SupportModalProps) => {
 
   if (!isOpen) return null
 
-  // Function to open external links
   const openExternalLink = (url: string) => {
     window.open(url, '_blank')
     // Keep the modal open for potential further exploration
@@ -73,7 +72,6 @@ export const SupportModal = ({ isOpen, onClose }: SupportModalProps) => {
     },
   ]
 
-  // Toggle expanded issue in troubleshooting
   const toggleIssue = (index: number) => {
     if (expandedIssue === index) {
       setExpandedIssue(null)
@@ -82,7 +80,6 @@ export const SupportModal = ({ isOpen, onClose }: SupportModalProps) => {
     }
   }
 
-  // Return to main section
   const goBack = () => {
     setActiveSection('main')
     setExpandedIssue(null)
@@ -377,7 +374,6 @@ export const SupportModal = ({ isOpen, onClose }: SupportModalProps) => {
   )
 }
 
-// Support button component that can be placed in the UI
 export const SupportButton = ({ onClick }: SupportButtonProps) => {
   return (
     <button
@@ -388,20 +384,5 @@ export const SupportButton = ({ onClick }: SupportButtonProps) => {
       <HelpCircle className="w-5 h-5 text-cyan" />
       <span>Support</span>
     </button>
-  )
-}
-
-// Usage example in a component
-export const SupportIntegration = () => {
-  const [showSupport, setShowSupport] = useState(false)
-
-  return (
-    <>
-      <SupportButton onClick={() => setShowSupport(true)} />
-      <SupportModal
-        isOpen={showSupport}
-        onClose={() => setShowSupport(false)}
-      />
-    </>
   )
 }

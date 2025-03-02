@@ -12,7 +12,7 @@ interface SelectProps {
   options: Array<{ value: string; ticker?: string }>
   onSelect: (value: string) => void
   theme: 'light' | 'dark'
-  disabled?: boolean // Add the disabled prop
+  disabled?: boolean
 }
 
 const Select: React.FC<SelectProps> = (props) => {
@@ -68,14 +68,14 @@ interface AssetSelectProps {
   options: Array<{ value: string; ticker?: string }>
   value: string
   onChange: (value: string) => void
-  disabled?: boolean // Add the disabled prop
+  disabled?: boolean
 }
 
 const AssetSelect: React.FC<AssetSelectProps> = ({
   options,
   value,
   onChange,
-  disabled = false, // Add a default value
+  disabled = false,
 }) => (
   <Select
     active={value}

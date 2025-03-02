@@ -36,14 +36,12 @@ import { NETWORK_DEFAULTS } from '../../constants/networks'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 import { setSettingsAsync } from '../../slices/nodeSettings/nodeSettings.slice'
 
-// Define the steps for the wallet restoration process
 const steps = [
   { id: 'backup-selection', label: 'Backup Selection' },
   { id: 'restoration', label: 'Restoration' },
   { id: 'completion', label: 'Completion' },
 ]
 
-// Define types for modal state
 const ModalType = {
   ERROR: 'error',
   NONE: 'none',
@@ -85,7 +83,6 @@ interface StatusModalProps {
   isOpen: boolean
 }
 
-// Modal component for better reusability
 const StatusModal = ({
   type,
   title,
@@ -110,7 +107,6 @@ const StatusModal = ({
 
   if (!isOpen) return null
 
-  // Define icon and colors based on modal type
   const getModalConfig = () => {
     switch (type) {
       case ModalType.SUCCESS:
@@ -187,7 +183,6 @@ export const Component = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const isSubmitting = useRef(false)
 
-  // Unified modal state
   const [modalState, setModalState] = useState<ModalState>({
     autoClose: false,
     details: '',
@@ -569,7 +564,6 @@ export const Component = () => {
           </SetupSection>
         )}
 
-        {/* Unified Modal Component */}
         <StatusModal
           autoClose={modalState.autoClose}
           autoCloseDelay={3000}

@@ -184,7 +184,6 @@ export const Component = () => {
     })
   }
 
-  // Simplified Connection Details Component
   const SimpleConnectionDetails = () => {
     const rpcConfig = parseRpcUrl(nodeSettings.rpc_connection_url)
 
@@ -261,11 +260,9 @@ export const Component = () => {
     )
   }
 
-  // Render the unlock form card with matched styling from screenshot
   const renderUnlockForm = () => (
     <Card className="w-full max-w-md mx-auto bg-gray-900 rounded-lg overflow-hidden border border-gray-800">
       <div className="flex flex-col items-center pt-12 pb-6">
-        {/* Key icon with blue background */}
         <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center mb-6">
           <Lock className="w-10 h-10 text-white" />
         </div>

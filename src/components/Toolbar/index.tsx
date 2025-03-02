@@ -15,7 +15,6 @@ import {
   setSettingsAsync,
 } from '../../slices/nodeSettings/nodeSettings.slice'
 
-// Types and Interfaces
 export interface Account {
   datapath: string
   default_lsp_url: string
@@ -45,7 +44,6 @@ interface NodeCardProps {
   onDelete: (account: Account) => void
 }
 
-// Modal Component
 const Modal: React.FC<ModalProps> = ({ onClose, children }) => {
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -89,7 +87,6 @@ const Modal: React.FC<ModalProps> = ({ onClose, children }) => {
   )
 }
 
-// Node Card Component
 const NodeCard: React.FC<NodeCardProps> = ({
   account,
   isCollapsed,
@@ -374,7 +371,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
     }
   }, [])
 
-  // Toggle edit mode
   const toggleEditMode = () => {
     setIsEditing(!isEditing)
   }
@@ -725,9 +721,9 @@ const DeleteNodeModalContent: React.FC<DeleteNodeModalContentProps> = ({
   onCancel,
   onConfirm,
 }) => {
-  const handleDelete = async () => {
+  const handleDelete = () => {
     try {
-      await onConfirm(account)
+      onConfirm(account)
       onCancel() // Close the modal after successful deletion
     } catch (error) {
       // Error is already handled in the parent component

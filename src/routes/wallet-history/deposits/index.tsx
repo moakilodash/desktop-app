@@ -39,7 +39,7 @@ const formatAssetAmount = (
 
   // Find asset info to get precision
   const assetInfo = assetsList?.find((a) => a.ticker === asset)
-  const precision = assetInfo?.precision ?? 8 // Default to 8 if not found
+  const precision = assetInfo?.precision ?? 8
 
   // Convert to decimal and format with proper precision
   const amountDecimal = new Decimal(amount)

@@ -278,7 +278,6 @@ export const StatusToast: React.FC<{
   return <StatusToastContainer onRemove={removeToast} toasts={toasts} />
 }
 
-// Helper function to update a specific toast
 const updateToast = (toasts: Toast[], id: string, updates: Partial<Toast>) => {
   return toasts.map((toast) =>
     toast.id === id ? { ...toast, ...updates } : toast

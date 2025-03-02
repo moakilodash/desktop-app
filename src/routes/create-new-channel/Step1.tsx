@@ -22,7 +22,6 @@ interface FormFields {
   pubKeyAndAddress: string
 }
 
-// Add this validation helper function at the top level
 const isValidPubkeyAndAddress = (value: string): boolean => {
   // Check basic format: pubkey@host:port
   const parts = value.split('@')

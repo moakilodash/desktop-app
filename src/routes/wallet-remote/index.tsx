@@ -167,7 +167,7 @@ export const Component = () => {
       nodeUrl: data.node_url,
 
       proxyEndpoint: data.proxy_endpoint,
-      rpcConnectionUrl: data.rpc_connection_url, // Empty for remote nodes
+      rpcConnectionUrl: data.rpc_connection_url,
     })
 
     // Set as current account

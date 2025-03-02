@@ -60,7 +60,7 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({ assets }) => {
       fromAmount: '',
       fromAsset: '',
       takerPubkey: '',
-      timeoutSec: '3600', // Default 1 hour
+      timeoutSec: '3600',
       toAmount: '',
       toAsset: '',
     },
@@ -124,12 +124,12 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({ assets }) => {
         if (maxHtlc) {
           newBalances['BTC'] = {
             // For BTC, inbound is the sum of inbound_balance_msat across all channels
-inbound:
+            inbound:
               channels.data?.channels.reduce(
                 (sum, c) => sum + (c.inbound_balance_msat || 0),
                 0
               ) || 0,
-            
+
             outbound: maxHtlc,
           }
         }

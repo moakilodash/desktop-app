@@ -232,9 +232,9 @@ interface DropdownMenuProps {
   onItemClick?: (item: NavItem | string) => void
 }
 
-// Define types for NavItem component props - requires 'to' property
+// Define types for NavItem component props
 interface NavItemProps {
-  item: NavItem & { to: string } // Ensure 'to' is required for NavItem component
+  item: NavItem & { to: string }
   isCollapsed: boolean
   isActive: boolean
 }
@@ -515,7 +515,6 @@ export const Layout = (props: Props) => {
   const [isTransactionMenuOpen, setIsTransactionMenuOpen] = useState(false)
   const [isSupportMenuOpen, setIsSupportMenuOpen] = useState(false)
 
-  // Add state for support modal
   const [showSupportModal, setShowSupportModal] = useState(false)
 
   const channelMenuRef = useRef(null)
@@ -526,7 +525,6 @@ export const Layout = (props: Props) => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
 
-  // Get the lock endpoint from nodeApi
   const [lock] = nodeApi.endpoints.lock.useLazyQuery()
 
   const [showLogoutModal, setShowLogoutModal] = useState(false)
@@ -547,7 +545,6 @@ export const Layout = (props: Props) => {
     }
   )
 
-  // Function to handle logout
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true)
@@ -574,7 +571,6 @@ export const Layout = (props: Props) => {
     }
   }
 
-  // Function to handle opening external links
   const openExternalLink = (url: string) => {
     window.open(url, '_blank')
   }
@@ -679,9 +675,7 @@ export const Layout = (props: Props) => {
   }, [])
 
   const shouldHideNavbar = HIDE_NAVBAR_PATHS.includes(location.pathname)
-  // const isNodeConnected = nodeInfo.isSuccess
 
-  // Function to handle quick actions
   const handleTransactionAction = (type: string) => {
     dispatch(
       uiSliceActions.setModal({
@@ -911,8 +905,8 @@ export const Layout = (props: Props) => {
                         ...SUPPORT_RESOURCES.map((resource) => ({
                           icon: resource.icon,
                           label: resource.name,
-                          to: '#', // Placeholder - we'll handle this in the click handler
-                          url: resource.url, // Custom property to store the URL
+                          to: '#', // Placeholder
+                          url: resource.url,
                         })),
                       ]}
                       menuRef={supportMenuRef}

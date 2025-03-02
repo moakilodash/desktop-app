@@ -1,6 +1,6 @@
 import { CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
 import { useEffect } from 'react'
-// Define types for modal state
+
 export const ModalType = {
   ERROR: 'error',
   NONE: 'none',
@@ -8,10 +8,8 @@ export const ModalType = {
   WARNING: 'warning',
 } as const
 
-// Define type for modal type values
 export type ModalTypeValue = (typeof ModalType)[keyof typeof ModalType]
 
-// Define interface for StatusModal props
 export interface StatusModalProps {
   type: ModalTypeValue
   title: string
@@ -23,7 +21,6 @@ export interface StatusModalProps {
   isOpen: boolean
 }
 
-// StatusModal component for consistent UI across the app
 export const StatusModal: React.FC<StatusModalProps> = ({
   type,
   title,

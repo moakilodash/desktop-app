@@ -284,8 +284,8 @@ interface TakerRequest {
 interface MakerInitRequest {
   qty_from: number
   qty_to: number
-  from_asset?: string // Omitted for BTC, RGB asset ID for other assets
-  to_asset?: string // Omitted for BTC, RGB asset ID for other assets
+  from_asset?: string
+  to_asset?: string
   timeout_sec: number
 }
 

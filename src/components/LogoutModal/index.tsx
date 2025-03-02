@@ -63,7 +63,6 @@ export const LogoutModal: React.FC<LogoutModalProps> = ({
   )
 }
 
-// Simple component for logout button with icon
 export const LogoutButton: React.FC<{ onClick: () => void }> = ({
   onClick,
 }) => {

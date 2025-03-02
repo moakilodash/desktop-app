@@ -38,8 +38,6 @@ interface AssetInfo {
   max_channel_amount: number
 }
 
-//interface Lsps1GetInfoRequest {}
-
 interface Lsps1GetInfoResponse {
   lsp_connection_url: string
   options: {
@@ -59,7 +57,6 @@ interface Lsps1GetInfoResponse {
   assets: Record<string, Record<string, AssetInfo>>
 }
 
-// Request and response interfaces for lsps1.create_order
 interface Lsps1CreateOrderRequest {
   client_pubkey: string
   lsp_balance_sat: LSPS0Sat
@@ -128,14 +125,12 @@ interface PaymentOnchain {
   refund_onchain_address?: string
 }
 
-// Request and response interfaces for lsps1.get_order
 interface Lsps1GetOrderRequest {
   order_id: string
 }
 
 interface Lsps1GetOrderResponse extends Lsps1CreateOrderResponse {}
 
-// List trading pairs
 export interface TradingPair {
   base_asset: string
   base_asset_id: string

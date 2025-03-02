@@ -2,7 +2,6 @@ import ReactDOM from 'react-dom/client'
 import { Provider } from 'react-redux'
 import WebFont from 'webfontloader'
 
-import { App } from './app'
 import { Router } from './app/router'
 import { store } from './app/store'
 
@@ -16,8 +15,6 @@ WebFont.load({
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <Provider store={store}>
-    <App>
-      <Router />
-    </App>
+    <Router />
   </Provider>
 )
