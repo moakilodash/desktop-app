@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
 import {
-  TRADE_PATH,
+  WALLET_DASHBOARD_PATH,
   WALLET_SETUP_PATH,
   WALLET_UNLOCK_PATH,
 } from '../../app/router/paths'
@@ -197,7 +197,7 @@ export const Component = () => {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      navigate(TRADE_PATH)
+      navigate(WALLET_DASHBOARD_PATH)
     } catch (error) {
       console.error('Failed to setup remote node:', error)
       toast.error('Failed to setup remote node. Please check your settings.')

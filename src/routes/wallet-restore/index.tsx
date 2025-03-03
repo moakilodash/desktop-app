@@ -13,7 +13,10 @@ import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
-import { TRADE_PATH, WALLET_SETUP_PATH } from '../../app/router/paths'
+import {
+  WALLET_DASHBOARD_PATH,
+  WALLET_SETUP_PATH,
+} from '../../app/router/paths'
 import { useAppDispatch } from '../../app/store/hooks'
 import { Layout } from '../../components/Layout'
 import { NetworkSelector } from '../../components/NetworkSelector'
@@ -229,7 +232,7 @@ export const Component = () => {
 
     // Navigate if it was a success modal
     if (modalState.type === ModalType.SUCCESS) {
-      navigate(TRADE_PATH)
+      navigate(WALLET_DASHBOARD_PATH)
     } else if (modalState.type === ModalType.ERROR) {
       // On error, go back to the first step
       setCurrentStep('backup-selection')
@@ -270,7 +273,7 @@ export const Component = () => {
     try {
       let nodeInfoRes = await nodeInfo()
       if (nodeInfoRes.isSuccess) {
-        navigate(TRADE_PATH)
+        navigate(WALLET_DASHBOARD_PATH)
         return
       }
 

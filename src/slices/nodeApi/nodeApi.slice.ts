@@ -354,7 +354,7 @@ interface ListSwapsResponse {
   taker: SwapDetails[]
 }
 
-enum Network {
+export enum Network {
   Mainnet = 'Mainnet',
   Testnet = 'Testnet',
   Regtest = 'Regtest',

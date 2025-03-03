@@ -2,48 +2,20 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import Decimal from 'decimal.js'
 import {
+  ArrowUpRight,
   ChevronLeft,
   ChevronRight,
-  Settings,
-  Zap,
-  Home,
-  Plus,
-  ArrowUpRight,
   ArrowDownLeft,
-  FileText,
   Activity,
-  ShoppingCart,
   Bell,
   HelpCircle,
   User,
-  Clock,
-  MessageCircle,
-  Github,
-  Store,
-  Users,
 } from 'lucide-react'
 import React, { useEffect, useState, useRef } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { toast, ToastContainer } from 'react-toastify'
 
-import {
-  TRADE_PATH,
-  TRADE_MARKET_MAKER_PATH,
-  TRADE_MANUAL_PATH,
-  TRADE_NOSTR_P2P_PATH,
-  WALLET_HISTORY_DEPOSITS_PATH,
-  WALLET_HISTORY_PATH,
-  WALLET_SETUP_PATH,
-  WALLET_RESTORE_PATH,
-  WALLET_UNLOCK_PATH,
-  WALLET_REMOTE_PATH,
-  WALLET_INIT_PATH,
-  WALLET_DASHBOARD_PATH,
-  SETTINGS_PATH,
-  CHANNELS_PATH,
-  CREATE_NEW_CHANNEL_PATH,
-  ORDER_CHANNEL_PATH,
-} from '../../app/router/paths'
+import { WALLET_SETUP_PATH } from '../../app/router/paths'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import logo from '../../assets/logo.svg'
 import { useOnClickOutside } from '../../hooks/useOnClickOutside'
@@ -55,167 +27,24 @@ import { ShutdownAnimation } from '../ShutdownAnimation'
 import { SupportModal } from '../SupportModal'
 
 import 'react-toastify/dist/ReactToastify.min.css'
+import {
+  MAIN_NAV_ITEMS,
+  CHANNEL_MENU_ITEMS,
+  TRANSACTION_MENU_ITEMS,
+  USER_MENU_ITEMS,
+  SUPPORT_RESOURCES,
+  PAGE_CONFIG,
+  HIDE_NAVBAR_PATHS,
+  NavItem,
+} from './config'
 import { LayoutModal } from './Modal'
+
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 interface Props {
   className?: string
   children: React.ReactNode
-}
-
-const HIDE_NAVBAR_PATHS = [
-  WALLET_SETUP_PATH,
-  WALLET_RESTORE_PATH,
-  WALLET_UNLOCK_PATH,
-  WALLET_REMOTE_PATH,
-  WALLET_INIT_PATH,
-]
-
-// Define main navigation items with icons
-const MAIN_NAV_ITEMS = [
-  {
-    icon: <Zap className="w-5 h-5" />,
-    label: 'Trade',
-    matchPath: TRADE_PATH,
-    subMenu: [
-      {
-        icon: <Store className="w-4 h-4" />,
-        label: 'Market Maker',
-        to: TRADE_MARKET_MAKER_PATH,
-      },
-      {
-        icon: <Zap className="w-4 h-4" />,
-        label: 'Manual Swaps',
-        to: TRADE_MANUAL_PATH,
-      },
-      {
-        disabled: true,
-        icon: <Users className="w-4 h-4" />,
-        label: 'Nostr P2P',
-        to: TRADE_NOSTR_P2P_PATH,
-      },
-    ],
-    to: TRADE_PATH,
-  },
-  {
-    icon: <Home className="w-5 h-5" />,
-    label: 'Dashboard',
-    matchPath: WALLET_DASHBOARD_PATH,
-    to: WALLET_DASHBOARD_PATH,
-  },
-  {
-    icon: <Clock className="w-5 h-5" />,
-    label: 'History',
-    matchPath: WALLET_HISTORY_PATH,
-    to: WALLET_HISTORY_DEPOSITS_PATH,
-  },
-  {
-    icon: <Activity className="w-5 h-5" />,
-    label: 'Channels',
-    matchPath: CHANNELS_PATH,
-    to: CHANNELS_PATH,
-  },
-]
-
-// Channel menu items
-const CHANNEL_MENU_ITEMS = [
-  {
-    icon: <Plus className="w-4 h-4" />,
-    label: 'Create New Channel',
-    to: CREATE_NEW_CHANNEL_PATH,
-  },
-  {
-    icon: <ShoppingCart className="w-4 h-4" />,
-    label: 'Buy a Channel',
-    to: ORDER_CHANNEL_PATH,
-  },
-  {
-    icon: <Settings className="w-4 h-4" />,
-    label: 'Manage Channels',
-    to: CHANNELS_PATH,
-  },
-]
-
-// Transaction menu items
-const TRANSACTION_MENU_ITEMS = [
-  {
-    action: 'deposit',
-    icon: (
-      <div className="p-1 rounded-full bg-cyan/10 text-cyan">
-        <ArrowDownLeft className="w-4 h-4" />
-      </div>
-    ),
-    label: 'Deposit',
-  },
-  {
-    action: 'withdraw',
-    icon: (
-      <div className="p-1 rounded-full bg-purple/10 text-purple">
-        <ArrowUpRight className="w-4 h-4" />
-      </div>
-    ),
-    label: 'Withdraw',
-  },
-]
-
-// User settings menu items
-const USER_MENU_ITEMS = [
-  {
-    icon: <Settings className="w-4 h-4" />,
-    label: 'Settings',
-    to: SETTINGS_PATH,
-  },
-  {
-    action: 'support',
-    icon: <HelpCircle className="w-4 h-4" />,
-    label: 'Help & Support',
-  },
-]
-
-// Support resources for the Help menu
-const SUPPORT_RESOURCES = [
-  {
-    description: 'Read our comprehensive guides and tutorials',
-    icon: <FileText className="w-4 h-4" />,
-    name: 'Documentation',
-    url: 'https://docs.kaleidoswap.com',
-  },
-  {
-    description: 'Frequently asked questions',
-    icon: <HelpCircle className="w-4 h-4" />,
-    name: 'FAQ',
-    url: 'https://docs.kaleidoswap.com/desktop-app/faq',
-  },
-  {
-    description: 'Join our community for support',
-    icon: <MessageCircle className="w-4 h-4" />,
-    name: 'Telegram Group',
-    url: 'https://t.me/kaleidoswap',
-  },
-  {
-    description: 'Report bugs or request features',
-    icon: <Github className="w-4 h-4" />,
-    name: 'GitHub Issues',
-    url: 'https://github.com/kaleidoswap/desktop-app',
-  },
-]
-
-// Define types for navigation items
-interface NavItem {
-  label: string
-  icon: React.ReactNode
-  to?: string
-  matchPath?: string
-  action?: string
-  url?: string
-  subMenu?: {
-    icon: React.ReactNode
-    label: string
-    to?: string
-    mode?: string
-    disabled?: boolean
-  }[]
 }
 
 // Define types for modal actions
@@ -829,24 +658,10 @@ export const Layout = (props: Props) => {
                       location.pathname.startsWith(item.to)
                     )
 
-                    let icon = mainNavItem?.icon
-                    let title = ''
-
-                    // Check for channel management pages
-                    if (location.pathname === CREATE_NEW_CHANNEL_PATH) {
-                      icon = <Plus className="w-5 h-5" />
-                      title = 'Create New Channel'
-                    } else if (location.pathname === ORDER_CHANNEL_PATH) {
-                      icon = <ShoppingCart className="w-5 h-5" />
-                      title = 'Buy a Channel'
-                    } else if (location.pathname === CHANNELS_PATH) {
-                      title = 'Channels'
-                    } else if (location.pathname === SETTINGS_PATH) {
-                      icon = <Settings className="w-5 h-5" />
-                      title = 'Settings'
-                    } else {
-                      title = mainNavItem?.label || 'Dashboard'
-                    }
+                    const pageConfig = PAGE_CONFIG[location.pathname]
+                    const icon = pageConfig?.icon || mainNavItem?.icon
+                    const title =
+                      pageConfig?.title || mainNavItem?.label || 'Dashboard'
 
                     return (
                       <>

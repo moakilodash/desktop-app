@@ -398,7 +398,28 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
       console.log('Running node account:', runningNodeAccount)
 
       if (currentNode && currentNode.name === node.name && isNodeRunning) {
-        console.log('Node already running, navigating to root')
+        // First update the Redux store before navigating
+        const dbNode = await invoke<Account>('get_account_by_name', {
+          name: node.name,
+        })
+
+        if (!dbNode) {
+          throw new Error('Node not found in database')
+        }
+
+        const formattedNode = {
+          ...dbNode,
+          maker_urls: Array.isArray(dbNode.maker_urls)
+            ? dbNode.maker_urls
+            : dbNode.maker_urls
+                ?.split(',')
+                .filter((url) => url.trim() !== '') || [],
+        }
+
+        // Wait for the Redux store to be updated
+        await dispatch(setSettingsAsync(formattedNode))
+
+        console.log('Node already running, navigating to dashboard')
         navigate(ROOT_PATH)
         return
       }

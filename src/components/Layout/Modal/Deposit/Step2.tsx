@@ -16,7 +16,7 @@ import { toast } from 'react-toastify'
 
 import { useAppSelector } from '../../../../app/store/hooks'
 import { BTC_ASSET_ID } from '../../../../constants'
-import { nodeApi } from '../../../../slices/nodeApi/nodeApi.slice'
+import { nodeApi , Network } from '../../../../slices/nodeApi/nodeApi.slice'
 
 interface Props {
   assetId?: string
@@ -72,6 +72,70 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
 
   // Add new state for recipient ID
   const [recipientId, setRecipientId] = useState<string>()
+
+  // Add network info query
+  const { data: networkInfo } = nodeApi.endpoints.networkInfo.useQuery()
+
+  // Function to render faucet suggestion
+  const renderFaucetSuggestion = () => {
+    if (!networkInfo || networkInfo.network === Network.Mainnet) return null
+
+    let faucetInfo = {
+      description: '',
+      link: '',
+      linkText: '',
+      title: '',
+    }
+
+    switch (networkInfo.network) {
+      case Network.Signet:
+        faucetInfo = {
+          description:
+            'Get test coins from the Mutinynet faucet to try out the application.',
+          link: 'https://faucet.mutinynet.com/',
+          linkText: 'Visit Mutinynet Faucet',
+          title: 'Mutinynet Faucet Available',
+        }
+        break
+      case Network.Regtest:
+        faucetInfo = {
+          description:
+            'Get test coins from the RGB Tools Telegram bot to try out the application.',
+          link: 'https://t.me/rgb_lightning_bot',
+          linkText: 'Open RGB Tools Bot',
+          title: 'RGB Tools Bot Available',
+        }
+        break
+      case Network.Testnet:
+        faucetInfo = {
+          description:
+            'Get test coins from a Bitcoin testnet faucet to try out the application.',
+          link: 'https://faucet.mutinynet.com/',
+          linkText: 'Visit Testnet Faucet',
+          title: 'Testnet Faucet Available',
+        }
+        break
+    }
+
+    return (
+      <div className="mb-6 p-4 bg-green-500/10 rounded-xl border border-green-500/20">
+        <h4 className="text-green-400 font-medium mb-2">{faucetInfo.title}</h4>
+        <p className="text-green-300/80 text-sm mb-3">
+          {faucetInfo.description}
+        </p>
+        <a
+          className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/20 
+                   hover:bg-green-500/30 text-green-400 rounded-lg transition-colors text-sm"
+          href={faucetInfo.link}
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          <ArrowRight className="w-4 h-4" />
+          {faucetInfo.linkText}
+        </a>
+      </div>
+    )
+  }
 
   const generateAddress = async () => {
     setLoading(true)
@@ -199,6 +263,22 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
       </div>
 
       <div className="space-y-6">
+        {/* Show network info and faucet suggestion if on test network */}
+        {networkInfo && networkInfo.network !== Network.Mainnet && (
+          <div className="mb-6 p-4 bg-blue-500/10 rounded-xl border border-blue-500/20">
+            <p className="text-blue-400 text-sm flex items-center gap-2">
+              <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-500/20 text-xs font-medium">
+                {networkInfo.network}
+              </span>
+              You are connected to {networkInfo.network}. Use test coins for
+              experimenting.
+            </p>
+          </div>
+        )}
+
+        {/* Render faucet suggestion */}
+        {renderFaucetSuggestion()}
+
         {!assetId && (
           <div className="mb-6 p-4 bg-blue-500/10 rounded-xl border border-blue-500/20">
             <p className="text-blue-400 text-sm">

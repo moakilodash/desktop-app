@@ -1,58 +1,182 @@
-import { Link, Plus, ShoppingCart, HelpCircle } from 'lucide-react'
+import { Link, Plus, ShoppingCart, HelpCircle, Wallet } from 'lucide-react'
 import React from 'react'
 
 import {
   CREATE_NEW_CHANNEL_PATH,
   ORDER_CHANNEL_PATH,
 } from '../../app/router/paths'
+import { useAppDispatch } from '../../app/store/hooks'
+import { uiSliceActions } from '../../slices/ui/ui.slice'
 
 import { MakerSelector } from './MakerSelector'
 
 interface NoChannelsMessageProps {
   onNavigate: (path: string) => void
   onMakerChange: () => Promise<void>
+  hasEnoughBalance?: boolean
 }
 
 export const NoChannelsMessage: React.FC<NoChannelsMessageProps> = ({
   onNavigate,
   onMakerChange,
+  hasEnoughBalance = true,
 }) => {
+  const dispatch = useAppDispatch()
+
+  const handleShowDepositModal = () => {
+    dispatch(uiSliceActions.setModal({ assetId: undefined, type: 'deposit' }))
+  }
+
+  if (!hasEnoughBalance) {
+    return (
+      <div className="max-w-2xl w-full bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center">
+            <Wallet className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-white">
+            Insufficient Bitcoin Balance
+          </h2>
+          <p className="text-slate-400 text-center text-base max-w-md">
+            You need some bitcoin to open a channel. Please deposit some BTC to
+            get started.
+          </p>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl 
+                     font-medium transition-colors flex items-center gap-2 text-base"
+              onClick={handleShowDepositModal}
+            >
+              <Wallet className="w-5 h-5" />
+              Deposit BTC
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="max-w-xl w-full bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-6">
-      <div className="flex flex-col items-center space-y-3">
-        <div className="w-full flex justify-end mb-1">
+    <div className="max-w-2xl w-full bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
+      <div className="flex flex-col items-center space-y-4">
+        <div className="w-full flex justify-end mb-2">
           <MakerSelector hasNoPairs onMakerChange={onMakerChange} />
         </div>
-        <div className="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center">
-          <Link className="w-6 h-6 text-blue-500" />
+        <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center">
+          <Link className="w-8 h-8 text-blue-500" />
         </div>
-        <h2 className="text-xl font-bold text-white">
+        <h2 className="text-2xl font-bold text-white">
           No Trading Channels Available
         </h2>
-        <p className="text-slate-400 text-center text-sm">
-          To start trading, you need a direct channel with a{' '}
-          <span className="relative inline-block group">
-            supported asset
-            <HelpCircle className="inline-block ml-1 w-3 h-3 text-blue-500" />
-            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-gray-800 rounded-lg w-48 invisible group-hover:visible">
-              An asset listed from the maker
-            </span>
-          </span>{' '}
-          with the maker
+        <p className="text-slate-400 text-center text-base max-w-md">
+          To start trading, you need to open a channel with some assets
         </p>
 
-        <div className="flex gap-3 pt-3">
+        <div className="flex gap-4 pt-4">
           <button
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl 
-                     font-medium transition-colors flex items-center gap-2 text-sm"
+            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl 
+                     font-medium transition-colors flex items-center gap-2 text-base"
             onClick={() => onNavigate(CREATE_NEW_CHANNEL_PATH)}
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-5 h-5" />
             Open Channel
           </button>
           <button
             className="px-6 py-3 border border-blue-500/50 text-blue-500 rounded-xl 
-                     hover:bg-blue-500/10 transition-colors flex items-center gap-2"
+                     hover:bg-blue-500/10 transition-colors flex items-center gap-2 text-base"
+            onClick={() => onNavigate(ORDER_CHANNEL_PATH)}
+          >
+            <ShoppingCart className="w-5 h-5" />
+            Buy from LSP
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+interface NoTradingChannelsMessageProps {
+  onNavigate: (path: string) => void
+  onMakerChange: () => Promise<void>
+  hasEnoughBalance?: boolean
+}
+
+export const NoTradingChannelsMessage: React.FC<
+  NoTradingChannelsMessageProps
+> = ({ onNavigate, onMakerChange, hasEnoughBalance = true }) => {
+  const dispatch = useAppDispatch()
+
+  const handleShowDepositModal = () => {
+    dispatch(uiSliceActions.setModal({ assetId: undefined, type: 'deposit' }))
+  }
+
+  if (!hasEnoughBalance) {
+    return (
+      <div className="max-w-2xl w-full bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center">
+            <Wallet className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-white">
+            Insufficient Bitcoin Balance
+          </h2>
+          <p className="text-slate-400 text-center text-base max-w-md">
+            You need some bitcoin to open a trading channel. Please deposit some
+            BTC to get started.
+          </p>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl 
+                     font-medium transition-colors flex items-center gap-2 text-base"
+              onClick={handleShowDepositModal}
+            >
+              <Wallet className="w-5 h-5" />
+              Deposit BTC
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-2xl w-full bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
+      <div className="flex flex-col items-center space-y-4">
+        <div className="w-full flex justify-end mb-2">
+          <MakerSelector hasNoPairs onMakerChange={onMakerChange} />
+        </div>
+        <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center">
+          <Link className="w-8 h-8 text-blue-500" />
+        </div>
+        <h2 className="text-2xl font-bold text-white">
+          No Trading Channels Available
+        </h2>
+        <p className="text-slate-400 text-center text-base max-w-md">
+          To start trading, you need a direct channel with a{' '}
+          <span className="relative inline-block group">
+            supported asset
+            <HelpCircle className="inline-block ml-1 w-4 h-4 text-blue-500" />
+            <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-4 py-2.5 text-sm text-white bg-gray-800 rounded-lg w-56 invisible group-hover:visible">
+              An asset listed from the market maker
+            </span>
+          </span>{' '}
+          with the market maker
+        </p>
+
+        <div className="flex gap-4 pt-4">
+          <button
+            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl 
+                     font-medium transition-colors flex items-center gap-2 text-base"
+            onClick={() => onNavigate(CREATE_NEW_CHANNEL_PATH)}
+          >
+            <Plus className="w-5 h-5" />
+            Open Channel
+          </button>
+          <button
+            className="px-6 py-3 border border-blue-500/50 text-blue-500 rounded-xl 
+                     hover:bg-blue-500/10 transition-colors flex items-center gap-2 text-base"
             onClick={() => onNavigate(ORDER_CHANNEL_PATH)}
           >
             <ShoppingCart className="w-5 h-5" />

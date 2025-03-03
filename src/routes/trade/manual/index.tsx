@@ -17,7 +17,11 @@ import { Loader } from '../../../components/Loader'
 import { StatusToast } from '../../../components/StatusToast'
 import { NoChannelsMessage, ManualSwapForm } from '../../../components/Trade'
 import { TakerSwapForm } from '../../../components/Trade/TakerSwapForm'
-import { nodeApi, NiaAsset } from '../../../slices/nodeApi/nodeApi.slice'
+import {
+  nodeApi,
+  Channel,
+  NiaAsset,
+} from '../../../slices/nodeApi/nodeApi.slice'
 import { logger } from '../../../utils/logger'
 import './index.css'
 
@@ -27,12 +31,14 @@ export const Component = () => {
   const [assets, setAssets] = useState<NiaAsset[]>([])
   const [hasValidChannelsForTrading, setHasValidChannelsForTrading] =
     useState(false)
+  const [hasEnoughBalance, setHasEnoughBalance] = useState(true)
   const [isExplanationExpanded, setIsExplanationExpanded] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [activeRole, setActiveRole] = useState<'maker' | 'taker'>('maker')
 
   // API hooks
   const [listChannels] = nodeApi.endpoints.listChannels.useLazyQuery()
+  const [btcBalance] = nodeApi.endpoints.btcBalance.useLazyQuery()
 
   const { data: assetsData } = nodeApi.endpoints.listAssets.useQuery(
     undefined,
@@ -85,20 +91,30 @@ export const Component = () => {
     const setup = async () => {
       setIsLoading(true)
       try {
-        const listChannelsResponse = await listChannels()
+        const [listChannelsResponse, balanceResponse] = await Promise.all([
+          listChannels(),
+          btcBalance({ skip_sync: false }),
+        ])
 
         if ('data' in listChannelsResponse && listChannelsResponse.data) {
           const channelsList = listChannelsResponse.data.channels
 
           // Check if there's at least one channel with an asset that is ready and usable
           const hasValidChannels = channelsList.some(
-            (channel) =>
+            (channel: Channel) =>
               channel.asset_id !== null &&
               channel.ready &&
               (channel.outbound_balance_msat > 0 ||
                 channel.inbound_balance_msat > 0)
           )
           setHasValidChannelsForTrading(hasValidChannels)
+        }
+
+        // Check if there's enough balance to open a channel
+        if ('data' in balanceResponse && balanceResponse.data) {
+          const { vanilla } = balanceResponse.data
+          // Assuming minimum balance needed is 20000 sats (adjust as needed)
+          setHasEnoughBalance(vanilla.spendable >= 20000)
         }
 
         if (assetsData) {
@@ -117,7 +133,7 @@ export const Component = () => {
     }
 
     setup()
-  }, [listChannels, assetsData])
+  }, [listChannels, btcBalance, assetsData])
 
   const refreshData = async () => {
     setIsLoading(true)
@@ -156,7 +172,11 @@ export const Component = () => {
 
   // Render functions
   const renderNoChannelsMessage = () => (
-    <NoChannelsMessage onMakerChange={refreshData} onNavigate={navigate} />
+    <NoChannelsMessage
+      hasEnoughBalance={hasEnoughBalance}
+      onMakerChange={refreshData}
+      onNavigate={navigate}
+    />
   )
 
   const renderRoleSelector = () => (
@@ -420,10 +440,6 @@ export const Component = () => {
 
   return (
     <div className="container mx-auto w-full flex flex-col items-center justify-center py-6">
-      <h1 className="text-2xl font-bold text-white mb-6 page-title">
-        Manual Trading
-      </h1>
-
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <Loader />

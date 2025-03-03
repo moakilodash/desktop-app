@@ -15,7 +15,10 @@ import { SubmitHandler, UseFormReturn, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
-import { TRADE_PATH, WALLET_SETUP_PATH } from '../../app/router/paths'
+import {
+  WALLET_DASHBOARD_PATH,
+  WALLET_SETUP_PATH,
+} from '../../app/router/paths'
 import { useAppDispatch } from '../../app/store/hooks'
 import { Layout } from '../../components/Layout'
 import { MnemonicDisplay } from '../../components/MnemonicDisplay'
@@ -425,7 +428,7 @@ export const Component = () => {
           setNodePassword(data.password)
           await unlockExistingNode(data.password)
           await saveAccountSettings(accountName, network, datapath)
-          navigate(TRADE_PATH)
+          navigate(WALLET_DASHBOARD_PATH)
         } else {
           throw error
         }
@@ -579,7 +582,7 @@ export const Component = () => {
       toast.success('Wallet unlocked successfully!')
 
       // Navigate to trade path
-      navigate(TRADE_PATH)
+      navigate(WALLET_DASHBOARD_PATH)
     } catch (error) {
       console.error('Unlock failed:', error)
       setIsNodeError(true)

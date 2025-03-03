@@ -13,7 +13,6 @@ import { StatusToast } from '../../../components/StatusToast'
 import { SwapConfirmation } from '../../../components/SwapConfirmation'
 import { SwapDetails, SwapRecap } from '../../../components/SwapRecap'
 import {
-  NoChannelsMessage,
   NoTradingPairsMessage,
   SwapInputField,
   ExchangeRateSection,
@@ -42,6 +41,8 @@ import {
 } from '../../../slices/nodeApi/nodeApi.slice'
 import { logger } from '../../../utils/logger'
 import './index.css'
+import { NoTradingChannelsMessage } from '../../../components/Trade/NoChannelsMessage'
+import { MIN_CHANNEL_CAPACITY } from '../../../constants'
 
 interface Fields {
   rfq_id: string
@@ -82,6 +83,7 @@ export const Component = () => {
   const [selectedPair, setSelectedPair] = useState<TradingPair | null>(null)
   const [pubKey, setPubKey] = useState('')
   const [selectedSize, setSelectedSize] = useState(100)
+  const [hasEnoughBalance, setHasEnoughBalance] = useState(true)
 
   const [minFromAmount, setMinFromAmount] = useState(0)
   const [maxFromAmount, setMaxFromAmount] = useState(0)
@@ -129,6 +131,7 @@ export const Component = () => {
   const [initSwap] = makerApi.endpoints.initSwap.useLazyQuery()
   const [execSwap] = makerApi.endpoints.execSwap.useLazyQuery()
   const [getPairs] = makerApi.endpoints.getPairs.useLazyQuery()
+  const [btcBalance] = nodeApi.endpoints.btcBalance.useLazyQuery()
 
   const { data: assetsData } = nodeApi.endpoints.listAssets.useQuery(
     undefined,
@@ -679,28 +682,52 @@ export const Component = () => {
     const setup = async () => {
       setIsLoading(true)
       try {
-        const [nodeInfoResponse, listChannelsResponse] = await Promise.all([
+        const [
+          nodeInfoResponse,
+          listChannelsResponse,
+          balanceResponse,
+          getPairsResponse,
+        ] = await Promise.all([
           nodeInfo(),
           listChannels(),
+          btcBalance({ skip_sync: false }),
+          getPairs(),
         ])
 
         if ('data' in nodeInfoResponse && nodeInfoResponse.data) {
           setPubKey(nodeInfoResponse.data.pubkey)
         }
 
+        let supportedAssets: string[] = []
+        if ('data' in getPairsResponse && getPairsResponse.data) {
+          const pairs = getPairsResponse.data.pairs
+          supportedAssets = Array.from(
+            new Set(
+              pairs.flatMap((pair) => [pair.base_asset_id, pair.quote_asset_id])
+            )
+          )
+        }
+
         if ('data' in listChannelsResponse && listChannelsResponse.data) {
           const channelsList = listChannelsResponse.data.channels
           setChannels(channelsList)
 
-          // Check if there's at least one channel with an asset that is ready and usable
+          // Check if there's at least one channel with a market maker supported asset
           const hasValidChannels = channelsList.some(
-            (channel) =>
+            (channel: Channel) =>
               channel.asset_id !== null &&
               channel.ready &&
               (channel.outbound_balance_msat > 0 ||
-                channel.inbound_balance_msat > 0)
+                channel.inbound_balance_msat > 0) &&
+              supportedAssets.includes(channel.asset_id)
           )
           setHasValidChannelsForTrading(hasValidChannels)
+        }
+
+        // Check if there's enough balance to open a channel
+        if ('data' in balanceResponse && balanceResponse.data) {
+          const { vanilla } = balanceResponse.data
+          setHasEnoughBalance(vanilla.spendable >= MIN_CHANNEL_CAPACITY)
         }
 
         if (assetsData) {
@@ -722,7 +749,16 @@ export const Component = () => {
     }
 
     setup()
-  }, [nodeInfo, listChannels, assetsData, dispatch, form, formatAmount])
+  }, [
+    nodeInfo,
+    listChannels,
+    btcBalance,
+    getPairs,
+    assetsData,
+    dispatch,
+    form,
+    formatAmount,
+  ])
 
   // Add a new function to fetch and set pairs
   const getAvailableAssets = useCallback(() => {
@@ -1228,10 +1264,6 @@ export const Component = () => {
     [tradablePairs, getAvailableAssets, displayAsset]
   )
 
-  const renderNoChannelsMessage = () => (
-    <NoChannelsMessage onMakerChange={refreshData} onNavigate={navigate} />
-  )
-
   const renderSwapForm = () => (
     <div className="swap-form-container w-full max-w-2xl">
       <div className="bg-gradient-to-b from-slate-900/80 to-slate-800/80 backdrop-blur-sm rounded-2xl border border-slate-700/50 p-4 shadow-lg w-full">
@@ -1357,7 +1389,11 @@ export const Component = () => {
           <Loader />
         </div>
       ) : !hasValidChannelsForTrading ? (
-        renderNoChannelsMessage()
+        <NoTradingChannelsMessage
+          hasEnoughBalance={hasEnoughBalance}
+          onMakerChange={refreshData}
+          onNavigate={navigate}
+        />
       ) : !wsConnected || tradablePairs.length === 0 ? (
         <div className="max-w-xl w-full mx-auto bg-slate-900/60 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-4 shadow-lg">
           <NoTradingPairsMessage
