@@ -18,7 +18,6 @@ interface NoChannelsMessageProps {
 
 export const NoChannelsMessage: React.FC<NoChannelsMessageProps> = ({
   onNavigate,
-  onMakerChange,
   hasEnoughBalance = true,
 }) => {
   const dispatch = useAppDispatch()

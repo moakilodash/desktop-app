@@ -324,6 +324,10 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
             Configure Your Channel
           </h2>
           <p className="text-gray-400 mt-2">Set up your channel parameters</p>
+          <p className="text-gray-400 mt-1">
+            Fees will be calculated in the next step based on all parameters
+            including channel capacity, duration, and assets
+          </p>
         </div>
 
         <div className="flex justify-between mb-8">
@@ -380,10 +384,28 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
           ) : (
             <div className="space-y-8">
               <div className="bg-gray-800 p-6 rounded-lg">
+                <label className="block text-sm font-medium mb-2">
+                  Channel Capacity (sats)
+                  <span className="ml-2 text-gray-400 hover:text-gray-300 cursor-help relative group">
+                    ⓘ
+                    <span
+                      className="invisible group-hover:visible absolute left-0 
+                      bg-gray-900 text-white text-sm rounded py-1 px-2 w-80
+                      shadow-lg z-50 top-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    >
+                      The total size of your Lightning channel in satoshis. Min:{' '}
+                      {MIN_CHANNEL_CAPACITY.toLocaleString()} sats Max:{' '}
+                      {MAX_CHANNEL_CAPACITY.toLocaleString()} sats. This
+                      determines the maximum amount you can send or receive
+                      through this channel. You'll need to pay fees based on
+                      this capacity.
+                    </span>
+                  </span>
+                </label>
                 <NumberInput
                   className="group transition-all duration-300 hover:translate-x-1"
                   error={formState.errors.capacitySat?.message}
-                  label="Channel Capacity (sats)"
+                  label=""
                   max={MAX_CHANNEL_CAPACITY}
                   min={MIN_CHANNEL_CAPACITY}
                   onChange={(value) => setValue('capacitySat', value)}
@@ -402,10 +424,27 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
               </div>
 
               <div className="bg-gray-800 p-6 rounded-lg">
+                <label className="block text-sm font-medium mb-2">
+                  Your Channel Liquidity (sats)
+                  <span className="ml-2 text-gray-400 hover:text-gray-300 cursor-help relative group">
+                    ⓘ
+                    <span
+                      className="invisible group-hover:visible absolute left-0 
+                      bg-gray-900 text-white text-sm rounded py-1 px-2 w-80
+                      shadow-lg z-50 top-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    >
+                      Also known as outbound liquidity - the amount of satoshis
+                      you'll have available to send. The remaining capacity will
+                      be on the LSP side for receiving payments. Max: Your
+                      chosen channel capacity. You'll need to pay for this
+                      liquidity - fees will be shown in the next step.
+                    </span>
+                  </span>
+                </label>
                 <NumberInput
                   className="group transition-all duration-300 hover:translate-x-1"
                   error={formState.errors.clientBalanceSat?.message}
-                  label="Your Channel Liquidity (sats)"
+                  label=""
                   max={parseInt(
                     parseFormattedNumber(watch('capacitySat')) || '0',
                     10
@@ -433,12 +472,13 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                     ⓘ
                     <span
                       className="invisible group-hover:visible absolute left-0 
-                      bg-gray-900 text-white text-sm rounded py-1 px-2 w-64 
+                      bg-gray-900 text-white text-sm rounded py-1 px-2 w-80
                       shadow-lg z-50 top-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                     >
-                      The minimum amount of time the LSP guarantees to keep your
-                      channel open. Longer durations may provide more stability
-                      for your lightning network operations.
+                      The minimum time the LSP guarantees to keep your channel
+                      open. Longer durations provide more stability but may
+                      affect fees. 1 week = 1,008 blocks 1 month = 4,320 blocks
+                      6 months = 25,920 blocks
                     </span>
                   </span>
                 </label>
@@ -472,6 +512,18 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                     type="checkbox"
                   />
                   <span className="text-lg font-medium">Add Asset</span>
+                  <span className="ml-2 text-gray-400 hover:text-gray-300 cursor-help relative group">
+                    ⓘ
+                    <span
+                      className="invisible group-hover:visible absolute left-0 
+                      bg-gray-900 text-white text-sm rounded py-1 px-2 w-96
+                      shadow-lg z-50 top-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    >
+                      Adding an RGB asset enables you to receive that asset
+                      through this channel. The amount you specify will be held
+                      by the LSP, determining how much you can receive.
+                    </span>
+                  </span>
                 </label>
 
                 {addAsset && (
@@ -479,6 +531,19 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                     <div>
                       <label className="block text-sm font-medium mb-2">
                         Select Asset
+                        <span className="ml-2 text-gray-400 hover:text-gray-300 cursor-help relative group">
+                          ⓘ
+                          <span
+                            className="invisible group-hover:visible absolute left-0 
+                            bg-gray-900 text-white text-sm rounded py-1 px-2 w-80
+                            shadow-lg z-50 top-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                          >
+                            Choose an RGB asset to add to your channel. The
+                            selected amount will be on the LSP side, allowing
+                            you to receive the asset. Additional fees will apply
+                            based on the asset type and amount.
+                          </span>
+                        </span>
                       </label>
                       <AssetSelector
                         assetMap={assetMap}

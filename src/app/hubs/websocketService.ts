@@ -15,11 +15,14 @@ class WebSocketService {
   private clientId: string = ''
   private dispatch: Dispatch | null = null
   private reconnectAttempts: number = 0
-  private maxReconnectAttempts: number = 1
-  private reconnectInterval: number = 3000
+  private maxReconnectAttempts: number = 5
+  private reconnectInterval: number = 5000
   private subscribedPairs: Set<string> = new Set()
   private currentUrl: string = ''
   private isReconnecting: boolean = false
+  private heartbeatInterval: number | null = null
+  private lastHeartbeatResponse: number = 0
+  private heartbeatTimeout: number = 10000
 
   private constructor() {}
 
@@ -77,18 +80,24 @@ class WebSocketService {
       toast.success('Connected to maker websocket')
       this.reconnectAttempts = 0
       this.resubscribeAll()
+      this.startHeartbeat()
     }
 
     this.socket.onmessage = (event) => {
       const data = JSON.parse(event.data)
       if (data.action === 'price_update') {
         this.dispatch && this.dispatch(updatePrice(data.data))
+        this.lastHeartbeatResponse = Date.now()
+      } else if (data.action === 'heartbeat') {
+        this.lastHeartbeatResponse = Date.now()
+        this.socket?.send(JSON.stringify({ action: 'heartbeat_ack' }))
       }
     }
 
     this.socket.onclose = (event) => {
       console.log('WebSocket disconnected')
       this.dispatch && this.dispatch(setWsConnected(false))
+      this.stopHeartbeat()
       if (!event.wasClean) {
         this.handleReconnect()
       }
@@ -96,6 +105,43 @@ class WebSocketService {
 
     this.socket.onerror = (error) => {
       console.error('WebSocket error:', error)
+      this.checkConnection()
+    }
+  }
+
+  private startHeartbeat() {
+    this.stopHeartbeat()
+    this.lastHeartbeatResponse = Date.now()
+
+    this.heartbeatInterval = setInterval(() => {
+      if (this.socket?.readyState === WebSocket.OPEN) {
+        if (Date.now() - this.lastHeartbeatResponse > this.heartbeatTimeout) {
+          console.warn('Heartbeat timeout - reconnecting')
+          this.reconnect()
+          return
+        }
+
+        try {
+          this.socket.send(JSON.stringify({ action: 'heartbeat' }))
+        } catch (error) {
+          console.error('Error sending heartbeat:', error)
+          this.reconnect()
+        }
+      }
+    }, 5000)
+  }
+
+  private stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval)
+      this.heartbeatInterval = null
+    }
+  }
+
+  private checkConnection() {
+    if (this.socket && this.socket.readyState !== WebSocket.OPEN) {
+      console.warn('Connection check failed - reconnecting')
+      this.reconnect()
     }
   }
 
@@ -108,10 +154,19 @@ class WebSocketService {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.isReconnecting = true
       this.reconnectAttempts++
+      const backoffTime = Math.min(
+        this.reconnectInterval * Math.pow(2, this.reconnectAttempts - 1),
+        30000
+      )
+
+      console.log(
+        `Attempting reconnect ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${backoffTime}ms`
+      )
+
       setTimeout(() => {
         this.connect()
         this.isReconnecting = false
-      }, this.reconnectInterval)
+      }, backoffTime)
     } else {
       toast.error(
         'Failed to connect to maker websocket. Please check your connection and refresh the page.'
@@ -148,6 +203,7 @@ class WebSocketService {
   }
 
   public close() {
+    this.stopHeartbeat()
     if (this.socket) {
       this.socket.close()
       this.socket = null

@@ -5,6 +5,10 @@ import { SizeButtons } from './SizeButtons'
 
 import { AssetSelect } from './index'
 
+// Add animation styles
+const inputAnimationClass = 'transition-all duration-200 ease-in-out'
+const amountAnimationClass = 'transition-all duration-300 ease-in-out'
+
 interface SwapInputFieldProps {
   label: string
   availableAmount?: string
@@ -57,7 +61,9 @@ export const SwapInputField: React.FC<SwapInputFieldProps> = ({
     <div className="flex justify-between items-center">
       <div className="text-sm font-medium text-slate-400">{label}</div>
       {availableAmount && (
-        <div className="flex items-center gap-1 text-xs text-slate-400">
+        <div
+          className={`flex items-center gap-1 text-xs text-slate-400 ${amountAnimationClass}`}
+        >
           <span>
             {availableAmountLabel} {availableAmount}
           </span>
@@ -81,16 +87,16 @@ export const SwapInputField: React.FC<SwapInputFieldProps> = ({
     <div className="flex gap-2">
       {isLoading ? (
         <div
-          className="flex-1 px-3 py-1.5 bg-slate-900/50 rounded-lg border border-slate-700 
-                     text-slate-400 min-h-[34px] flex items-center"
+          className={`flex-1 px-3 py-1.5 bg-slate-900/50 rounded-lg border border-slate-700 
+                     text-slate-400 min-h-[34px] flex items-center ${amountAnimationClass}`}
         >
           {isLoadingLabel}
         </div>
       ) : (
         <input
-          className="flex-1 px-3 py-1.5 bg-slate-900/50 rounded-lg border border-slate-700 
+          className={`flex-1 px-3 py-1.5 bg-slate-900/50 rounded-lg border border-slate-700 
                    text-white text-base focus:border-blue-500 focus:ring-1 focus:ring-blue-500
-                   placeholder:text-slate-600 min-h-[34px]"
+                   placeholder:text-slate-600 min-h-[34px] ${inputAnimationClass}`}
           disabled={disabled}
           onChange={onAmountChange}
           type="text"
@@ -107,13 +113,15 @@ export const SwapInputField: React.FC<SwapInputFieldProps> = ({
 
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
       {showMinAmount && minAmount && (
-        <div className="text-slate-500">
+        <div className={`text-slate-500 ${amountAnimationClass}`}>
           Min: {formatAmount(minAmount, asset)} {getDisplayAsset(asset)}
         </div>
       )}
       {showMaxHtlc && maxHtlcAmount && asset === 'BTC' && (
         <div className="relative group">
-          <span className="text-slate-500 cursor-help border-b border-dotted border-slate-600">
+          <span
+            className={`text-slate-500 cursor-help border-b border-dotted border-slate-600 ${amountAnimationClass}`}
+          >
             Max HTLC: {formatAmount(maxHtlcAmount, 'BTC')}{' '}
             {getDisplayAsset('BTC')}
           </span>
