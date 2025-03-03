@@ -523,9 +523,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
 
   return (
     <>
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
         <div
-          className={`flex items-center justify-between ${isCollapsed ? 'p-2' : 'p-4'}`}
+          className={`flex items-center justify-between ${isCollapsed ? 'p-2' : 'p-4'} flex-shrink-0`}
         >
           {/* Title - completely hidden in collapsed state, no hover effect */}
           {!isCollapsed && (
@@ -557,7 +557,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
 
         {/* Visual indication of edit mode - only show in expanded view */}
         {isEditing && !isCollapsed && (
-          <div className="px-4 py-2 bg-cyan/10 border-y border-cyan/20">
+          <div className="px-4 py-2 bg-cyan/10 border-y border-cyan/20 flex-shrink-0">
             <p className="text-sm text-cyan flex items-center">
               <Edit className="w-4 h-4 mr-2" />
               Edit Mode: Click a node to edit, or use the edit/delete buttons
@@ -566,7 +566,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
         )}
 
         <div
-          className={`flex-1 overflow-y-auto custom-scrollbar ${isCollapsed ? 'p-2' : 'p-4'} space-y-2`}
+          className={`flex-1 overflow-y-auto custom-scrollbar min-h-0 ${isCollapsed ? 'p-2' : 'p-4'} space-y-2`}
         >
           {accounts.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center p-4">
