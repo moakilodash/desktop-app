@@ -603,22 +603,22 @@ export const Component = () => {
 
     if (fromAmount < minFromAmount) {
       setErrorMessage(
-        `Minimum amount to send: ${formatAmount(minFromAmount, form.getValues().fromAsset)} ${displayAsset(form.getValues().fromAsset)}`
+        `The amount you're trying to send (${formatAmount(fromAmount, form.getValues().fromAsset)} ${displayAsset(form.getValues().fromAsset)}) is too small. Minimum required: ${formatAmount(minFromAmount, form.getValues().fromAsset)} ${displayAsset(form.getValues().fromAsset)}`
       )
     } else if (fromAmount > maxFromAmount) {
       setErrorMessage(
-        `Maximum amount to send: ${formatAmount(maxFromAmount, form.getValues().fromAsset)} ${displayAsset(form.getValues().fromAsset)}`
+        `The amount you're trying to send (${formatAmount(fromAmount, form.getValues().fromAsset)} ${displayAsset(form.getValues().fromAsset)}) exceeds your available balance. Maximum available: ${formatAmount(maxFromAmount, form.getValues().fromAsset)} ${displayAsset(form.getValues().fromAsset)}`
       )
     } else if (toAmount > maxToAmount) {
       setErrorMessage(
-        `Maximum amount to receive: ${formatAmount(maxToAmount, form.getValues().toAsset)} ${displayAsset(form.getValues().toAsset)}`
+        `The amount you're trying to receive (${formatAmount(toAmount, form.getValues().toAsset)} ${displayAsset(form.getValues().toAsset)}) exceeds the maximum allowed. Maximum receivable: ${formatAmount(maxToAmount, form.getValues().toAsset)} ${displayAsset(form.getValues().toAsset)}`
       )
     } else if (
       form.getValues().fromAsset === 'BTC' &&
       fromAmount > max_outbound_htlc_sat
     ) {
       setErrorMessage(
-        `Maximum HTLC size: ${formatAmount(max_outbound_htlc_sat, 'BTC')} ${displayAsset('BTC')}`
+        `The amount you're trying to send (${formatAmount(fromAmount, 'BTC')} ${displayAsset('BTC')}) exceeds the maximum HTLC size. Maximum per transaction: ${formatAmount(max_outbound_htlc_sat, 'BTC')} ${displayAsset('BTC')}`
       )
     } else {
       setErrorMessage(null)
@@ -870,6 +870,36 @@ export const Component = () => {
   }
 
   // Update the executeSwap function's error handling
+  const handleApiError = (error: FetchBaseQueryError): string => {
+    if (!error) return 'Unknown error occurred'
+
+    if (typeof error === 'string') return error
+
+    const errorData = error.data
+    if (!errorData) return 'No error details available'
+
+    // Handle string error responses
+    if (typeof errorData === 'string') return errorData
+
+    // Handle object error responses
+    if (typeof errorData === 'object') {
+      // First check for detail field which is common in API errors
+      if ('detail' in errorData && typeof errorData.detail === 'string') {
+        // Extract just the error message without the status code if possible
+        const match = errorData.detail.match(/\d{3}:\s*(.+)/)
+        return match ? match[1].trim() : errorData.detail
+      }
+      // Fallback to error field
+      if ('error' in errorData && typeof errorData.error === 'string') {
+        return errorData.error
+      }
+      // If no recognized error format, stringify the object
+      return JSON.stringify(errorData)
+    }
+
+    return String(errorData)
+  }
+
   const executeSwap = async (data: Fields) => {
     let toastId: string | number | null = null
     let timeoutId: any | null = null
@@ -882,28 +912,6 @@ export const Component = () => {
         clearTimeout(timeoutId)
       }
       setIsSwapInProgress(false)
-    }
-
-    const handleApiError = (error: FetchBaseQueryError): string => {
-      if (!error) return 'Unknown error occurred'
-
-      if (typeof error === 'string') return error
-
-      const errorData = error.data
-      if (!errorData) return 'No error details available'
-
-      if (typeof errorData === 'string') return errorData
-
-      if (typeof errorData === 'object') {
-        // Return the full error detail including status codes
-        if ('detail' in errorData && typeof errorData.detail === 'string')
-          return errorData.detail
-        if ('error' in errorData && typeof errorData.error === 'string')
-          return errorData.error
-        return JSON.stringify(errorData)
-      }
-
-      return String(errorData)
     }
 
     try {
@@ -967,9 +975,11 @@ export const Component = () => {
 
       const initSwapResponse = await initSwap(payload)
       if ('error' in initSwapResponse) {
-        throw new Error(
-          handleApiError(initSwapResponse.error as FetchBaseQueryError)
+        const errorMessage = handleApiError(
+          initSwapResponse.error as FetchBaseQueryError
         )
+        setErrorMessage(errorMessage)
+        throw new Error(errorMessage)
       }
 
       if (!initSwapResponse.data) {
@@ -1077,73 +1087,34 @@ export const Component = () => {
     } catch (error) {
       logger.error('Error executing swap', error)
 
-      // Extract full error message
+      // Extract error message
       const errorMessage =
         error instanceof Error ? error.message : 'An unknown error occurred'
-
-      // Only show error details if they add meaningful information
-      const rawErrorDetails =
-        typeof error === 'object' && error !== null
-          ? JSON.stringify(
-              error,
-              (value) => {
-                // Skip empty objects and null values
-                if (value === null) return undefined
-                if (
-                  typeof value === 'object' &&
-                  Object.keys(value).length === 0
-                )
-                  return undefined
-                return value
-              },
-              2
-            )
-          : String(error)
-
-      // Only keep error details if they're different from the message and not empty
-      const errorDetails =
-        rawErrorDetails &&
-        rawErrorDetails !== '{}' &&
-        rawErrorDetails !== errorMessage
-          ? rawErrorDetails
-          : null
+      setErrorMessage(errorMessage)
 
       // Clear any existing toasts first
       toast.dismiss()
-      setErrorMessage(errorMessage)
 
       // Create a new persistent error toast with improved UI
       toast.error(
-        <div
-          className="flex flex-col gap-2"
-          onClick={(e) => e.stopPropagation()}
-        >
+        <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="font-medium text-red-500">Swap Failed</span>
-            {errorDetails && (
-              <div className="flex items-center gap-2">
-                <button
-                  className="p-1 hover:bg-slate-700/50 rounded transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    copyToClipboard(errorDetails)
-                  }}
-                  title="Copy error details"
-                >
-                  <Copy className="w-4 h-4" />
-                </button>
-              </div>
-            )}
+            <span className="font-medium">Swap Failed</span>
+            <button
+              className="p-1 hover:bg-slate-700/50 rounded transition-colors"
+              onClick={(e) => {
+                e.stopPropagation()
+                copyToClipboard(errorMessage)
+              }}
+              title="Copy error details"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
           </div>
-          <p className="text-sm text-slate-300">{errorMessage}</p>
-          {errorDetails && (
-            <pre className="text-xs text-slate-400 overflow-x-auto p-2 bg-slate-900/50 rounded mt-2 font-mono">
-              {errorDetails}
-            </pre>
-          )}
+          <p className="text-sm">{errorMessage}</p>
         </div>,
         {
-          autoClose: false,
+          autoClose: 5000,
           closeButton: true,
           closeOnClick: false,
           draggable: false,
@@ -1155,7 +1126,6 @@ export const Component = () => {
       )
 
       setIsSwapInProgress(false)
-
       if (timeoutId !== null) {
         clearTimeout(timeoutId)
         timeoutId = null
@@ -1345,15 +1315,20 @@ export const Component = () => {
 
           {errorMessage && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mt-4">
-              <div className="flex items-center justify-between">
-                <span className="text-red-500 text-sm">{errorMessage}</span>
-                <button
-                  className="p-1 hover:bg-red-500/10 rounded transition-colors"
-                  onClick={() => copyToClipboard(errorMessage)}
-                  title="Copy error message"
-                >
-                  <Copy className="w-4 h-4 text-red-500" />
-                </button>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-red-500 font-medium">Trade Error</span>
+                  <button
+                    className="p-1 hover:bg-red-500/10 rounded transition-colors"
+                    onClick={() => copyToClipboard(errorMessage)}
+                    title="Copy error message"
+                  >
+                    <Copy className="w-4 h-4 text-red-500" />
+                  </button>
+                </div>
+                <span className="text-red-400/90 text-sm leading-relaxed">
+                  {errorMessage}
+                </span>
               </div>
             </div>
           )}
