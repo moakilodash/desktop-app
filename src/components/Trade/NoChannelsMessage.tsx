@@ -60,9 +60,6 @@ export const NoChannelsMessage: React.FC<NoChannelsMessageProps> = ({
   return (
     <div className="max-w-2xl w-full bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
       <div className="flex flex-col items-center space-y-4">
-        <div className="w-full flex justify-end mb-2">
-          <MakerSelector hasNoPairs onMakerChange={onMakerChange} />
-        </div>
         <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center">
           <Link className="w-8 h-8 text-blue-500" />
         </div>

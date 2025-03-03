@@ -87,7 +87,6 @@ const AssetSelect: React.FC<AssetSelectProps> = ({
 )
 
 export { NoChannelsMessage } from './NoChannelsMessage'
-export { NoTradingPairsMessage } from './NoTradingPairsMessage'
 export { Header } from './Header'
 export { SizeButtons } from './SizeButtons'
 export { SwapInputField } from './SwapInputField'

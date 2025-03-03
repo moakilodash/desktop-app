@@ -13,7 +13,6 @@ import { StatusToast } from '../../../components/StatusToast'
 import { SwapConfirmation } from '../../../components/SwapConfirmation'
 import { SwapDetails, SwapRecap } from '../../../components/SwapRecap'
 import {
-  NoTradingPairsMessage,
   SwapInputField,
   ExchangeRateSection,
   SwapButton,
@@ -1395,13 +1394,11 @@ export const Component = () => {
           onNavigate={navigate}
         />
       ) : !wsConnected || tradablePairs.length === 0 ? (
-        <div className="max-w-xl w-full mx-auto bg-slate-900/60 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-4 shadow-lg">
-          <NoTradingPairsMessage
-            isLoading={isLoading}
-            onRefresh={refreshData}
-            wsConnected={wsConnected}
-          />
-        </div>
+        <NoTradingChannelsMessage
+          hasEnoughBalance={hasEnoughBalance}
+          onMakerChange={refreshData}
+          onNavigate={navigate}
+        />
       ) : (
         <div className="w-full flex justify-center">{renderSwapForm()}</div>
       )}
