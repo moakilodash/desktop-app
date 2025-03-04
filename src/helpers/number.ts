@@ -252,3 +252,23 @@ export const formatExchangeRate = (rate: number, precision: number): string => {
 export const getDisplayAsset = (asset: string, bitcoinUnit: string): string => {
   return asset === 'BTC' && bitcoinUnit === 'SAT' ? 'SAT' : asset
 }
+
+/**
+ * Formats a number with commas for thousands separator
+ * @param value The number to format
+ * @returns The formatted number string
+ */
+export const formatNumberWithCommas = (value: string | number): string => {
+  const parts = value.toString().split('.')
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  return parts.join('.')
+}
+
+/**
+ * Parses a formatted number string to a plain number string
+ * @param value The formatted number string
+ * @returns The plain number string
+ *  */
+export const parseNumberWithCommas = (value: string): string => {
+  return value.replace(/[^\d.]/g, '')
+}

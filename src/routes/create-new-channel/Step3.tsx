@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 
 import { TNewChannelForm } from '../../slices/channel/channel.slice'
 

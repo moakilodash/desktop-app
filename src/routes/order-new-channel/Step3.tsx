@@ -15,6 +15,7 @@ import { toast } from 'react-toastify'
 
 import 'react-toastify/dist/ReactToastify.css'
 import { useAppSelector } from '../../app/store/hooks'
+import { blocksToTime } from '../../helpers/datetime'
 import { formatBitcoinAmount } from '../../helpers/number'
 import { Lsps1CreateOrderResponse } from '../../slices/makerApi/makerApi.slice'
 import {
@@ -41,22 +42,6 @@ const getFeeIcon = (type: string) => {
     default:
       return <Zap className="w-4 h-4" />
   }
-}
-
-const blocksToTime = (blocks: number) => {
-  const minutes = blocks * 10
-  const days = Math.floor(minutes / 1440)
-  const hours = Math.floor((minutes % 1440) / 60)
-  const mins = minutes % 60
-
-  let timeString = ''
-  if (days > 0) timeString += `${days} day${days > 1 ? 's' : ''}`
-  if (hours > 0)
-    timeString += `${timeString ? ', ' : ''}${hours} hour${hours > 1 ? 's' : ''}`
-  if (mins > 0)
-    timeString += `${timeString ? ', ' : ''}${mins} minute${mins > 1 ? 's' : ''}`
-
-  return timeString || 'less than a minute'
 }
 
 const formatAssetAmount = (
