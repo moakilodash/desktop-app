@@ -36,6 +36,21 @@ interface AssetInfo {
   max_channel_amount: number
 }
 
+interface LspOptions {
+  min_required_channel_confirmations: number
+  min_funding_confirms_within_blocks: number
+  min_onchain_payment_confirmations: number
+  supports_zero_channel_reserve: boolean
+  min_onchain_payment_size_sat: number
+  max_channel_expiry_blocks: number
+  min_initial_client_balance_sat: number
+  max_initial_client_balance_sat: number
+  min_initial_lsp_balance_sat: number
+  max_initial_lsp_balance_sat: number
+  min_channel_balance_sat: number
+  max_channel_balance_sat: number
+}
+
 const FormFieldsSchema = z.object({
   assetAmount: z.string(),
   assetId: z.string(),
@@ -191,6 +206,11 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
   const [assetMap, setAssetMap] = useState<Record<string, AssetInfo>>({})
   const [addAsset, setAddAsset] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [lspOptions, setLspOptions] = useState<LspOptions | null>(null)
+  const [effectiveMinCapacity, setEffectiveMinCapacity] =
+    useState<number>(MIN_CHANNEL_CAPACITY)
+  const [effectiveMaxCapacity, setEffectiveMaxCapacity] =
+    useState<number>(MAX_CHANNEL_CAPACITY)
 
   const { handleSubmit, setValue, control, watch, formState } =
     useForm<FormFields>({
@@ -214,14 +234,44 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
       try {
         const infoResponse = await getInfoRequest()
 
-        if (infoResponse.data?.assets) {
-          const tmpMap: Record<string, AssetInfo> = {}
-          if (Array.isArray(infoResponse.data.assets)) {
-            infoResponse.data.assets.forEach((asset: AssetInfo) => {
-              tmpMap[asset.asset_id] = asset
-            })
+        if (infoResponse.data) {
+          if (infoResponse.data.options) {
+            setLspOptions(infoResponse.data.options)
+
+            const lspMinCapacity =
+              infoResponse.data.options.min_channel_balance_sat || 0
+            const lspMaxCapacity =
+              infoResponse.data.options.max_channel_balance_sat ||
+              Number.MAX_SAFE_INTEGER
+
+            const newMinCapacity = Math.max(
+              MIN_CHANNEL_CAPACITY,
+              lspMinCapacity
+            )
+            setEffectiveMinCapacity(newMinCapacity)
+
+            const newMaxCapacity = Math.min(
+              MAX_CHANNEL_CAPACITY,
+              lspMaxCapacity
+            )
+            setEffectiveMaxCapacity(newMaxCapacity)
+
+            setValue('capacitySat', newMinCapacity.toString())
+
+            const minClientBalance =
+              infoResponse.data.options.min_initial_client_balance_sat || 0
+            setValue('clientBalanceSat', minClientBalance.toString())
           }
-          setAssetMap(tmpMap)
+
+          if (infoResponse.data.assets) {
+            const tmpMap: Record<string, AssetInfo> = {}
+            if (Array.isArray(infoResponse.data.assets)) {
+              infoResponse.data.assets.forEach((asset: AssetInfo) => {
+                tmpMap[asset.asset_id] = asset
+              })
+            }
+            setAssetMap(tmpMap)
+          }
         }
       } catch (error) {
         toast.error('Error fetching data. Please try again later.', {
@@ -234,7 +284,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
     }
 
     fetchData()
-  }, [getInfoRequest])
+  }, [getInfoRequest, setValue])
 
   const getAssetPrecision = useCallback(
     (assetId: string) => {
@@ -316,6 +366,29 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
     return max_channel_amount / Math.pow(10, precision)
   }, [assetId, assetMap])
 
+  const getAssetMinAmount = useCallback(() => {
+    if (!assetId || !assetMap[assetId]) return 0
+    const { min_channel_amount, precision } = assetMap[assetId]
+    return min_channel_amount / Math.pow(10, precision)
+  }, [assetId, assetMap])
+
+  const getChannelExpiryOptions = useCallback(() => {
+    const options = [
+      { label: '1 week', value: (6 * 24 * 7).toString() },
+      { label: '1 month', value: (6 * 24 * 30).toString() },
+    ]
+
+    const sixMonthsBlocks = 6 * 24 * 30 * 6
+    if (
+      !lspOptions ||
+      sixMonthsBlocks <= lspOptions.max_channel_expiry_blocks
+    ) {
+      options.push({ label: '6 months', value: sixMonthsBlocks.toString() })
+    }
+
+    return options
+  }, [lspOptions])
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 p-6">
       <div className="max-w-3xl mx-auto">
@@ -394,8 +467,8 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                       shadow-lg z-50 top-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                     >
                       The total size of your Lightning channel in satoshis. Min:{' '}
-                      {MIN_CHANNEL_CAPACITY.toLocaleString()} sats Max:{' '}
-                      {MAX_CHANNEL_CAPACITY.toLocaleString()} sats. This
+                      {effectiveMinCapacity.toLocaleString()} sats Max:{' '}
+                      {effectiveMaxCapacity.toLocaleString()} sats. This
                       determines the maximum amount you can send or receive
                       through this channel. You'll need to pay fees based on
                       this capacity.
@@ -406,8 +479,8 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                   className="group transition-all duration-300 hover:translate-x-1"
                   error={formState.errors.capacitySat?.message}
                   label=""
-                  max={MAX_CHANNEL_CAPACITY}
-                  min={MIN_CHANNEL_CAPACITY}
+                  max={effectiveMaxCapacity}
+                  min={effectiveMinCapacity}
                   onChange={(value) => setValue('capacitySat', value)}
                   onSliderChange={(e) =>
                     setValue('capacitySat', e.target.value)
@@ -435,9 +508,17 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                     >
                       Also known as outbound liquidity - the amount of satoshis
                       you'll have available to send. The remaining capacity will
-                      be on the LSP side for receiving payments. Max: Your
-                      chosen channel capacity. You'll need to pay for this
-                      liquidity - fees will be shown in the next step.
+                      be on the LSP side for receiving payments. Min:{' '}
+                      {lspOptions?.min_initial_client_balance_sat.toLocaleString() ||
+                        0}{' '}
+                      sats, Max:{' '}
+                      {Math.min(
+                        lspOptions?.max_initial_client_balance_sat ||
+                          Number.MAX_SAFE_INTEGER,
+                        effectiveMaxCapacity
+                      ).toLocaleString()}{' '}
+                      sats (or your chosen channel capacity). You'll need to pay
+                      for this liquidity - fees will be shown in the next step.
                     </span>
                   </span>
                 </label>
@@ -445,11 +526,15 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                   className="group transition-all duration-300 hover:translate-x-1"
                   error={formState.errors.clientBalanceSat?.message}
                   label=""
-                  max={parseInt(
-                    parseFormattedNumber(watch('capacitySat')) || '0',
-                    10
+                  max={Math.min(
+                    parseInt(
+                      parseFormattedNumber(watch('capacitySat')) || '0',
+                      10
+                    ),
+                    lspOptions?.max_initial_client_balance_sat ||
+                      Number.MAX_SAFE_INTEGER
                   )}
-                  min={0}
+                  min={lspOptions?.min_initial_client_balance_sat || 0}
                   onChange={(value) => setValue('clientBalanceSat', value)}
                   onSliderChange={(e) =>
                     setValue('clientBalanceSat', e.target.value)
@@ -478,7 +563,10 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                       The minimum time the LSP guarantees to keep your channel
                       open. Longer durations provide more stability but may
                       affect fees. 1 week = 1,008 blocks 1 month = 4,320 blocks
-                      6 months = 25,920 blocks
+                      6 months = 25,920 blocks. Max:{' '}
+                      {lspOptions?.max_channel_expiry_blocks.toLocaleString() ||
+                        0}{' '}
+                      blocks.
                     </span>
                   </span>
                 </label>
@@ -489,14 +577,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                     <Select
                       active={field.value.toString()}
                       onSelect={(value) => field.onChange(parseInt(value))}
-                      options={[
-                        { label: '1 week', value: (6 * 24 * 7).toString() },
-                        { label: '1 month', value: (6 * 24 * 30).toString() },
-                        {
-                          label: '6 months',
-                          value: (6 * 24 * 30 * 6).toString(),
-                        },
-                      ]}
+                      options={getChannelExpiryOptions()}
                       theme="dark"
                     />
                   )}
@@ -559,7 +640,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                           error={formState.errors.assetAmount?.message}
                           label={`Asset Amount (${assetMap[assetId]?.ticker || ''})`}
                           max={getAssetMaxAmount()}
-                          min={0}
+                          min={getAssetMinAmount()}
                           onChange={(value) => setValue('assetAmount', value)}
                           onSliderChange={(e) =>
                             setValue('assetAmount', e.target.value)

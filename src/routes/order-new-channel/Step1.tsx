@@ -106,7 +106,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
         }
       } catch (error) {
         console.error('Error fetching LSP info:', error)
-        // toast.error('Failed to fetch LSP information')
+        toast.error('Failed to fetch LSP information')
       } finally {
         setIsLoading(false)
       }

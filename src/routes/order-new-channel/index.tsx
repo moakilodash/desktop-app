@@ -3,6 +3,7 @@ import { useCallback, useState, useEffect, useRef } from 'react'
 import { ClipLoader } from 'react-spinners'
 import { toast } from 'react-toastify'
 
+import { MIN_CHANNEL_CAPACITY, MAX_CHANNEL_CAPACITY } from '../../constants'
 import {
   makerApi,
   Lsps1CreateOrderResponse,
@@ -14,6 +15,20 @@ import { Step2 } from './Step2'
 import { Step3 } from './Step3'
 import { Step4 } from './Step4'
 import 'react-toastify/dist/ReactToastify.css'
+
+// Define the asset interface
+interface AssetInfo {
+  name: string
+  ticker: string
+  asset_id: string
+  precision: number
+  min_initial_client_amount: number
+  max_initial_client_amount: number
+  min_initial_lsp_amount: number
+  max_initial_lsp_amount: number
+  min_channel_amount: number
+  max_channel_amount: number
+}
 
 export const Component = () => {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
@@ -27,6 +42,7 @@ export const Component = () => {
     makerApi.endpoints.create_order.useLazyQuery()
   const [getOrderRequest, getOrderResponse] =
     makerApi.endpoints.get_order.useLazyQuery()
+  const [getInfoRequest] = makerApi.endpoints.get_info.useLazyQuery()
   const [paymentStatus, setPaymentStatus] = useState<
     'success' | 'error' | null
   >(null)
@@ -106,86 +122,174 @@ export const Component = () => {
   const onSubmitStep2 = useCallback(
     async (data: any) => {
       setLoading(true)
-      const clientPubKey = (await nodeInfoRequest()).data?.pubkey
-      const addressRefund = (await addressRequest()).data?.address
+      try {
+        // Get node info and refund address
+        const clientPubKey = (await nodeInfoRequest()).data?.pubkey
+        const addressRefund = (await addressRequest()).data?.address
 
-      if (!clientPubKey) {
-        console.error('Could not get client pubkey')
-        setLoading(false)
-        return
-      }
-      if (!addressRefund) {
-        console.error('Could not get refund address')
-        setLoading(false)
-        return
-      }
-      if (!data) {
-        console.error('Form data is incomplete or missing')
-        setLoading(false)
-        return
-      }
+        if (!clientPubKey) {
+          throw new Error('Could not get client pubkey')
+        }
+        if (!addressRefund) {
+          throw new Error('Could not get refund address')
+        }
+        if (!data) {
+          throw new Error('Form data is incomplete or missing')
+        }
 
-      const {
-        capacitySat,
-        clientBalanceSat,
-        assetId,
-        assetAmount,
-        channelExpireBlocks,
-      } = data
+        const {
+          capacitySat,
+          clientBalanceSat,
+          assetId,
+          assetAmount,
+          channelExpireBlocks,
+        } = data
 
-      if (clientBalanceSat > capacitySat) {
-        console.error('Client balance cannot be greater than capacity')
-        setLoading(false)
-        return
-      }
+        // Get LSP info to validate against constraints
+        const infoResponse = await getInfoRequest()
+        const lspOptions = infoResponse.data?.options
+        let assets: AssetInfo[] = []
 
-      const payload: any = {
-        announce_channel: true,
-        channel_expiry_blocks: channelExpireBlocks,
-        client_balance_sat: clientBalanceSat,
-        client_pubkey: clientPubKey,
-        funding_confirms_within_blocks: 1,
-        lsp_balance_sat: capacitySat - clientBalanceSat,
-        refund_onchain_address: addressRefund,
-        required_channel_confirmations: 3,
-      }
-      if (assetId && assetAmount) {
-        payload.asset_id = assetId
-        payload.lsp_asset_amount = assetAmount
-        payload.client_asset_amount = 0
-      }
-      // log the payload for the request
-      console.log(
-        `Payload for create order request: ${JSON.stringify(payload)}`
-      )
-      const channelResponse = await createOrderRequest(payload)
-      setLoading(false)
-      if (channelResponse.error) {
-        let errorMessage = 'An error occurred'
-        if ('status' in channelResponse.error) {
-          const fetchError = channelResponse.error as FetchBaseQueryError
-          errorMessage = `Error ${fetchError.status}: ${JSON.stringify(fetchError.data)}`
+        // Safely extract assets array
+        if (
+          infoResponse.data?.assets &&
+          Array.isArray(infoResponse.data.assets)
+        ) {
+          assets = infoResponse.data.assets as AssetInfo[]
+        }
+
+        // Validate channel capacity
+        if (lspOptions) {
+          // Calculate effective min/max capacity
+          const effectiveMinCapacity = Math.max(
+            MIN_CHANNEL_CAPACITY,
+            lspOptions.min_channel_balance_sat
+          )
+          const effectiveMaxCapacity = Math.min(
+            MAX_CHANNEL_CAPACITY,
+            lspOptions.max_channel_balance_sat
+          )
+
+          if (capacitySat < effectiveMinCapacity) {
+            throw new Error(
+              `Channel capacity must be at least ${effectiveMinCapacity.toLocaleString()} sats`
+            )
+          }
+          if (capacitySat > effectiveMaxCapacity) {
+            throw new Error(
+              `Channel capacity cannot exceed ${effectiveMaxCapacity.toLocaleString()} sats`
+            )
+          }
+        }
+
+        // Validate client balance
+        if (lspOptions) {
+          if (clientBalanceSat < lspOptions.min_initial_client_balance_sat) {
+            throw new Error(
+              `Your channel liquidity must be at least ${lspOptions.min_initial_client_balance_sat} sats`
+            )
+          }
+          if (clientBalanceSat > lspOptions.max_initial_client_balance_sat) {
+            throw new Error(
+              `Your channel liquidity cannot exceed ${lspOptions.max_initial_client_balance_sat} sats`
+            )
+          }
+        }
+
+        if (clientBalanceSat > capacitySat) {
+          throw new Error('Client balance cannot be greater than capacity')
+        }
+
+        // Validate channel expiry
+        if (
+          lspOptions &&
+          channelExpireBlocks > lspOptions.max_channel_expiry_blocks
+        ) {
+          throw new Error(
+            `Channel expiry cannot exceed ${lspOptions.max_channel_expiry_blocks} blocks`
+          )
+        }
+
+        // Validate asset amount if an asset is selected
+        if (assetId && assetAmount) {
+          const selectedAsset = assets.find(
+            (asset: AssetInfo) => asset.asset_id === assetId
+          )
+          if (selectedAsset) {
+            if (assetAmount < selectedAsset.min_channel_amount) {
+              throw new Error(
+                `Asset amount must be at least ${selectedAsset.min_channel_amount / Math.pow(10, selectedAsset.precision)} ${selectedAsset.ticker}`
+              )
+            }
+            if (assetAmount > selectedAsset.max_channel_amount) {
+              throw new Error(
+                `Asset amount cannot exceed ${selectedAsset.max_channel_amount / Math.pow(10, selectedAsset.precision)} ${selectedAsset.ticker}`
+              )
+            }
+          }
+        }
+
+        const payload: any = {
+          announce_channel: true,
+          channel_expiry_blocks: channelExpireBlocks,
+          client_balance_sat: clientBalanceSat,
+          client_pubkey: clientPubKey,
+          funding_confirms_within_blocks:
+            lspOptions?.min_funding_confirms_within_blocks || 1,
+          lsp_balance_sat: capacitySat - clientBalanceSat,
+          refund_onchain_address: addressRefund,
+          required_channel_confirmations:
+            lspOptions?.min_required_channel_confirmations || 3,
+        }
+
+        if (assetId && assetAmount) {
+          payload.asset_id = assetId
+          payload.lsp_asset_amount = assetAmount
+          payload.client_asset_amount = 0
+        }
+
+        // log the payload for the request
+        console.log(
+          `Payload for create order request: ${JSON.stringify(payload)}`
+        )
+
+        const channelResponse = await createOrderRequest(payload)
+
+        if (channelResponse.error) {
+          let errorMessage = 'An error occurred'
+          if ('status' in channelResponse.error) {
+            const fetchError = channelResponse.error as FetchBaseQueryError
+            errorMessage = `Error ${fetchError.status}: ${JSON.stringify(fetchError.data)}`
+          } else {
+            errorMessage = channelResponse.error.message || errorMessage
+          }
+          throw new Error(errorMessage)
         } else {
-          errorMessage = channelResponse.error.message || errorMessage
+          console.log('Request of channel created successfully!')
+          console.log('Response:', channelResponse.data)
+          const orderId: string = channelResponse.data?.order_id || ''
+          if (!orderId) {
+            throw new Error('Could not get order id')
+          }
+          setOrderId(orderId)
+          setStep(3)
         }
-        toast.error(errorMessage, {
-          autoClose: 5000,
-          position: 'bottom-right',
-        })
-        return
-      } else {
-        console.log('Request of channel created successfully!')
-        console.log('Response:', channelResponse.data)
-        const orderId: string = channelResponse.data?.order_id || ''
-        if (!orderId) {
-          console.error('Could not get order id')
-          return
-        }
-        setOrderId(orderId)
-        setStep(3)
+      } catch (error) {
+        console.error('Error creating channel order:', error)
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'An error occurred while creating the channel order',
+          {
+            autoClose: 5000,
+            position: 'bottom-right',
+          }
+        )
+      } finally {
+        setLoading(false)
       }
     },
-    [createOrderRequest, nodeInfoRequest]
+    [createOrderRequest, nodeInfoRequest, addressRequest, getInfoRequest]
   )
 
   const onStepBack = useCallback(() => {
@@ -264,7 +368,10 @@ export const Component = () => {
       </div>
 
       <div className={step !== 4 ? 'hidden' : ''}>
-        <Step4 paymentStatus={paymentStatus ?? ''} />
+        <Step4
+          orderId={orderId ?? undefined}
+          paymentStatus={paymentStatus ?? ''}
+        />
       </div>
     </div>
   )
