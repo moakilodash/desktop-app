@@ -21,24 +21,12 @@ const formatPubKey = (pubKey: string) => {
 }
 
 export const Step3 = ({ error, onBack, onNext, feeRates, formData }: Props) => {
-  // Log initial form data
-  useEffect(() => {
-    console.log('Step3: Initial form data:', formData)
-  }, [formData])
-
   // Parse the peer connection string using useMemo to persist the values
   const connectionDetails = useMemo(() => {
     const [pubKey = '', hostAddress = ''] = formData.pubKeyAndAddress?.split(
       '@'
     ) ?? ['', '']
     const [host = '', port = ''] = hostAddress?.split(':') ?? ['', '']
-
-    console.log('Step3: Parsed connection details:', {
-      host,
-      originalString: formData.pubKeyAndAddress,
-      port,
-      pubKey,
-    })
 
     return { host, port, pubKey }
   }, [formData.pubKeyAndAddress])
@@ -51,14 +39,6 @@ export const Step3 = ({ error, onBack, onNext, feeRates, formData }: Props) => {
       connectionDetails.port &&
       formData.pubKeyAndAddress
     )
-
-    console.log('Step3: Node info validation:', {
-      hasConnectionString: !!formData.pubKeyAndAddress,
-      hasHost: !!connectionDetails.host,
-      hasPort: !!connectionDetails.port,
-      hasPubKey: !!connectionDetails.pubKey,
-      hasValidNodeInfo: isValid,
-    })
 
     return isValid
   }, [connectionDetails, formData.pubKeyAndAddress])

@@ -73,21 +73,6 @@ export const Step2 = ({
       resolver: zodResolver(Step2Schema),
     })
 
-  useEffect(() => {
-    const subscription = watch((value, { name }) => {
-      if (name && formState.errors[name]) {
-        clearErrors(name)
-      }
-
-      // Log form value changes
-      console.log('Step2: Form value changed:', {
-        field: name,
-        value: value[name as keyof FormFields],
-      })
-    })
-    return () => subscription.unsubscribe()
-  }, [watch, clearErrors, formState.errors])
-
   const capacitySat = watch('capacitySat')
   const selectedFee = watch('fee')
   const currentAssetAmount = watch('assetAmount')

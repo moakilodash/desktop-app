@@ -60,16 +60,6 @@ export const Component = () => {
     while (shouldRetry) {
       try {
         const rpcConfig = parseRpcUrl(nodeSettings.rpc_connection_url)
-        console.log(
-          'Unlocking the node with params: ',
-          rpcConfig.host,
-          rpcConfig.password,
-          rpcConfig.port,
-          rpcConfig.username,
-          nodeSettings.indexer_url,
-          data.password,
-          nodeSettings.proxy_endpoint
-        )
 
         await unlock({
           bitcoind_rpc_host: rpcConfig.host,
@@ -110,7 +100,6 @@ export const Component = () => {
             shouldRetry = false
             continue
           } else {
-            console.warn('Fetch error, retrying immediately...')
             doubleFetchErrorFlag = true
             continue
           }
@@ -121,9 +110,6 @@ export const Component = () => {
           error?.data.error ===
             'Cannot call other APIs while node is changing state'
         ) {
-          console.warn(
-            `Node is changing state, retrying in ${pollingInterval / 1000}s...`
-          )
           await new Promise((res) => setTimeout(res, pollingInterval))
           pollingInterval = Math.min(pollingInterval * 2, 15000)
           continue

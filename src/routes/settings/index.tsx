@@ -219,7 +219,6 @@ export const Component: React.FC = () => {
         type: ModalType.SUCCESS,
       })
     } catch (error) {
-      console.error('Failed to restart node:', error)
       toast.error(
         `Failed to restart node: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
@@ -318,7 +317,6 @@ export const Component: React.FC = () => {
         })
       }
     } catch (error) {
-      console.error('Failed to save settings:', error)
       toast.error(
         `Failed to save settings: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
@@ -361,7 +359,6 @@ export const Component: React.FC = () => {
   const confirmLogout = async () => {
     try {
       const lockResponse = await lock().unwrap()
-      console.log('lockResponse', lockResponse)
 
       if (lockResponse !== undefined && lockResponse !== null) {
         await invoke('stop_node')
@@ -371,7 +368,6 @@ export const Component: React.FC = () => {
         throw new Error('Node lock unsuccessful')
       }
     } catch (error) {
-      console.error('Logout error:', error)
       toast.error(
         `Logout failed: ${error instanceof Error ? error.message : ''}. Redirecting anyway.`
       )
@@ -408,7 +404,6 @@ export const Component: React.FC = () => {
       navigate(WALLET_SETUP_PATH)
       toast.success('Node shut down successfully')
     } catch (error) {
-      console.error('Error shutting down node:', error)
       toast.error('Failed to shut down node')
     } finally {
       setIsShuttingDown(false)
@@ -433,7 +428,6 @@ export const Component: React.FC = () => {
         toast.success('Logs exported successfully')
       }
     } catch (error) {
-      console.error('Failed to export logs:', error)
       toast.error('Failed to export logs')
     }
   }

@@ -207,7 +207,6 @@ export const parseAssetAmountWithPrecision = (
 
     return Math.round(parsedAmount * multiplier)
   } catch (error) {
-    console.error('Error parsing amount:', error)
     return 0
   }
 }

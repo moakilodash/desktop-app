@@ -160,7 +160,6 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({ assets }) => {
       setAssetBalances(newBalances)
       toast.success('Asset balances updated')
     } catch (error) {
-      console.error('Failed to fetch asset balances:', error)
       toast.error('Failed to fetch asset balances')
     } finally {
       setIsLoadingBalances(false)
@@ -213,7 +212,6 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({ assets }) => {
       // Apply thousands separators for better readability
       setValue('fromAmount', formattedValue)
     } catch (error) {
-      console.error('Error handling amount change:', error)
       setValue('fromAmount', '')
     }
   }
@@ -231,7 +229,6 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({ assets }) => {
       // Apply thousands separators for better readability
       setValue('toAmount', formattedValue)
     } catch (error) {
-      console.error('Error handling amount change:', error)
       setValue('toAmount', '')
     }
   }
@@ -348,15 +345,6 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({ assets }) => {
       let fromAmountValue = parseAssetAmount(data.fromAmount, data.fromAsset)
       let toAmountValue = parseAssetAmount(data.toAmount, data.toAsset)
 
-      console.log('Parsed amounts for API:', {
-        fromAmount: data.fromAmount,
-        fromAmountValue,
-        fromAsset: data.fromAsset,
-        toAmount: data.toAmount,
-        toAmountValue,
-        toAsset: data.toAsset,
-      })
-
       // Prepare request object with required fields
       const requestPayload: {
         qty_from: number
@@ -388,7 +376,6 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({ assets }) => {
         requestPayload.to_asset = data.toAsset
       }
 
-      console.log('Sending swap request:', requestPayload)
       const response = await makerInit(requestPayload).unwrap()
 
       setSwapString(response.swapstring)
@@ -396,7 +383,6 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({ assets }) => {
       setSwapInitiated(true)
       toast.success('Swap initiated successfully')
     } catch (error) {
-      console.error('Failed to initiate swap:', error)
       toast.error('Failed to initiate swap. Please try again.')
     } finally {
       setIsInitiating(false)
@@ -429,7 +415,6 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({ assets }) => {
       setPaymentSecret('')
       setValue('takerPubkey', '')
     } catch (error) {
-      console.error('Failed to execute swap:', error)
       toast.error('Failed to execute swap. Please try again.')
     } finally {
       setIsExecuting(false)
@@ -472,7 +457,6 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({ assets }) => {
         useGrouping: true,
       }).format(balance / Math.pow(10, precision))
     } catch (error) {
-      console.error('Error formatting balance:', error)
       return '0'
     }
   }

@@ -293,16 +293,13 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
 
         // If validation passes, update Redux and proceed
         dispatch(orderChannelSliceActions.setChannelRequestForm(submissionData))
-        console.log('Form submitted with data:', submissionData)
         onNext(submissionData)
       } catch (error) {
         if (error instanceof z.ZodError) {
-          console.error('Validation error:', error.errors)
           toast.error(
             'There was an error with the form data. Please check your inputs.'
           )
         } else {
-          console.error('Unexpected error:', error)
           toast.error('An unexpected error occurred. Please try again.')
         }
       }

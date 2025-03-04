@@ -304,7 +304,6 @@ export const Component = () => {
 
       setIsStartingNode(true)
       setCurrentStep('restoration')
-      console.log('Starting node...')
 
       try {
         const defaultMakerUrl = NETWORK_DEFAULTS[data.network].default_maker_url
@@ -377,7 +376,6 @@ export const Component = () => {
           await invoke('stop_node')
         }
       } catch (error) {
-        console.error('Node operation failed:', error)
         await invoke('stop_node')
         showErrorModal(
           'Node Operation Failed',
@@ -385,7 +383,6 @@ export const Component = () => {
         )
       }
     } catch (error) {
-      console.error('Restore failed:', error)
       showErrorModal(
         'Unexpected Error',
         `An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`
@@ -413,7 +410,6 @@ export const Component = () => {
         form.setValue('backup_path', selected)
       }
     } catch (error) {
-      console.error('Error selecting backup file:', error)
       toast.error('Failed to select backup file')
     }
   }

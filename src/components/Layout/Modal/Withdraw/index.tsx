@@ -101,7 +101,6 @@ export const WithdrawModalContent = () => {
         setIsDecodingInvoice(true)
         try {
           const decoded = await decodeInvoice({ invoice: text }).unwrap()
-          console.log(decoded)
           setDecodedInvoice(decoded)
           setValue('address', text)
         } catch (error) {
@@ -318,7 +317,6 @@ export const WithdrawModalContent = () => {
           setAssetBalance(balance.spendable)
         }
       } catch (error) {
-        console.error('Failed to fetch balance:', error)
         setAssetBalance(0)
       }
     }

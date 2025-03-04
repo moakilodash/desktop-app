@@ -90,7 +90,6 @@ export const Component = () => {
 
   const onSubmitStep1 = useCallback(
     async (data: { connectionUrl: string; success: boolean }) => {
-      console.log('Step 1 submitted:', data)
       if (data.success) {
         setStep(2)
       } else {
@@ -155,9 +154,6 @@ export const Component = () => {
         payload.client_asset_amount = 0
       }
       // log the payload for the request
-      console.log(
-        `Payload for create order request: ${JSON.stringify(payload)}`
-      )
       const channelResponse = await createOrderRequest(payload)
       setLoading(false)
       if (channelResponse.error) {
@@ -174,8 +170,6 @@ export const Component = () => {
         })
         return
       } else {
-        console.log('Request of channel created successfully!')
-        console.log('Response:', channelResponse.data)
         const orderId: string = channelResponse.data?.order_id || ''
         if (!orderId) {
           console.error('Could not get order id')

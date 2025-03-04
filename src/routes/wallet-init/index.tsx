@@ -201,7 +201,6 @@ export const Component = () => {
 
       handleStepChange('password')
     } catch (error) {
-      console.error('Node setup failed:', error)
       toast.error('Failed to set up node. Please try again.')
     }
   }
@@ -226,8 +225,6 @@ export const Component = () => {
     const isNodeRunning = await invoke<boolean>('is_node_running')
 
     if (runningNodeAccount && isNodeRunning) {
-      console.log('Stopping existing node for account:', runningNodeAccount)
-
       try {
         const nodeStoppedPromise = new Promise<void>((resolve, reject) => {
           let unlistenFn: (() => void) | null = null
@@ -256,7 +253,6 @@ export const Component = () => {
         // Additional delay to ensure resources are released
         await new Promise((resolve) => setTimeout(resolve, 2000))
       } catch (error) {
-        console.error('Error stopping existing node:', error)
         throw new Error(`Failed to stop existing node: ${error}`)
       }
     } else if (runningNodeAccount) {
@@ -272,28 +268,16 @@ export const Component = () => {
     network: BitcoinNetwork,
     datapath: string
   ): Promise<void> => {
-    console.log('Starting local node with parameters:', {
-      accountName,
-      daemonListeningPort: nodeSetupForm.getValues('daemon_listening_port'),
-      datapath,
-      ldkPeerListeningPort: nodeSetupForm.getValues('ldk_peer_listening_port'),
-      network,
-    })
-
     try {
       const nodeStartedPromise = new Promise<void>((resolve, reject) => {
         let unlistenFn: (() => void) | null = null
 
-        console.log('Setting up node event listener...')
-
         const timeoutId = setTimeout(async () => {
-          console.log('Timeout occurred, checking node status...')
           if (unlistenFn) unlistenFn()
 
           try {
             const isRunning = await invoke<boolean>('is_node_running')
             if (isRunning) {
-              console.log('Node is running, proceeding...')
               resolve()
               return
             }
@@ -305,9 +289,7 @@ export const Component = () => {
         }, 15000)
 
         listen('node-log', (event: { payload: string }) => {
-          console.log('Node log:', event.payload)
           if (event.payload.includes('Listening on')) {
-            console.log('Node is ready')
             if (unlistenFn) unlistenFn()
             clearTimeout(timeoutId)
             resolve()
@@ -335,7 +317,6 @@ export const Component = () => {
 
       await nodeStartedPromise
     } catch (error) {
-      console.error('Error starting local node:', error)
       throw new Error(`Failed to start node: ${error}`)
     }
   }
@@ -426,7 +407,6 @@ export const Component = () => {
         }
       }
     } catch (error) {
-      console.error('Password setup failed:', error)
       toast.error(
         error instanceof Error ? error.message : 'Failed to initialize node'
       )
@@ -574,7 +554,6 @@ export const Component = () => {
       // Navigate to trade path
       navigate(TRADE_PATH)
     } catch (error) {
-      console.error('Unlock failed:', error)
       setIsNodeError(true)
       setNodeErrorMessage(
         error instanceof Error ? error.message : 'Failed to unlock node'
@@ -593,7 +572,6 @@ export const Component = () => {
       toast.info('Node unlocking cancelled')
       handleStepChange('verify')
     } catch (error) {
-      console.error('Error cancelling unlock:', error)
       toast.error('Failed to cancel unlocking')
     } finally {
       setIsUnlocking(false)

@@ -46,12 +46,10 @@ export const orderChannelSlice = createSlice({
       state,
       action: PayloadAction<Partial<SliceState['forms']['request']>>
     ) => {
-      console.log('Updating Redux store:', action.payload)
       state.forms.request = {
         ...state.forms.request,
         ...action.payload,
       }
-      console.log('Updated Redux store:', state.forms.request)
     },
   },
 })

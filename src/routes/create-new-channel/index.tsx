@@ -78,7 +78,6 @@ export const Component = () => {
           slow: slowFee.fee_rate * 1000,
         })
       } catch (e) {
-        console.error('Failed to fetch fee rates:', e)
         setFormError('Failed to fetch fee rates. Please try again.')
       }
     }
@@ -153,10 +152,8 @@ export const Component = () => {
         throw new Error(openChannelResponse.error)
       }
 
-      console.log('Channel opened successfully:', openChannelResponse)
       setStep(4)
     } catch (error) {
-      console.error('Failed to open channel:', error)
       setChannelOpeningError(
         error instanceof Error ? error.message : 'Failed to open channel'
       )
