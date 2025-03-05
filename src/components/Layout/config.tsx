@@ -56,6 +56,12 @@ export interface NavItem {
 // Define main navigation items with icons
 export const MAIN_NAV_ITEMS = [
   {
+    icon: <Home className="w-5 h-5" />,
+    label: 'Dashboard',
+    matchPath: WALLET_DASHBOARD_PATH,
+    to: WALLET_DASHBOARD_PATH,
+  },
+  {
     icon: <Zap className="w-5 h-5" />,
     label: 'Trade',
     matchPath: TRADE_PATH,
@@ -78,12 +84,6 @@ export const MAIN_NAV_ITEMS = [
       },
     ],
     to: TRADE_PATH,
-  },
-  {
-    icon: <Home className="w-5 h-5" />,
-    label: 'Dashboard',
-    matchPath: WALLET_DASHBOARD_PATH,
-    to: WALLET_DASHBOARD_PATH,
   },
   {
     icon: <Clock className="w-5 h-5" />,

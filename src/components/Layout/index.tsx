@@ -39,7 +39,6 @@ import {
 } from './config'
 import { LayoutModal } from './Modal'
 
-
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 interface Props {
@@ -85,6 +84,25 @@ const SidebarNavItem = ({ item, isCollapsed }: NavItemProps) => {
   const hasSubMenu = item.subMenu && item.subMenu.length > 0
 
   const handleClick = (e: React.MouseEvent) => {
+    // If sidebar is collapsed and this is the Trade item, navigate directly to Market Maker page
+    if (
+      isCollapsed &&
+      item.label === 'Trade' &&
+      item.subMenu &&
+      item.subMenu.length > 0
+    ) {
+      e.preventDefault()
+      // Find the Market Maker submenu item and navigate to its path
+      const marketMakerItem = item.subMenu.find(
+        (subItem) => subItem.label === 'Market Maker'
+      )
+      if (marketMakerItem && marketMakerItem.to) {
+        navigate(marketMakerItem.to)
+      }
+      return
+    }
+
+    // Normal behavior for expanded sidebar
     if (hasSubMenu) {
       e.preventDefault()
       setIsSubMenuOpen(!isSubMenuOpen)
@@ -537,7 +555,12 @@ export const Layout = (props: Props) => {
               <img
                 alt="KaleidoSwap"
                 className={`cursor-pointer transition-all duration-300 ${isSidebarCollapsed ? 'w-10 h-10' : 'h-8'}`}
-                onClick={() => navigate(WALLET_SETUP_PATH)}
+                onClick={() => {
+                  // Only navigate to wallet setup when sidebar is not collapsed
+                  if (!isSidebarCollapsed) {
+                    navigate(WALLET_SETUP_PATH)
+                  }
+                }}
                 src={logo}
               />
 
