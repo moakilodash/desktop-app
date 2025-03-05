@@ -333,7 +333,7 @@ export const Step1 = ({ onNext, formData, onFormUpdate }: Props) => {
       {/* Connection Dialog */}
       {showConnectionDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800/50 backdrop-blur-sm p-8 rounded-xl border border-gray-700/50 max-w-md w-full mx-4">
+          <div className="bg-gray-800 p-8 rounded-xl border border-gray-700 max-w-md w-full mx-4">
             <h3 className="text-2xl font-bold text-white mb-4">
               Connect to Peer
             </h3>
