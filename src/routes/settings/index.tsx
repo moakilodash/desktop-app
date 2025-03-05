@@ -181,7 +181,10 @@ export const Component: React.FC = () => {
       makerUrls: Array.isArray(nodeSettings.maker_urls)
         ? nodeSettings.maker_urls
         : [],
-      nodeConnectionString: nodeConnectionString || 'http://localhost:3001',
+      nodeConnectionString:
+        nodeSettings.node_url ||
+        nodeConnectionString ||
+        'http://localhost:3001',
       proxyEndpoint: nodeSettings.proxy_endpoint || '',
       rpcConnectionUrl: nodeSettings.rpc_connection_url || '',
     })
@@ -259,7 +262,7 @@ export const Component: React.FC = () => {
           makerUrls: data.makerUrls.join(','),
           name: currentAccount.name,
           network: currentAccount.network,
-          nodeUrl: currentAccount.node_url,
+          nodeUrl: data.nodeConnectionString,
           proxyEndpoint: data.proxyEndpoint,
           rpcConnectionUrl: data.rpcConnectionUrl,
         })
@@ -273,6 +276,7 @@ export const Component: React.FC = () => {
             indexer_url: data.indexerUrl,
             ldk_peer_listening_port: currentAccount.ldk_peer_listening_port,
             maker_urls: data.makerUrls,
+            node_url: data.nodeConnectionString,
             proxy_endpoint: data.proxyEndpoint,
             rpc_connection_url: data.rpcConnectionUrl,
           })
