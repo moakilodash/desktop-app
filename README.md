@@ -30,6 +30,7 @@
     - [How to Contribute](#how-to-contribute)
   - [Support 📞](#support-)
   - [License 📜](#license-)
+  - [No Responsibility Disclaimer ⚠️](#no-responsibility-disclaimer-️)
 
 ## Overview
 
@@ -169,7 +170,7 @@ You can install the app in two ways:
 ## Security Considerations 🔒
 
 - **Node Availability**: Keep your node online to ensure consistent Lightning functionality.
-- **No API Authentication Yet**: Avoid exposing the node’s API to untrusted networks.
+- **No API Authentication Yet**: Avoid exposing the node's API to untrusted networks.
 - **Alpha Software**: This is alpha software; do not risk real funds or large amounts on mainnet.
 
 ## Roadmap 🛣️
@@ -209,6 +210,15 @@ We welcome contributions of all forms—bug reports, feature requests, and pull 
 
 Kaleidoswap is licensed under the [MIT License](LICENSE.md).
 
+## No Responsibility Disclaimer ⚠️
+
+**USE AT YOUR OWN RISK**: Kaleidoswap is provided "as is" without any warranties of any kind, either express or implied.
+
+- The developers and contributors of Kaleidoswap assume **NO RESPONSIBILITY** for any losses, damages, or other liabilities that may arise from using this software.
+- By using Kaleidoswap, you acknowledge that you are using experimental software and accept all associated risks.
+- You are solely responsible for the security of your funds, private keys, and any transactions conducted through the application.
+- We strongly recommend testing with minimal amounts on test networks before considering any use on mainnet.
+- The software may contain bugs, errors, or security vulnerabilities that could result in the loss of funds.
 ---  
 
-*Thanks for using Kaleidoswap! We’re excited to see what you build, and we appreciate your feedback and contributions.*
+*Thanks for using Kaleidoswap! We're excited to see what you build, and we appreciate your feedback and contributions.*

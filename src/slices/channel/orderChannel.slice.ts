@@ -13,7 +13,6 @@ export const OrderChannelFormSchema = z.object({
   assetId: z.string(),
   capacitySat: z
     .number()
-    .min(MIN_CHANNEL_CAPACITY, 'Minimum amount is 50000 satoshis')
     .max(MAX_CHANNEL_CAPACITY, 'Maximum amount is 100000000 satoshis'),
   channelExpireBlocks: z.number().gte(0),
   clientBalanceSat: z.number().gte(0),

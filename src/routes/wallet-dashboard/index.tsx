@@ -15,6 +15,7 @@ import {
   Download,
   Upload,
   History,
+  AlertCircle,
 } from 'lucide-react'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -38,6 +39,7 @@ import {
   InfoCardGrid,
   NetworkWarningAlert,
   OverlayTooltip,
+  Alert,
 } from '../../components/ui'
 import { UTXOManagementModal } from '../../components/UTXOManagementModal'
 import { BitcoinNetwork } from '../../constants'
@@ -554,6 +556,38 @@ export const Component = () => {
             }
             network={networkInfoResponse.data?.network || 'Testnet'}
           />
+        </div>
+      )}
+
+      {onChainBalance === 0 && offChainBalance === 0 && (
+        <div className="mb-6">
+          <Alert
+            className="mb-6"
+            icon={<AlertCircle className="w-5 h-5" />}
+            title="No Bitcoin Funds"
+            variant="warning"
+          >
+            <p className="text-sm">
+              You don't have any Bitcoin funds in your wallet. Deposit funds to
+              start using the application.
+              <Button
+                className="ml-4 mt-2"
+                icon={<ArrowDownRight className="w-3.5 h-3.5" />}
+                onClick={() =>
+                  dispatch(
+                    uiSliceActions.setModal({
+                      assetId: assetsResponse.data?.nia[0]?.asset_id,
+                      type: 'deposit',
+                    })
+                  )
+                }
+                size="sm"
+                variant="success"
+              >
+                Deposit Now
+              </Button>
+            </p>
+          </Alert>
         </div>
       )}
 

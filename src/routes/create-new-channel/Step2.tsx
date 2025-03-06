@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
+import { toast } from 'react-toastify'
 import { z } from 'zod'
 
 import { Select } from '../../components/Select'
@@ -12,6 +13,7 @@ import {
 import { nodeApi, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
 
 import { FormError } from './FormError'
+import 'react-toastify/dist/ReactToastify.css'
 
 interface Props {
   onBack: VoidFunction
@@ -65,7 +67,7 @@ export const Step2 = ({
         assetAmount: formData.assetAmount || 0,
         assetId: formData.assetId || '',
         assetTicker: formData.assetTicker || '',
-        capacitySat: formData.capacitySat || MIN_CHANNEL_CAPACITY,
+        capacitySat: formData.capacitySat || 0,
         fee: formData.fee || 'medium',
         pubKeyAndAddress: formData.pubKeyAndAddress,
       },
@@ -107,9 +109,10 @@ export const Step2 = ({
         const newMaxCapacity = Math.min(MAX_CHANNEL_CAPACITY, totalSpendable)
         setMaxCapacity(newMaxCapacity)
 
-        if (!formData.capacitySat) {
-          setValue('capacitySat', MIN_CHANNEL_CAPACITY)
-        }
+        // Don't set a default value for capacitySat
+        // if (!formData.capacitySat) {
+        //   setValue('capacitySat', MIN_CHANNEL_CAPACITY)
+        // }
       } catch (error) {
         console.error('Error fetching BTC balance:', error)
       }
@@ -166,26 +169,84 @@ export const Step2 = ({
     return num.toLocaleString('en-US')
   }
 
-  const parseInputValue = (value: string): number => {
-    const sanitized = value.replace(/[^0-9.]/g, '')
-    const parsed = parseFloat(sanitized)
-    return isNaN(parsed) ? 0 : parsed
-  }
-
   const handleCapacityChange = (value: string) => {
-    const numValue = parseInputValue(value)
-    if (numValue >= 0) {
-      setValue('capacitySat', numValue)
-      onFormUpdate({ capacitySat: numValue })
+    // Don't enforce minimum values during typing
+    const sanitized = value.replace(/[^0-9.]/g, '')
+    if (sanitized === '') {
+      // Allow empty input for better UX
+      setValue('capacitySat', 0)
+      onFormUpdate({ capacitySat: 0 })
+      return
     }
+
+    const numValue = parseFloat(sanitized)
+    if (isNaN(numValue)) return
+
+    // Only enforce maximum constraint
+    if (numValue > maxCapacity) {
+      setValue('capacitySat', maxCapacity)
+      onFormUpdate({ capacitySat: maxCapacity })
+
+      // Show toast notification
+      toast.info(
+        `Channel capacity limited to maximum: ${formatNumber(maxCapacity)} sats`,
+        {
+          autoClose: 3000,
+          position: 'bottom-right',
+        }
+      )
+      return
+    }
+
+    // Provide feedback if value is at or below minimum, but still allow it
+    if (numValue <= MIN_CHANNEL_CAPACITY && numValue > 0) {
+      // Show toast notification
+      toast.warn(
+        `Note: You'll need to enter a value greater than ${formatNumber(MIN_CHANNEL_CAPACITY)} sats to proceed.`,
+        {
+          autoClose: 3000,
+          position: 'bottom-right',
+        }
+      )
+    }
+
+    setValue('capacitySat', numValue)
+    onFormUpdate({ capacitySat: numValue })
   }
 
   const handleAssetAmountChange = (value: string) => {
-    const numValue = parseInputValue(value)
-    if (numValue >= 0) {
-      setValue('assetAmount', numValue)
-      onFormUpdate({ assetAmount: numValue })
+    // Don't enforce minimum values during typing
+    const sanitized = value.replace(/[^0-9.]/g, '')
+    if (sanitized === '') {
+      setValue('assetAmount', 0)
+      onFormUpdate({ assetAmount: 0 })
+      return
     }
+
+    const numValue = parseFloat(sanitized)
+    if (isNaN(numValue)) return
+
+    // Only enforce maximum constraint
+    const maxAmount = selectedAsset
+      ? maxAssetAmountMap[selectedAsset.asset_id] || 0
+      : 0
+    if (numValue > maxAmount) {
+      setValue('assetAmount', maxAmount)
+      onFormUpdate({ assetAmount: maxAmount })
+
+      // Show toast notification
+      toast.info(
+        `Asset amount limited to maximum: ${formatNumber(maxAmount)} ${selectedAsset?.ticker || ''}`,
+        {
+          autoClose: 3000,
+          position: 'bottom-right',
+        }
+      )
+      return
+    }
+
+    setValue('assetAmount', numValue)
+    onFormUpdate({ assetAmount: numValue })
   }
 
   const handleFeeChange = (fee: 'slow' | 'medium' | 'fast') => {
@@ -206,6 +267,12 @@ export const Step2 = ({
         assetId: asset.asset_id,
         assetTicker: asset.ticker, // Reset amount when changing asset
       })
+
+      // Show toast notification
+      toast.info(`Selected asset: ${asset.ticker}. Please enter an amount.`, {
+        autoClose: 3000,
+        position: 'bottom-right',
+      })
     }
   }
 
@@ -222,10 +289,86 @@ export const Step2 = ({
         assetId: '',
         assetTicker: '',
       })
+
+      // Show toast notification
+      toast.info('Asset selection removed.', {
+        autoClose: 3000,
+        position: 'bottom-right',
+      })
+    } else {
+      // Show toast notification with clear instructions
+      toast.info(
+        'Please select an asset from the dropdown. You must select an asset to proceed.',
+        {
+          autoClose: 5000,
+          position: 'bottom-right',
+        }
+      )
     }
   }
 
   const onSubmit: SubmitHandler<FormFields> = (data) => {
+    // Check if capacity is empty or zero
+    if (!data.capacitySat) {
+      toast.error('Please enter a channel capacity.', {
+        autoClose: 5000,
+        position: 'bottom-right',
+      })
+      return
+    }
+
+    // Check if capacity is below or equal to minimum
+    if (data.capacitySat <= MIN_CHANNEL_CAPACITY) {
+      toast.error(
+        `Channel capacity must be greater than ${formatNumber(MIN_CHANNEL_CAPACITY)} sats.`,
+        {
+          autoClose: 5000,
+          position: 'bottom-right',
+        }
+      )
+      return
+    }
+
+    // Check if "Add Asset" is checked but no asset is selected
+    if (addAsset && !data.assetId) {
+      toast.error('Please select an asset or uncheck the "Add Asset" option.', {
+        autoClose: 5000,
+        position: 'bottom-right',
+      })
+      return
+    }
+
+    // Check if asset is selected but no amount is provided
+    if (addAsset && data.assetId && data.assetAmount <= 0) {
+      toast.error(
+        'Please enter an asset amount or remove the asset selection.',
+        {
+          autoClose: 5000,
+          position: 'bottom-right',
+        }
+      )
+      return
+    }
+
+    // Check if asset amount is below minimum
+    if (addAsset && data.assetId && selectedAsset) {
+      // Use a small percentage of the max amount as the minimum
+      const maxAmount = maxAssetAmountMap[selectedAsset.asset_id] || 0
+      const minAssetAmount = Math.max(1, maxAmount * 0.01) // At least 1% of max or 1 unit
+
+      if (data.assetAmount < minAssetAmount) {
+        toast.error(
+          `Asset amount is too small. Please enter at least ${formatNumber(minAssetAmount)} ${selectedAsset.ticker}.`,
+          {
+            autoClose: 5000,
+            position: 'bottom-right',
+          }
+        )
+        return
+      }
+    }
+
+    // All validations passed, proceed with form submission
     onFormUpdate(data)
     onNext()
   }
@@ -268,9 +411,13 @@ export const Step2 = ({
             <input
               className="flex-grow rounded bg-blue-dark px-4 py-3 outline-none text-white"
               onChange={(e) => handleCapacityChange(e.target.value)}
-              placeholder="Enter amount"
+              placeholder="Enter amount in sats"
               type="text"
-              value={capacitySat ? formatNumber(capacitySat) : ''}
+              value={
+                capacitySat === MIN_CHANNEL_CAPACITY
+                  ? ''
+                  : formatNumber(capacitySat)
+              }
             />
             <span className="text-sm text-gray-400">
               {formatNumber(maxCapacity)} max
@@ -282,8 +429,16 @@ export const Step2 = ({
             min={MIN_CHANNEL_CAPACITY}
             onChange={(e) => handleCapacityChange(e.target.value)}
             type="range"
-            value={capacitySat || MIN_CHANNEL_CAPACITY}
+            value={
+              typeof capacitySat === 'number'
+                ? capacitySat.toString()
+                : MIN_CHANNEL_CAPACITY.toString()
+            }
           />
+          <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <span>Min: {formatNumber(MIN_CHANNEL_CAPACITY)}</span>
+            <span>Max: {formatNumber(maxCapacity)}</span>
+          </div>
           {formState.errors.capacitySat && (
             <p className="text-red-500 text-sm mt-1">
               {formState.errors.capacitySat.message}
@@ -322,24 +477,38 @@ export const Step2 = ({
                 <div className="bg-gray-900/50 p-6 rounded-lg">
                   <label className="block text-sm font-medium text-gray-400 mb-3">
                     Select Asset
+                    <span className="text-red-500 ml-1">*</span>
+                    <span className="text-xs text-yellow-500 ml-2">
+                      (Required)
+                    </span>
                   </label>
                   <Controller
                     control={control}
                     name="assetId"
                     render={({ field }) => (
-                      <Select
-                        {...field}
-                        active={field.value}
-                        onSelect={(value) => {
-                          field.onChange(value)
-                          handleAssetSelect(value)
-                        }}
-                        options={availableAssets.map((a: NiaAsset) => ({
-                          label: a.ticker,
-                          value: a.asset_id,
-                        }))}
-                        theme="dark"
-                      />
+                      <>
+                        <Select
+                          {...field}
+                          active={field.value}
+                          onSelect={(value) => {
+                            field.onChange(value)
+                            handleAssetSelect(value)
+                          }}
+                          options={availableAssets.map((a: NiaAsset) => ({
+                            label: a.ticker,
+                            value: a.asset_id,
+                          }))}
+                          theme="dark"
+                        />
+
+                        {!field.value && addAsset && (
+                          <p className="text-xs text-yellow-500 mt-2">
+                            You must select an asset to proceed. If you don't
+                            want to add an asset, uncheck the "Add Asset"
+                            option.
+                          </p>
+                        )}
+                      </>
                     )}
                   />
 
@@ -390,7 +559,7 @@ export const Step2 = ({
                         onChange={(e) =>
                           handleAssetAmountChange(e.target.value)
                         }
-                        placeholder={`Enter amount to allocate`}
+                        placeholder="Enter asset amount"
                         type="text"
                         value={
                           currentAssetAmount
@@ -406,7 +575,7 @@ export const Step2 = ({
                           handleAssetAmountChange(e.target.value)
                         }
                         type="range"
-                        value={currentAssetAmount || 0}
+                        value={currentAssetAmount.toString()}
                       />
                       <div className="flex justify-between text-xs text-gray-500">
                         <span>0</span>
@@ -416,6 +585,11 @@ export const Step2 = ({
                           )}
                         </span>
                       </div>
+                      {selectedAsset && (
+                        <p className="text-xs text-yellow-500 mt-1">
+                          Note: Asset amount must be greater than 0 to proceed.
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -512,7 +686,6 @@ export const Step2 = ({
             focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
             shadow-lg hover:shadow-xl
             flex items-center"
-          disabled={!formState.isValid}
           type="submit"
         >
           Next
