@@ -1017,6 +1017,7 @@ export const Component = () => {
         payment_hash: payment_hash,
         price: selectedPairFeed.price / selectedPairFeed.size,
         selectedPair: selectedPair,
+        selectedPairFeed: selectedPairFeed,
         timestamp: new Date().toISOString(),
         toAmount: formatAmount(
           parseAssetAmount(data.to, data.toAsset),

@@ -22,6 +22,7 @@ export interface SwapDetails {
   toAsset: string
   timestamp: string
   selectedPair: TradingPair | null
+  selectedPairFeed: any | null
   payment_hash: string
 }
 
@@ -92,6 +93,7 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
     toAsset,
     timestamp,
     selectedPair,
+    selectedPairFeed,
     payment_hash,
   } = swapDetails
 
@@ -107,45 +109,112 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
   const displayFromAsset = getDisplayAsset(fromAsset, bitcoinUnit)
   const displayToAsset = getDisplayAsset(toAsset, bitcoinUnit)
 
-  const calculateAndFormatRate = useCallback(() => {
-    if (!price || !selectedPair) return ''
+  //const calculateAndFormatRate = useCallback(() => {
+  //  if (!price || !selectedPair) return ''
+  //
+  //  const isInverted =
+  //    fromAsset === selectedPair.quote_asset &&
+  //    toAsset === selectedPair.base_asset
+  //
+  //  const precision = !isInverted
+  //    ? getAssetPrecision(toAsset)
+  //    : getAssetPrecision(fromAsset)
+  //
+  //  let rate = price
+  //  let fromUnit = fromAsset === 'BTC' ? bitcoinUnit : fromAsset
+  //  let toUnit = toAsset === 'BTC' ? bitcoinUnit : toAsset
+  //
+  //  if (
+  //    (fromUnit === 'SAT' && !isInverted) ||
+  //    (toUnit === 'SAT' && isInverted)
+  //  ) {
+  //    rate = rate / SATOSHIS_PER_BTC
+  //  }
+  //
+  //  // Format with a minimum of 2 decimal places and a maximum based on asset precision
+  //  const formattedRate = !isInverted
+  //    ? new Intl.NumberFormat('en-US', {
+  //        maximumFractionDigits: Math.max(precision, 4),
+  //        minimumFractionDigits: 2,
+  //        useGrouping: true,
+  //      }).format(rate)
+  //    : new Intl.NumberFormat('en-US', {
+  //        maximumFractionDigits: Math.max(precision, 4),
+  //        minimumFractionDigits: 2,
+  //        useGrouping: true,
+  //      }).format(1 / rate)
+  //
+  //  return `1 ${fromUnit} = ${formattedRate} ${toUnit}`
+  //}, [price, selectedPair, fromAsset, toAsset, bitcoinUnit, getAssetPrecision])
+  //
+  //const exchangeRate = calculateAndFormatRate()
 
-    const isInverted =
-      fromAsset === selectedPair.quote_asset &&
-      toAsset === selectedPair.base_asset
+  const calculateAndFormatRate = useCallback(
+    (
+      fromAsset: string,
+      toAsset: string,
+      selectedPair: { base_asset: string; quote_asset: string } | null,
+      selectedPairFeed: { price: number } | null
+    ) => {
+      if (!price || !selectedPair || !selectedPairFeed)
+        return 'Price not available'
 
-    const precision = !isInverted
-      ? getAssetPrecision(toAsset)
-      : getAssetPrecision(fromAsset)
+      let rate = selectedPairFeed.price
+      console.log(rate)
+      let displayFromAsset = fromAsset
+      let displayToAsset = toAsset
 
-    let rate = price
-    let fromUnit = fromAsset === 'BTC' ? bitcoinUnit : fromAsset
-    let toUnit = toAsset === 'BTC' ? bitcoinUnit : toAsset
+      const isInverted =
+        fromAsset === selectedPair.quote_asset &&
+        toAsset === selectedPair.base_asset
 
-    if (
-      (fromUnit === 'SAT' && !isInverted) ||
-      (toUnit === 'SAT' && isInverted)
-    ) {
-      rate = rate / SATOSHIS_PER_BTC
-    }
+      const precision = !isInverted
+        ? getAssetPrecision(displayToAsset)
+        : getAssetPrecision(displayFromAsset)
 
-    // Format with a minimum of 2 decimal places and a maximum based on asset precision
-    const formattedRate = !isInverted
-      ? new Intl.NumberFormat('en-US', {
-          maximumFractionDigits: Math.max(precision, 4),
-          minimumFractionDigits: 2,
-          useGrouping: true,
-        }).format(rate)
-      : new Intl.NumberFormat('en-US', {
-          maximumFractionDigits: Math.max(precision, 4),
-          minimumFractionDigits: 2,
-          useGrouping: true,
-        }).format(1 / rate)
+      let fromUnit = displayFromAsset === 'BTC' ? bitcoinUnit : displayFromAsset
+      let toUnit = displayToAsset === 'BTC' ? bitcoinUnit : displayToAsset
 
-    return `1 ${fromUnit} = ${formattedRate} ${toUnit}`
-  }, [price, selectedPair, fromAsset, toAsset, bitcoinUnit, getAssetPrecision])
+      if (
+        (fromUnit === 'SAT' && !isInverted) ||
+        (toUnit === 'SAT' && isInverted)
+      ) {
+        rate = rate / SATOSHIS_PER_BTC
+      }
 
-  const exchangeRate = calculateAndFormatRate()
+      return !isInverted
+        ? new Intl.NumberFormat('en-US', {
+            maximumFractionDigits: precision > 4 ? precision : 4,
+            minimumFractionDigits: precision,
+            useGrouping: true,
+          }).format(
+            parseFloat(
+              (rate / Math.pow(10, precision)).toFixed(
+                precision > 4 ? precision : 4
+              )
+            )
+          )
+        : new Intl.NumberFormat('en-US', {
+            maximumFractionDigits: precision > 4 ? precision : 4,
+            minimumFractionDigits: precision,
+            useGrouping: true,
+          }).format(
+            parseFloat(
+              (Math.pow(10, precision) / rate).toFixed(
+                precision > 4 ? precision : 4
+              )
+            )
+          )
+    },
+    [bitcoinUnit, getAssetPrecision]
+  )
+
+  const exchangeRate = calculateAndFormatRate(
+    fromAsset,
+    toAsset,
+    selectedPair,
+    selectedPairFeed
+  )
 
   const isPending = currentSwap?.status?.toLowerCase() === 'pending'
   const isWaiting = currentSwap?.status?.toLowerCase() === 'waiting'
