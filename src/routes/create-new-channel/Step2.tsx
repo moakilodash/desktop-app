@@ -198,18 +198,6 @@ export const Step2 = ({
       return
     }
 
-    // Provide feedback if value is at or below minimum, but still allow it
-    if (numValue <= MIN_CHANNEL_CAPACITY && numValue > 0) {
-      // Show toast notification
-      toast.warn(
-        `Note: You'll need to enter a value greater than ${formatNumber(MIN_CHANNEL_CAPACITY)} sats to proceed.`,
-        {
-          autoClose: 3000,
-          position: 'bottom-right',
-        }
-      )
-    }
-
     setValue('capacitySat', numValue)
     onFormUpdate({ capacitySat: numValue })
   }
