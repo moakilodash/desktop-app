@@ -12,7 +12,7 @@ interface SelectProps {
   options: Array<{ value: string; ticker?: string }>
   onSelect: (value: string) => void
   theme: 'light' | 'dark'
-  disabled?: boolean // Add the disabled prop
+  disabled?: boolean
 }
 
 const Select: React.FC<SelectProps> = (props) => {
@@ -31,31 +31,33 @@ const Select: React.FC<SelectProps> = (props) => {
           props.theme === 'dark' ? 'bg-blue-dark' : 'bg-section-lighter',
           props.disabled ? 'opacity-50 cursor-not-allowed' : ''
         )}
-        onClick={() => setIsOpen((state) => !state)}
+        onClick={() => !props.disabled && setIsOpen((state) => !state)}
       >
         <AssetOption ticker={active?.ticker} />
         <ArrowDownIcon />
       </div>
 
-      <ul
-        className={twJoin(
-          'absolute top-full bg-section-lighter divide-y divide-divider rounded',
-          !isOpen ? 'hidden' : undefined
-        )}
-      >
-        {props.options.map((option) => (
-          <li
-            className="px-4 py-3 cursor-pointer hover:bg-divider first:rounded-t last:rounded-b"
-            key={option.value}
-            onClick={() => {
-              props.onSelect(option.value)
-              setIsOpen(false)
-            }}
-          >
-            <AssetOption ticker={option.ticker} />
-          </li>
-        ))}
-      </ul>
+      {!props.disabled && (
+        <ul
+          className={twJoin(
+            'absolute top-full bg-section-lighter divide-y divide-divider rounded',
+            !isOpen ? 'hidden' : undefined
+          )}
+        >
+          {props.options.map((option) => (
+            <li
+              className="px-4 py-3 cursor-pointer hover:bg-divider first:rounded-t last:rounded-b"
+              key={option.value}
+              onClick={() => {
+                props.onSelect(option.value)
+                setIsOpen(false)
+              }}
+            >
+              <AssetOption ticker={option.ticker} />
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
@@ -68,14 +70,14 @@ interface AssetSelectProps {
   options: Array<{ value: string; ticker?: string }>
   value: string
   onChange: (value: string) => void
-  disabled?: boolean // Add the disabled prop
+  disabled?: boolean
 }
 
 const AssetSelect: React.FC<AssetSelectProps> = ({
   options,
   value,
   onChange,
-  disabled = false, // Add a default value
+  disabled = false,
 }) => (
   <Select
     active={value}
@@ -96,3 +98,4 @@ export { MakerSelector } from './MakerSelector'
 export { AssetOption, AssetSelect, ExchangeRateDisplay }
 export { ManualSwapForm } from './ManualSwapForm'
 export { NostrP2P } from './NostrP2P'
+export { TradeForm } from './TradeForm'

@@ -255,12 +255,6 @@ export const Step2 = ({
         assetId: asset.asset_id,
         assetTicker: asset.ticker, // Reset amount when changing asset
       })
-
-      // Show toast notification
-      toast.info(`Selected asset: ${asset.ticker}. Please enter an amount.`, {
-        autoClose: 3000,
-        position: 'bottom-right',
-      })
     }
   }
 
@@ -277,21 +271,6 @@ export const Step2 = ({
         assetId: '',
         assetTicker: '',
       })
-
-      // Show toast notification
-      toast.info('Asset selection removed.', {
-        autoClose: 3000,
-        position: 'bottom-right',
-      })
-    } else {
-      // Show toast notification with clear instructions
-      toast.info(
-        'Please select an asset from the dropdown. You must select an asset to proceed.',
-        {
-          autoClose: 5000,
-          position: 'bottom-right',
-        }
-      )
     }
   }
 
@@ -465,10 +444,6 @@ export const Step2 = ({
                 <div className="bg-gray-900/50 p-6 rounded-lg">
                   <label className="block text-sm font-medium text-gray-400 mb-3">
                     Select Asset
-                    <span className="text-red-500 ml-1">*</span>
-                    <span className="text-xs text-yellow-500 ml-2">
-                      (Required)
-                    </span>
                   </label>
                   <Controller
                     control={control}
@@ -573,11 +548,6 @@ export const Step2 = ({
                           )}
                         </span>
                       </div>
-                      {selectedAsset && (
-                        <p className="text-xs text-yellow-500 mt-1">
-                          Note: Asset amount must be greater than 0 to proceed.
-                        </p>
-                      )}
                     </div>
                   </div>
                 )}

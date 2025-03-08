@@ -28,6 +28,9 @@ export const loadAssetIcon = async (
     if (!assetTicker || assetTicker === 'None') {
       return defaultIcon
     }
+    if (assetTicker === 'SAT') {
+      assetTicker = 'BTC'
+    }
 
     const iconUrl = `${COIN_ICON_URL}${assetTicker.toLowerCase()}.png`
     const response = await fetch(iconUrl)
