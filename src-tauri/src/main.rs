@@ -19,6 +19,7 @@ fn main() {
     let node_process = Arc::new(Mutex::new(NodeProcess::new()));
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_process::init())
@@ -33,13 +34,13 @@ fn main() {
                     match event {
                         tauri::WindowEvent::CloseRequested { api, .. } => {
                             println!("Window close requested, initiating shutdown sequence...");
-                            
+
                             // Check if node is running before preventing close
                             let is_node_running = {
                                 let node_process = node_process.lock().unwrap();
                                 node_process.is_running()
                             };
-                            
+
                             if is_node_running {
                                 // Only prevent close and show shutdown animation if node is running
                                 let window = window.clone();
@@ -386,6 +387,8 @@ fn is_node_running(
 }
 
 #[tauri::command]
-fn get_running_node_account(node_process: tauri::State<'_, Arc<Mutex<NodeProcess>>>) -> Option<String> {
+fn get_running_node_account(
+    node_process: tauri::State<'_, Arc<Mutex<NodeProcess>>>,
+) -> Option<String> {
     node_process.lock().unwrap().get_current_account()
 }

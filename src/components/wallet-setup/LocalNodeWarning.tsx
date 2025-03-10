@@ -1,3 +1,4 @@
+import { openUrl } from '@tauri-apps/plugin-opener'
 import { AlertTriangle, Info } from 'lucide-react'
 import React from 'react'
 
@@ -18,7 +19,7 @@ export const LocalNodeWarning: React.FC = () => (
           className="ml-2 text-cyan underline"
           icon={<Info className="w-3.5 h-3.5" />}
           onClick={() =>
-            window.open(
+            openUrl(
               'https://github.com/RGB-Tools/rgb-lightning-node/wiki/Node-Hosting',
               '_blank'
             )

@@ -1,3 +1,4 @@
+import { openUrl } from '@tauri-apps/plugin-opener'
 import {
   HelpCircle,
   BookOpen,
@@ -35,7 +36,7 @@ export const SupportModal = ({ isOpen, onClose }: SupportModalProps) => {
   if (!isOpen) return null
 
   const openExternalLink = (url: string) => {
-    window.open(url, '_blank')
+    openUrl(url)
     // Keep the modal open for potential further exploration
   }
 

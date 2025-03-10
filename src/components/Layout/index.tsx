@@ -39,6 +39,7 @@ import {
   NavItem,
 } from './config'
 import { LayoutModal } from './Modal'
+import { openUrl } from '@tauri-apps/plugin-opener'
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -420,7 +421,7 @@ export const Layout = (props: Props) => {
   }
 
   const openExternalLink = (url: string) => {
-    window.open(url, '_blank')
+    openUrl(url)
   }
 
   useEffect(() => {
