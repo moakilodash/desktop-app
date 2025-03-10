@@ -20,8 +20,7 @@ export const LocalNodeWarning: React.FC = () => (
           icon={<Info className="w-3.5 h-3.5" />}
           onClick={() =>
             openUrl(
-              'https://github.com/RGB-Tools/rgb-lightning-node/wiki/Node-Hosting',
-              '_blank'
+              'https://github.com/RGB-Tools/rgb-lightning-node/wiki/Node-Hosting'
             )
           }
           size="sm"

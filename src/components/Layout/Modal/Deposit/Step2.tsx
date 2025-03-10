@@ -1,3 +1,4 @@
+import { openUrl } from '@tauri-apps/plugin-opener'
 import {
   CircleCheckBig,
   CircleX,
@@ -118,16 +119,16 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
         <p className="text-green-300/80 text-sm mb-3">
           {faucetInfo.description}
         </p>
-        <a
+        <button
           className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/20 
                    hover:bg-green-500/30 text-green-400 rounded-lg transition-colors text-sm"
-          href={faucetInfo.link}
-          rel="noopener noreferrer"
-          target="_blank"
+          onClick={() => {
+            openUrl(faucetInfo.link)
+          }}
         >
           <ArrowRight className="w-4 h-4" />
           {faucetInfo.linkText}
-        </a>
+        </button>
       </div>
     )
   }

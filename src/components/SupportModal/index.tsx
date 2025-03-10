@@ -345,12 +345,14 @@ export const SupportModal = ({ isOpen, onClose }: SupportModalProps) => {
           <div className="flex flex-wrap justify-between items-center gap-4">
             <div className="text-sm text-gray-400">
               Need more help?{' '}
-              <a
+              <button
                 className="text-cyan hover:underline"
-                href="mailto:support@kaleidoswap.com"
+                onClick={() => {
+                  openUrl('mailto:support@kaleidoswap.com')
+                }}
               >
                 support@kaleidoswap.com
-              </a>
+              </button>
             </div>
             <div className="flex gap-3">
               <button
