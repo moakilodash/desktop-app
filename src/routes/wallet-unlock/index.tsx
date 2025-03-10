@@ -5,7 +5,10 @@ import { SubmitHandler, useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
-import { TRADE_PATH, WALLET_SETUP_PATH } from '../../app/router/paths'
+import {
+  WALLET_DASHBOARD_PATH,
+  WALLET_SETUP_PATH,
+} from '../../app/router/paths'
 import { useAppSelector } from '../../app/store/hooks'
 import { Layout } from '../../components/Layout'
 import { Button, Card, SetupLayout } from '../../components/ui'
@@ -36,7 +39,7 @@ export const Component = () => {
     const checkNodeStatus = async () => {
       const nodeInfoRes = await nodeInfo()
       if (nodeInfoRes.isSuccess) {
-        navigate(TRADE_PATH)
+        navigate(WALLET_DASHBOARD_PATH)
       }
     }
     checkNodeStatus()
@@ -77,7 +80,7 @@ export const Component = () => {
             autoClose: 3000,
             position: 'bottom-right',
           })
-          navigate(TRADE_PATH)
+          navigate(WALLET_DASHBOARD_PATH)
         } else {
           throw new Error('Failed to get node info after unlock')
         }
@@ -127,7 +130,7 @@ export const Component = () => {
             autoClose: 3000,
             position: 'bottom-right',
           })
-          navigate(TRADE_PATH)
+          navigate(WALLET_DASHBOARD_PATH)
           shouldRetry = false
         } else {
           const errorMessage = error.data?.error || 'An error occurred'

@@ -15,6 +15,7 @@ import {
   Download,
   Upload,
   History,
+  AlertCircle,
 } from 'lucide-react'
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -38,6 +39,7 @@ import {
   InfoCardGrid,
   NetworkWarningAlert,
   OverlayTooltip,
+  Alert,
 } from '../../components/ui'
 import { UTXOManagementModal } from '../../components/UTXOManagementModal'
 import { BitcoinNetwork } from '../../constants'
@@ -197,6 +199,7 @@ const OnChainDetailsOverlay = ({
   onChainColoredFutureBalance,
   onChainColoredSpendableBalance,
   bitcoinUnit,
+  isLoading,
 }: {
   onChainBalance: number
   onChainFutureBalance: number
@@ -205,6 +208,7 @@ const OnChainDetailsOverlay = ({
   onChainColoredFutureBalance: number
   onChainColoredSpendableBalance: number
   bitcoinUnit: string
+  isLoading: boolean
 }) => {
   return (
     <OverlayTooltip
@@ -220,22 +224,31 @@ const OnChainDetailsOverlay = ({
               <div className="bg-[#0B101B] rounded-md p-1">
                 <div className="text-xs text-gray-400">Settled</div>
                 <div className="text-xs font-medium text-white truncate">
-                  {formatBitcoinAmount(onChainBalance, bitcoinUnit)}{' '}
-                  {bitcoinUnit}
+                  {onChainBalance === 0 ? (
+                    <span className="text-slate-500">No balance</span>
+                  ) : (
+                    `${formatBitcoinAmount(onChainBalance, bitcoinUnit)} ${bitcoinUnit}`
+                  )}
                 </div>
               </div>
               <div className="bg-[#0B101B] rounded-md p-1">
                 <div className="text-xs text-gray-400">Future</div>
                 <div className="text-xs font-medium text-white truncate">
-                  {formatBitcoinAmount(onChainFutureBalance, bitcoinUnit)}{' '}
-                  {bitcoinUnit}
+                  {onChainFutureBalance === 0 ? (
+                    <span className="text-slate-500">No future balance</span>
+                  ) : (
+                    `${formatBitcoinAmount(onChainFutureBalance, bitcoinUnit)} ${bitcoinUnit}`
+                  )}
                 </div>
               </div>
               <div className="bg-[#0B101B] rounded-md p-1">
                 <div className="text-xs text-gray-400">Spendable</div>
                 <div className="text-xs font-medium text-white truncate">
-                  {formatBitcoinAmount(onChainSpendableBalance, bitcoinUnit)}{' '}
-                  {bitcoinUnit}
+                  {onChainSpendableBalance === 0 ? (
+                    <span className="text-slate-500">No spendable balance</span>
+                  ) : (
+                    `${formatBitcoinAmount(onChainSpendableBalance, bitcoinUnit)} ${bitcoinUnit}`
+                  )}
                 </div>
               </div>
             </div>
@@ -251,28 +264,35 @@ const OnChainDetailsOverlay = ({
               <div className="bg-[#0B101B] rounded-md p-1">
                 <div className="text-xs text-gray-400">Settled</div>
                 <div className="text-xs font-medium text-white truncate">
-                  {formatBitcoinAmount(onChainColoredBalance, bitcoinUnit)}{' '}
-                  {bitcoinUnit}
+                  {onChainColoredBalance === 0 ? (
+                    <span className="text-slate-500">No colored balance</span>
+                  ) : (
+                    `${formatBitcoinAmount(onChainColoredBalance, bitcoinUnit)} ${bitcoinUnit}`
+                  )}
                 </div>
               </div>
               <div className="bg-[#0B101B] rounded-md p-1">
                 <div className="text-xs text-gray-400">Future</div>
                 <div className="text-xs font-medium text-white truncate">
-                  {formatBitcoinAmount(
-                    onChainColoredFutureBalance,
-                    bitcoinUnit
-                  )}{' '}
-                  {bitcoinUnit}
+                  {onChainColoredFutureBalance === 0 ? (
+                    <span className="text-slate-500">
+                      No future colored balance
+                    </span>
+                  ) : (
+                    `${formatBitcoinAmount(onChainColoredFutureBalance, bitcoinUnit)} ${bitcoinUnit}`
+                  )}
                 </div>
               </div>
               <div className="bg-[#0B101B] rounded-md p-1">
                 <div className="text-xs text-gray-400">Spendable</div>
                 <div className="text-xs font-medium text-white truncate">
-                  {formatBitcoinAmount(
-                    onChainColoredSpendableBalance,
-                    bitcoinUnit
-                  )}{' '}
-                  {bitcoinUnit}
+                  {onChainColoredSpendableBalance === 0 ? (
+                    <span className="text-slate-500">
+                      No spendable colored balance
+                    </span>
+                  ) : (
+                    `${formatBitcoinAmount(onChainColoredSpendableBalance, bitcoinUnit)} ${bitcoinUnit}`
+                  )}
                 </div>
               </div>
             </div>
@@ -282,16 +302,18 @@ const OnChainDetailsOverlay = ({
       title="On-chain Details"
     >
       <div>
-        <span className="text-sm text-gray-400 flex items-center gap-2">
+        <span className="text-sm text-slate-400 flex items-center gap-2">
           <ChainIcon className="w-4 h-4 text-blue-500" />
           On-chain
         </span>
         <div className="text-lg font-medium text-white">
-          {formatBitcoinAmount(
-            onChainBalance + onChainColoredBalance,
-            bitcoinUnit
-          )}{' '}
-          {bitcoinUnit}
+          {isLoading ? (
+            <LoadingPlaceholder />
+          ) : onChainBalance + onChainColoredBalance === 0 ? (
+            <span className="text-slate-500">No balance</span>
+          ) : (
+            `${formatBitcoinAmount(onChainBalance + onChainColoredBalance, bitcoinUnit)} ${bitcoinUnit}`
+          )}
         </div>
       </div>
     </OverlayTooltip>
@@ -347,25 +369,34 @@ const LiquidityCard = ({
         <div className="text-base font-bold text-white mb-1.5">
           {isLoading ? (
             <LoadingPlaceholder width="w-20" />
+          ) : amount === 0 ? (
+            <span className="text-slate-500">No liquidity</span>
           ) : (
             `${formatBitcoinAmount(amount, bitcoinUnit)} ${bitcoinUnit}`
           )}
         </div>
 
-        {!isLoading && totalCapacity && totalCapacity > 0 && (
+        {!isLoading && (
           <div className="mt-1">
             <div className="flex justify-between items-center mb-0.5">
               <span className="text-xs text-slate-400">
-                {percentage}% of capacity
+                {totalCapacity && totalCapacity > 0
+                  ? `${percentage}% of capacity`
+                  : 'No channels open'}
               </span>
-              {percentage < 20 && (
+              {totalCapacity && totalCapacity > 0 && percentage < 20 && (
                 <span className="text-xs text-red-300">Low</span>
               )}
             </div>
             <div className="w-full bg-slate-800/80 rounded-full h-1 overflow-hidden shadow-inner">
               <div
                 className={`${statusColor} h-full rounded-full transition-all duration-300`}
-                style={{ width: `${percentage}%` }}
+                style={{
+                  width:
+                    totalCapacity && totalCapacity > 0
+                      ? `${percentage}%`
+                      : '0%',
+                }}
               ></div>
             </div>
           </div>
@@ -528,6 +559,38 @@ export const Component = () => {
         </div>
       )}
 
+      {onChainBalance === 0 && offChainBalance === 0 && (
+        <div className="mb-6">
+          <Alert
+            className="mb-6"
+            icon={<AlertCircle className="w-5 h-5" />}
+            title="No Bitcoin Funds"
+            variant="warning"
+          >
+            <p className="text-sm">
+              You don't have any Bitcoin funds in your wallet. Deposit funds to
+              start using the application.
+              <Button
+                className="ml-4 mt-2"
+                icon={<ArrowDownRight className="w-3.5 h-3.5" />}
+                onClick={() =>
+                  dispatch(
+                    uiSliceActions.setModal({
+                      assetId: assetsResponse.data?.nia[0]?.asset_id,
+                      type: 'deposit',
+                    })
+                  )
+                }
+                size="sm"
+                variant="success"
+              >
+                Deposit Now
+              </Button>
+            </p>
+          </Alert>
+        </div>
+      )}
+
       {showIssueAssetModal && (
         <IssueAssetModal
           onClose={() => setShowIssueAssetModal(false)}
@@ -676,6 +739,7 @@ export const Component = () => {
             <div className="bg-[#0B101B]/80 rounded-lg p-2.5 hover:bg-[#0B101B] transition-all duration-200">
               <OnChainDetailsOverlay
                 bitcoinUnit={bitcoinUnit}
+                isLoading={isLoading}
                 onChainBalance={onChainBalance}
                 onChainColoredBalance={onChainColoredBalance}
                 onChainColoredFutureBalance={onChainColoredFutureBalance}

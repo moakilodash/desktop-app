@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 
 import {
-  TRADE_PATH,
+  WALLET_DASHBOARD_PATH,
   WALLET_SETUP_PATH,
   WALLET_UNLOCK_PATH,
 } from '../../app/router/paths'
@@ -42,7 +42,7 @@ export const RootRoute = () => {
           navigate(WALLET_SETUP_PATH)
         }
       } else {
-        navigate(TRADE_PATH)
+        navigate(WALLET_DASHBOARD_PATH)
       }
     }
     run()

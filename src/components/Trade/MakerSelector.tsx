@@ -89,10 +89,7 @@ export const MakerSelector: React.FC<MakerSelectorProps> = ({
 
       // Basic URL validation
       let url = newMakerUrl
-      if (!url.startsWith('http')) {
-        url = `https://${url}`
-      }
-
+      console.log('newMakerUrl', newMakerUrl)
       // Check if URL is valid
       new URL(url)
 

@@ -199,10 +199,7 @@ export const Component = () => {
             message={`Insufficient balance to open a channel. You need at least ${MIN_CHANNEL_CAPACITY} satoshis.`}
           />
           <button
-            className="mt-6 px-8 py-3 bg-cyan text-blue-darkest font-semibold rounded-xl
-            hover:bg-cyan-400 active:bg-cyan-600 transition-all duration-200
-            focus:outline-none focus:ring-2 focus:ring-cyan/50 focus:ring-offset-2 focus:ring-offset-blue-darkest
-            transform hover:scale-[1.02] active:scale-[0.98]"
+            className="px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 transition text-white font-medium shadow-lg shadow-blue-700/20 flex items-center"
             onClick={() => navigate(WALLET_DASHBOARD_PATH)}
           >
             Go to Dashboard

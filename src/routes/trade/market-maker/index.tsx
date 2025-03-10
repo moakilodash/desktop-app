@@ -13,8 +13,6 @@ import { StatusToast } from '../../../components/StatusToast'
 import { SwapConfirmation } from '../../../components/SwapConfirmation'
 import { SwapDetails, SwapRecap } from '../../../components/SwapRecap'
 import {
-  NoChannelsMessage,
-  NoTradingPairsMessage,
   SwapInputField,
   ExchangeRateSection,
   SwapButton,
@@ -42,6 +40,8 @@ import {
 } from '../../../slices/nodeApi/nodeApi.slice'
 import { logger } from '../../../utils/logger'
 import './index.css'
+import { NoTradingChannelsMessage } from '../../../components/Trade/NoChannelsMessage'
+import { MIN_CHANNEL_CAPACITY } from '../../../constants'
 
 interface Fields {
   rfq_id: string
@@ -81,6 +81,7 @@ export const Component = () => {
   const [selectedPair, setSelectedPair] = useState<TradingPair | null>(null)
   const [pubKey, setPubKey] = useState('')
   const [selectedSize, setSelectedSize] = useState(100)
+  const [hasEnoughBalance, setHasEnoughBalance] = useState(true)
 
   const [minFromAmount, setMinFromAmount] = useState(0)
   const [maxFromAmount, setMaxFromAmount] = useState(0)
@@ -126,6 +127,7 @@ export const Component = () => {
   const [initSwap] = makerApi.endpoints.initSwap.useLazyQuery()
   const [execSwap] = makerApi.endpoints.execSwap.useLazyQuery()
   const [getPairs] = makerApi.endpoints.getPairs.useLazyQuery()
+  const [btcBalance] = nodeApi.endpoints.btcBalance.useLazyQuery()
 
   const { data: assetsData } = nodeApi.endpoints.listAssets.useQuery(
     undefined,
@@ -590,22 +592,22 @@ export const Component = () => {
 
     if (fromAmount < minFromAmount) {
       setErrorMessage(
-        `Minimum amount to send: ${formatAmount(minFromAmount, form.getValues().fromAsset)} ${displayAsset(form.getValues().fromAsset)}`
+        `The amount you're trying to send (${formatAmount(fromAmount, form.getValues().fromAsset)} ${displayAsset(form.getValues().fromAsset)}) is too small. Minimum required: ${formatAmount(minFromAmount, form.getValues().fromAsset)} ${displayAsset(form.getValues().fromAsset)}`
       )
     } else if (fromAmount > maxFromAmount) {
       setErrorMessage(
-        `Maximum amount to send: ${formatAmount(maxFromAmount, form.getValues().fromAsset)} ${displayAsset(form.getValues().fromAsset)}`
+        `The amount you're trying to send (${formatAmount(fromAmount, form.getValues().fromAsset)} ${displayAsset(form.getValues().fromAsset)}) exceeds your available balance. Maximum available: ${formatAmount(maxFromAmount, form.getValues().fromAsset)} ${displayAsset(form.getValues().fromAsset)}`
       )
     } else if (toAmount > maxToAmount) {
       setErrorMessage(
-        `Maximum amount to receive: ${formatAmount(maxToAmount, form.getValues().toAsset)} ${displayAsset(form.getValues().toAsset)}`
+        `The amount you're trying to receive (${formatAmount(toAmount, form.getValues().toAsset)} ${displayAsset(form.getValues().toAsset)}) exceeds the maximum allowed. Maximum receivable: ${formatAmount(maxToAmount, form.getValues().toAsset)} ${displayAsset(form.getValues().toAsset)}`
       )
     } else if (
       form.getValues().fromAsset === 'BTC' &&
       fromAmount > max_outbound_htlc_sat
     ) {
       setErrorMessage(
-        `Maximum HTLC size: ${formatAmount(max_outbound_htlc_sat, 'BTC')} ${displayAsset('BTC')}`
+        `The amount you're trying to send (${formatAmount(fromAmount, 'BTC')} ${displayAsset('BTC')}) exceeds the maximum HTLC size. Maximum per transaction: ${formatAmount(max_outbound_htlc_sat, 'BTC')} ${displayAsset('BTC')}`
       )
     } else {
       setErrorMessage(null)
@@ -668,28 +670,52 @@ export const Component = () => {
     const setup = async () => {
       setIsLoading(true)
       try {
-        const [nodeInfoResponse, listChannelsResponse] = await Promise.all([
+        const [
+          nodeInfoResponse,
+          listChannelsResponse,
+          balanceResponse,
+          getPairsResponse,
+        ] = await Promise.all([
           nodeInfo(),
           listChannels(),
+          btcBalance({ skip_sync: false }),
+          getPairs(),
         ])
 
         if ('data' in nodeInfoResponse && nodeInfoResponse.data) {
           setPubKey(nodeInfoResponse.data.pubkey)
         }
 
+        let supportedAssets: string[] = []
+        if ('data' in getPairsResponse && getPairsResponse.data) {
+          const pairs = getPairsResponse.data.pairs
+          supportedAssets = Array.from(
+            new Set(
+              pairs.flatMap((pair) => [pair.base_asset_id, pair.quote_asset_id])
+            )
+          )
+        }
+
         if ('data' in listChannelsResponse && listChannelsResponse.data) {
           const channelsList = listChannelsResponse.data.channels
           setChannels(channelsList)
 
-          // Check if there's at least one channel with an asset that is ready and usable
+          // Check if there's at least one channel with a market maker supported asset
           const hasValidChannels = channelsList.some(
-            (channel) =>
+            (channel: Channel) =>
               channel.asset_id !== null &&
               channel.ready &&
               (channel.outbound_balance_msat > 0 ||
-                channel.inbound_balance_msat > 0)
+                channel.inbound_balance_msat > 0) &&
+              supportedAssets.includes(channel.asset_id)
           )
           setHasValidChannelsForTrading(hasValidChannels)
+        }
+
+        // Check if there's enough balance to open a channel
+        if ('data' in balanceResponse && balanceResponse.data) {
+          const { vanilla } = balanceResponse.data
+          setHasEnoughBalance(vanilla.spendable >= MIN_CHANNEL_CAPACITY)
         }
 
         if (assetsData) {
@@ -710,7 +736,16 @@ export const Component = () => {
     }
 
     setup()
-  }, [nodeInfo, listChannels, assetsData, dispatch, form, formatAmount])
+  }, [
+    nodeInfo,
+    listChannels,
+    btcBalance,
+    getPairs,
+    assetsData,
+    dispatch,
+    form,
+    formatAmount,
+  ])
 
   const getAvailableAssets = useCallback(() => {
     // Get unique assets from channels that are ready and usable
@@ -822,6 +857,36 @@ export const Component = () => {
   }
 
   // Update the executeSwap function's error handling
+  const handleApiError = (error: FetchBaseQueryError): string => {
+    if (!error) return 'Unknown error occurred'
+
+    if (typeof error === 'string') return error
+
+    const errorData = error.data
+    if (!errorData) return 'No error details available'
+
+    // Handle string error responses
+    if (typeof errorData === 'string') return errorData
+
+    // Handle object error responses
+    if (typeof errorData === 'object') {
+      // First check for detail field which is common in API errors
+      if ('detail' in errorData && typeof errorData.detail === 'string') {
+        // Extract just the error message without the status code if possible
+        const match = errorData.detail.match(/\d{3}:\s*(.+)/)
+        return match ? match[1].trim() : errorData.detail
+      }
+      // Fallback to error field
+      if ('error' in errorData && typeof errorData.error === 'string') {
+        return errorData.error
+      }
+      // If no recognized error format, stringify the object
+      return JSON.stringify(errorData)
+    }
+
+    return String(errorData)
+  }
+
   const executeSwap = async (data: Fields) => {
     let toastId: string | number | null = null
     let timeoutId: any | null = null
@@ -834,28 +899,6 @@ export const Component = () => {
         clearTimeout(timeoutId)
       }
       setIsSwapInProgress(false)
-    }
-
-    const handleApiError = (error: FetchBaseQueryError): string => {
-      if (!error) return 'Unknown error occurred'
-
-      if (typeof error === 'string') return error
-
-      const errorData = error.data
-      if (!errorData) return 'No error details available'
-
-      if (typeof errorData === 'string') return errorData
-
-      if (typeof errorData === 'object') {
-        // Return the full error detail including status codes
-        if ('detail' in errorData && typeof errorData.detail === 'string')
-          return errorData.detail
-        if ('error' in errorData && typeof errorData.error === 'string')
-          return errorData.error
-        return JSON.stringify(errorData)
-      }
-
-      return String(errorData)
     }
 
     try {
@@ -919,9 +962,11 @@ export const Component = () => {
 
       const initSwapResponse = await initSwap(payload)
       if ('error' in initSwapResponse) {
-        throw new Error(
-          handleApiError(initSwapResponse.error as FetchBaseQueryError)
+        const errorMessage = handleApiError(
+          initSwapResponse.error as FetchBaseQueryError
         )
+        setErrorMessage(errorMessage)
+        throw new Error(errorMessage)
       }
 
       if (!initSwapResponse.data) {
@@ -1030,72 +1075,33 @@ export const Component = () => {
     } catch (error) {
       logger.error('Error executing swap', error)
 
-      // Extract full error message
+      // Extract error message
       const errorMessage =
         error instanceof Error ? error.message : 'An unknown error occurred'
-
-      // Only show error details if they add meaningful information
-      const rawErrorDetails =
-        typeof error === 'object' && error !== null
-          ? JSON.stringify(
-              error,
-              (value) => {
-                // Skip empty objects and null values
-                if (value === null) return undefined
-                if (
-                  typeof value === 'object' &&
-                  Object.keys(value).length === 0
-                )
-                  return undefined
-                return value
-              },
-              2
-            )
-          : String(error)
-
-      // Only keep error details if they're different from the message and not empty
-      const errorDetails =
-        rawErrorDetails &&
-        rawErrorDetails !== '{}' &&
-        rawErrorDetails !== errorMessage
-          ? rawErrorDetails
-          : null
+      setErrorMessage(errorMessage)
 
       // Clear any existing toasts first
       toast.dismiss()
-      setErrorMessage(errorMessage)
 
       toast.error(
-        <div
-          className="flex flex-col gap-2"
-          onClick={(e) => e.stopPropagation()}
-        >
+        <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="font-medium text-red-500">Swap Failed</span>
-            {errorDetails && (
-              <div className="flex items-center gap-2">
-                <button
-                  className="p-1 hover:bg-slate-700/50 rounded transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    copyToClipboard(errorDetails)
-                  }}
-                  title="Copy error details"
-                >
-                  <Copy className="w-4 h-4" />
-                </button>
-              </div>
-            )}
+            <span className="font-medium">Swap Failed</span>
+            <button
+              className="p-1 hover:bg-slate-700/50 rounded transition-colors"
+              onClick={(e) => {
+                e.stopPropagation()
+                copyToClipboard(errorMessage)
+              }}
+              title="Copy error details"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
           </div>
-          <p className="text-sm text-slate-300">{errorMessage}</p>
-          {errorDetails && (
-            <pre className="text-xs text-slate-400 overflow-x-auto p-2 bg-slate-900/50 rounded mt-2 font-mono">
-              {errorDetails}
-            </pre>
-          )}
+          <p className="text-sm">{errorMessage}</p>
         </div>,
         {
-          autoClose: false,
+          autoClose: 5000,
           closeButton: true,
           closeOnClick: false,
           draggable: false,
@@ -1107,7 +1113,6 @@ export const Component = () => {
       )
 
       setIsSwapInProgress(false)
-
       if (timeoutId !== null) {
         clearTimeout(timeoutId)
         timeoutId = null
@@ -1215,10 +1220,6 @@ export const Component = () => {
     [tradablePairs, getAvailableAssets, displayAsset]
   )
 
-  const renderNoChannelsMessage = () => (
-    <NoChannelsMessage onMakerChange={refreshData} onNavigate={navigate} />
-  )
-
   const renderSwapForm = () => (
     <div className="swap-form-container w-full max-w-2xl">
       <div className="bg-gradient-to-b from-slate-900/80 to-slate-800/80 backdrop-blur-sm rounded-2xl border border-slate-700/50 p-4 shadow-lg w-full">
@@ -1301,15 +1302,20 @@ export const Component = () => {
 
           {errorMessage && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mt-4">
-              <div className="flex items-center justify-between">
-                <span className="text-red-500 text-sm">{errorMessage}</span>
-                <button
-                  className="p-1 hover:bg-red-500/10 rounded transition-colors"
-                  onClick={() => copyToClipboard(errorMessage)}
-                  title="Copy error message"
-                >
-                  <Copy className="w-4 h-4 text-red-500" />
-                </button>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-red-500 font-medium">Trade Error</span>
+                  <button
+                    className="p-1 hover:bg-red-500/10 rounded transition-colors"
+                    onClick={() => copyToClipboard(errorMessage)}
+                    title="Copy error message"
+                  >
+                    <Copy className="w-4 h-4 text-red-500" />
+                  </button>
+                </div>
+                <span className="text-red-400/90 text-sm leading-relaxed">
+                  {errorMessage}
+                </span>
               </div>
             </div>
           )}
@@ -1344,15 +1350,17 @@ export const Component = () => {
           <Loader />
         </div>
       ) : !hasValidChannelsForTrading ? (
-        renderNoChannelsMessage()
+        <NoTradingChannelsMessage
+          hasEnoughBalance={hasEnoughBalance}
+          onMakerChange={refreshData}
+          onNavigate={navigate}
+        />
       ) : !wsConnected || tradablePairs.length === 0 ? (
-        <div className="max-w-xl w-full mx-auto bg-slate-900/60 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-4 shadow-lg">
-          <NoTradingPairsMessage
-            isLoading={isLoading}
-            onRefresh={refreshData}
-            wsConnected={wsConnected}
-          />
-        </div>
+        <NoTradingChannelsMessage
+          hasEnoughBalance={hasEnoughBalance}
+          onMakerChange={refreshData}
+          onNavigate={navigate}
+        />
       ) : (
         <div className="w-full flex justify-center">{renderSwapForm()}</div>
       )}

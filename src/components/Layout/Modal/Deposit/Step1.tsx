@@ -1,7 +1,9 @@
-import { Search, ChevronDown, Plus, Bitcoin } from 'lucide-react'
+import { Search, ChevronDown, Plus } from 'lucide-react'
 import { useCallback, useState } from 'react'
 
 import { useAppSelector } from '../../../../app/store/hooks'
+import btcLogo from '../../../../assets/bitcoin-logo.svg'
+import rgbLogo from '../../../../assets/rgb-symbol-color.svg'
 import { BTC_ASSET_ID } from '../../../../constants'
 import { nodeApi } from '../../../../slices/nodeApi/nodeApi.slice'
 import { DepositModal, uiSliceSeletors } from '../../../../slices/ui/ui.slice'
@@ -66,7 +68,11 @@ export const Step1 = ({ onNext }: Props) => {
   return (
     <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
       <div className="flex flex-col items-center mb-8">
-        <Bitcoin className="w-12 h-12 text-blue-500 mb-4" />
+        {selectedAsset?.asset_id === BTC_ASSET_ID ? (
+          <img alt="Bitcoin" className="w-12 h-12 mb-4" src={btcLogo} />
+        ) : (
+          <img alt="RGB Asset" className="w-12 h-12 mb-4" src={rgbLogo} />
+        )}
         <h3 className="text-3xl font-bold text-white mb-2">Select Asset</h3>
         <p className="text-slate-400 text-center max-w-md">
           Choose the asset you want to deposit into your wallet
@@ -86,9 +92,11 @@ export const Step1 = ({ onNext }: Props) => {
               {selectedAsset && !isNewAsset ? (
                 <>
                   <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                    <span className="text-blue-500 font-bold">
-                      {selectedAsset.ticker[0]}
-                    </span>
+                    {selectedAsset.asset_id === BTC_ASSET_ID ? (
+                      <img alt="Bitcoin" className="w-6 h-6" src={btcLogo} />
+                    ) : (
+                      <img alt="RGB Asset" className="w-6 h-6" src={rgbLogo} />
+                    )}
                   </div>
                   <div>
                     <div className="font-medium text-white">
@@ -141,9 +149,15 @@ export const Step1 = ({ onNext }: Props) => {
                     onClick={() => handleAssetSelect(asset)}
                   >
                     <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-                      <span className="text-blue-500 font-bold">
-                        {asset.ticker[0]}
-                      </span>
+                      {asset.asset_id === BTC_ASSET_ID ? (
+                        <img alt="Bitcoin" className="w-5 h-5" src={btcLogo} />
+                      ) : (
+                        <img
+                          alt="RGB Asset"
+                          className="w-5 h-5"
+                          src={rgbLogo}
+                        />
+                      )}
                     </div>
                     <div className="text-left">
                       <div className="font-medium text-white">

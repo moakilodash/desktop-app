@@ -1,48 +1,14 @@
-import { CheckCircle, AlertCircle, Clock, ArrowRight } from 'lucide-react'
-import React, { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { ArrowRight } from 'lucide-react'
+import React, { useEffect, useRef } from 'react'
 
 import { useAppSelector } from '../../app/store/hooks'
+import { useAssetIcon } from '../../helpers/utils'
 import {
   NiaAsset,
   nodeApi,
   SwapDetails,
 } from '../../slices/nodeApi/nodeApi.slice'
-
-const getStatusConfig = (status: string) => {
-  switch (status.toLowerCase()) {
-    case 'succeeded':
-      return {
-        badgeClass: 'bg-green-500/20 text-green-600 dark:text-green-400',
-        containerClass: 'bg-green-500/10 dark:bg-green-900/20',
-        icon: CheckCircle,
-        iconClass: 'text-green-500',
-      }
-    case 'failed':
-    case 'expired':
-      return {
-        badgeClass: 'bg-red-500/20 text-red-600 dark:text-red-400',
-        containerClass: 'bg-red-500/10 dark:bg-red-900/20',
-        icon: AlertCircle,
-        iconClass: 'text-red-500',
-      }
-    case 'waiting':
-    case 'pending':
-      return {
-        badgeClass: 'bg-blue-500/20 text-blue-600 dark:text-blue-400',
-        containerClass: 'bg-blue-500/10 dark:bg-blue-900/20',
-        icon: Clock,
-        iconClass: 'text-blue-500',
-      }
-    default:
-      return {
-        badgeClass: 'bg-gray-500/20 text-gray-600 dark:text-gray-400',
-        containerClass: 'bg-gray-500/10 dark:bg-gray-900/20',
-        icon: Clock,
-        iconClass: 'text-gray-500',
-      }
-  }
-}
+import { useNotification } from '../NotificationSystem'
 
 const formatAmount = (amount: number) => {
   return new Intl.NumberFormat('en-US', {
@@ -51,10 +17,34 @@ const formatAmount = (amount: number) => {
   }).format(amount)
 }
 
-const StatusToastElement: React.FC<{
+const AssetDisplay: React.FC<{
+  amount: number
+  asset: string
+  align?: 'left' | 'right'
+}> = ({ amount, asset, align = 'left' }) => {
+  const [imgSrc] = useAssetIcon(asset)
+
+  return (
+    <div
+      className={`flex items-center gap-2 ${align === 'right' ? 'justify-end' : ''}`}
+    >
+      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
+        <img alt={`${asset} icon`} className="w-4 h-4" src={imgSrc} />
+      </div>
+      <div>
+        <div className="font-medium text-gray-700 dark:text-gray-200">
+          {formatAmount(amount)} {asset}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const SwapStatusContent: React.FC<{
   swap: SwapDetails
   assets: NiaAsset[]
-}> = ({ swap, assets }) => {
+  timestamp?: Date
+}> = ({ swap, assets, timestamp }) => {
   const bitcoinUnit = useAppSelector((state) => state.settings.bitcoinUnit)
 
   const fromAssetTicker =
@@ -87,199 +77,151 @@ const StatusToastElement: React.FC<{
     toAssetQty *= 100000
   }
 
-  const {
-    icon: StatusIcon,
-    containerClass,
-    iconClass,
-    badgeClass,
-  } = getStatusConfig(swap.status)
-  const isPending = ['waiting', 'pending'].includes(swap.status.toLowerCase())
-
   return (
-    <div
-      className={`min-w-[320px] max-w-[400px] rounded-xl shadow-lg ${containerClass} backdrop-blur-md`}
-    >
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <StatusIcon className={`${iconClass} w-5 h-5`} />
-            <span className="font-semibold text-gray-700 dark:text-gray-200">
-              Swap Status
-            </span>
-          </div>
-          <span
-            className={`px-2.5 py-1 rounded-full text-xs font-medium uppercase ${badgeClass}`}
-          >
-            {swap.status}
-          </span>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex-1">
+          <span className="text-sm text-gray-500 dark:text-gray-400">From</span>
+          <AssetDisplay amount={fromAssetQty} asset={fromAssetTicker} />
         </div>
 
-        {isPending && (
-          <div className="h-1.5 bg-blue-500/20 dark:bg-blue-400/20 rounded-full overflow-hidden mb-3">
-            <div
-              className="h-full bg-blue-500 dark:bg-blue-400 rounded-full animate-[progress_2s_linear_infinite]"
-              style={{
-                animation: 'progress 2s linear infinite',
-                background:
-                  'linear-gradient(90deg, rgba(59, 130, 246, 0.5) 0%, rgba(59, 130, 246, 1) 50%, rgba(59, 130, 246, 0.5) 100%)',
-                transform: 'translateX(-100%)',
-              }}
-            />
-          </div>
-        )}
+        <ArrowRight className="text-gray-400 w-4 h-4 flex-shrink-0" />
 
-        <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex-1">
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                From
-              </span>
-              <div className="font-medium text-gray-700 dark:text-gray-200">
-                {formatAmount(fromAssetQty)} {fromAssetTicker}
-              </div>
-            </div>
-
-            <ArrowRight className="text-gray-400 w-4 h-4 flex-shrink-0" />
-
-            <div className="flex-1 text-right">
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                To
-              </span>
-              <div className="font-medium text-gray-700 dark:text-gray-200">
-                {formatAmount(toAssetQty)} {toAssetTicker}
-              </div>
-            </div>
-          </div>
-
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            {new Date().toLocaleString(undefined, {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-            })}
-          </div>
+        <div className="flex-1">
+          <span className="text-sm text-gray-500 dark:text-gray-400">To</span>
+          <AssetDisplay
+            align="right"
+            amount={toAssetQty}
+            asset={toAssetTicker}
+          />
         </div>
+      </div>
+
+      <div className="text-xs text-gray-500 dark:text-gray-400">
+        {(timestamp || new Date()).toLocaleString(undefined, {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        })}
       </div>
     </div>
   )
 }
 
-interface Toast {
+interface SwapNotificationState {
   id: string
-  content: React.ReactNode
-  type: 'success' | 'error' | 'loading'
-  autoClose?: number
-}
-
-const StatusToastContainer: React.FC<{
-  toasts: Toast[]
-  onRemove: (id: string) => void
-}> = ({ toasts, onRemove }) => {
-  useEffect(() => {
-    toasts.forEach((toast) => {
-      if (toast.autoClose) {
-        const timer = setTimeout(() => {
-          onRemove(toast.id)
-        }, toast.autoClose)
-        return () => clearTimeout(timer)
-      }
-    })
-  }, [toasts, onRemove])
-
-  return createPortal(
-    <div className="fixed bottom-4 left-4 z-50 space-y-4">
-      {toasts.map((toast) => (
-        <div
-          className="transition-all duration-300 ease-in-out"
-          key={toast.id}
-          onClick={() => onRemove(toast.id)}
-        >
-          {toast.content}
-        </div>
-      ))}
-    </div>,
-    document.body
-  )
+  status: string
+  timestamp: Date
+  dismissed: boolean
 }
 
 export const StatusToast: React.FC<{
   assets: NiaAsset[]
 }> = ({ assets }) => {
-  const [toasts, setToasts] = useState<Toast[]>([])
-  const paymentHashToStatus = useRef<Record<string, string>>({})
+  const { addNotification, removeNotification } = useNotification()
+  const swapStates = useRef<Record<string, SwapNotificationState>>({})
 
   const { data } = nodeApi.useListSwapsQuery(undefined, {
     pollingInterval: 6000,
   })
 
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id))
-    delete paymentHashToStatus.current[id]
-  }
-
   useEffect(() => {
     if (!data?.taker) return
 
-    // Remove toasts for swaps that no longer exist
-    setToasts((prev) =>
-      prev.filter((toast) =>
-        data.taker.some((swap) => swap.payment_hash === toast.id)
-      )
-    )
-
+    // Process new and existing swaps
     data.taker.forEach((swap) => {
-      const existingStatus = paymentHashToStatus.current[swap.payment_hash]
+      const currentState = swapStates.current[swap.payment_hash]
 
-      if (existingStatus && existingStatus !== swap.status) {
-        // Update existing toast
-        if (swap.status === 'Failed' || swap.status === 'Expired') {
-          setToasts((prev) =>
-            updateToast(prev, swap.payment_hash, {
-              autoClose: 5000,
-              content: <StatusToastElement assets={assets} swap={swap} />,
-              type: 'error',
-            })
-          )
-          setTimeout(() => removeToast(swap.payment_hash), 5000)
-        } else if (swap.status === 'Succeeded') {
-          setToasts((prev) =>
-            updateToast(prev, swap.payment_hash, {
-              autoClose: 5000,
-              content: <StatusToastElement assets={assets} swap={swap} />,
-              type: 'success',
-            })
-          )
-          setTimeout(() => removeToast(swap.payment_hash), 5000)
-        } else {
-          setToasts((prev) =>
-            updateToast(prev, swap.payment_hash, {
-              content: <StatusToastElement assets={assets} swap={swap} />,
-              type: 'loading',
-            })
-          )
-        }
-      } else if (!existingStatus && swap.status === 'Pending') {
-        // Create new toast
-        setToasts((prev) => [
-          ...prev,
-          {
-            content: <StatusToastElement assets={assets} swap={swap} />,
-            id: swap.payment_hash,
-            type: 'loading',
-          },
-        ])
+      // Skip if the swap was dismissed and has a final status
+      if (
+        currentState?.dismissed &&
+        ['Succeeded', 'Failed', 'Expired'].includes(currentState.status)
+      ) {
+        return
       }
 
-      paymentHashToStatus.current[swap.payment_hash] = swap.status
-    })
-  }, [data, assets])
+      // Create or update notification
+      const timestamp = currentState?.timestamp || new Date()
+      const notificationConfig = {
+        message: (
+          <SwapStatusContent
+            assets={assets}
+            swap={swap}
+            timestamp={timestamp}
+          />
+        ),
+        onClose: () => {
+          if (swapStates.current[swap.payment_hash]) {
+            swapStates.current[swap.payment_hash].dismissed = true
+          }
+        },
+        showProgress: swap.status === 'Pending',
+        timestamp,
+        title: `Swap ${swap.status}`,
+      }
 
-  return <StatusToastContainer onRemove={removeToast} toasts={toasts} />
+      // Handle status changes
+      if (currentState) {
+        if (currentState.status !== swap.status) {
+          removeNotification(currentState.id)
+          const newId = addNotification({
+            ...notificationConfig,
+            autoClose: ['Succeeded', 'Failed', 'Expired'].includes(swap.status)
+              ? 5000
+              : undefined,
+            type: getNotificationType(swap.status),
+          })
+          swapStates.current[swap.payment_hash] = {
+            dismissed: false,
+            id: newId,
+            status: swap.status,
+            timestamp,
+          }
+        }
+      } else if (swap.status === 'Pending') {
+        // New pending swap
+        const id = addNotification({
+          ...notificationConfig,
+          type: 'loading',
+        })
+        swapStates.current[swap.payment_hash] = {
+          dismissed: false,
+          id,
+          status: swap.status,
+          timestamp,
+        }
+      }
+    })
+
+    // Clean up completed swaps that are no longer in the data
+    Object.entries(swapStates.current).forEach(([hash, state]) => {
+      const swapExists = data.taker.some((swap) => swap.payment_hash === hash)
+      const isFinalStatus = ['Succeeded', 'Failed', 'Expired'].includes(
+        state.status
+      )
+
+      // Remove the notification if:
+      // 1. The swap no longer exists in the data AND
+      // 2. Either it's not in a final status OR it's been dismissed
+      if (!swapExists && (!isFinalStatus || state.dismissed)) {
+        removeNotification(state.id)
+        delete swapStates.current[hash]
+      }
+    })
+  }, [data, assets, addNotification, removeNotification])
+
+  return null
 }
 
-const updateToast = (toasts: Toast[], id: string, updates: Partial<Toast>) => {
-  return toasts.map((toast) =>
-    toast.id === id ? { ...toast, ...updates } : toast
-  )
+function getNotificationType(status: string) {
+  switch (status) {
+    case 'Succeeded':
+      return 'success'
+    case 'Failed':
+    case 'Expired':
+      return 'error'
+    case 'Pending':
+      return 'loading'
+    default:
+      return 'info'
+  }
 }

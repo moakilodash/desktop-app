@@ -25,7 +25,7 @@ export const MnemonicDisplay = ({
         className="mb-6"
         icon={<AlertCircle className="w-5 h-5" />}
         title="Important"
-        variant="error"
+        variant="warning"
       >
         <p className="text-sm">
           Never share your recovery phrase with anyone. Store it securely

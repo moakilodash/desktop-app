@@ -40,9 +40,24 @@ interface AssetInfo {
   max_channel_amount: number
 }
 
+interface LspOptions {
+  min_required_channel_confirmations: number
+  min_funding_confirms_within_blocks: number
+  min_onchain_payment_confirmations: number
+  supports_zero_channel_reserve: boolean
+  min_onchain_payment_size_sat: number
+  max_channel_expiry_blocks: number
+  min_initial_client_balance_sat: number
+  max_initial_client_balance_sat: number
+  min_initial_lsp_balance_sat: number
+  max_initial_lsp_balance_sat: number
+  min_channel_balance_sat: number
+  max_channel_balance_sat: number
+}
+
 const FormFieldsSchema = z.object({
-  assetAmount: z.string(),
-  assetId: z.string(),
+  assetAmount: z.string().optional().default(''),
+  assetId: z.string().optional().default(''),
   capacitySat: z.string(),
   channelExpireBlocks: z.number(),
   clientBalanceSat: z.string(),
@@ -67,6 +82,7 @@ interface NumberInputProps {
 }
 
 const formatSliderValue = (value: number, precision: number = 0): string => {
+  if (isNaN(value) || value === 0) return ''
   const formattedValue = new Intl.NumberFormat('en-US', {
     maximumFractionDigits: precision,
     minimumFractionDigits: precision,
@@ -90,13 +106,13 @@ const NumberInput: React.FC<NumberInputProps> = ({
   sliderValue,
 }) => {
   const [displayValue, setDisplayValue] = useState(
-    formatNumberWithCommas(value)
+    value ? formatNumberWithCommas(value) : ''
   )
   const [isFocused, setIsFocused] = useState(false)
 
   useEffect(() => {
     if (!isFocused) {
-      setDisplayValue(formatNumberWithCommas(value))
+      setDisplayValue(value ? formatNumberWithCommas(value) : '')
     }
   }, [value, isFocused])
 
@@ -119,16 +135,38 @@ const NumberInput: React.FC<NumberInputProps> = ({
       formattedValue = `${whole}.${decimal.slice(0, precision)}`
     }
 
-    // Handle min/max
-    if (min !== undefined && parsedValue < min) {
-      formattedValue = min.toString()
-    }
     if (max !== undefined && parsedValue > max) {
       formattedValue = max.toString()
     }
 
     setDisplayValue(formattedValue)
     onChange(formattedValue)
+  }
+
+  // Add a new function to handle blur event
+  const handleBlur = () => {
+    setIsFocused(false)
+
+    if (!value) {
+      setDisplayValue('')
+      return
+    }
+
+    const parsedValue = parseFloat(value)
+    if (isNaN(parsedValue)) {
+      setDisplayValue(formatNumberWithCommas(value))
+      return
+    }
+
+    // Don't apply min constraints on blur - let the form submission handle it
+    // Only apply max constraints to prevent errors
+    let finalValue = value
+    if (max !== undefined && parsedValue > max) {
+      finalValue = max.toString()
+      onChange(finalValue)
+    }
+
+    setDisplayValue(formatNumberWithCommas(finalValue))
   }
 
   return (
@@ -138,7 +176,7 @@ const NumberInput: React.FC<NumberInputProps> = ({
           {label}
         </label>
         <span className="text-sm text-gray-400">
-          {formatSliderValue(parseFloat(value || '0'), precision)}
+          {value ? formatSliderValue(parseFloat(value || '0'), precision) : ''}
         </span>
       </div>
       <div className="relative">
@@ -146,12 +184,7 @@ const NumberInput: React.FC<NumberInputProps> = ({
           className={`w-full px-4 py-3 bg-gray-700/50 border ${
             error ? 'border-red-500' : 'border-gray-600'
           } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200 text-white`}
-          onBlur={() => {
-            setIsFocused(false)
-            if (value) {
-              setDisplayValue(formatNumberWithCommas(value))
-            }
-          }}
+          onBlur={handleBlur}
           onChange={handleChange}
           onFocus={() => {
             setIsFocused(true)
@@ -185,15 +218,20 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
   const [assetMap, setAssetMap] = useState<Record<string, AssetInfo>>({})
   const [addAsset, setAddAsset] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [lspOptions, setLspOptions] = useState<LspOptions | null>(null)
+  const [effectiveMinCapacity, setEffectiveMinCapacity] =
+    useState<number>(MIN_CHANNEL_CAPACITY)
+  const [effectiveMaxCapacity, setEffectiveMaxCapacity] =
+    useState<number>(MAX_CHANNEL_CAPACITY)
 
   const { handleSubmit, setValue, control, watch, formState } =
     useForm<FormFields>({
       defaultValues: {
-        assetAmount: '0',
+        assetAmount: '',
         assetId: '',
-        capacitySat: MIN_CHANNEL_CAPACITY.toString(),
+        capacitySat: '',
         channelExpireBlocks: 1008,
-        clientBalanceSat: '0',
+        clientBalanceSat: '',
       },
       resolver: zodResolver(FormFieldsSchema),
     })
@@ -208,14 +246,38 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
       try {
         const infoResponse = await getInfoRequest()
 
-        if (infoResponse.data?.assets) {
-          const tmpMap: Record<string, AssetInfo> = {}
-          if (Array.isArray(infoResponse.data.assets)) {
-            infoResponse.data.assets.forEach((asset: AssetInfo) => {
-              tmpMap[asset.asset_id] = asset
-            })
+        if (infoResponse.data) {
+          if (infoResponse.data.options) {
+            setLspOptions(infoResponse.data.options)
+
+            const lspMinCapacity =
+              infoResponse.data.options.min_channel_balance_sat || 0
+            const lspMaxCapacity =
+              infoResponse.data.options.max_channel_balance_sat ||
+              Number.MAX_SAFE_INTEGER
+
+            const newMinCapacity = Math.max(
+              MIN_CHANNEL_CAPACITY,
+              lspMinCapacity
+            )
+            setEffectiveMinCapacity(newMinCapacity)
+
+            const newMaxCapacity = Math.min(
+              MAX_CHANNEL_CAPACITY,
+              lspMaxCapacity
+            )
+            setEffectiveMaxCapacity(newMaxCapacity)
           }
-          setAssetMap(tmpMap)
+
+          if (infoResponse.data.assets) {
+            const tmpMap: Record<string, AssetInfo> = {}
+            if (Array.isArray(infoResponse.data.assets)) {
+              infoResponse.data.assets.forEach((asset: AssetInfo) => {
+                tmpMap[asset.asset_id] = asset
+              })
+            }
+            setAssetMap(tmpMap)
+          }
         }
       } catch (error) {
         toast.error('Error fetching data. Please try again later.', {
@@ -228,7 +290,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
     }
 
     fetchData()
-  }, [getInfoRequest])
+  }, [getInfoRequest, setValue])
 
   const getAssetPrecision = useCallback(
     (assetId: string) => {
@@ -253,6 +315,23 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
 
   const onSubmit = useCallback(
     (data: FormFields) => {
+      // Check if required fields are filled, but don't block on minimum values
+      if (!data.capacitySat) {
+        toast.error('Please enter a channel capacity.', {
+          autoClose: 5000,
+          position: 'bottom-right',
+        })
+        return
+      }
+
+      if (!data.clientBalanceSat) {
+        toast.error('Please enter your channel liquidity.', {
+          autoClose: 5000,
+          position: 'bottom-right',
+        })
+        return
+      }
+
       if (addAsset && !data.assetId) {
         toast.error('Please select an asset before proceeding.', {
           autoClose: 5000,
@@ -261,21 +340,82 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
         return
       }
 
-      const parsedCapacitySat = parseInt(
-        data.capacitySat.replace(/[^0-9]/g, ''),
-        10
-      )
+      // Apply min/max constraints before submission
+      let capacitySat = data.capacitySat
+      let clientBalanceSat = data.clientBalanceSat
+
+      const parsedCapacitySat = parseInt(capacitySat.replace(/[^0-9]/g, ''), 10)
+
+      // Always adjust to minimum instead of blocking submission
+      if (
+        isNaN(parsedCapacitySat) ||
+        parsedCapacitySat < effectiveMinCapacity
+      ) {
+        capacitySat = effectiveMinCapacity.toString()
+        setValue('capacitySat', capacitySat)
+        toast.info(
+          `Channel capacity adjusted to minimum: ${formatNumberWithCommas(capacitySat)} sats`,
+          {
+            autoClose: 3000,
+            position: 'bottom-right',
+          }
+        )
+      }
+
       const parsedClientBalanceSat = parseInt(
-        data.clientBalanceSat.replace(/[^0-9]/g, ''),
+        clientBalanceSat.replace(/[^0-9]/g, ''),
         10
       )
-      const parsedAssetAmount = addAsset
-        ? parseAssetAmount(data.assetAmount, data.assetId)
-        : 0
+
+      const minClientBalance = lspOptions?.min_initial_client_balance_sat || 0
+      if (
+        isNaN(parsedClientBalanceSat) ||
+        parsedClientBalanceSat < minClientBalance
+      ) {
+        clientBalanceSat = minClientBalance.toString()
+        setValue('clientBalanceSat', clientBalanceSat)
+        toast.info(
+          `Channel liquidity adjusted to minimum: ${formatNumberWithCommas(clientBalanceSat)} sats`,
+          {
+            autoClose: 3000,
+            position: 'bottom-right',
+          }
+        )
+      }
+
+      let assetAmount = data.assetAmount || ''
+      if (addAsset && data.assetId) {
+        const assetInfo = assetMap[data.assetId]
+        if (assetInfo) {
+          const minAssetAmount =
+            assetInfo.min_channel_amount / Math.pow(10, assetInfo.precision)
+          const parsedAmount = parseFloat(assetAmount || '0')
+
+          if (
+            (parsedAmount !== 0 && isNaN(parsedAmount)) ||
+            (parsedAmount > 0 && parsedAmount < minAssetAmount)
+          ) {
+            assetAmount = minAssetAmount.toString()
+            setValue('assetAmount', assetAmount)
+            toast.info(
+              `Asset amount adjusted to minimum: ${formatNumberWithCommas(assetAmount)} ${assetInfo.ticker}`,
+              {
+                autoClose: 3000,
+                position: 'bottom-right',
+              }
+            )
+          }
+        }
+      }
+
+      const parsedAssetAmount =
+        addAsset && data.assetId
+          ? parseAssetAmount(assetAmount, data.assetId)
+          : 0
 
       const submissionData: TChannelRequestForm = {
         assetAmount: parsedAssetAmount,
-        assetId: data.assetId,
+        assetId: data.assetId || '',
         capacitySat: parsedCapacitySat,
         channelExpireBlocks: data.channelExpireBlocks,
         clientBalanceSat: parsedClientBalanceSat,
@@ -290,6 +430,63 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
         onNext(submissionData)
       } catch (error) {
         if (error instanceof z.ZodError) {
+          console.error('Validation error:', error.errors)
+
+          // Instead of showing an error, adjust the values and try again
+          const adjustedData = { ...submissionData }
+          let madeAdjustments = false
+
+          error.errors.forEach((err) => {
+            const path = err.path.join('.')
+            if (path === 'capacitySat' && err.message.includes('minimum')) {
+              adjustedData.capacitySat = effectiveMinCapacity
+              setValue('capacitySat', effectiveMinCapacity.toString())
+              madeAdjustments = true
+            } else if (
+              path === 'capacitySat' &&
+              err.message.includes('maximum')
+            ) {
+              adjustedData.capacitySat = MAX_CHANNEL_CAPACITY
+              setValue('capacitySat', MAX_CHANNEL_CAPACITY.toString())
+              madeAdjustments = true
+            } else if (
+              path === 'clientBalanceSat' &&
+              err.message.includes('minimum')
+            ) {
+              const minValue = lspOptions?.min_initial_client_balance_sat || 0
+              adjustedData.clientBalanceSat = minValue
+              setValue('clientBalanceSat', minValue.toString())
+              madeAdjustments = true
+            } else if (
+              path === 'assetAmount' &&
+              addAsset &&
+              data.assetId &&
+              assetMap[data.assetId]
+            ) {
+              const assetInfo = assetMap[data.assetId]
+              const minAssetAmount =
+                assetInfo.min_channel_amount / Math.pow(10, assetInfo.precision)
+              adjustedData.assetAmount =
+                minAssetAmount * Math.pow(10, assetInfo.precision)
+              setValue('assetAmount', minAssetAmount.toString())
+              madeAdjustments = true
+            }
+          })
+
+          if (madeAdjustments) {
+            toast.info('Some values were adjusted to meet requirements.', {
+              autoClose: 3000,
+              position: 'bottom-right',
+            })
+
+            // Update Redux and proceed with adjusted data
+            dispatch(
+              orderChannelSliceActions.setChannelRequestForm(adjustedData)
+            )
+            onNext(adjustedData)
+            return
+          }
+
           toast.error(
             'There was an error with the form data. Please check your inputs.'
           )
@@ -298,7 +495,16 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
         }
       }
     },
-    [addAsset, onNext, parseAssetAmount, dispatch]
+    [
+      addAsset,
+      onNext,
+      parseAssetAmount,
+      dispatch,
+      setValue,
+      effectiveMinCapacity,
+      lspOptions,
+      assetMap,
+    ]
   )
 
   const getAssetMaxAmount = useCallback(() => {
@@ -306,6 +512,29 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
     const { max_channel_amount, precision } = assetMap[assetId]
     return max_channel_amount / Math.pow(10, precision)
   }, [assetId, assetMap])
+
+  const getAssetMinAmount = useCallback(() => {
+    if (!assetId || !assetMap[assetId]) return 0
+    const { min_channel_amount, precision } = assetMap[assetId]
+    return min_channel_amount / Math.pow(10, precision)
+  }, [assetId, assetMap])
+
+  const getChannelExpiryOptions = useCallback(() => {
+    const options = [
+      { label: '1 week', value: (6 * 24 * 7).toString() },
+      { label: '1 month', value: (6 * 24 * 30).toString() },
+    ]
+
+    const sixMonthsBlocks = 6 * 24 * 30 * 6
+    if (
+      !lspOptions ||
+      sixMonthsBlocks <= lspOptions.max_channel_expiry_blocks
+    ) {
+      options.push({ label: '6 months', value: sixMonthsBlocks.toString() })
+    }
+
+    return options
+  }, [lspOptions])
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 p-6">
@@ -315,6 +544,10 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
             Configure Your Channel
           </h2>
           <p className="text-gray-400 mt-2">Set up your channel parameters</p>
+          <p className="text-gray-400 mt-1">
+            Fees will be calculated in the next step based on all parameters
+            including channel capacity, duration, and assets
+          </p>
         </div>
 
         <div className="flex justify-between mb-8">
@@ -371,12 +604,30 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
           ) : (
             <div className="space-y-8">
               <div className="bg-gray-800 p-6 rounded-lg">
+                <label className="block text-sm font-medium mb-2">
+                  Channel Capacity (sats)
+                  <span className="ml-2 text-gray-400 hover:text-gray-300 cursor-help relative group">
+                    ⓘ
+                    <span
+                      className="invisible group-hover:visible absolute left-0 
+                      bg-gray-900 text-white text-sm rounded py-1 px-2 w-80
+                      shadow-lg z-50 top-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    >
+                      The total size of your Lightning channel in satoshis. Min:{' '}
+                      {effectiveMinCapacity.toLocaleString()} sats Max:{' '}
+                      {effectiveMaxCapacity.toLocaleString()} sats. This
+                      determines the maximum amount you can send or receive
+                      through this channel. You'll need to pay fees based on
+                      this capacity.
+                    </span>
+                  </span>
+                </label>
                 <NumberInput
                   className="group transition-all duration-300 hover:translate-x-1"
                   error={formState.errors.capacitySat?.message}
-                  label="Channel Capacity (sats)"
-                  max={MAX_CHANNEL_CAPACITY}
-                  min={MIN_CHANNEL_CAPACITY}
+                  label=""
+                  max={effectiveMaxCapacity}
+                  min={effectiveMinCapacity}
                   onChange={(value) => setValue('capacitySat', value)}
                   onSliderChange={(e) =>
                     setValue('capacitySat', e.target.value)
@@ -384,24 +635,57 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                   placeholder="Enter amount"
                   showSlider
                   sliderStep={1000}
-                  sliderValue={parseInt(
-                    parseNumberWithCommas(watch('capacitySat')) || '0',
-                    10
-                  )}
+                  sliderValue={
+                    watch('capacitySat')
+                      ? parseInt(
+                          parseNumberWithCommas(watch('capacitySat')) || '0',
+                          10
+                        )
+                      : effectiveMinCapacity
+                  }
                   value={watch('capacitySat')}
                 />
               </div>
 
               <div className="bg-gray-800 p-6 rounded-lg">
+                <label className="block text-sm font-medium mb-2">
+                  Your Channel Liquidity (sats)
+                  <span className="ml-2 text-gray-400 hover:text-gray-300 cursor-help relative group">
+                    ⓘ
+                    <span
+                      className="invisible group-hover:visible absolute left-0 
+                      bg-gray-900 text-white text-sm rounded py-1 px-2 w-80
+                      shadow-lg z-50 top-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    >
+                      Also known as outbound liquidity - the amount of satoshis
+                      you'll have available to send. The remaining capacity will
+                      be on the LSP side for receiving payments. Min:{' '}
+                      {lspOptions?.min_initial_client_balance_sat.toLocaleString() ||
+                        0}{' '}
+                      sats, Max:{' '}
+                      {Math.min(
+                        lspOptions?.max_initial_client_balance_sat ||
+                          Number.MAX_SAFE_INTEGER,
+                        effectiveMaxCapacity
+                      ).toLocaleString()}{' '}
+                      sats (or your chosen channel capacity). You'll need to pay
+                      for this liquidity - fees will be shown in the next step.
+                    </span>
+                  </span>
+                </label>
                 <NumberInput
                   className="group transition-all duration-300 hover:translate-x-1"
                   error={formState.errors.clientBalanceSat?.message}
-                  label="Your Channel Liquidity (sats)"
-                  max={parseInt(
-                    parseNumberWithCommas(watch('capacitySat')) || '0',
-                    10
+                  label=""
+                  max={Math.min(
+                    parseInt(
+                      parseNumberWithCommas(watch('capacitySat')) || '0',
+                      10
+                    ),
+                    lspOptions?.max_initial_client_balance_sat ||
+                      Number.MAX_SAFE_INTEGER
                   )}
-                  min={0}
+                  min={lspOptions?.min_initial_client_balance_sat || 0}
                   onChange={(value) => setValue('clientBalanceSat', value)}
                   onSliderChange={(e) =>
                     setValue('clientBalanceSat', e.target.value)
@@ -409,10 +693,15 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                   placeholder="Enter amount"
                   showSlider
                   sliderStep={1000}
-                  sliderValue={parseInt(
-                    parseNumberWithCommas(watch('clientBalanceSat')) || '0',
-                    10
-                  )}
+                  sliderValue={
+                    watch('clientBalanceSat')
+                      ? parseInt(
+                          parseNumberWithCommas(watch('clientBalanceSat')) ||
+                            '0',
+                          10
+                        )
+                      : lspOptions?.min_initial_client_balance_sat || 0
+                  }
                   value={watch('clientBalanceSat')}
                 />
               </div>
@@ -424,12 +713,16 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                     ⓘ
                     <span
                       className="invisible group-hover:visible absolute left-0 
-                      bg-gray-900 text-white text-sm rounded py-1 px-2 w-64 
+                      bg-gray-900 text-white text-sm rounded py-1 px-2 w-80
                       shadow-lg z-50 top-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                     >
-                      The minimum amount of time the LSP guarantees to keep your
-                      channel open. Longer durations may provide more stability
-                      for your lightning network operations.
+                      The minimum time the LSP guarantees to keep your channel
+                      open. Longer durations provide more stability but may
+                      affect fees. 1 week = 1,008 blocks 1 month = 4,320 blocks
+                      6 months = 25,920 blocks. Max:{' '}
+                      {lspOptions?.max_channel_expiry_blocks.toLocaleString() ||
+                        0}{' '}
+                      blocks.
                     </span>
                   </span>
                 </label>
@@ -440,14 +733,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                     <Select
                       active={field.value.toString()}
                       onSelect={(value) => field.onChange(parseInt(value))}
-                      options={[
-                        { label: '1 week', value: (6 * 24 * 7).toString() },
-                        { label: '1 month', value: (6 * 24 * 30).toString() },
-                        {
-                          label: '6 months',
-                          value: (6 * 24 * 30 * 6).toString(),
-                        },
-                      ]}
+                      options={getChannelExpiryOptions()}
                       theme="dark"
                     />
                   )}
@@ -463,6 +749,18 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                     type="checkbox"
                   />
                   <span className="text-lg font-medium">Add Asset</span>
+                  <span className="ml-2 text-gray-400 hover:text-gray-300 cursor-help relative group">
+                    ⓘ
+                    <span
+                      className="invisible group-hover:visible absolute left-0 
+                      bg-gray-900 text-white text-sm rounded py-1 px-2 w-96
+                      shadow-lg z-50 top-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    >
+                      Adding an RGB asset enables you to receive that asset
+                      through this channel. The amount you specify will be held
+                      by the LSP, determining how much you can receive.
+                    </span>
+                  </span>
                 </label>
 
                 {addAsset && (
@@ -470,6 +768,19 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                     <div>
                       <label className="block text-sm font-medium mb-2">
                         Select Asset
+                        <span className="ml-2 text-gray-400 hover:text-gray-300 cursor-help relative group">
+                          ⓘ
+                          <span
+                            className="invisible group-hover:visible absolute left-0 
+                            bg-gray-900 text-white text-sm rounded py-1 px-2 w-80
+                            shadow-lg z-50 top-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                          >
+                            Choose an RGB asset to add to your channel. The
+                            selected amount will be on the LSP side, allowing
+                            you to receive the asset. Additional fees will apply
+                            based on the asset type and amount.
+                          </span>
+                        </span>
                       </label>
                       <AssetSelector
                         assetMap={assetMap}
@@ -485,7 +796,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                           error={formState.errors.assetAmount?.message}
                           label={`Asset Amount (${assetMap[assetId]?.ticker || ''})`}
                           max={getAssetMaxAmount()}
-                          min={0}
+                          min={getAssetMinAmount()}
                           onChange={(value) => setValue('assetAmount', value)}
                           onSliderChange={(e) =>
                             setValue('assetAmount', e.target.value)
@@ -496,9 +807,14 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                           sliderStep={
                             1 / Math.pow(10, getAssetPrecision(assetId))
                           }
-                          sliderValue={parseFloat(
-                            parseNumberWithCommas(watch('assetAmount')) || '0'
-                          )}
+                          sliderValue={
+                            watch('assetAmount')
+                              ? parseFloat(
+                                  parseNumberWithCommas(watch('assetAmount')) ||
+                                    '0'
+                                )
+                              : getAssetMinAmount()
+                          }
                           value={watch('assetAmount')}
                         />
                       </div>
