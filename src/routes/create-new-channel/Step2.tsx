@@ -317,24 +317,6 @@ export const Step2 = ({
       return
     }
 
-    // Check if asset amount is below minimum
-    if (addAsset && data.assetId && selectedAsset) {
-      // Use a small percentage of the max amount as the minimum
-      const maxAmount = maxAssetAmountMap[selectedAsset.asset_id] || 0
-      const minAssetAmount = Math.max(1, maxAmount * 0.01) // At least 1% of max or 1 unit
-
-      if (data.assetAmount < minAssetAmount) {
-        toast.error(
-          `Asset amount is too small. Please enter at least ${formatNumber(minAssetAmount)} ${selectedAsset.ticker}.`,
-          {
-            autoClose: 5000,
-            position: 'bottom-right',
-          }
-        )
-        return
-      }
-    }
-
     // All validations passed, proceed with form submission
     onFormUpdate(data)
     onNext()

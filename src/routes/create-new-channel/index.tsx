@@ -2,8 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { TRADE_PATH, WALLET_DASHBOARD_PATH } from '../../app/router/paths'
+import { CreateUTXOModal } from '../../components/CreateUTXOModal'
 import { Spinner } from '../../components/Spinner'
 import { MIN_CHANNEL_CAPACITY } from '../../constants'
+import { useUtxoErrorHandler } from '../../hooks/useUtxoErrorHandler'
 import { TNewChannelForm } from '../../slices/channel/channel.slice'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 
@@ -47,6 +49,9 @@ export const Component = () => {
   const [channelOpeningError, setChannelOpeningError] = useState<string | null>(
     null
   )
+
+  const { showUtxoModal, setShowUtxoModal, utxoModalProps, handleApiError } =
+    useUtxoErrorHandler()
 
   // Clear form errors when changing steps
   useEffect(() => {
@@ -130,6 +135,16 @@ export const Component = () => {
     return true
   }
 
+  const openChannelOperation = async () => {
+    return await openChannel({
+      asset_amount: formData.assetAmount,
+      asset_id: formData.assetId,
+      capacity_sat: formData.capacitySat,
+      fee_rate_msat: feeRates[formData.fee],
+      peer_pubkey_and_opt_addr: formData.pubKeyAndAddress,
+    }).unwrap()
+  }
+
   const onSubmit = useCallback(async () => {
     if (!validateForm()) {
       return
@@ -138,13 +153,7 @@ export const Component = () => {
     setChannelOpeningError(null)
 
     try {
-      const openChannelResponse = await openChannel({
-        asset_amount: formData.assetAmount,
-        asset_id: formData.assetId,
-        capacity_sat: formData.capacitySat,
-        fee_rate_msat: feeRates[formData.fee],
-        peer_pubkey_and_opt_addr: formData.pubKeyAndAddress,
-      }).unwrap()
+      const openChannelResponse = await openChannelOperation()
 
       if (
         'error' in openChannelResponse &&
@@ -155,14 +164,27 @@ export const Component = () => {
 
       console.log('Channel opened successfully:', openChannelResponse)
       setStep(4)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to open channel:', error)
-      setChannelOpeningError(
-        error instanceof Error ? error.message : 'Failed to open channel'
+
+      // Check if it's a UTXO-related error
+      const wasHandled = handleApiError(
+        error,
+        'channel',
+        formData.capacitySat,
+        openChannelOperation
       )
-      setStep(4)
+
+      // Only proceed to error step if we didn't handle it with UTXO modal
+      if (!wasHandled) {
+        setChannelOpeningError(
+          error?.data?.error ||
+            (error instanceof Error ? error.message : 'Failed to open channel')
+        )
+        setStep(4)
+      }
     }
-  }, [openChannel, formData, feeRates])
+  }, [openChannel, formData, feeRates, handleApiError, openChannelOperation])
 
   const handleFormUpdate = (updates: Partial<TNewChannelForm>) => {
     setFormData((prev) => ({
@@ -195,61 +217,74 @@ export const Component = () => {
   }
 
   return (
-    <div className="max-w-screen-lg w-full bg-blue-darkest/80 backdrop-blur-sm rounded-2xl border border-white/5 shadow-2xl px-8 py-12">
-      {insufficientBalance ? (
-        <div className="text-center p-8 animate-fadeIn">
-          <FormError
-            message={`Insufficient balance to open a channel. You need at least ${MIN_CHANNEL_CAPACITY} satoshis.`}
-          />
-          <button
-            className="px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 transition text-white font-medium shadow-lg shadow-blue-700/20 flex items-center"
-            onClick={() => navigate(WALLET_DASHBOARD_PATH)}
-          >
-            Go to Dashboard
-          </button>
-        </div>
-      ) : (
-        <>
-          {formError && <FormError message={formError} />}
-
-          {step === 1 && (
-            <Step1
-              formData={formData}
-              onFormUpdate={handleFormUpdate}
-              onNext={() => setStep(2)}
+    <>
+      <div className="max-w-screen-lg w-full bg-blue-darkest/80 backdrop-blur-sm rounded-2xl border border-white/5 shadow-2xl px-8 py-12">
+        {insufficientBalance ? (
+          <div className="text-center p-8 animate-fadeIn">
+            <FormError
+              message={`Insufficient balance to open a channel. You need at least ${MIN_CHANNEL_CAPACITY} satoshis.`}
             />
-          )}
+            <button
+              className="px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 transition text-white font-medium shadow-lg shadow-blue-700/20 flex items-center"
+              onClick={() => navigate(WALLET_DASHBOARD_PATH)}
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        ) : (
+          <>
+            {formError && <FormError message={formError} />}
 
-          {step === 2 && (
-            <Step2
-              feeRates={feeRates}
-              formData={formData}
-              onBack={() => setStep(1)}
-              onFormUpdate={handleFormUpdate}
-              onNext={() => setStep(3)}
-            />
-          )}
+            {step === 1 && (
+              <Step1
+                formData={formData}
+                onFormUpdate={handleFormUpdate}
+                onNext={() => setStep(2)}
+              />
+            )}
 
-          {step === 3 && (
-            <Step3
-              error={formError || undefined}
-              feeRates={feeRates}
-              formData={formData}
-              onBack={() => setStep(2)}
-              onFormUpdate={handleFormUpdate}
-              onNext={onSubmit}
-            />
-          )}
+            {step === 2 && (
+              <Step2
+                feeRates={feeRates}
+                formData={formData}
+                onBack={() => setStep(1)}
+                onFormUpdate={handleFormUpdate}
+                onNext={() => setStep(3)}
+              />
+            )}
 
-          {step === 4 && (
-            <Step4
-              error={channelOpeningError}
-              onFinish={() => navigate(TRADE_PATH)}
-              onRetry={() => setStep(3)}
-            />
-          )}
-        </>
-      )}
-    </div>
+            {step === 3 && (
+              <Step3
+                error={formError || undefined}
+                feeRates={feeRates}
+                formData={formData}
+                onBack={() => setStep(2)}
+                onFormUpdate={handleFormUpdate}
+                onNext={onSubmit}
+              />
+            )}
+
+            {step === 4 && (
+              <Step4
+                error={channelOpeningError}
+                onFinish={() => navigate(TRADE_PATH)}
+                onRetry={() => setStep(3)}
+              />
+            )}
+          </>
+        )}
+      </div>
+
+      {/* UTXO Modal for handling UTXO-related errors */}
+      <CreateUTXOModal
+        channelCapacity={utxoModalProps.channelCapacity}
+        error={utxoModalProps.error}
+        isOpen={showUtxoModal}
+        onClose={() => setShowUtxoModal(false)}
+        onSuccess={() => setStep(4)}
+        operationType={utxoModalProps.operationType}
+        retryFunction={utxoModalProps.retryFunction}
+      />
+    </>
   )
 }

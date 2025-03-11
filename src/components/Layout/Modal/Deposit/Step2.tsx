@@ -9,14 +9,19 @@ import {
   Wallet,
   Zap,
   Link as ChainIcon,
+  AlertTriangle,
 } from 'lucide-react'
 import { QRCodeCanvas } from 'qrcode.react'
 import { useState, useEffect } from 'react'
 import { toast } from 'react-toastify'
 
 import { useAppSelector } from '../../../../app/store/hooks'
+import btcLogo from '../../../../assets/bitcoin-logo.svg'
+import rgbLogo from '../../../../assets/rgb-symbol-color.svg'
+import { CreateUTXOModal } from '../../../../components/CreateUTXOModal'
 import { BTC_ASSET_ID } from '../../../../constants'
-import { nodeApi , Network } from '../../../../slices/nodeApi/nodeApi.slice'
+import { useUtxoErrorHandler } from '../../../../hooks/useUtxoErrorHandler'
+import { nodeApi, Network } from '../../../../slices/nodeApi/nodeApi.slice'
 
 interface Props {
   assetId?: string
@@ -29,6 +34,10 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
   const [address, setAddress] = useState<string>()
   const [loading, setLoading] = useState<boolean>(false)
   const [amount, setAmount] = useState<string>('')
+  const [noColorableUtxos, setNoColorableUtxos] = useState<boolean>(false)
+
+  const { showUtxoModal, setShowUtxoModal, utxoModalProps, handleApiError } =
+    useUtxoErrorHandler()
 
   const bitcoinUnit = useAppSelector((state) => state.settings.bitcoinUnit)
   const [addressQuery] = nodeApi.endpoints.address.useLazyQuery()
@@ -47,19 +56,25 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
   useEffect(() => {
     setAddress(undefined)
     setAmount('')
+    setNoColorableUtxos(false)
   }, [network])
 
   // Add new state and query for asset info
   const [assetTicker, setAssetTicker] = useState<string>('')
+  const [assetName, setAssetName] = useState<string>('')
   const { data: assetList } = nodeApi.endpoints.listAssets.useQuery()
 
   // Add useEffect to set asset ticker when assetList is loaded
   useEffect(() => {
-    if (assetList?.nia && assetId !== BTC_ASSET_ID) {
+    if (assetList?.nia && assetId !== BTC_ASSET_ID && assetId) {
       const asset = assetList.nia.find((a) => a.asset_id === assetId)
       if (asset) {
         setAssetTicker(asset.ticker)
+        setAssetName(asset.name)
       }
+    } else if (assetId === BTC_ASSET_ID) {
+      setAssetTicker('BTC')
+      setAssetName('Bitcoin')
     }
   }, [assetList, assetId])
 
@@ -137,6 +152,39 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
     )
   }
 
+  const generateRgbInvoice = async () => {
+    try {
+      const res = await rgbInvoice(assetId ? { asset_id: assetId } : {})
+      setNoColorableUtxos(false)
+      if ('error' in res && res.error) {
+        const errorMessage =
+          'data' in res.error ? res.error.data?.error : 'Unknown error'
+
+        // Check if this is a UTXO-related error
+        const wasHandled = handleApiError(
+          res.error,
+          'issuance',
+          0,
+          generateRgbInvoice
+        )
+
+        if (!wasHandled) {
+          // Check specifically for no colorable UTXOs error to show our custom message
+          if (errorMessage.includes('No uncolored UTXOs are available')) {
+            setNoColorableUtxos(true)
+          } else {
+            toast.error('Failed to generate RGB invoice: ' + errorMessage)
+          }
+        }
+      } else {
+        setAddress(res.data?.invoice)
+        setRecipientId(res.data?.recipient_id)
+      }
+    } catch (error) {
+      toast.error('Failed to generate RGB invoice')
+    }
+  }
+
   const generateAddress = async () => {
     setLoading(true)
     try {
@@ -165,15 +213,7 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
           setAddress(res.data?.invoice)
         }
       } else if (!assetId || assetId !== BTC_ASSET_ID) {
-        const res = await rgbInvoice(assetId ? { asset_id: assetId } : {})
-        if ('error' in res && res.error) {
-          const errorMessage =
-            'data' in res.error ? res.error.data?.error : 'Unknown error'
-          toast.error('Failed to generate RGB invoice: ' + errorMessage)
-        } else {
-          setAddress(res.data?.invoice)
-          setRecipientId(res.data?.recipient_id)
-        }
+        await generateRgbInvoice()
       } else {
         const res = await addressQuery()
         setAddress(res.data?.address)
@@ -255,9 +295,31 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
   return (
     <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-8">
       <div className="flex flex-col items-center mb-8">
-        <Wallet className="w-12 h-12 text-blue-500 mb-4" />
-        <h3 className="text-3xl font-bold text-white mb-2">Fund Your Wallet</h3>
-        <p className="text-slate-400 text-center max-w-md">
+        {/* Display selected asset icon */}
+        {assetId === BTC_ASSET_ID ? (
+          <img alt="Bitcoin" className="w-12 h-12 mb-4" src={btcLogo} />
+        ) : (
+          <img alt="RGB Asset" className="w-12 h-12 mb-4" src={rgbLogo} />
+        )}
+
+        {/* Show the asset name and ticker prominently */}
+        <h3 className="text-3xl font-bold text-white mb-2">
+          {assetId
+            ? assetTicker
+              ? `Deposit ${assetTicker}`
+              : 'Deposit Asset'
+            : 'Deposit Any RGB Asset'}
+        </h3>
+
+        {assetName && <div className="text-slate-400 mb-2">{assetName}</div>}
+
+        {assetId && assetId !== BTC_ASSET_ID && (
+          <div className="text-xs text-slate-500 mt-1 bg-slate-800 px-3 py-1 rounded-full">
+            {assetId.slice(0, 10)}...{assetId.slice(-10)}
+          </div>
+        )}
+
+        <p className="text-slate-400 text-center max-w-md mt-4">
           Choose your preferred deposit method and follow the steps below
         </p>
       </div>
@@ -278,6 +340,33 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
 
         {/* Render faucet suggestion */}
         {renderFaucetSuggestion()}
+
+        {/* No Colorable UTXOs Warning */}
+        {noColorableUtxos && (
+          <div className="mb-6 p-4 bg-yellow-500/10 rounded-xl border border-yellow-500/20">
+            <div className="flex items-start">
+              <AlertTriangle className="text-yellow-500 w-5 h-5 mr-3 mt-0.5 flex-shrink-0" />
+              <div>
+                <h4 className="text-yellow-400 font-medium mb-2">
+                  Colorable UTXOs Required
+                </h4>
+                <p className="text-yellow-300/80 text-sm mb-3">
+                  To receive RGB assets on-chain, you need to have colorable
+                  UTXOs available. These are special UTXOs that can hold RGB
+                  assets.
+                </p>
+                <button
+                  className="px-4 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 
+                          rounded-lg transition-colors text-sm flex items-center gap-2"
+                  onClick={() => setShowUtxoModal(true)}
+                >
+                  <Wallet className="w-4 h-4" />
+                  Create Colorable UTXOs
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {!assetId && (
           <div className="mb-6 p-4 bg-blue-500/10 rounded-xl border border-blue-500/20">
@@ -459,6 +548,16 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
           </button>
         </div>
       </div>
+
+      {/* UTXO Modal for handling UTXO-related errors */}
+      <CreateUTXOModal
+        error={utxoModalProps.error}
+        isOpen={showUtxoModal}
+        onClose={() => setShowUtxoModal(false)}
+        onSuccess={() => generateRgbInvoice()}
+        operationType="issuance"
+        retryFunction={utxoModalProps.retryFunction}
+      />
     </div>
   )
 }

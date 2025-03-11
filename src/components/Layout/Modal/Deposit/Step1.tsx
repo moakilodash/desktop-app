@@ -141,6 +141,16 @@ export const Step1 = ({ onNext }: Props) => {
               </div>
 
               <div className="py-2">
+                {/* Add New Asset Button - Now at the top */}
+                <button
+                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-blue-500/10 
+                           text-blue-500 transition-colors duration-200 border-b border-slate-700"
+                  onClick={handleAddNewAsset}
+                >
+                  <Plus className="w-5 h-5" />
+                  <span>Add New Asset</span>
+                </button>
+
                 {filteredAssets.map((asset) => (
                   <button
                     className="w-full px-4 py-3 flex items-center gap-3 hover:bg-blue-500/10 
@@ -169,15 +179,6 @@ export const Step1 = ({ onNext }: Props) => {
                     </div>
                   </button>
                 ))}
-
-                <button
-                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-blue-500/10 
-                           text-blue-500 transition-colors duration-200"
-                  onClick={handleAddNewAsset}
-                >
-                  <Plus className="w-5 h-5" />
-                  <span>Add New Asset</span>
-                </button>
               </div>
             </div>
           )}

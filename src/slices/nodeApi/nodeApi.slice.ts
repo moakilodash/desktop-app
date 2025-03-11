@@ -563,6 +563,9 @@ export const nodeApi = createApi({
         method: 'POST',
         url: '/estimatefee',
       }),
+      transformResponse: (response: EstimateFeeResponse) => ({
+        fee_rate: Math.round(response.fee_rate),
+      }),
     }),
     init: builder.query<InitResponse, InitRequest>({
       query: (body) => ({
