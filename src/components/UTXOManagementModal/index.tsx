@@ -1,4 +1,4 @@
-import { Plus, Loader, Zap, Wallet } from 'lucide-react'
+import { Plus, Loader, Zap, Wallet, Paintbrush } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -13,8 +13,10 @@ interface UTXOManagementModalProps {
 
 interface UTXOSummary {
   totalColorable: number
+  totalColored: number
   totalNormal: number
   colorableCount: number
+  coloredCount: number
   normalCount: number
 }
 
@@ -35,27 +37,50 @@ export const UTXOManagementModal = ({
     return () => clearInterval(intervalId)
   }, [listUnspents])
 
-  const { colorableUtxos, normalUtxos, summary } = useMemo(() => {
+  const { colorableUtxos, coloredUtxos, normalUtxos, summary } = useMemo(() => {
     if (!unspentsData?.unspents) {
       return {
         colorableUtxos: [],
+        coloredUtxos: [],
         normalUtxos: [],
         summary: {
           colorableCount: 0,
+          coloredCount: 0,
           normalCount: 0,
           totalColorable: 0,
+          totalColored: 0,
           totalNormal: 0,
         },
       }
     }
 
-    const colorable = unspentsData.unspents.filter((u) => u.utxo.colorable)
+    // Separate UTXOs into:
+    // 1. Colorable (can be used for RGB assets but not yet allocated)
+    // 2. Colored (already have RGB allocations)
+    // 3. Normal (can't be used for RGB assets)
+
+    const colored = unspentsData.unspents.filter(
+      (u) =>
+        u.utxo.colorable &&
+        Array.isArray(u.rgb_allocations) &&
+        u.rgb_allocations.length > 0
+    )
+    const colorable = unspentsData.unspents.filter(
+      (u) =>
+        u.utxo.colorable &&
+        (!Array.isArray(u.rgb_allocations) || u.rgb_allocations.length <= 0)
+    )
     const normal = unspentsData.unspents.filter((u) => !u.utxo.colorable)
 
     const summary: UTXOSummary = {
       colorableCount: colorable.length,
+      coloredCount: colored.length,
       normalCount: normal.length,
       totalColorable: colorable.reduce(
+        (sum, u) => sum + parseInt(u.utxo.btc_amount),
+        0
+      ),
+      totalColored: colored.reduce(
         (sum, u) => sum + parseInt(u.utxo.btc_amount),
         0
       ),
@@ -65,12 +90,37 @@ export const UTXOManagementModal = ({
       ),
     }
 
-    return { colorableUtxos: colorable, normalUtxos: normal, summary }
+    return {
+      colorableUtxos: colorable,
+      coloredUtxos: colored,
+      normalUtxos: normal,
+      summary,
+    }
   }, [unspentsData])
 
   const handleCreateUTXOs = () => {
     onClose()
     navigate(CREATEUTXOS_PATH)
+  }
+
+  const getUtxoStatusLabel = (unspent: any) => {
+    if (!unspent.utxo.colorable) {
+      return 'Normal'
+    }
+    if (unspent.rgb_allocations && unspent.rgb_allocations.length > 0) {
+      return 'Colored'
+    }
+    return 'Colorable'
+  }
+
+  const getUtxoStatusStyle = (unspent: any) => {
+    if (!unspent.utxo.colorable) {
+      return 'bg-blue-500/20 text-blue-400'
+    }
+    if (unspent.rgb_allocations && unspent.rgb_allocations.length > 0) {
+      return 'bg-purple-500/20 text-purple-400'
+    }
+    return 'bg-green-500/20 text-green-400'
   }
 
   const UTXOCard = ({ unspent }: { unspent: any; index: number }) => (
@@ -83,10 +133,9 @@ export const UTXOManagementModal = ({
           {unspent.utxo.outpoint.split(':')[0]}
         </div>
         <div
-          className={`px-2 py-1 rounded-lg text-xs font-medium 
-          ${unspent.utxo.colorable ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'}`}
+          className={`px-2 py-1 rounded-lg text-xs font-medium ${getUtxoStatusStyle(unspent)}`}
         >
-          {unspent.utxo.colorable ? 'Colorable' : 'Normal'}
+          {getUtxoStatusLabel(unspent)}
         </div>
       </div>
       <div className="text-lg font-medium text-white">
@@ -133,7 +182,7 @@ export const UTXOManagementModal = ({
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-4">
             <div className="flex items-center gap-2 mb-2">
               <Zap className="w-5 h-5 text-green-500" />
@@ -144,7 +193,7 @@ export const UTXOManagementModal = ({
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center gap-2 text-sm text-slate-300">
                 <div className="w-2 h-2 rounded-full bg-green-500" />
-                <span>Open RGB Lightning Channels</span>
+                <span>UTXO RGB ready not yet allocated</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-slate-300">
                 <div className="w-2 h-2 rounded-full bg-green-500" />
@@ -162,6 +211,30 @@ export const UTXOManagementModal = ({
 
           <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-4">
             <div className="flex items-center gap-2 mb-2">
+              <Paintbrush className="w-5 h-5 text-purple-500" />
+              <h3 className="text-lg font-medium text-white">Colored UTXOs</h3>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-2 text-sm text-slate-300">
+                <div className="w-2 h-2 rounded-full bg-purple-500" />
+                <span>Open RGB Lightning Channels</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-slate-300">
+                <div className="w-2 h-2 rounded-full bg-purple-500" />
+                <span>Send On-chain RGB Assets</span>
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-white mt-3">
+              {formatBitcoinAmount(summary.totalColored, bitcoinUnit)}{' '}
+              {bitcoinUnit}
+            </div>
+            <div className="text-sm text-slate-400 mt-1">
+              {summary.coloredCount} UTXOs
+            </div>
+          </div>
+
+          <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-4">
+            <div className="flex items-center gap-2 mb-2">
               <Wallet className="w-5 h-5 text-blue-500" />
               <h3 className="text-lg font-medium text-white">Normal UTXOs</h3>
             </div>
@@ -172,7 +245,7 @@ export const UTXOManagementModal = ({
               </div>
               <div className="flex items-center gap-2 text-sm text-slate-300">
                 <div className="w-2 h-2 rounded-full bg-blue-500" />
-                <span>Regular Transactions</span>
+                <span>Regular transactions</span>
               </div>
             </div>
             <div className="text-2xl font-bold text-white mt-3">
@@ -209,6 +282,25 @@ export const UTXOManagementModal = ({
                 </h3>
                 <div className="space-y-3">
                   {colorableUtxos.map((unspent, index) => (
+                    <UTXOCard
+                      index={index}
+                      key={unspent.utxo.outpoint}
+                      unspent={unspent}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Colored UTXOs Section */}
+            {coloredUtxos.length > 0 && (
+              <div>
+                <h3 className="text-lg font-medium text-white mb-3 flex items-center gap-2">
+                  <Paintbrush className="w-5 h-5 text-purple-500" />
+                  Colored UTXOs
+                </h3>
+                <div className="space-y-3">
+                  {coloredUtxos.map((unspent, index) => (
                     <UTXOCard
                       index={index}
                       key={unspent.utxo.outpoint}
