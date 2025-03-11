@@ -225,7 +225,7 @@ interface SendAssetRequest {
   amount: number
   recipient_id: string
   fee_rate: number
-  transport_endpoint: string
+  transport_endpoints: string[]
 }
 
 interface SendAssetResponse {
@@ -380,6 +380,20 @@ export interface DecodeInvoiceResponse {
   payment_secret: string
   payee_pubkey: string
   network: string
+}
+
+export interface DecodeRgbInvoiceResponse {
+  recipient_id: string
+  asset_iface: string | null
+  asset_id: string | null
+  amount: number | null
+  network: string
+  expiration_timestamp: number
+  transport_endpoints: string[]
+}
+
+export interface DecodeRgbInvoiceRequest {
+  invoice: string
 }
 
 export interface UnlockRequest {
@@ -548,6 +562,16 @@ export const nodeApi = createApi({
         body,
         method: 'POST',
         url: '/decodelninvoice',
+      }),
+    }),
+    decodeRgbInvoice: builder.query<
+      DecodeRgbInvoiceResponse,
+      DecodeRgbInvoiceRequest
+    >({
+      query: (body) => ({
+        body,
+        method: 'POST',
+        url: '/decodergbinvoice',
       }),
     }),
     disconnectPeer: builder.mutation<void, DisconnectPeerRequest>({
@@ -743,7 +767,7 @@ export const nodeApi = createApi({
           min_confirmations: 1,
           recipient_id: body.recipient_id,
           skip_sync: false,
-          transport_endpoints: [body.transport_endpoint],
+          transport_endpoints: body.transport_endpoints,
         },
         method: 'POST',
         url: '/sendasset',
