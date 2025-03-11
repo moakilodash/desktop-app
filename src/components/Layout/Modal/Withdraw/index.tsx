@@ -20,6 +20,7 @@ import {
   nodeApi,
   ApiError,
   DecodeInvoiceResponse,
+  DecodeRgbInvoiceResponse,
 } from '../../../../slices/nodeApi/nodeApi.slice'
 import { uiSliceActions } from '../../../../slices/ui/ui.slice'
 
@@ -47,6 +48,8 @@ export const WithdrawModalContent = () => {
   })
   const [decodedInvoice, setDecodedInvoice] =
     useState<DecodeInvoiceResponse | null>(null)
+  const [decodedRgbInvoice, setDecodedRgbInvoice] =
+    useState<DecodeRgbInvoiceResponse | null>(null)
   const [isDecodingInvoice, setIsDecodingInvoice] = useState(false)
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [pendingData, setPendingData] = useState<Fields | null>(null)
@@ -58,6 +61,7 @@ export const WithdrawModalContent = () => {
   const [estimateFee] = nodeApi.useLazyEstimateFeeQuery()
   const assets = nodeApi.endpoints.listAssets.useQuery()
   const [decodeInvoice] = nodeApi.useLazyDecodeInvoiceQuery()
+  const [decodeRgbInvoice] = nodeApi.useLazyDecodeRgbInvoiceQuery()
 
   const form = useForm<Fields>({
     defaultValues: {
@@ -98,23 +102,18 @@ export const WithdrawModalContent = () => {
     try {
       const text = await navigator.clipboard.readText()
       if (text.startsWith('ln')) {
-        setIsDecodingInvoice(true)
-        try {
-          const decoded = await decodeInvoice({ invoice: text }).unwrap()
-          setDecodedInvoice(decoded)
-          setValue('address', text)
-        } catch (error) {
-          toast.error('Invalid Lightning invoice')
-          setDecodedInvoice(null)
-        } finally {
-          setIsDecodingInvoice(false)
-        }
+        setValue('network', 'lightning')
+        setValue('address', text)
+        await handleInvoiceChange({ target: { value: text } } as any)
+      } else if (text.startsWith('rgb')) {
+        setValue('network', 'on-chain')
+        setValue('address', text)
+        await handleInvoiceChange({ target: { value: text } } as any)
       } else {
         setValue('address', text)
-        setDecodedInvoice(null)
       }
     } catch (error) {
-      toast.error('Failed to paste from clipboard')
+      console.error('Failed to read clipboard', error)
     }
   }
 
@@ -122,18 +121,41 @@ export const WithdrawModalContent = () => {
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const invoice = e.target.value
+
+    // Reset all decoded states
+    setDecodedInvoice(null)
+    setDecodedRgbInvoice(null)
+
     if (invoice.startsWith('ln')) {
       setIsDecodingInvoice(true)
       try {
         const decoded = await decodeInvoice({ invoice }).unwrap()
         setDecodedInvoice(decoded)
       } catch (error) {
-        setDecodedInvoice(null)
+        console.error('Failed to decode Lightning invoice', error)
       } finally {
         setIsDecodingInvoice(false)
       }
-    } else {
-      setDecodedInvoice(null)
+    } else if (invoice.startsWith('rgb')) {
+      setIsDecodingInvoice(true)
+      try {
+        const decodedRgb = await decodeRgbInvoice({ invoice }).unwrap()
+        setDecodedRgbInvoice(decodedRgb)
+
+        // If the decoded RGB invoice has an asset_id, set it in the form
+        if (decodedRgb.asset_id) {
+          setValue('asset_id', decodedRgb.asset_id)
+        }
+
+        // If the decoded RGB invoice has an amount, set it in the form
+        if (decodedRgb.amount) {
+          setValue('amount', decodedRgb.amount)
+        }
+      } catch (error) {
+        console.error('Failed to decode RGB invoice', error)
+      } finally {
+        setIsDecodingInvoice(false)
+      }
     }
   }
 
@@ -257,23 +279,50 @@ export const WithdrawModalContent = () => {
             pendingData.asset_id
           )
 
-          const res = await sendAsset({
-            amount: rawAmount,
-            asset_id: pendingData.asset_id,
-            fee_rate:
-              pendingData.fee_rate !== 'custom'
-                ? feeEstimations[
-                    pendingData.fee_rate as keyof typeof feeEstimations
-                  ]
-                : customFee,
-            recipient_id: pendingData.address,
-            transport_endpoint: transportEndpoint,
-          }).unwrap()
+          // Check if we're using an RGB invoice
+          if (pendingData.address.startsWith('rgb') && decodedRgbInvoice) {
+            // Use the information from the decoded RGB invoice
+            const res = await sendAsset({
+              amount:
+                decodedRgbInvoice.amount !== null
+                  ? decodedRgbInvoice.amount
+                  : rawAmount,
+              asset_id: decodedRgbInvoice.asset_id || pendingData.asset_id,
+              fee_rate:
+                pendingData.fee_rate !== 'custom'
+                  ? feeEstimations[
+                      pendingData.fee_rate as keyof typeof feeEstimations
+                    ]
+                  : customFee,
+              recipient_id: decodedRgbInvoice.recipient_id,
+              transport_endpoints: decodedRgbInvoice.transport_endpoints,
+            }).unwrap()
 
-          if ('error' in res) {
-            throw new Error(
-              (res.error as ApiError)?.data?.error || 'Payment failed'
-            )
+            if ('error' in res) {
+              throw new Error(
+                (res.error as ApiError)?.data?.error || 'Payment failed'
+              )
+            }
+          } else {
+            // Use the manually entered recipient ID
+            const res = await sendAsset({
+              amount: rawAmount,
+              asset_id: pendingData.asset_id,
+              fee_rate:
+                pendingData.fee_rate !== 'custom'
+                  ? feeEstimations[
+                      pendingData.fee_rate as keyof typeof feeEstimations
+                    ]
+                  : customFee,
+              recipient_id: pendingData.address,
+              transport_endpoints: [transportEndpoint],
+            }).unwrap()
+
+            if ('error' in res) {
+              throw new Error(
+                (res.error as ApiError)?.data?.error || 'Payment failed'
+              )
+            }
           }
         }
       }
@@ -306,7 +355,9 @@ export const WithdrawModalContent = () => {
             nodeApi.endpoints.btcBalance.initiate({ skip_sync: false })
           ).unwrap()
           if (bitcoinUnit === 'SAT') {
-            setAssetBalance(balance.vanilla.spendable)
+            setAssetBalance(
+              balance.vanilla.spendable + balance.colored.spendable
+            )
           } else {
             setAssetBalance(balance.vanilla.spendable / 100000000)
           }
@@ -584,16 +635,73 @@ export const WithdrawModalContent = () => {
                 placeholder={
                   assetId === BTC_ASSET_ID
                     ? 'Paste BTC address here'
-                    : 'Paste blinded UTXO here: bcrt:utxob:...'
+                    : 'Paste blinded UTXO or RGB invoice here'
                 }
                 type="text"
                 {...field}
+                onChange={(e) => {
+                  field.onChange(e)
+                  handleInvoiceChange(e)
+                }}
               />
-              {assetId !== BTC_ASSET_ID && (
+              {assetId !== BTC_ASSET_ID && !decodedRgbInvoice && (
                 <p className="text-sm text-slate-400 mt-2">
                   For asset transfers, please provide a blinded UTXO as the
-                  recipient identifier
+                  recipient identifier or paste an RGB invoice
                 </p>
+              )}
+              {isDecodingInvoice && (
+                <p className="text-sm text-blue-400 mt-2">
+                  Decoding invoice...
+                </p>
+              )}
+              {decodedRgbInvoice && (
+                <div className="mt-2 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                  <div className="text-blue-400 font-medium mb-1">
+                    RGB Invoice Detected
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    {decodedRgbInvoice.asset_id && (
+                      <>
+                        <div className="text-slate-400">Asset ID:</div>
+                        <div className="text-white font-mono truncate">
+                          {`${decodedRgbInvoice.asset_id.slice(0, 8)}...${decodedRgbInvoice.asset_id.slice(-8)}`}
+                        </div>
+                      </>
+                    )}
+                    <div className="text-slate-400">Recipient ID:</div>
+                    <div className="text-white font-mono truncate">
+                      {`${decodedRgbInvoice.recipient_id.slice(0, 8)}...${decodedRgbInvoice.recipient_id.slice(-8)}`}
+                    </div>
+                    {decodedRgbInvoice.amount && (
+                      <>
+                        <div className="text-slate-400">Amount:</div>
+                        <div className="text-white">
+                          {decodedRgbInvoice.amount}
+                        </div>
+                      </>
+                    )}
+                    <div className="text-slate-400">Network:</div>
+                    <div className="text-white">
+                      {decodedRgbInvoice.network}
+                    </div>
+                  </div>
+
+                  {decodedRgbInvoice.asset_id &&
+                    decodedRgbInvoice.asset_id !== assetId && (
+                      <div className="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg flex items-start gap-2">
+                        <AlertTriangle
+                          className="text-yellow-500 flex-shrink-0"
+                          size={18}
+                        />
+                        <p className="text-sm text-yellow-500">
+                          This invoice is for a different asset than what you
+                          have selected. The asset from the invoice will be used
+                          when submitting.
+                        </p>
+                      </div>
+                    )}
+                </div>
               )}
             </div>
           )}
