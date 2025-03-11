@@ -31,9 +31,9 @@ export const NodeOption: React.FC<NodeOptionProps> = ({
   >
     {recommended && (
       <div className="absolute top-0 right-0">
-        <div className="bg-cyan text-blue-darkest text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg">
+        {/* <div className="bg-cyan text-blue-darkest text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg">
           Recommended
-        </div>
+        </div> */}
       </div>
     )}
     <div className="p-6">
