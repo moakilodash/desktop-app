@@ -24,7 +24,6 @@ import { Card, Button } from '../../components/ui'
 import {
   NodeOption,
   WalletAction,
-  LocalNodeWarning,
   RemoteNodeInfo,
   IconWrapper,
 } from '../../components/wallet-setup'
