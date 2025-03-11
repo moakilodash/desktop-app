@@ -1222,114 +1222,118 @@ export const Component = () => {
 
   const renderSwapForm = () => (
     <div className="swap-form-container w-full max-w-2xl">
-      <div className="bg-gradient-to-b from-slate-900/80 to-slate-800/80 backdrop-blur-sm rounded-2xl border border-slate-700/50 p-4 shadow-lg w-full">
-        <div className="mb-2">
+      <div className="bg-gradient-to-b from-slate-900/80 to-slate-800/80 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-lg w-full">
+        <div className="border-b border-slate-700/50 px-4 pt-4 pb-3">
           <MakerSelector hasNoPairs={false} onMakerChange={refreshData} />
         </div>
 
-        <form className="space-y-3" onSubmit={form.handleSubmit(onSubmit)}>
-          <SwapInputField
-            asset={form.getValues().fromAsset}
-            assetOptions={getAssetOptions(form.getValues().toAsset)}
-            availableAmount={`${formatAmount(maxFromAmount, form.getValues().fromAsset)} ${displayAsset(form.getValues().fromAsset)}`}
-            availableAmountLabel="Available:"
-            disabled={!hasChannels || !hasTradablePairs || isSwapInProgress}
-            formatAmount={formatAmount}
-            getDisplayAsset={displayAsset}
-            label="You Send"
-            maxAmount={maxFromAmount}
-            maxHtlcAmount={max_outbound_htlc_sat}
-            minAmount={minFromAmount}
-            onAmountChange={handleFromAmountChange}
-            onAssetChange={(value) => handleAssetChange('fromAsset', value)}
-            onRefresh={refreshAmounts}
-            onSizeClick={onSizeClick}
-            selectedSize={selectedSize}
-            showMaxHtlc
-            showMinAmount
-            showSizeButtons
-            value={form.getValues().from}
-          />
-
-          <div className="flex justify-center my-0">
-            <button
-              className={`p-1.5 rounded-lg bg-slate-800 border transition-all transform hover:scale-110
-                ${
-                  hasChannels && hasTradablePairs && !isSwapInProgress
-                    ? 'border-blue-500/50 hover:border-blue-500 cursor-pointer'
-                    : 'border-slate-700 opacity-50 cursor-not-allowed'
-                }`}
-              onClick={() =>
-                hasChannels &&
-                hasTradablePairs &&
-                !isSwapInProgress &&
-                onSwapAssets()
-              }
-              type="button"
-            >
-              <SwapIcon />
-            </button>
-          </div>
-
-          <SwapInputField
-            asset={form.getValues().toAsset}
-            assetOptions={getAssetOptions(form.getValues().fromAsset)}
-            availableAmount={`${formatAmount(maxToAmount, form.getValues().toAsset)} ${displayAsset(form.getValues().toAsset)}`}
-            availableAmountLabel="Can receive up to:"
-            disabled={!hasChannels || !hasTradablePairs || isSwapInProgress}
-            formatAmount={formatAmount}
-            getDisplayAsset={displayAsset}
-            isLoading={isToAmountLoading}
-            label="You Receive (Estimated)"
-            maxAmount={maxToAmount}
-            onAmountChange={handleToAmountChange}
-            onAssetChange={(value) => handleAssetChange('toAsset', value)}
-            value={form.getValues().to}
-          />
-
-          {selectedPair && (
-            <ExchangeRateSection
-              bitcoinUnit={bitcoinUnit}
+        <div className="p-4">
+          <form className="space-y-3" onSubmit={form.handleSubmit(onSubmit)}>
+            <SwapInputField
+              asset={form.getValues().fromAsset}
+              assetOptions={getAssetOptions(form.getValues().toAsset)}
+              availableAmount={`${formatAmount(maxFromAmount, form.getValues().fromAsset)} ${displayAsset(form.getValues().fromAsset)}`}
+              availableAmountLabel="Available:"
+              disabled={!hasChannels || !hasTradablePairs || isSwapInProgress}
               formatAmount={formatAmount}
-              fromAsset={form.getValues().fromAsset}
-              getAssetPrecision={getAssetPrecisionWrapper}
-              isPriceLoading={isPriceLoading}
-              selectedPair={selectedPair}
-              selectedPairFeed={selectedPairFeed}
-              toAsset={form.getValues().toAsset}
+              getDisplayAsset={displayAsset}
+              label="You Send"
+              maxAmount={maxFromAmount}
+              maxHtlcAmount={max_outbound_htlc_sat}
+              minAmount={minFromAmount}
+              onAmountChange={handleFromAmountChange}
+              onAssetChange={(value) => handleAssetChange('fromAsset', value)}
+              onRefresh={refreshAmounts}
+              onSizeClick={onSizeClick}
+              selectedSize={selectedSize}
+              showMaxHtlc
+              showMinAmount
+              showSizeButtons
+              value={form.getValues().from}
             />
-          )}
 
-          {errorMessage && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mt-4">
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-red-500 font-medium">Trade Error</span>
-                  <button
-                    className="p-1 hover:bg-red-500/10 rounded transition-colors"
-                    onClick={() => copyToClipboard(errorMessage)}
-                    title="Copy error message"
-                  >
-                    <Copy className="w-4 h-4 text-red-500" />
-                  </button>
-                </div>
-                <span className="text-red-400/90 text-sm leading-relaxed">
-                  {errorMessage}
-                </span>
-              </div>
+            <div className="flex justify-center my-0">
+              <button
+                className={`p-1.5 rounded-lg bg-slate-800 border transition-all transform hover:scale-110
+                  ${
+                    hasChannels && hasTradablePairs && !isSwapInProgress
+                      ? 'border-blue-500/50 hover:border-blue-500 cursor-pointer'
+                      : 'border-slate-700 opacity-50 cursor-not-allowed'
+                  }`}
+                onClick={() =>
+                  hasChannels &&
+                  hasTradablePairs &&
+                  !isSwapInProgress &&
+                  onSwapAssets()
+                }
+                type="button"
+              >
+                <SwapIcon />
+              </button>
             </div>
-          )}
 
-          <SwapButton
-            errorMessage={errorMessage}
-            hasChannels={hasChannels}
-            hasTradablePairs={hasTradablePairs}
-            isPriceLoading={isPriceLoading}
-            isSwapInProgress={isSwapInProgress}
-            isToAmountLoading={isToAmountLoading}
-            wsConnected={wsConnected}
-          />
-        </form>
+            <SwapInputField
+              asset={form.getValues().toAsset}
+              assetOptions={getAssetOptions(form.getValues().fromAsset)}
+              availableAmount={`${formatAmount(maxToAmount, form.getValues().toAsset)} ${displayAsset(form.getValues().toAsset)}`}
+              availableAmountLabel="Can receive up to:"
+              disabled={!hasChannels || !hasTradablePairs || isSwapInProgress}
+              formatAmount={formatAmount}
+              getDisplayAsset={displayAsset}
+              isLoading={isToAmountLoading}
+              label="You Receive (Estimated)"
+              maxAmount={maxToAmount}
+              onAmountChange={handleToAmountChange}
+              onAssetChange={(value) => handleAssetChange('toAsset', value)}
+              value={form.getValues().to}
+            />
+
+            {selectedPair && (
+              <ExchangeRateSection
+                bitcoinUnit={bitcoinUnit}
+                formatAmount={formatAmount}
+                fromAsset={form.getValues().fromAsset}
+                getAssetPrecision={getAssetPrecisionWrapper}
+                isPriceLoading={isPriceLoading}
+                selectedPair={selectedPair}
+                selectedPairFeed={selectedPairFeed}
+                toAsset={form.getValues().toAsset}
+              />
+            )}
+
+            {errorMessage && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mt-4">
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-red-500 font-medium">
+                      Trade Error
+                    </span>
+                    <button
+                      className="p-1 hover:bg-red-500/10 rounded transition-colors"
+                      onClick={() => copyToClipboard(errorMessage)}
+                      title="Copy error message"
+                    >
+                      <Copy className="w-4 h-4 text-red-500" />
+                    </button>
+                  </div>
+                  <span className="text-red-400/90 text-sm leading-relaxed">
+                    {errorMessage}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <SwapButton
+              errorMessage={errorMessage}
+              hasChannels={hasChannels}
+              hasTradablePairs={hasTradablePairs}
+              isPriceLoading={isPriceLoading}
+              isSwapInProgress={isSwapInProgress}
+              isToAmountLoading={isToAmountLoading}
+              wsConnected={wsConnected}
+            />
+          </form>
+        </div>
       </div>
     </div>
   )
@@ -1344,23 +1348,27 @@ export const Component = () => {
   }
 
   return (
-    <div className="container mx-auto w-full flex items-center justify-center">
+    <div className="container mx-auto">
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <Loader />
         </div>
       ) : !hasValidChannelsForTrading ? (
-        <NoTradingChannelsMessage
-          hasEnoughBalance={hasEnoughBalance}
-          onMakerChange={refreshData}
-          onNavigate={navigate}
-        />
+        <div className="w-full flex justify-center">
+          <NoTradingChannelsMessage
+            hasEnoughBalance={hasEnoughBalance}
+            onMakerChange={refreshData}
+            onNavigate={navigate}
+          />
+        </div>
       ) : !wsConnected || tradablePairs.length === 0 ? (
-        <NoTradingChannelsMessage
-          hasEnoughBalance={hasEnoughBalance}
-          onMakerChange={refreshData}
-          onNavigate={navigate}
-        />
+        <div className="w-full flex justify-center">
+          <NoTradingChannelsMessage
+            hasEnoughBalance={hasEnoughBalance}
+            onMakerChange={refreshData}
+            onNavigate={navigate}
+          />
+        </div>
       ) : (
         <div className="w-full flex justify-center">{renderSwapForm()}</div>
       )}

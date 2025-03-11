@@ -549,7 +549,7 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
         error={utxoModalProps.error}
         isOpen={showUtxoModal}
         onClose={() => setShowUtxoModal(false)}
-        onSuccess={() => generateRgbInvoice()}
+        onSuccess={() => setShowUtxoModal(false)}
         operationType="issuance"
         retryFunction={utxoModalProps.retryFunction}
       />

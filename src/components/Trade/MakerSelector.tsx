@@ -141,19 +141,39 @@ export const MakerSelector: React.FC<MakerSelectorProps> = ({
     show && (
       <div className="relative" ref={dropdownRef}>
         <div className="flex flex-col gap-1 mb-1">
-          <label className="text-sm font-medium text-slate-400">
-            Market Maker
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-sm font-semibold text-slate-300 uppercase tracking-wider">
+              Market Maker
+            </label>
+            {wsConnected ? (
+              hasNoPairs ? (
+                <span className="text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-300 rounded-full flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-yellow-400"></div>
+                  No Trading Pairs
+                </span>
+              ) : (
+                <span className="text-xs px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-full flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                  Connected
+                </span>
+              )
+            ) : (
+              <span className="text-xs px-2 py-0.5 bg-red-500/20 text-red-300 rounded-full flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse"></div>
+                Disconnected
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <button
               className={twJoin(
-                'flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl',
-                'transition-all duration-200 min-w-[200px]',
-                'border',
+                'flex-1 flex items-center justify-between gap-3 px-4 py-3 rounded-xl',
+                'transition-all duration-200',
+                'border-2',
                 wsConnected
                   ? hasNoPairs
                     ? 'bg-yellow-500/5 border-yellow-500/30 hover:bg-yellow-500/10'
-                    : 'bg-slate-800 border-slate-700/50 hover:bg-slate-700'
+                    : 'bg-slate-800/80 border-slate-600/50 hover:bg-slate-700'
                   : 'bg-red-500/5 border-red-500/30 hover:bg-red-500/10',
                 hasNoPairs ? 'animate-pulse' : '',
                 'hover:scale-[1.02] active:scale-[0.98]',
@@ -163,10 +183,10 @@ export const MakerSelector: React.FC<MakerSelectorProps> = ({
               onClick={() => !isLoading && setIsOpen(!isOpen)}
               type="button"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0">
                 <div
                   className={twJoin(
-                    'relative flex items-center gap-3',
+                    'relative flex items-center gap-3 min-w-0',
                     wsConnected
                       ? hasNoPairs
                         ? 'text-yellow-200'
@@ -174,7 +194,7 @@ export const MakerSelector: React.FC<MakerSelectorProps> = ({
                       : 'text-red-200'
                   )}
                 >
-                  <div className="relative">
+                  <div className="relative flex-shrink-0">
                     <div
                       className={twJoin(
                         'absolute inset-0 blur-md rounded-full',
@@ -200,17 +220,17 @@ export const MakerSelector: React.FC<MakerSelectorProps> = ({
                       )}
                     />
                   </div>
-                  <span className="text-sm font-medium truncate max-w-[180px]">
+                  <span className="text-sm font-medium overflow-hidden text-ellipsis whitespace-nowrap">
                     {currentUrl ? new URL(currentUrl).hostname : 'Select Maker'}
                   </span>
                 </div>
               </div>
               {isLoading ? (
-                <RefreshCw className="w-4 h-4 text-slate-400 animate-spin" />
+                <RefreshCw className="w-4 h-4 text-slate-400 animate-spin flex-shrink-0" />
               ) : (
                 <ChevronDown
                   className={twJoin(
-                    'w-4 h-4',
+                    'w-4 h-4 flex-shrink-0',
                     hasNoPairs ? 'text-yellow-400' : 'text-slate-400',
                     'transition-transform duration-200',
                     isOpen ? 'rotate-180' : ''
@@ -221,9 +241,9 @@ export const MakerSelector: React.FC<MakerSelectorProps> = ({
 
             {!wsConnected && !isLoading && (
               <button
-                className="p-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 
+                className="p-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 
                 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]
-                text-red-200 border border-red-500/30"
+                text-red-200 border-2 border-red-500/30 flex-shrink-0"
                 onClick={handleRefreshConnection}
                 title="Refresh connection"
                 type="button"
@@ -234,8 +254,8 @@ export const MakerSelector: React.FC<MakerSelectorProps> = ({
 
             {isLoading && (
               <div
-                className="p-2.5 rounded-xl bg-slate-800 
-              text-slate-400 border border-slate-700/50"
+                className="p-3 rounded-xl bg-slate-800 
+              text-slate-400 border-2 border-slate-700/50 flex-shrink-0"
               >
                 <RefreshCw className="w-4 h-4 animate-spin" />
               </div>
@@ -246,6 +266,9 @@ export const MakerSelector: React.FC<MakerSelectorProps> = ({
         {isOpen && (
           <div className="absolute top-full mt-2 right-0 w-96 bg-slate-800/95 backdrop-blur-sm rounded-xl border-2 border-slate-700/50 shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="p-2 max-h-[320px] overflow-y-auto custom-scrollbar">
+              <div className="px-4 py-2 text-xs font-medium text-slate-400 uppercase tracking-wider border-b border-slate-700/50 mb-1">
+                Available Makers
+              </div>
               {allMakerUrls.map((url) => (
                 <button
                   className={twJoin(
@@ -261,14 +284,14 @@ export const MakerSelector: React.FC<MakerSelectorProps> = ({
                   type="button"
                 >
                   {url === currentUrl ? (
-                    <Check className="w-4 h-4 text-blue-400" />
+                    <Check className="w-4 h-4 text-blue-400 flex-shrink-0" />
                   ) : (
-                    <Globe className="w-4 h-4 text-slate-500 group-hover:text-slate-300" />
+                    <Globe className="w-4 h-4 text-slate-500 group-hover:text-slate-300 flex-shrink-0" />
                   )}
-                  <div className="flex flex-col flex-1 text-left">
+                  <div className="flex flex-col flex-1 text-left overflow-hidden">
                     <span
                       className={twJoin(
-                        'text-sm font-medium truncate transition-colors duration-200',
+                        'text-sm font-medium overflow-hidden text-ellipsis whitespace-nowrap transition-colors duration-200',
                         url === currentUrl
                           ? 'text-blue-400'
                           : 'text-slate-400 group-hover:text-slate-200'
@@ -276,12 +299,12 @@ export const MakerSelector: React.FC<MakerSelectorProps> = ({
                     >
                       {new URL(url).hostname}
                     </span>
-                    <span className="text-xs text-slate-500 truncate">
+                    <span className="text-xs text-slate-500 overflow-hidden text-ellipsis whitespace-nowrap">
                       {url}
                     </span>
                   </div>
                   {url === nodeSettings.default_maker_url && (
-                    <Star className="w-4 h-4 text-blue-400 fill-current" />
+                    <Star className="w-4 h-4 text-blue-400 fill-current flex-shrink-0" />
                   )}
                 </button>
               ))}
@@ -290,7 +313,7 @@ export const MakerSelector: React.FC<MakerSelectorProps> = ({
                 <div className="p-3 border-t border-slate-700/50 mt-2">
                   <div className="flex items-center gap-2">
                     <input
-                      className="flex-1 px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500"
+                      className="flex-1 px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50"
                       onChange={(e) => setNewMakerUrl(e.target.value)}
                       onKeyDown={(e) =>
                         e.key === 'Enter' && handleAddNewMaker()
@@ -300,7 +323,7 @@ export const MakerSelector: React.FC<MakerSelectorProps> = ({
                       value={newMakerUrl}
                     />
                     <button
-                      className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                      className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex-shrink-0"
                       onClick={handleAddNewMaker}
                     >
                       <Check className="w-4 h-4" />
@@ -309,23 +332,21 @@ export const MakerSelector: React.FC<MakerSelectorProps> = ({
                 </div>
               ) : (
                 <button
-                  className="flex items-center gap-2 w-full px-4 py-3 text-sm text-blue-400 hover:text-blue-300 border-t border-slate-700/50 mt-2 transition-colors"
+                  className="flex items-center gap-2 w-full px-4 py-3 text-sm text-blue-400 hover:text-blue-300 border-t border-slate-700/50 mt-2 transition-colors hover:bg-slate-700/30 rounded-lg"
                   onClick={() => setIsAddingNew(true)}
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-4 h-4 flex-shrink-0" />
                   <span>Add new maker</span>
                 </button>
               )}
 
               <button
-                className="flex items-center gap-2 w-full px-4 py-3 text-sm text-slate-400 hover:text-slate-300 transition-colors"
+                className="flex items-center gap-2 w-full px-4 py-3 text-sm text-slate-400 hover:text-slate-300 transition-colors hover:bg-slate-700/30 rounded-lg"
                 onClick={() =>
-                  openUrl(
-                    'https://github.com/BitSwap-BiFi/Kaleidoswap/wiki/Makers'
-                  )
+                  openUrl('https://docs.kaleidoswap.com/api/market-maker')
                 }
               >
-                <ExternalLink className="w-4 h-4" />
+                <ExternalLink className="w-4 h-4 flex-shrink-0" />
                 <span>Learn about makers</span>
               </button>
             </div>
