@@ -162,8 +162,8 @@ export const Component = () => {
                         Lightning node
                       </p>
                     </div>
-
-                    <LocalNodeWarning />
+                    {/* TODO: Add local node warning after mainnet launch */}
+                    {/* <LocalNodeWarning /> */}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <WalletAction

@@ -269,10 +269,10 @@ export const Step2 = ({
       return
     }
 
-    // Check if capacity is below or equal to minimum
-    if (data.capacitySat <= MIN_CHANNEL_CAPACITY) {
+    // Check if capacity is below minimum
+    if (data.capacitySat < MIN_CHANNEL_CAPACITY) {
       toast.error(
-        `Channel capacity must be greater than ${formatNumber(MIN_CHANNEL_CAPACITY)} sats.`,
+        `Channel capacity must be at least ${formatNumber(MIN_CHANNEL_CAPACITY)} sats.`,
         {
           autoClose: 5000,
           position: 'bottom-right',
@@ -347,11 +347,7 @@ export const Step2 = ({
               onChange={(e) => handleCapacityChange(e.target.value)}
               placeholder="Enter amount in sats"
               type="text"
-              value={
-                capacitySat === MIN_CHANNEL_CAPACITY
-                  ? ''
-                  : formatNumber(capacitySat)
-              }
+              value={capacitySat ? formatNumber(capacitySat) : ''}
             />
             <span className="text-sm text-gray-400">
               {formatNumber(maxCapacity)} max
