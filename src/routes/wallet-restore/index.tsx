@@ -39,14 +39,12 @@ import { NETWORK_DEFAULTS } from '../../constants/networks'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 import { setSettingsAsync } from '../../slices/nodeSettings/nodeSettings.slice'
 
-// Define the steps for the wallet restoration process
 const steps = [
   { id: 'backup-selection', label: 'Backup Selection' },
   { id: 'restoration', label: 'Restoration' },
   { id: 'completion', label: 'Completion' },
 ]
 
-// Define types for modal state
 const ModalType = {
   ERROR: 'error',
   NONE: 'none',
@@ -88,7 +86,6 @@ interface StatusModalProps {
   isOpen: boolean
 }
 
-// Modal component for better reusability
 const StatusModal = ({
   type,
   title,
@@ -113,7 +110,6 @@ const StatusModal = ({
 
   if (!isOpen) return null
 
-  // Define icon and colors based on modal type
   const getModalConfig = () => {
     switch (type) {
       case ModalType.SUCCESS:
@@ -190,7 +186,6 @@ export const Component = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
   const isSubmitting = useRef(false)
 
-  // Unified modal state
   const [modalState, setModalState] = useState<ModalState>({
     autoClose: false,
     details: '',
@@ -312,7 +307,6 @@ export const Component = () => {
 
       setIsStartingNode(true)
       setCurrentStep('restoration')
-      console.log('Starting node...')
 
       try {
         const defaultMakerUrl = NETWORK_DEFAULTS[data.network].default_maker_url
@@ -385,7 +379,6 @@ export const Component = () => {
           await invoke('stop_node')
         }
       } catch (error) {
-        console.error('Node operation failed:', error)
         await invoke('stop_node')
         showErrorModal(
           'Node Operation Failed',
@@ -393,7 +386,6 @@ export const Component = () => {
         )
       }
     } catch (error) {
-      console.error('Restore failed:', error)
       showErrorModal(
         'Unexpected Error',
         `An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`
@@ -421,7 +413,6 @@ export const Component = () => {
         form.setValue('backup_path', selected)
       }
     } catch (error) {
-      console.error('Error selecting backup file:', error)
       toast.error('Failed to select backup file')
     }
   }
@@ -572,7 +563,6 @@ export const Component = () => {
           </SetupSection>
         )}
 
-        {/* Unified Modal Component */}
         <StatusModal
           autoClose={modalState.autoClose}
           autoCloseDelay={3000}

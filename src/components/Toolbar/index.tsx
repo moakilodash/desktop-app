@@ -15,7 +15,6 @@ import {
   setSettingsAsync,
 } from '../../slices/nodeSettings/nodeSettings.slice'
 
-// Types and Interfaces
 export interface Account {
   datapath: string
   default_lsp_url: string
@@ -45,7 +44,6 @@ interface NodeCardProps {
   onDelete: (account: Account) => void
 }
 
-// Modal Component
 const Modal: React.FC<ModalProps> = ({ onClose, children }) => {
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -89,7 +87,6 @@ const Modal: React.FC<ModalProps> = ({ onClose, children }) => {
   )
 }
 
-// Node Card Component
 const NodeCard: React.FC<NodeCardProps> = ({
   account,
   isCollapsed,
@@ -267,8 +264,6 @@ const useAccounts = () => {
 
   const updateAccount = useCallback(async (updatedAccount: Account) => {
     try {
-      console.log('Updating account:', updatedAccount.name)
-
       // Convert maker_urls to string if it's an array
       const makerUrlsString = Array.isArray(updatedAccount.maker_urls)
         ? updatedAccount.maker_urls.join(',')
@@ -290,8 +285,6 @@ const useAccounts = () => {
         rpcConnectionUrl: updatedAccount.rpc_connection_url,
       }
 
-      console.log('Invoking update_account with params:', params)
-
       await invoke('update_account', params)
 
       setAccounts((prev) =>
@@ -302,7 +295,6 @@ const useAccounts = () => {
 
       toast.success(`Account "${updatedAccount.name}" updated successfully`)
     } catch (error) {
-      console.error('Update account error:', error)
       toast.error(`Failed to update account: ${error}`)
       throw error
     }
@@ -314,7 +306,6 @@ const useAccounts = () => {
       setAccounts((prev) => prev.filter((a) => a.name !== account.name))
       toast.success(`Account "${account.name}" deleted successfully`)
     } catch (error) {
-      console.error(error)
       toast.error(`Failed to delete account "${account.name}"`)
       throw error
     }
@@ -374,7 +365,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
     }
   }, [])
 
-  // Toggle edit mode
   const toggleEditMode = () => {
     setIsEditing(!isEditing)
   }
@@ -382,20 +372,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
   const handleNodeChange = async (node: Account) => {
     try {
       setIsSwitching(true)
-      console.log('Starting node change for:', node.name)
 
       const currentNode = await invoke<Account | null>('get_current_account')
-      console.log('Current node:', currentNode)
 
       const isNodeRunning = await invoke<boolean>('is_node_running', {
         accountName: node.name,
       })
-      console.log('Is node running:', isNodeRunning)
 
       const runningNodeAccount = await invoke<string | null>(
         'get_running_node_account'
       )
-      console.log('Running node account:', runningNodeAccount)
 
       if (currentNode && currentNode.name === node.name && isNodeRunning) {
         // First update the Redux store before navigating
@@ -425,15 +411,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
       }
 
       if (runningNodeAccount && isNodeRunning) {
-        console.log('Stopping existing node for account:', runningNodeAccount)
         await invoke('stop_node')
         await new Promise((resolve) => setTimeout(resolve, 1000))
       }
 
-      console.log('Setting current node:', node.name)
       await invoke('set_current_account', { accountName: node.name })
 
-      console.log('Getting node from database:', node.name)
       const dbNode = await invoke<Account>('get_account_by_name', {
         name: node.name,
       })
@@ -442,7 +425,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
         throw new Error('Node not found in database')
       }
 
-      console.log('Formatting node data')
       const formattedNode = {
         ...dbNode,
         maker_urls: Array.isArray(dbNode.maker_urls)
@@ -451,21 +433,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
             [],
       }
 
-      console.log('Updating Redux state with node data')
       await dispatch(setSettingsAsync(formattedNode))
 
       if (
         node.node_url.startsWith('http://localhost:') &&
         node.datapath !== ''
       ) {
-        console.log('Starting local node with parameters:', {
-          accountName: node.name,
-          daemonListeningPort: node.daemon_listening_port,
-          datapath: node.datapath,
-          ldkPeerListeningPort: node.ldk_peer_listening_port,
-          network: node.network,
-        })
-
         toast.info('Starting local node...', {
           autoClose: 2000,
           position: 'bottom-right',
@@ -479,20 +452,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({ isCollapsed = false }) => {
             ldkPeerListeningPort: node.ldk_peer_listening_port,
             network: node.network,
           })
-          console.log('Node started successfully')
         } catch (error) {
-          console.error('Failed to start node:', error)
           throw new Error(
             error instanceof Error ? error.message : 'Failed to start node'
           )
         }
       }
 
-      console.log('Navigating to root path')
       await new Promise((resolve) => setTimeout(resolve, 1000))
       navigate(ROOT_PATH)
     } catch (error) {
-      console.error('Node change failed:', error)
       dispatch(nodeSettingsActions.resetNodeSettings())
       toast.error(
         error instanceof Error
@@ -746,9 +715,9 @@ const DeleteNodeModalContent: React.FC<DeleteNodeModalContentProps> = ({
   onCancel,
   onConfirm,
 }) => {
-  const handleDelete = async () => {
+  const handleDelete = () => {
     try {
-      await onConfirm(account)
+      onConfirm(account)
       onCancel() // Close the modal after successful deletion
     } catch (error) {
       // Error is already handled in the parent component
@@ -845,7 +814,6 @@ const EditNodeModalContent: React.FC<EditNodeModalContentProps> = ({
       onClose()
       toast.success(`Node "${formData.name}" updated successfully`)
     } catch (error) {
-      console.error(error)
       toast.error('Failed to update node')
     } finally {
       setIsLoading(false)

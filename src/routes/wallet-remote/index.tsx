@@ -10,7 +10,7 @@ import {
   WALLET_SETUP_PATH,
   WALLET_UNLOCK_PATH,
 } from '../../app/router/paths'
-import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
+import { useAppDispatch } from '../../app/store/hooks'
 import { Layout } from '../../components/Layout'
 import { NetworkSelector } from '../../components/NetworkSelector'
 import {
@@ -56,11 +56,6 @@ export const Component = () => {
   const dispatch = useAppDispatch()
 
   const navigate = useNavigate()
-
-  const { data: nodeSettingsData } = useAppSelector(
-    (state) => state.nodeSettings
-  )
-  console.log('Node Settings: ', nodeSettingsData)
 
   const form = useForm<Fields>({
     defaultValues: {
@@ -118,7 +113,6 @@ export const Component = () => {
         return
       }
     } catch (error) {
-      console.error('Failed to check account existence:', error)
       setIsNodeError(true)
       setNodeErrorMessage(
         'Failed to check account existence. Please try again.'
@@ -167,7 +161,7 @@ export const Component = () => {
       nodeUrl: data.node_url,
 
       proxyEndpoint: data.proxy_endpoint,
-      rpcConnectionUrl: data.rpc_connection_url, // Empty for remote nodes
+      rpcConnectionUrl: data.rpc_connection_url,
     })
 
     // Set as current account
@@ -199,7 +193,6 @@ export const Component = () => {
 
       navigate(WALLET_DASHBOARD_PATH)
     } catch (error) {
-      console.error('Failed to setup remote node:', error)
       toast.error('Failed to setup remote node. Please check your settings.')
       dispatch(nodeSettingsActions.resetNodeSettings())
     }

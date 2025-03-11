@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import axios from 'axios'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
 
 import { Spinner } from '../../components/Spinner'
 import { NETWORK_DEFAULTS } from '../../constants/networks'
+import { isValidPubkeyAndAddress } from '../../helpers/address'
 import { KaleidoswapBoxIcon } from '../../icons/KaleidoswapBox'
 import {
   NewChannelFormSchema,
@@ -22,34 +23,6 @@ interface FormFields {
   pubKeyAndAddress: string
 }
 
-// Add this validation helper function at the top level
-const isValidPubkeyAndAddress = (value: string): boolean => {
-  // Check basic format: pubkey@host:port
-  const parts = value.split('@')
-  if (parts.length !== 2) return false
-
-  const [pubkey, hostAndPort] = parts
-
-  // Validate pubkey: 66 characters hex string
-  const pubkeyRegex = /^[0-9a-fA-F]{66}$/
-  if (!pubkeyRegex.test(pubkey)) return false
-
-  // Validate host:port format
-  const hostPortParts = hostAndPort.split(':')
-  if (hostPortParts.length !== 2) return false
-
-  const [host, port] = hostPortParts
-
-  // Basic host validation
-  if (!host || host.length < 1) return false
-
-  // Port should be a number between 1-65535
-  const portNum = parseInt(port, 10)
-  if (isNaN(portNum) || portNum < 1 || portNum > 65535) return false
-
-  return true
-}
-
 export const Step1 = ({ onNext, formData, onFormUpdate }: Props) => {
   const [isLoading, setIsLoading] = useState(false)
   const [localError, setLocalError] = useState('')
@@ -60,7 +33,7 @@ export const Step1 = ({ onNext, formData, onFormUpdate }: Props) => {
   const [connectPeer] = nodeApi.endpoints.connectPeer.useMutation()
   const [listPeers] = nodeApi.endpoints.listPeers.useLazyQuery()
 
-  const { handleSubmit, control, formState, clearErrors, setValue, watch } =
+  const { handleSubmit, control, formState, clearErrors, setValue } =
     useForm<FormFields>({
       defaultValues: {
         pubKeyAndAddress: formData.pubKeyAndAddress || '',
@@ -78,21 +51,11 @@ export const Step1 = ({ onNext, formData, onFormUpdate }: Props) => {
       ),
     })
 
-  // Watch for form changes
-  useEffect(() => {
-    const subscription = watch((value) => {
-      console.log('Step1: Form value changed:', value)
-    })
-    return () => subscription.unsubscribe()
-  }, [watch])
-
   const onSubmit: SubmitHandler<FormFields> = async (data) => {
-    console.log('Step1: Form submitted with data:', data)
     // Clear any previous errors
     setLocalError('')
 
     if (!isValidPubkeyAndAddress(data.pubKeyAndAddress)) {
-      console.log('Step1: Invalid peer format detected')
       setLocalError(
         'Invalid peer format. Expected format: <66-char-hex-pubkey>@hostname:port'
       )
@@ -100,24 +63,20 @@ export const Step1 = ({ onNext, formData, onFormUpdate }: Props) => {
     }
 
     // First update the form data
-    console.log('Step1: Updating form data with:', data.pubKeyAndAddress)
     onFormUpdate({
       pubKeyAndAddress: data.pubKeyAndAddress,
     })
 
     // Then check connection
     const isConnected = await checkPeerConnection(data.pubKeyAndAddress)
-    console.log('Step1: Connection check result:', isConnected)
 
     if (!isConnected) {
-      console.log('Step1: Not connected, showing dialog')
       setSelectedPeerInfo(data.pubKeyAndAddress)
       setShowConnectionDialog(true)
       return
     }
 
     // If already connected, proceed to next step
-    console.log('Step1: Already connected, proceeding to next step')
     onNext()
   }
 
@@ -163,7 +122,6 @@ export const Step1 = ({ onNext, formData, onFormUpdate }: Props) => {
         onNext()
       }
     } catch (err) {
-      console.error('Error fetching LSP info:', err)
       setLocalError(
         err instanceof Error
           ? err.message
@@ -180,7 +138,6 @@ export const Step1 = ({ onNext, formData, onFormUpdate }: Props) => {
       const [pubkey] = peerInfo.split('@')
       return peers.peers.some((peer) => peer.pubkey === pubkey)
     } catch (error) {
-      console.error('Error checking peer connection:', error)
       return false
     }
   }

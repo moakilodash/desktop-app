@@ -1,3 +1,4 @@
+import { openUrl } from '@tauri-apps/plugin-opener'
 import {
   ChevronDown,
   Star,
@@ -316,15 +317,17 @@ export const MakerSelector: React.FC<MakerSelectorProps> = ({
                 </button>
               )}
 
-              <a
+              <button
                 className="flex items-center gap-2 w-full px-4 py-3 text-sm text-slate-400 hover:text-slate-300 transition-colors"
-                href="https://github.com/BitSwap-BiFi/Kaleidoswap/wiki/Makers"
-                rel="noopener noreferrer"
-                target="_blank"
+                onClick={() =>
+                  openUrl(
+                    'https://github.com/BitSwap-BiFi/Kaleidoswap/wiki/Makers'
+                  )
+                }
               >
                 <ExternalLink className="w-4 h-4" />
                 <span>Learn about makers</span>
-              </a>
+              </button>
             </div>
           </div>
         )}

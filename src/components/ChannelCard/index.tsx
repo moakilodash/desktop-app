@@ -207,7 +207,7 @@ const InfoModal: React.FC<InfoModalProps> = ({
 interface ChannelCardProps {
   channel: any
   onClose: (channelId: string, peerPubkey: string) => void
-  asset: any // Changed from assets to asset
+  asset: any
 }
 
 const AssetIcon: React.FC<{ ticker: string; className?: string }> = ({
@@ -252,7 +252,6 @@ export const ChannelCard: React.FC<ChannelCardProps> = ({
 
   const isRgbChannel = !!channel.asset_id
 
-  // Determine channel status for styling
   const isReady = channel.ready
   const isPublic = channel.public
 

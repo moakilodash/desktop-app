@@ -1,4 +1,5 @@
 use std::env;
+use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::net::TcpListener;
 use std::path::PathBuf;
@@ -10,7 +11,6 @@ use std::thread;
 use std::time::Duration;
 use tauri::Manager;
 use tauri::{AppHandle, Emitter, WebviewWindow};
-use std::fs::File;
 
 const SHUTDOWN_TIMEOUT_SECS: u64 = 5;
 
@@ -210,7 +210,7 @@ impl NodeProcess {
 
         println!("Node started successfully for account: {}", account_name);
 
-        // Optionally emit an event so your UI knows a node started
+        // Emit an event so your UI knows a node started
         if let Some(window) = &*self.window.lock().unwrap() {
             let _ = window.emit("node-started", ());
         }
@@ -400,10 +400,9 @@ impl NodeProcess {
         } else {
             if cfg!(target_os = "macos") {
                 // macOS: ~/Library/Logs/com.kaleidoswap.dev/
-                let home = env::var("HOME")
-                    .map_err(|e| format!("Failed to get HOME directory: {}", e))?;
-                PathBuf::from(home)
-                    .join("Library/Logs/com.kaleidoswap.dev")
+                let home =
+                    env::var("HOME").map_err(|e| format!("Failed to get HOME directory: {}", e))?;
+                PathBuf::from(home).join("Library/Logs/com.kaleidoswap.dev")
             } else if cfg!(target_os = "windows") {
                 // Windows: %APPDATA%\com.kaleidoswap.dev\logs
                 let app_data = env::var("APPDATA")
@@ -413,10 +412,9 @@ impl NodeProcess {
                     .join("logs")
             } else {
                 // Linux: ~/.local/share/com.kaleidoswap.dev/logs
-                let home = env::var("HOME")
-                    .map_err(|e| format!("Failed to get HOME directory: {}", e))?;
-                PathBuf::from(home)
-                    .join(".local/share/com.kaleidoswap.dev/logs")
+                let home =
+                    env::var("HOME").map_err(|e| format!("Failed to get HOME directory: {}", e))?;
+                PathBuf::from(home).join(".local/share/com.kaleidoswap.dev/logs")
             }
         };
 

@@ -39,6 +39,7 @@ import {
   NavItem,
 } from './config'
 import { LayoutModal } from './Modal'
+import { openUrl } from '@tauri-apps/plugin-opener'
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -61,9 +62,9 @@ interface DropdownMenuProps {
   onItemClick?: (item: NavItem | string) => void
 }
 
-// Define types for NavItem component props - requires 'to' property
+// Define types for NavItem component props
 interface NavItemProps {
-  item: NavItem & { to: string } // Ensure 'to' is required for NavItem component
+  item: NavItem & { to: string }
   isCollapsed: boolean
   isActive: boolean
 }
@@ -363,7 +364,6 @@ export const Layout = (props: Props) => {
   const [isTransactionMenuOpen, setIsTransactionMenuOpen] = useState(false)
   const [isSupportMenuOpen, setIsSupportMenuOpen] = useState(false)
 
-  // Add state for support modal
   const [showSupportModal, setShowSupportModal] = useState(false)
 
   const channelMenuRef = useRef(null)
@@ -374,7 +374,6 @@ export const Layout = (props: Props) => {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
 
-  // Get the lock endpoint from nodeApi
   const [lock] = nodeApi.endpoints.lock.useLazyQuery()
 
   const [showLogoutModal, setShowLogoutModal] = useState(false)
@@ -397,12 +396,10 @@ export const Layout = (props: Props) => {
     }
   )
 
-  // Function to handle logout
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true)
       const lockResponse = await lock().unwrap()
-      console.log('lockResponse', lockResponse)
       await invoke('stop_node')
 
       if (lockResponse !== undefined || lockResponse === null) {
@@ -413,7 +410,6 @@ export const Layout = (props: Props) => {
         throw new Error('Node lock unsuccessful')
       }
     } catch (error) {
-      console.error('Logout error:', error)
       toast.error(
         `Logout failed: ${error instanceof Error ? error.message : ''}. Redirecting anyway.`
       )
@@ -424,9 +420,8 @@ export const Layout = (props: Props) => {
     }
   }
 
-  // Function to handle opening external links
   const openExternalLink = (url: string) => {
-    window.open(url, '_blank')
+    openUrl(url)
   }
 
   useEffect(() => {
@@ -435,7 +430,6 @@ export const Layout = (props: Props) => {
       if (isFetching) return
 
       if (error && 'status' in error && error.status === 403) {
-        console.log('Node is locked, waiting to retry...')
         setIsRetrying(true)
         await sleep(3000)
         setIsRetrying(false)
@@ -481,7 +475,6 @@ export const Layout = (props: Props) => {
         highestBlockDeposit &&
         highestBlockDeposit?.confirmation_time?.height > lastDeposit
       ) {
-        console.log('Deposit received')
         toast.info('Deposit received')
         setLastDeposit(highestBlockDeposit?.confirmation_time?.height)
       }
@@ -529,9 +522,7 @@ export const Layout = (props: Props) => {
   }, [])
 
   const shouldHideNavbar = HIDE_NAVBAR_PATHS.includes(location.pathname)
-  // const isNodeConnected = nodeInfo.isSuccess
 
-  // Function to handle quick actions
   const handleTransactionAction = (type: string) => {
     dispatch(
       uiSliceActions.setModal({

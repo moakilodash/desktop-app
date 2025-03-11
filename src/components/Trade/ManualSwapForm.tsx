@@ -60,7 +60,7 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({ assets }) => {
       fromAmount: '',
       fromAsset: '',
       takerPubkey: '',
-      timeoutSec: '3600', // Default 1 hour
+      timeoutSec: '3600',
       toAmount: '',
       toAsset: '',
     },
@@ -124,12 +124,12 @@ export const ManualSwapForm: React.FC<ManualSwapFormProps> = ({ assets }) => {
         if (maxHtlc) {
           newBalances['BTC'] = {
             // For BTC, inbound is the sum of inbound_balance_msat across all channels
-inbound:
+            inbound:
               channels.data?.channels.reduce(
                 (sum, c) => sum + (c.inbound_balance_msat || 0),
                 0
               ) || 0,
-            
+
             outbound: maxHtlc,
           }
         }
@@ -160,7 +160,6 @@ inbound:
       setAssetBalances(newBalances)
       toast.success('Asset balances updated')
     } catch (error) {
-      console.error('Failed to fetch asset balances:', error)
       toast.error('Failed to fetch asset balances')
     } finally {
       setIsLoadingBalances(false)
@@ -213,7 +212,6 @@ inbound:
       // Apply thousands separators for better readability
       setValue('fromAmount', formattedValue)
     } catch (error) {
-      console.error('Error handling amount change:', error)
       setValue('fromAmount', '')
     }
   }
@@ -231,7 +229,6 @@ inbound:
       // Apply thousands separators for better readability
       setValue('toAmount', formattedValue)
     } catch (error) {
-      console.error('Error handling amount change:', error)
       setValue('toAmount', '')
     }
   }
@@ -348,15 +345,6 @@ inbound:
       let fromAmountValue = parseAssetAmount(data.fromAmount, data.fromAsset)
       let toAmountValue = parseAssetAmount(data.toAmount, data.toAsset)
 
-      console.log('Parsed amounts for API:', {
-        fromAmount: data.fromAmount,
-        fromAmountValue,
-        fromAsset: data.fromAsset,
-        toAmount: data.toAmount,
-        toAmountValue,
-        toAsset: data.toAsset,
-      })
-
       // Prepare request object with required fields
       const requestPayload: {
         qty_from: number
@@ -388,7 +376,6 @@ inbound:
         requestPayload.to_asset = data.toAsset
       }
 
-      console.log('Sending swap request:', requestPayload)
       const response = await makerInit(requestPayload).unwrap()
 
       setSwapString(response.swapstring)
@@ -396,7 +383,6 @@ inbound:
       setSwapInitiated(true)
       toast.success('Swap initiated successfully')
     } catch (error) {
-      console.error('Failed to initiate swap:', error)
       toast.error('Failed to initiate swap. Please try again.')
     } finally {
       setIsInitiating(false)
@@ -429,7 +415,6 @@ inbound:
       setPaymentSecret('')
       setValue('takerPubkey', '')
     } catch (error) {
-      console.error('Failed to execute swap:', error)
       toast.error('Failed to execute swap. Please try again.')
     } finally {
       setIsExecuting(false)
@@ -472,7 +457,6 @@ inbound:
         useGrouping: true,
       }).format(balance / Math.pow(10, precision))
     } catch (error) {
-      console.error('Error formatting balance:', error)
       return '0'
     }
   }

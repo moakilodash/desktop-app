@@ -73,7 +73,7 @@ export const Component = () => {
     const formattedAmount = (amount / divisor).toFixed(precision)
     return new Intl.NumberFormat('en-US', {
       maximumFractionDigits: precision,
-      minimumFractionDigits: 0, // Don't show unnecessary zeros
+      minimumFractionDigits: 0,
       useGrouping: true,
     }).format(parseFloat(formattedAmount))
   }
@@ -170,7 +170,6 @@ export const Component = () => {
     }
   }
 
-  // Render functions
   const renderNoChannelsMessage = () => (
     <NoChannelsMessage
       hasEnoughBalance={hasEnoughBalance}

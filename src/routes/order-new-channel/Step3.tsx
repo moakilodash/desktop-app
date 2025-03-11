@@ -15,6 +15,7 @@ import { toast } from 'react-toastify'
 
 import 'react-toastify/dist/ReactToastify.css'
 import { useAppSelector } from '../../app/store/hooks'
+import { blocksToTime } from '../../helpers/datetime'
 import { formatBitcoinAmount } from '../../helpers/number'
 import { Lsps1CreateOrderResponse } from '../../slices/makerApi/makerApi.slice'
 import {
@@ -30,7 +31,6 @@ interface StepProps {
   order: Lsps1CreateOrderResponse | null
 }
 
-// Define the getFeeIcon function
 const getFeeIcon = (type: string) => {
   switch (type) {
     case 'slow':
@@ -44,24 +44,6 @@ const getFeeIcon = (type: string) => {
   }
 }
 
-// Function to convert blocks to human-readable time
-const blocksToTime = (blocks: number) => {
-  const minutes = blocks * 10
-  const days = Math.floor(minutes / 1440)
-  const hours = Math.floor((minutes % 1440) / 60)
-  const mins = minutes % 60
-
-  let timeString = ''
-  if (days > 0) timeString += `${days} day${days > 1 ? 's' : ''}`
-  if (hours > 0)
-    timeString += `${timeString ? ', ' : ''}${hours} hour${hours > 1 ? 's' : ''}`
-  if (mins > 0)
-    timeString += `${timeString ? ', ' : ''}${mins} minute${mins > 1 ? 's' : ''}`
-
-  return timeString || 'less than a minute'
-}
-
-// Add this helper function near the top of the file
 const formatAssetAmount = (
   amount: number | undefined,
   precision: number
@@ -77,7 +59,6 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
   const [useWalletFunds, setUseWalletFunds] = useState(false)
   const bitcoinUnit = useAppSelector((state) => state.settings.bitcoinUnit)
 
-  // Add queries for wallet balances
   const [btcBalance, btcBalanceResponse] =
     nodeApi.endpoints.btcBalance.useLazyQuery()
   const [listChannels, listChannelsResponse] =
@@ -92,7 +73,6 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
   const [isProcessingWalletPayment, setIsProcessingWalletPayment] =
     useState(false)
 
-  // Define fee rates
   const feeRates = [
     { label: 'Slow', rate: 1, value: 'slow' },
     { label: 'Normal', rate: 2, value: 'normal' },
@@ -100,15 +80,12 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
     { label: 'Custom', rate: customFee, value: 'custom' },
   ]
 
-  // Add new state for payment status
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'paid' | null>(
     null
   )
 
-  // Add loading state for data fetching
   const [isLoadingData, setIsLoadingData] = useState(false)
 
-  // Add decodeInvoice to the list of queries
   const [decodeInvoice] = nodeApi.endpoints.decodeInvoice.useLazyQuery()
 
   // Memoize the refresh function
@@ -653,7 +630,6 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
     )
   }
 
-  // Add success message component
   const renderSuccessMessage = () => (
     <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6 mb-6">
       <div className="flex flex-col items-center text-center">

@@ -22,6 +22,7 @@ import {
   ORDER_CHANNEL_PATH,
 } from '../../app/router/paths'
 import { ChannelCard } from '../../components/ChannelCard'
+import { formatTimeAgo } from '../../helpers/datetime'
 import { nodeApi, Channel } from '../../slices/nodeApi/nodeApi.slice'
 
 interface StatCardProps {
@@ -245,19 +246,6 @@ export const Component: React.FC = () => {
     } catch (error) {
       console.error('Error closing channel:', error)
     }
-  }
-
-  const formatTimeAgo = (date: Date) => {
-    const now = new Date()
-    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-
-    if (seconds < 60) return `${seconds} seconds ago`
-    const minutes = Math.floor(seconds / 60)
-    if (minutes < 60) return `${minutes} minutes ago`
-    const hours = Math.floor(minutes / 60)
-    if (hours < 24) return `${hours} hours ago`
-    const days = Math.floor(hours / 24)
-    return `${days} days ago`
   }
 
   // Toggle filter option

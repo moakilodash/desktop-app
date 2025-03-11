@@ -33,7 +33,6 @@ export const Component = () => {
   const navigate = useNavigate()
   const [nodeType, setNodeType] = useState<'local' | 'remote' | null>(null)
   const [isTransitioning, setIsTransitioning] = useState(false)
-  // State for support modal
   const [showSupportModal, setShowSupportModal] = useState(false)
 
   // Handle transitions
@@ -53,7 +52,6 @@ export const Component = () => {
         setNodeType(type)
         setIsTransitioning(false)
 
-        // Re-add fade-in class
         if (content) {
           content.classList.remove('fade-out')
           content.classList.add('fade-in')
@@ -234,7 +232,6 @@ export const Component = () => {
         </div>
       </div>
 
-      {/* Support Modal */}
       <SupportModal
         isOpen={showSupportModal}
         onClose={() => setShowSupportModal(false)}

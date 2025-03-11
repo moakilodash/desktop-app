@@ -63,16 +63,6 @@ export const Component = () => {
     while (shouldRetry) {
       try {
         const rpcConfig = parseRpcUrl(nodeSettings.rpc_connection_url)
-        console.log(
-          'Unlocking the node with params: ',
-          rpcConfig.host,
-          rpcConfig.password,
-          rpcConfig.port,
-          rpcConfig.username,
-          nodeSettings.indexer_url,
-          data.password,
-          nodeSettings.proxy_endpoint
-        )
 
         await unlock({
           bitcoind_rpc_host: rpcConfig.host,
@@ -113,7 +103,6 @@ export const Component = () => {
             shouldRetry = false
             continue
           } else {
-            console.warn('Fetch error, retrying immediately...')
             doubleFetchErrorFlag = true
             continue
           }
@@ -124,9 +113,6 @@ export const Component = () => {
           error?.data.error ===
             'Cannot call other APIs while node is changing state'
         ) {
-          console.warn(
-            `Node is changing state, retrying in ${pollingInterval / 1000}s...`
-          )
           await new Promise((res) => setTimeout(res, pollingInterval))
           pollingInterval = Math.min(pollingInterval * 2, 15000)
           continue
@@ -187,7 +173,6 @@ export const Component = () => {
     })
   }
 
-  // Simplified Connection Details Component
   const SimpleConnectionDetails = () => {
     const rpcConfig = parseRpcUrl(nodeSettings.rpc_connection_url)
 
@@ -264,11 +249,9 @@ export const Component = () => {
     )
   }
 
-  // Render the unlock form card with matched styling from screenshot
   const renderUnlockForm = () => (
     <Card className="w-full max-w-md mx-auto bg-gray-900 rounded-lg overflow-hidden border border-gray-800">
       <div className="flex flex-col items-center pt-12 pb-6">
-        {/* Key icon with blue background */}
         <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center mb-6">
           <Lock className="w-10 h-10 text-white" />
         </div>

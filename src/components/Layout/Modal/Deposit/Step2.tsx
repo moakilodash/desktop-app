@@ -1,4 +1,4 @@
-// Step2.tsx - Main deposit component with improved UI
+import { openUrl } from '@tauri-apps/plugin-opener'
 import {
   CircleCheckBig,
   CircleX,
@@ -59,12 +59,10 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
     setNoColorableUtxos(false)
   }, [network])
 
-  // Add new state and query for asset info
   const [assetTicker, setAssetTicker] = useState<string>('')
   const [assetName, setAssetName] = useState<string>('')
   const { data: assetList } = nodeApi.endpoints.listAssets.useQuery()
 
-  // Add useEffect to set asset ticker when assetList is loaded
   useEffect(() => {
     if (assetList?.nia && assetId !== BTC_ASSET_ID && assetId) {
       const asset = assetList.nia.find((a) => a.asset_id === assetId)
@@ -78,14 +76,12 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
     }
   }, [assetList, assetId])
 
-  // Add effect to clear address when amount changes for lightning
   useEffect(() => {
     if (network === 'lightning' && address) {
       setAddress(undefined)
     }
   }, [amount, network])
 
-  // Add new state for recipient ID
   const [recipientId, setRecipientId] = useState<string>()
 
   // Add network info query
@@ -138,16 +134,16 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
         <p className="text-green-300/80 text-sm mb-3">
           {faucetInfo.description}
         </p>
-        <a
+        <button
           className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/20 
                    hover:bg-green-500/30 text-green-400 rounded-lg transition-colors text-sm"
-          href={faucetInfo.link}
-          rel="noopener noreferrer"
-          target="_blank"
+          onClick={() => {
+            openUrl(faucetInfo.link)
+          }}
         >
           <ArrowRight className="w-4 h-4" />
           {faucetInfo.linkText}
-        </a>
+        </button>
       </div>
     )
   }
@@ -414,7 +410,6 @@ export const Step2 = ({ assetId, onBack, onNext }: Props) => {
           </div>
         )}
 
-        {/* Generate Button or Address Display */}
         {!address ? (
           <button
             className="w-full py-4 px-6 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-900

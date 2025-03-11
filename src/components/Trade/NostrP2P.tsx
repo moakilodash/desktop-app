@@ -1,3 +1,4 @@
+import { openUrl } from '@tauri-apps/plugin-opener'
 import { Users, Zap, Clock, Bell, ArrowRight, Globe } from 'lucide-react'
 import React from 'react'
 
@@ -78,14 +79,14 @@ export const NostrP2P: React.FC = () => {
         <div className="bg-blue-600/10 border border-blue-500/20 rounded-lg p-4 w-full">
           <p className="text-blue-400 text-sm text-center">
             Want to be notified when Nostr P2P trading launches?{' '}
-            <a
+            <button
               className="text-blue-400 underline hover:text-blue-300"
-              href="https://github.com/BitSwap-BiFi/Kaleidoswap"
-              rel="noopener noreferrer"
-              target="_blank"
+              onClick={() =>
+                openUrl('https://github.com/BitSwap-BiFi/Kaleidoswap')
+              }
             >
               Star our GitHub repo
-            </a>
+            </button>
           </p>
         </div>
       </div>

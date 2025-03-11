@@ -22,6 +22,7 @@ export interface SwapDetails {
   toAsset: string
   timestamp: string
   selectedPair: TradingPair | null
+  selectedPairFeed: any | null
   payment_hash: string
 }
 
@@ -92,6 +93,7 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
     toAsset,
     timestamp,
     selectedPair,
+    selectedPairFeed,
     payment_hash,
   } = swapDetails
 
@@ -107,45 +109,72 @@ export const SwapRecap: React.FC<SwapRecapProps> = ({
   const displayFromAsset = getDisplayAsset(fromAsset, bitcoinUnit)
   const displayToAsset = getDisplayAsset(toAsset, bitcoinUnit)
 
-  const calculateAndFormatRate = useCallback(() => {
-    if (!price || !selectedPair) return ''
+  const calculateAndFormatRate = useCallback(
+    (
+      fromAsset: string,
+      toAsset: string,
+      selectedPair: { base_asset: string; quote_asset: string } | null,
+      selectedPairFeed: { price: number } | null
+    ) => {
+      if (!price || !selectedPair || !selectedPairFeed)
+        return 'Price not available'
 
-    const isInverted =
-      fromAsset === selectedPair.quote_asset &&
-      toAsset === selectedPair.base_asset
+      let rate = selectedPairFeed.price
+      console.log(rate)
+      let displayFromAsset = fromAsset
+      let displayToAsset = toAsset
 
-    const precision = !isInverted
-      ? getAssetPrecision(toAsset)
-      : getAssetPrecision(fromAsset)
+      const isInverted =
+        fromAsset === selectedPair.quote_asset &&
+        toAsset === selectedPair.base_asset
 
-    let rate = price
-    let fromUnit = fromAsset === 'BTC' ? bitcoinUnit : fromAsset
-    let toUnit = toAsset === 'BTC' ? bitcoinUnit : toAsset
+      const precision = !isInverted
+        ? getAssetPrecision(displayToAsset)
+        : getAssetPrecision(displayFromAsset)
 
-    if (
-      (fromUnit === 'SAT' && !isInverted) ||
-      (toUnit === 'SAT' && isInverted)
-    ) {
-      rate = rate / SATOSHIS_PER_BTC
-    }
+      let fromUnit = displayFromAsset === 'BTC' ? bitcoinUnit : displayFromAsset
+      let toUnit = displayToAsset === 'BTC' ? bitcoinUnit : displayToAsset
 
-    // Format with a minimum of 2 decimal places and a maximum based on asset precision
-    const formattedRate = !isInverted
-      ? new Intl.NumberFormat('en-US', {
-          maximumFractionDigits: Math.max(precision, 4),
-          minimumFractionDigits: 2,
-          useGrouping: true,
-        }).format(rate)
-      : new Intl.NumberFormat('en-US', {
-          maximumFractionDigits: Math.max(precision, 4),
-          minimumFractionDigits: 2,
-          useGrouping: true,
-        }).format(1 / rate)
+      if (
+        (fromUnit === 'SAT' && !isInverted) ||
+        (toUnit === 'SAT' && isInverted)
+      ) {
+        rate = rate / SATOSHIS_PER_BTC
+      }
 
-    return `1 ${fromUnit} = ${formattedRate} ${toUnit}`
-  }, [price, selectedPair, fromAsset, toAsset, bitcoinUnit, getAssetPrecision])
+      return !isInverted
+        ? new Intl.NumberFormat('en-US', {
+            maximumFractionDigits: precision > 4 ? precision : 4,
+            minimumFractionDigits: precision,
+            useGrouping: true,
+          }).format(
+            parseFloat(
+              (rate / Math.pow(10, precision)).toFixed(
+                precision > 4 ? precision : 4
+              )
+            )
+          )
+        : new Intl.NumberFormat('en-US', {
+            maximumFractionDigits: precision > 4 ? precision : 4,
+            minimumFractionDigits: precision,
+            useGrouping: true,
+          }).format(
+            parseFloat(
+              (Math.pow(10, precision) / rate).toFixed(
+                precision > 4 ? precision : 4
+              )
+            )
+          )
+    },
+    [bitcoinUnit, getAssetPrecision]
+  )
 
-  const exchangeRate = calculateAndFormatRate()
+  const exchangeRate = calculateAndFormatRate(
+    fromAsset,
+    toAsset,
+    selectedPair,
+    selectedPairFeed
+  )
 
   const isPending = currentSwap?.status?.toLowerCase() === 'pending'
   const isWaiting = currentSwap?.status?.toLowerCase() === 'waiting'

@@ -106,7 +106,6 @@ export const Component = () => {
 
   const onSubmitStep1 = useCallback(
     async (data: { connectionUrl: string; success: boolean }) => {
-      console.log('Step 1 submitted:', data)
       if (data.success) {
         setStep(2)
       } else {

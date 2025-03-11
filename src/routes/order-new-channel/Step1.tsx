@@ -88,7 +88,6 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
   const lspUrl = currentAccount.default_lsp_url
 
   useEffect(() => {
-    console.log('Fetching LSP Info...')
     fetchLspInfo()
   }, [lspUrl, getInfo])
 
@@ -97,7 +96,6 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
       setIsLoading(true)
       try {
         const response = await getInfo().unwrap()
-        console.log('LSP Info response:', response)
         if (response.lsp_connection_url) {
           setConnectionUrl(response.lsp_connection_url)
           checkPeerConnection(response.lsp_connection_url)
@@ -117,16 +115,13 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
     try {
       const pubkey = connectionUrl.split('@')[0]
       const peersResponse = await listPeers().unwrap()
-      console.log('Peers response:', peersResponse)
       if (peersResponse?.peers) {
         const isConnected = peersResponse.peers.some(
           (peer) => peer.pubkey === pubkey
         )
         setIsAlreadyConnected(isConnected)
-        console.log('Is already connected:', isConnected)
       }
     } catch (error) {
-      console.error('Error checking peer connection:', error)
       toast.error('Failed to check peer connection status')
     }
   }
@@ -159,11 +154,9 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
             : 'Failed to connect to peer'
         throw new Error(errorMessage)
       }
-      console.log('Connect peer response:', response)
       toast.success('Successfully connected to LSP')
       onNext({ connectionUrl, success: true })
     } catch (error) {
-      console.error('Failed to connect to peer:', error)
       toast.error(`${error}`)
       setShowConnectPopup(false)
     } finally {
@@ -172,7 +165,6 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
   }
 
   const handleKaleidoswapSelect = async () => {
-    console.log('buttonClicked')
     setIsLoading(true)
     try {
       const networkInfo = await getNetworkInfo().unwrap()
@@ -205,7 +197,6 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
 
       await fetchLspInfo()
     } catch (error) {
-      console.error('Error selecting Kaleidoswap LSP:', error)
       toast.error(`Failed to select Kaleidoswap LSP`)
     } finally {
       setIsLoading(false)
@@ -226,7 +217,6 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
 
       await fetchLspInfo()
     } catch (error) {
-      console.error('Error selecting Kaleidoswap LSP:', error)
       toast.error('Failed to select Kaleidoswap LSP')
     } finally {
       setIsLoading(false)

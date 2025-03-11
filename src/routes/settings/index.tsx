@@ -124,14 +124,13 @@ export const Component: React.FC = () => {
 
   const fetchNodeLogs = async () => {
     try {
-      // Use a non-blocking approach with a timeout
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Logs fetch timeout')), 5000)
       )
 
       const logsPromise = invoke<string[]>('get_node_logs')
 
-      // Race between the actual fetch and the timeout
+      // Race between the fetch and the timeout
       const logs = (await Promise.race([
         logsPromise,
         timeoutPromise,
@@ -146,7 +145,6 @@ export const Component: React.FC = () => {
     }
   }
 
-  // Add loading state for initial data loading
   const [isLoading, setIsLoading] = useState(true)
 
   // Optimize the useEffect for data loading
@@ -170,7 +168,7 @@ export const Component: React.FC = () => {
     return () => {
       clearInterval(logsInterval)
     }
-  }, []) // Empty dependency array to run only on mount
+  }, [])
 
   useEffect(() => {
     reset({
@@ -224,7 +222,6 @@ export const Component: React.FC = () => {
         type: ModalType.SUCCESS,
       })
     } catch (error) {
-      console.error('Failed to restart node:', error)
       toast.error(
         `Failed to restart node: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
@@ -324,7 +321,6 @@ export const Component: React.FC = () => {
         })
       }
     } catch (error) {
-      console.error('Failed to save settings:', error)
       toast.error(
         `Failed to save settings: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
@@ -358,7 +354,6 @@ export const Component: React.FC = () => {
     }
   }
 
-  // Add state for restart confirmation
   const [showRestartConfirmation, setShowRestartConfirmation] = useState(false)
 
   const handleLogout = async () => {
@@ -368,7 +363,6 @@ export const Component: React.FC = () => {
   const confirmLogout = async () => {
     try {
       const lockResponse = await lock().unwrap()
-      console.log('lockResponse', lockResponse)
 
       if (lockResponse !== undefined && lockResponse !== null) {
         await invoke('stop_node')
@@ -378,7 +372,6 @@ export const Component: React.FC = () => {
         throw new Error('Node lock unsuccessful')
       }
     } catch (error) {
-      console.error('Logout error:', error)
       toast.error(
         `Logout failed: ${error instanceof Error ? error.message : ''}. Redirecting anyway.`
       )
@@ -415,7 +408,6 @@ export const Component: React.FC = () => {
       navigate(WALLET_SETUP_PATH)
       toast.success('Node shut down successfully')
     } catch (error) {
-      console.error('Error shutting down node:', error)
       toast.error('Failed to shut down node')
     } finally {
       setIsShuttingDown(false)
@@ -440,7 +432,6 @@ export const Component: React.FC = () => {
         toast.success('Logs exported successfully')
       }
     } catch (error) {
-      console.error('Failed to export logs:', error)
       toast.error('Failed to export logs')
     }
   }
@@ -454,15 +445,12 @@ export const Component: React.FC = () => {
 
   // Separate useEffect for node info polling
   useEffect(() => {
-    // Initial fetch
     nodeInfo()
 
-    // Set up polling interval
     const interval = setInterval(() => {
       nodeInfo()
-    }, 10000) // Poll every 10 seconds
+    }, 10000)
 
-    // Cleanup on unmount
     return () => clearInterval(interval)
   }, [nodeInfo])
 
@@ -498,7 +486,7 @@ export const Component: React.FC = () => {
 
       {/* Main Content Grid */}
       <div className="w-full max-w-7xl mx-auto space-y-8">
-        {/* Settings Grid - Modified to be side-by-side only for settings and status */}
+        {/* Settings Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Application Settings */}
           <div className="lg:col-span-2 space-y-6">
@@ -888,7 +876,7 @@ export const Component: React.FC = () => {
           </div>
         </div>
 
-        {/* Logs Section - Now full width below other cards */}
+        {/* Logs Section */}
         {isLocalNode && (
           <div className="bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-700 overflow-hidden">
             {/* Header with controls */}
@@ -949,7 +937,7 @@ export const Component: React.FC = () => {
               </div>
             </div>
 
-            {/* Logs display area - Now with more height since it's full width */}
+            {/* Logs display area */}
             <div className="bg-gray-900/95">
               <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700/50 bg-gray-800/50">
                 <span className="text-sm font-medium text-gray-300">
@@ -981,7 +969,6 @@ export const Component: React.FC = () => {
         )}
       </div>
 
-      {/* Keep existing modals */}
       <BackupModal
         backupPath={backupPath}
         control={backupControl}
@@ -1005,7 +992,6 @@ export const Component: React.FC = () => {
         type={modal.type}
       />
 
-      {/* Add Restart Confirmation Modal */}
       {showRestartConfirmation && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-sm">

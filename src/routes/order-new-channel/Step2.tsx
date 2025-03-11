@@ -9,6 +9,10 @@ import { AssetSelector } from '../../components/AssetSelector'
 import { Select } from '../../components/Select'
 import { MIN_CHANNEL_CAPACITY, MAX_CHANNEL_CAPACITY } from '../../constants'
 import {
+  formatNumberWithCommas,
+  parseNumberWithCommas,
+} from '../../helpers/number'
+import {
   orderChannelSliceActions,
   OrderChannelFormSchema,
   TChannelRequestForm,
@@ -60,16 +64,6 @@ const FormFieldsSchema = z.object({
 })
 
 type FormFields = z.infer<typeof FormFieldsSchema>
-
-const formatNumberWithCommas = (value: string | number): string => {
-  const parts = value.toString().split('.')
-  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-  return parts.join('.')
-}
-
-const parseFormattedNumber = (value: string): string => {
-  return value.replace(/[^\d.]/g, '')
-}
 
 interface NumberInputProps {
   value: string
@@ -123,7 +117,7 @@ const NumberInput: React.FC<NumberInputProps> = ({
   }, [value, isFocused])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = parseFormattedNumber(e.target.value)
+    const rawValue = parseNumberWithCommas(e.target.value)
 
     if (rawValue === '' || rawValue === '.') {
       setDisplayValue(rawValue)
@@ -194,7 +188,7 @@ const NumberInput: React.FC<NumberInputProps> = ({
           onChange={handleChange}
           onFocus={() => {
             setIsFocused(true)
-            setDisplayValue(parseFormattedNumber(value))
+            setDisplayValue(parseNumberWithCommas(value))
           }}
           placeholder={placeholder}
           type="text"
@@ -433,7 +427,6 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
 
         // If validation passes, update Redux and proceed
         dispatch(orderChannelSliceActions.setChannelRequestForm(submissionData))
-        console.log('Form submitted with data:', submissionData)
         onNext(submissionData)
       } catch (error) {
         if (error instanceof z.ZodError) {
@@ -498,7 +491,6 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
             'There was an error with the form data. Please check your inputs.'
           )
         } else {
-          console.error('Unexpected error:', error)
           toast.error('An unexpected error occurred. Please try again.')
         }
       }
@@ -646,7 +638,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                   sliderValue={
                     watch('capacitySat')
                       ? parseInt(
-                          parseFormattedNumber(watch('capacitySat')) || '0',
+                          parseNumberWithCommas(watch('capacitySat')) || '0',
                           10
                         )
                       : effectiveMinCapacity
@@ -687,7 +679,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                   label=""
                   max={Math.min(
                     parseInt(
-                      parseFormattedNumber(watch('capacitySat')) || '0',
+                      parseNumberWithCommas(watch('capacitySat')) || '0',
                       10
                     ),
                     lspOptions?.max_initial_client_balance_sat ||
@@ -704,7 +696,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                   sliderValue={
                     watch('clientBalanceSat')
                       ? parseInt(
-                          parseFormattedNumber(watch('clientBalanceSat')) ||
+                          parseNumberWithCommas(watch('clientBalanceSat')) ||
                             '0',
                           10
                         )
@@ -818,7 +810,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                           sliderValue={
                             watch('assetAmount')
                               ? parseFloat(
-                                  parseFormattedNumber(watch('assetAmount')) ||
+                                  parseNumberWithCommas(watch('assetAmount')) ||
                                     '0'
                                 )
                               : getAssetMinAmount()

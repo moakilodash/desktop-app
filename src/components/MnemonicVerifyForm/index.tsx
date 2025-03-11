@@ -3,7 +3,6 @@ import React, { useState } from 'react'
 import { SubmitHandler, UseFormReturn } from 'react-hook-form'
 import { toast } from 'react-toastify'
 
-// Import the wordlist
 import wordlistRaw from '../../assets/bip39-english.txt?raw'
 import { Button } from '../ui/Button'
 
@@ -28,7 +27,6 @@ export const MnemonicVerifyForm = ({
   const [_, setCurrentWord] = useState('')
   const [cursorPosition, setCursorPosition] = useState(0)
 
-  // Handle word suggestions
   const updateSuggestions = (text: string, position: number) => {
     const words = text.slice(0, position).split(' ')
     const currentWordInput = words[words.length - 1].toLowerCase()
@@ -42,14 +40,13 @@ export const MnemonicVerifyForm = ({
     if (currentWordInput.length > 0) {
       const matches = wordlist
         .filter((word) => word.startsWith(currentWordInput))
-        .slice(0, 5) // Limit to 5 suggestions
+        .slice(0, 5)
       setSuggestions(matches)
     } else {
       setSuggestions([])
     }
   }
 
-  // Handle suggestion click
   const handleSuggestionClick = (word: string) => {
     const textarea = document.querySelector('textarea') as HTMLTextAreaElement
     const text = textarea.value
@@ -63,7 +60,6 @@ export const MnemonicVerifyForm = ({
     form.setValue('mnemonic', newText)
     setSuggestions([])
 
-    // Set focus back to textarea
     textarea.focus()
     const newPosition = words.join(' ').length + 1
     textarea.setSelectionRange(newPosition, newPosition)
@@ -243,8 +239,6 @@ export const MnemonicVerifyForm = ({
               </div>
             )}
           </div>
-
-          {/* Submit Button */}
 
           {/* Submit Button */}
           <Button

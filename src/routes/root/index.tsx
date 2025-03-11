@@ -34,7 +34,6 @@ export const RootRoute = () => {
     async function run() {
       const nodeInfoResponse = await nodeInfo()
       const error: any = nodeInfoResponse.error
-      console.log(nodeInfoResponse)
 
       if (nodeInfoResponse.isError) {
         if (error.status !== 400) {

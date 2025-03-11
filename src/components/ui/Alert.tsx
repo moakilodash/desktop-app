@@ -1,3 +1,4 @@
+import { openUrl } from '@tauri-apps/plugin-opener'
 import { Info, AlertTriangle, CheckCircle, XCircle, X } from 'lucide-react'
 import React, { ReactNode } from 'react'
 
@@ -85,14 +86,14 @@ export const NetworkWarningAlert: React.FC<{
             {' '}
             <br />
             You can request test coins from the{' '}
-            <a
+            <button
               className="text-blue-400 hover:text-blue-300 underline"
-              href={faucetUrl}
-              rel="noopener noreferrer"
-              target="_blank"
+              onClick={() => {
+                openUrl(faucetUrl)
+              }}
             >
               {network} Faucet
-            </a>
+            </button>
             .
           </>
         )}

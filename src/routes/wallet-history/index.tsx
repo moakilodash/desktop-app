@@ -203,8 +203,8 @@ export const Component = () => {
         </div>
       </div>
 
-      {/* Footer with pagination (optional) */}
-      <div className="flex items-center justify-between px-6 py-4 border-t border-gray-700/50 bg-gray-800/30 hidden">
+      {/* Footer with pagination */}
+      <div className="flex items-center justify-between px-6 py-4 border-t border-gray-700/50 bg-gray-800/30">
         <div className="text-sm text-gray-400">
           Showing 1-10 of 24 transactions
         </div>
