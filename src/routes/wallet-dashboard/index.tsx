@@ -193,7 +193,7 @@ export const Component = () => {
         </div>
       )}
 
-      {onChainBalance === 0 && offChainBalance === 0 && (
+      {onChainBalance === 0 && offChainBalance === 0 && !isLoading && (
         <div className="mb-6">
           <Alert
             className="mb-6"

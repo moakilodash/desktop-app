@@ -14,7 +14,7 @@ import { toast } from 'react-toastify'
 
 import { useAppSelector } from '../../../app/store/hooks'
 import { Loader } from '../../../components/Loader'
-import { StatusToast } from '../../../components/StatusToast'
+// import { StatusToast } from '../../../components/StatusToast'
 import { NoChannelsMessage, ManualSwapForm } from '../../../components/Trade'
 import { TakerSwapForm } from '../../../components/Trade/TakerSwapForm'
 import {
@@ -449,7 +449,7 @@ export const Component = () => {
         renderSwapForm()
       )}
 
-      {!isLoading && assets.length > 0 && <StatusToast assets={assets} />}
+      {/* {!isLoading && assets.length > 0 && <StatusToast assets={assets} />} */}
     </div>
   )
 }

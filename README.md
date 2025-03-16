@@ -2,11 +2,18 @@
 
 <img src="./docs/logo-kaleido.png" alt="Kaleidoswap Logo" style="width: 50px; height: 50px;">
 
+## Overview
+
+**Kaleidoswap** is an open-source desktop application for decentralized, trustless trading of digital assets over the Bitcoin Lightning Network using the **RGB protocol**. By integrating seamlessly with an [RGB Lightning Node](https://github.com/RGB-Tools/rgb-lightning-node), the app enables multi-asset trading without intermediaries—giving you sovereignty over your funds.
+
+- **Alpha Software Caution**: This software is still in alpha. Swaps may fail or get stuck, and **mainnet usage is not recommended**.  
+- **Documentation**: Visit [docs.kaleidoswap.com](https://docs.kaleidoswap.com) for comprehensive guides and additional details.
+
 ## Table of Contents
 
 - [Kaleidoswap Desktop App](#kaleidoswap-desktop-app)
-  - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
+  - [Table of Contents](#table-of-contents)
   - [Screenshots](#screenshots)
   - [Features 🚀](#features-)
   - [Supported Networks](#supported-networks)
@@ -31,13 +38,6 @@
   - [Support 📞](#support-)
   - [License 📜](#license-)
   - [No Responsibility Disclaimer ⚠️](#no-responsibility-disclaimer-️)
-
-## Overview
-
-**Kaleidoswap** is an open-source desktop application for decentralized, trustless trading of digital assets over the Bitcoin Lightning Network using the **RGB protocol**. By integrating seamlessly with an [RGB Lightning Node](https://github.com/RGB-Tools/rgb-lightning-node), the app enables multi-asset trading without intermediaries—giving you sovereignty over your funds.
-
-- **Alpha Software Caution**: This software is still in alpha. Swaps may fail or get stuck, and **mainnet usage is not recommended**.  
-- **Documentation**: Visit [docs.kaleidoswap.com](https://docs.kaleidoswap.com) for comprehensive guides and additional details.
 
 ## Screenshots
 

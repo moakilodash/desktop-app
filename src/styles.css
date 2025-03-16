@@ -317,3 +317,69 @@
   transform: translate(-50%, -50%);
   animation: pulse 2s infinite;
 }
+
+/* Animation for new quote notification */
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+.animate-fade-in-out {
+  animation: fadeInOut 2s ease-in-out;
+}
+
+/* Loading animation for amount inputs */
+@keyframes loadingPulse {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.input-loading {
+  background: linear-gradient(
+    90deg,
+    rgba(30, 41, 59, 0.8) 25%,
+    rgba(51, 65, 85, 0.8) 50%,
+    rgba(30, 41, 59, 0.8) 75%
+  );
+  background-size: 200% 100%;
+  animation: loadingPulse 1.5s infinite;
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+/* Price update indicator animation */
+@keyframes priceUpdate {
+  0% {
+    transform: scale(0.95);
+    background-color: rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    transform: scale(1.05);
+    background-color: rgba(59, 130, 246, 0.5);
+  }
+  100% {
+    transform: scale(1);
+    background-color: rgba(59, 130, 246, 0.3);
+  }
+}
+
+.price-update-indicator {
+  animation: priceUpdate 0.6s ease-in-out;
+}

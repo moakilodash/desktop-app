@@ -1,5 +1,6 @@
 import { ArrowRight } from 'lucide-react'
 import React, { useEffect, useRef } from 'react'
+import { toast } from 'react-toastify'
 
 import { useAppSelector } from '../../app/store/hooks'
 import { useAssetIcon } from '../../helpers/utils'
@@ -77,15 +78,40 @@ const SwapStatusContent: React.FC<{
     toAssetQty *= 100000
   }
 
+  // Define status colors
+  const getStatusColor = () => {
+    switch (swap.status) {
+      case 'Succeeded':
+        return 'text-green-500 dark:text-green-400'
+      case 'Failed':
+      case 'Expired':
+        return 'text-red-500 dark:text-red-400'
+      case 'Pending':
+        return 'text-blue-500 dark:text-blue-400'
+      default:
+        return 'text-gray-500 dark:text-gray-400'
+    }
+  }
+
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between gap-4">
+    <div className="space-y-3 bg-gray-50/90 dark:bg-blue-darker p-4 rounded-lg border border-gray-200 dark:border-blue-700">
+      {/* Status badge at the top */}
+      <div className={`font-medium ${getStatusColor()} flex items-center`}>
+        <span className="mr-2">Swap {swap.status}</span>
+        {swap.status === 'Pending' && (
+          <div className="w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400 animate-pulse"></div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between gap-4 bg-white dark:bg-blue-900/80 p-3 rounded-lg shadow-md border border-gray-100 dark:border-blue-800">
         <div className="flex-1">
           <span className="text-sm text-gray-500 dark:text-gray-400">From</span>
           <AssetDisplay amount={fromAssetQty} asset={fromAssetTicker} />
         </div>
 
-        <ArrowRight className="text-gray-400 w-4 h-4 flex-shrink-0" />
+        <ArrowRight
+          className={`text-gray-400 w-4 h-4 flex-shrink-0 ${swap.status === 'Pending' ? 'animate-pulse' : ''}`}
+        />
 
         <div className="flex-1">
           <span className="text-sm text-gray-500 dark:text-gray-400">To</span>
@@ -119,6 +145,16 @@ export const StatusToast: React.FC<{
 }> = ({ assets }) => {
   const { addNotification, removeNotification } = useNotification()
   const swapStates = useRef<Record<string, SwapNotificationState>>({})
+  const autoRemoveTimeoutsRef = useRef<Record<string, number>>({})
+
+  // Clear any existing timeouts when component unmounts
+  useEffect(() => {
+    return () => {
+      Object.values(autoRemoveTimeoutsRef.current).forEach((timeout) => {
+        clearTimeout(timeout)
+      })
+    }
+  }, [])
 
   const { data } = nodeApi.useListSwapsQuery(undefined, {
     pollingInterval: 6000,
@@ -162,6 +198,12 @@ export const StatusToast: React.FC<{
       // Handle status changes
       if (currentState) {
         if (currentState.status !== swap.status) {
+          // Clear any existing auto-remove timeout for this swap
+          if (autoRemoveTimeoutsRef.current[swap.payment_hash]) {
+            clearTimeout(autoRemoveTimeoutsRef.current[swap.payment_hash])
+            delete autoRemoveTimeoutsRef.current[swap.payment_hash]
+          }
+
           removeNotification(currentState.id)
           const newId = addNotification({
             ...notificationConfig,
@@ -175,6 +217,27 @@ export const StatusToast: React.FC<{
             id: newId,
             status: swap.status,
             timestamp,
+          }
+
+          // Auto-remove successful or expired swaps
+          if (['Succeeded', 'Expired'].includes(swap.status)) {
+            console.log('auto-removing swap', swap.payment_hash)
+            autoRemoveTimeoutsRef.current[swap.payment_hash] = setTimeout(
+              () => {
+                if (swapStates.current[swap.payment_hash]) {
+                  removeNotification(swapStates.current[swap.payment_hash].id)
+                  delete swapStates.current[swap.payment_hash]
+                  delete autoRemoveTimeoutsRef.current[swap.payment_hash]
+                }
+              },
+              5000
+            )
+
+            if (swap.status === 'Succeeded') {
+              toast.success('Swap succeeded')
+            } else if (swap.status === 'Expired') {
+              toast.error('Swap expired')
+            }
           }
         }
       } else if (swap.status === 'Pending') {
@@ -205,11 +268,42 @@ export const StatusToast: React.FC<{
       if (!swapExists && (!isFinalStatus || state.dismissed)) {
         removeNotification(state.id)
         delete swapStates.current[hash]
+
+        // Clear any existing timeout
+        if (autoRemoveTimeoutsRef.current[hash]) {
+          clearTimeout(autoRemoveTimeoutsRef.current[hash])
+          delete autoRemoveTimeoutsRef.current[hash]
+        }
       }
     })
   }, [data, assets, addNotification, removeNotification])
 
-  return null
+  // Add a subtle floating component to draw attention to pending swaps
+  const pendingSwapCount = Object.values(swapStates.current).filter(
+    (state) => state.status === 'Pending' && !state.dismissed
+  ).length
+
+  const hasNewSwaps = pendingSwapCount > 0
+
+  if (pendingSwapCount === 0) {
+    return null
+  }
+
+  return (
+    <div
+      className={`fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 ease-in-out ${hasNewSwaps ? 'animate-bounce' : ''}`}
+    >
+      <div className="bg-gradient-to-r from-blue-900 to-blue-800 backdrop-blur-md p-3 rounded-lg shadow-xl border border-blue-700 flex items-center">
+        <div className="text-white font-medium flex items-center">
+          <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse mr-3"></div>
+          <span>
+            {pendingSwapCount} {pendingSwapCount === 1 ? 'Swap' : 'Swaps'} in
+            progress
+          </span>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function getNotificationType(status: string) {
