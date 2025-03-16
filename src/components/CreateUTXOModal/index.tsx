@@ -14,7 +14,7 @@ interface CreateUTXOModalProps {
   retryFunction?: () => Promise<any>
 }
 
-const DEFAULT_UTXO_SIZE = 10000
+const DEFAULT_UTXO_SIZE = 5000
 
 export const CreateUTXOModal: React.FC<CreateUTXOModalProps> = ({
   isOpen,
