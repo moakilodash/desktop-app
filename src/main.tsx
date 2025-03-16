@@ -7,6 +7,7 @@ import { Router } from './app/router'
 import { store } from './app/store'
 
 import './styles.css'
+import './i18n'
 
 WebFont.load({
   google: {

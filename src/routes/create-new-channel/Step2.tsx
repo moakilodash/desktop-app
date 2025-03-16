@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { Select } from '../../components/Select'
 import { MAX_CHANNEL_CAPACITY, MIN_CHANNEL_CAPACITY } from '../../constants'
+import { useAppTranslation } from '../../hooks/useAppTranslation'
 import {
   NewChannelFormSchema,
   channelSliceActions,
@@ -40,6 +41,8 @@ const Step2Schema = NewChannelFormSchema.omit({
 })
 
 export const Step2 = (props: Props) => {
+  const { t } = useAppTranslation('createNewChannel')
+
   const newChannelForm = useAppSelector(
     (state) => channelSliceSelectors.form(state, 'new') as TNewChannelForm
   )
@@ -209,18 +212,16 @@ export const Step2 = (props: Props) => {
     <form className="max-w-3xl mx-auto" onSubmit={handleSubmit(onSubmit)}>
       <div className="text-center mb-10">
         <h3 className="text-3xl font-bold text-white mb-4">
-          Open a Channel - Step 2
+          {t('steps.step2.title')}
         </h3>
-        <h4 className="text-xl text-gray-400">
-          Configure your channel capacity and assets
-        </h4>
+        <h4 className="text-xl text-gray-400">{t('steps.step2.subtitle')}</h4>
       </div>
 
       <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-8">
         {/* PubKey display section */}
         <div className="mb-8">
           <label className="block text-sm font-medium text-gray-400 mb-2">
-            Opening Channel with Node:
+            {t('steps.step2.channelWith')}
           </label>
           <div className="bg-gray-900/50 px-4 py-3 rounded-lg break-all font-mono text-sm text-white">
             {newChannelForm.pubKeyAndAddress}
@@ -229,20 +230,22 @@ export const Step2 = (props: Props) => {
 
         <div className="mb-8">
           <label className="block text-sm font-medium text-gray-400 mb-2">
-            Channel Capacity (satoshis)
+            {t('steps.step2.capacity.label')}
             <span className="text-xs text-gray-500 ml-2">
-              (The amount of BTC you want to allocate to this channel)
+              {t('steps.step2.capacity.help')}
             </span>
           </label>
           <div className="flex items-center space-x-4">
             <input
               className="flex-grow rounded bg-blue-dark px-4 py-3 outline-none"
               onChange={(e) => handleCapacityChange(e.target.value)}
-              placeholder="Enter amount"
+              placeholder={t('steps.step2.capacity.enterAmount')}
               type="text"
               value={capacitySat ? formatNumber(capacitySat) : ''}
             />
-            <span className="text-sm">{formatNumber(maxCapacity)} max</span>
+            <span className="text-sm">
+              {formatNumber(maxCapacity)} {t('steps.step2.capacity.max')}
+            </span>
           </div>
           <input
             className="w-full mt-2"
@@ -265,7 +268,7 @@ export const Step2 = (props: Props) => {
         {hasAvailableAssets ? (
           <div className="mb-8">
             <h5 className="text-lg font-semibold text-white mb-4">
-              RGB Assets
+              {t('steps.step2.assets.title')}
             </h5>
             <label className="flex items-center text-sm mb-4 text-gray-400">
               <input
@@ -274,12 +277,14 @@ export const Step2 = (props: Props) => {
                 onChange={(e) => setAddAsset(e.target.checked)}
                 type="checkbox"
               />
-              Add Asset
+              {t('steps.step2.assets.addAsset')}
             </label>
 
             {addAsset && (
               <>
-                <label className="block text-sm mb-2">Select Asset</label>
+                <label className="block text-sm mb-2">
+                  {t('steps.step2.assets.selectAsset')}
+                </label>
                 <Controller
                   control={control}
                   name="assetId"
@@ -299,20 +304,22 @@ export const Step2 = (props: Props) => {
 
                 {watch('assetId') && (
                   <div className="mt-4">
-                    <label className="block text-sm mb-2">Asset Amount</label>
+                    <label className="block text-sm mb-2">
+                      {t('steps.step2.assets.amount')}
+                    </label>
                     <div className="flex items-center space-x-4">
                       <input
                         className="flex-grow rounded bg-blue-dark px-4 py-3 outline-none"
                         onChange={(e) =>
                           handleAssetAmountChange(e.target.value)
                         }
-                        placeholder="Enter asset amount"
+                        placeholder={t('steps.step2.assets.enterAmount')}
                         type="text"
                         value={assetAmount ? formatNumber(assetAmount) : ''}
                       />
                       <span className="text-sm">
                         {formatNumber(maxAssetAmountMap[watch('assetId')] || 0)}{' '}
-                        max
+                        {t('steps.step2.capacity.max')}
                       </span>
                     </div>
                     <input
@@ -331,8 +338,7 @@ export const Step2 = (props: Props) => {
         ) : (
           <div className="mb-8 text-center">
             <p className="text-yellow-500">
-              You do not have any spendable on-chain RGB assets to open a
-              channel with.
+              {t('steps.step2.assets.noAssets')}
             </p>
           </div>
         )}
@@ -342,7 +348,7 @@ export const Step2 = (props: Props) => {
 
         <div>
           <label className="block text-sm font-medium text-gray-400 mb-2">
-            Transaction Fee
+            {t('steps.step2.fee.label')}
           </label>
           <div className="flex space-x-4">
             {['slow', 'medium', 'fast'].map((speed) => (
@@ -361,7 +367,9 @@ export const Step2 = (props: Props) => {
               >
                 {speed.charAt(0).toUpperCase() + speed.slice(1)}
                 <span className="text-xs text-gray-500 ml-2">
-                  ({`${props.feeRates[speed] / 1000} sat/vB`})
+                  (
+                  {`${props.feeRates[speed] / 1000} ${t('steps.step2.fee.rate')}`}
+                  )
                 </span>
               </button>
             ))}
@@ -393,7 +401,7 @@ export const Step2 = (props: Props) => {
               strokeWidth={2}
             />
           </svg>
-          Back
+          {t('steps.common.back')}
         </button>
 
         <button
@@ -405,7 +413,7 @@ export const Step2 = (props: Props) => {
             flex items-center"
           type="submit"
         >
-          Next
+          {t('steps.common.next')}
           <svg
             className="w-5 h-5 ml-2"
             fill="none"
@@ -433,7 +441,7 @@ export const Step2 = (props: Props) => {
             },
             {} as Record<string, string[]>
           )}
-          message="Please check the form for errors"
+          message={t('formError.checkForm')}
         />
       )}
     </form>

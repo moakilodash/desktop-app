@@ -2,25 +2,27 @@ import { CheckCircle, XCircle, ArrowRight, RefreshCcw } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 import { CHANNELS_PATH } from '../../app/router/paths'
+import { useAppTranslation } from '../../hooks/useAppTranslation'
 
 export const Step4 = ({ paymentStatus }: { paymentStatus: string }) => {
   const navigate = useNavigate()
 
+  const { t } = useAppTranslation('orderNewChannel')
+
   const statusConfig = {
     failed: {
       buttonAction: () => navigate(CHANNELS_PATH),
-      buttonText: 'Try Again',
+      buttonText: t('step4.failure.button'),
       icon: <XCircle className="text-red-500 mb-4" size={64} />,
-      message: 'There was an issue with your payment. Please try again.',
-      title: 'Payment Failed',
+      message: t('step4.failure.message'),
+      title: t('step4.failure.title'),
     },
     success: {
       buttonAction: () => navigate(CHANNELS_PATH),
-      buttonText: 'Go to Channels Page',
+      buttonText: t('step4.success.button'),
       icon: <CheckCircle className="text-green-500 mb-4" size={64} />,
-      message:
-        'Your payment has been received and the channel is being opened.',
-      title: 'Payment Completed!',
+      message: t('step4.success.message'),
+      title: t('step4.success.title'),
     },
   }
 
@@ -38,7 +40,7 @@ export const Step4 = ({ paymentStatus }: { paymentStatus: string }) => {
           <div className="flex items-center justify-center space-x-2 mb-6">
             <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
             <p className="text-green-500 font-medium">
-              Channel opening in progress
+              {t('step4.success.progress')}
             </p>
           </div>
         )}
@@ -59,7 +61,7 @@ export const Step4 = ({ paymentStatus }: { paymentStatus: string }) => {
           className="mt-4 text-gray-400 hover:text-white transition-colors"
           onClick={() => navigate(CHANNELS_PATH)}
         >
-          Return to Trade
+          {t('step4.failure.returnToTrade')}
         </button>
       )}
     </div>

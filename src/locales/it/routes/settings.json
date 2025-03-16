@@ -1,0 +1,81 @@
+{
+  "title": "Impostazioni",
+  "subtitle": "Gestire le preferenze dei nodi e delle applicazioni",
+  "applicationSettings": "Impostazioni dell'applicazione",
+  "generalSettings": "Impostazioni generali",
+  "language": "Lingua",
+  "bitcoinUnit": "Unità Bitcoin",
+  "maker": {
+    "title": "Impostazioni del Maker",
+    "url": "URL di Default del Maker",
+    "additionalURLs": "URL Aggiuntivi del Maker",
+    "addURL": "Aggiungi URL del Maker"
+  },
+  "nodeConnection": {
+    "title": "Impostazioni Connessione Nodo",
+    "restartRequired": "Richiede riavvio",
+    "connectionString": "Stringa di Connessione Nodo",
+    "rpcUrl": "URL RPC Bitcoind",
+    "indexerUrl": "URL Indexer",
+    "proxyEndpoint": "Endpoint Proxy RGB"
+  },
+  "resetChanges": "Resetta Modifiche",
+  "saveSettings": "Salva Impostazioni",
+  "nodeStatus": {
+    "title": "Stato del Nodo",
+    "status": "{{status}}",
+    "online": "Il Nodo è in funzione",
+    "offline": "Il Nodo è offline",
+    "connectionType": "Tipo di Connessione",
+    "localNode": "Nodo Locale",
+    "remoteNode": "Nodo Remoto"
+  },
+  "backup": {
+    "title": "Backup del Wallet",
+    "description": "Assicurati di eseguire il backup del tuo wallet per evitare la perdita di dati."
+  },
+  "logout": {
+    "confirmTitle": "Conferma Logout",
+    "confirmMessage": "Sei sicuro di voler effettuare il logout? Questo bloccherà il tuo nodo.",
+    "cancel": "Annulla",
+    "confirm": "Conferma Logout"
+  },
+  "shutdown": {
+    "confirmTitle": "Conferma Spegnimento",
+    "shuttingDownNode": "Spegnimento del nodo",
+    "confirmMessage": "Sei sicuro di voler spegnere il nodo? Questa azione è irreversibile.",
+    "inProgress": "Spegnimento del Nodo in corso. Attendere prego...",
+    "cancel": "Cancella",
+    "confirm": "Conferma Spegnimento",
+    "shutdown": "Spegnimento"
+  },
+  "logs": {
+    "title": "Log del Nodo",
+    "show": "Mostra",
+    "entries": "voci",
+    "actions": {
+      "export": {
+        "title": "Esporta log",
+        "disabled": "Nessun log da esportare"
+      },
+      "refresh": {
+        "title": "Aggiorna log"
+      },
+      "clear": {
+        "title": "Cancella log",
+        "disabled": "Nessun log da cancellare"
+      }
+    },
+    "display": {
+      "liveTitle": "Log del Nodo in Tempo Reale",
+      "showing": "Visualizzazione di {{current}} su {{total}} voci",
+      "noLogs": "Nessun log disponibile"
+    }
+  },
+  "modals": {
+    "settingsSaved": {
+      "title": "Impostazioni Salvate",
+      "message": "Le tue impostazioni sono state salvate con successo."
+    }
+  }
+}

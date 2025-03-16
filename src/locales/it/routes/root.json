@@ -1,0 +1,10 @@
+{
+  "title": "Connessione al Nodo",
+  "loadingTitle": "Connessione al Nodo",
+  "loadingDescription": "Attendere mentre stabiliamo la connessione...",
+  "errorTitle": "Errore di Connessione",
+  "errorNoWalletDescription": "Nessun wallet trovato. Configura il tuo wallet per continuare.",
+  "errorNodeConnectionDescription": "Il nodo non è in esecuzione. Prova a riavviare l'applicazione.",
+  "errorReturnButton": "Torna alla Configurazione del Wallet",
+  "errorDetailsPrefix": "Errore:"
+}

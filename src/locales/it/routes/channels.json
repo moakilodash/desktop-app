@@ -1,0 +1,27 @@
+{
+  "dashboard": {
+    "title": "Dashboard del Portafoglio Lightning",
+    "refresh": {
+      "button": "Aggiorna",
+      "loading": "Aggiornamento..."
+    }
+  },
+  "metrics": {
+    "totalBalance": {
+      "title": "Saldo Totale",
+      "value": "{{amount}} sats"
+    },
+    "inboundLiquidity": {
+      "title": "Liquidità Totale in Entrata",
+      "value": "{{amount}} sats"
+    },
+    "outboundLiquidity": {
+      "title": "Liquidità Totale in Uscita",
+      "value": "{{amount}} sats"
+    }
+  },
+  "channels": {
+    "empty": "Non hai ancora canali aperti.",
+    "info": "La liquidità del canale cambia mentre invii e ricevi pagamenti. Mantieni i tuoi canali bilanciati per prestazioni ottimali."
+  }
+}

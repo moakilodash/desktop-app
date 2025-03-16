@@ -1,0 +1,81 @@
+{
+  "title": "Settings",
+  "subtitle": "Manage your node and application preferences",
+  "applicationSettings": "Application Settings",
+  "generalSettings": "General Settings",
+  "language": "Language",
+  "bitcoinUnit": "Bitcoin Unit",
+  "maker": {
+    "title": "Maker Settings",
+    "url": "Default Maker URL",
+    "additionalURLs": "Additional Maker URLs",
+    "addURL": "Add Maker URL"
+  },
+  "nodeConnection": {
+    "title": "Node Connection Settings",
+    "restartRequired": "Requires restart",
+    "connectionString": "Node Connection String",
+    "rpcUrl": "Bitcoind RPC Connection URL",
+    "indexerUrl": "Indexer URL",
+    "proxyEndpoint": "RGB Proxy Endpoint"
+  },
+  "resetChanges": "Reset Changes",
+  "saveSettings": "Save Settings",
+  "nodeStatus": {
+    "title": "Node Status",
+    "status": "{{status}}",
+    "online": "Node is Running",
+    "offline": "Node is Offline",
+    "connectionType": "Connection Type",
+    "localNode": "Local Node",
+    "remoteNode": "Remote Node"
+  },
+  "backup": {
+    "title": "Backup Wallet",
+    "description": "Ensure your wallet is backed up securely to avoid data loss."
+  },
+  "logout": {
+    "confirmTitle": "Confirm Logout",
+    "confirmMessage": "Are you sure you want to logout? This will lock your node.",
+    "cancel": "Cancel",
+    "confirm": "Confirm Logout"
+  },
+  "shutdown": {
+    "confirmTitle": "Confirm Shutdown",
+    "shuttingDownNode": "Shutting Down Node",
+    "confirmMessage": "Are you sure you want to shut down the node? This action cannot be undone.",
+    "inProgress": "Shutting Down Node. Please wait...",
+    "cancel": "Cancel",
+    "confirm": "Confirm Shutdown",
+    "shutdown": "Shutdown"
+  },
+  "logs": {
+    "title": "Node Logs",
+    "show": "Show",
+    "entries": "entries",
+    "actions": {
+      "export": {
+        "title": "Export logs",
+        "disabled": "No logs to export"
+      },
+      "refresh": {
+        "title": "Refresh logs"
+      },
+      "clear": {
+        "title": "Clear logs",
+        "disabled": "No logs to clear"
+      }
+    },
+    "display": {
+      "liveTitle": "Live Node Logs",
+      "showing": "Showing {{current}} of {{total}} entries",
+      "noLogs": "No logs available"
+    }
+  },
+  "modals": {
+    "settingsSaved": {
+      "title": "Settings Saved",
+      "message": "Your settings have been successfully saved."
+    }
+  }
+}

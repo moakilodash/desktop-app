@@ -1,0 +1,98 @@
+{
+  "loading": {
+    "checkingBalance": "Verifica del saldo in corso..."
+  },
+  "error": {
+    "tryAgainLater": "Per favore riprova più tardi.",
+    "insufficientBalance": "Saldo insufficiente per aprire un canale. Hai bisogno di almeno {{amount}} satoshi.",
+    "depositRequired": "Deposita dei fondi nel tuo wallet per continuare."
+  },
+  "navigation": {
+    "goToDashboard": "Vai alla Dashboard"
+  },
+  "formError": {
+    "defaultMessage": "Si è verificato un errore nell'invio del modulo.",
+    "checkForm": "Controlla il modulo per gli errori",
+    "fieldPrefix": "Campo"
+  },
+  "steps": {
+    "common": {
+      "back": "Indietro",
+      "next": "Avanti",
+      "confirm": "Conferma"
+    },
+    "step1": {
+      "title": "Apri un Canale - Fase 1",
+      "subtitle": "Apri canali con altri nodi sulla rete per iniziare a utilizzare il Lightning Network.",
+      "nodeInfo": {
+        "title": "Seleziona dai Nodi Suggeriti",
+        "loadingLsp": "Caricamento informazioni LSP...",
+        "pubkeyLabel": "Formato: <66-char-hex-pubkey>@<host>:<port>",
+        "pubkeyExample": "Esempio: 039257e0669aa5dea5df7c971048699a39f9023333d550a90800b9412f231ee8e7@lsp.signet.kaleidoswap.com:9735",
+        "pubkeyHelp": "La stringa di connessione deve essere una chiave pubblica esadecimale di 66 caratteri, seguita dal simbolo @, quindi l'indirizzo host e il numero di porta (es. :9735)",
+        "or": "oppure"
+      },
+      "connectDialog": {
+        "title": "Connetti al Peer",
+        "message": "Vuoi connetterti a questo peer prima di aprire un canale?",
+        "connecting": "Connessione al peer in corso...",
+        "cancel": "Annulla",
+        "connect": "Connetti"
+      }
+    },
+    "step2": {
+      "title": "Apri un Canale - Fase 2",
+      "subtitle": "Configura la capacità del canale e gli asset",
+      "channelWith": "Apertura Canale con il Nodo:",
+      "capacity": {
+        "label": "Capacità del Canale (satoshi)",
+        "help": "(La quantità di BTC che vuoi allocare a questo canale)",
+        "max": "max",
+        "enterAmount": "Inserisci importo"
+      },
+      "assets": {
+        "title": "Asset RGB",
+        "addAsset": "Aggiungi Asset",
+        "selectAsset": "Seleziona Asset",
+        "amount": "Quantità Asset",
+        "enterAmount": "Inserisci quantità asset",
+        "noAssets": "Non hai asset RGB on-chain spendibili per aprire un canale."
+      },
+      "fee": {
+        "label": "Commissione di Transazione",
+        "rate": "sat/vB"
+      }
+    },
+    "step3": {
+      "title": "Apri un Canale - Fase 3",
+      "subtitle": "Rivedi e conferma i dettagli del canale",
+      "capacity": {
+        "label": "Capacità del Canale"
+      },
+      "node": {
+        "title": "Nodo Connesso",
+        "id": "ID Nodo:",
+        "host": "Host:",
+        "copyPubkey": "clicca per copiare"
+      },
+      "fee": {
+        "title": "Tasso di Commissione",
+        "selectedRate": "Tasso Selezionato:",
+        "feeRate": "Tasso Commissione:",
+        "loading": "Caricamento..."
+      }
+    },
+    "step4": {
+      "success": {
+        "title": "Canale creato con successo!",
+        "message": "Il canale è stato creato con successo, ora puoi iniziare a fare trading.",
+        "button": "Vai alla Pagina di Trading"
+      },
+      "error": {
+        "title": "Creazione del canale fallita",
+        "tryAgain": "Riprova",
+        "goToTrade": "Vai alla Pagina di Trading"
+      }
+    }
+  }
+}

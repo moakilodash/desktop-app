@@ -6,6 +6,7 @@ import { Controller, SubmitHandler, useForm } from 'react-hook-form'
 import { useAppDispatch } from '../../app/store/hooks'
 import { Spinner } from '../../components/Spinner'
 import { NETWORK_DEFAULTS } from '../../constants/networks'
+import { useAppTranslation } from '../../hooks/useAppTranslation'
 import { BitFinexBoxIcon } from '../../icons/BitFinexBox'
 import { KaleidoswapBoxIcon } from '../../icons/KaleidoswapBox'
 import {
@@ -26,6 +27,8 @@ interface FormFields {
 }
 
 export const Step1 = (props: Props) => {
+  const { t } = useAppTranslation('createNewChannel')
+
   const [lspConnectionUrl, setLspConnectionUrl] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -133,12 +136,9 @@ export const Step1 = (props: Props) => {
     <form onSubmit={handleSubmit(onSubmit)}>
       <div className="text-center mb-10">
         <h3 className="text-3xl font-bold text-white mb-4">
-          Open a Channel - Step 1
+          {t('steps.step1.title')}
         </h3>
-        <p className="text-gray-400">
-          Open channels to other nodes on the network to start using the
-          Lightning Network.
-        </p>
+        <p className="text-gray-400">{t('steps.step1.subtitle')}</p>
       </div>
 
       <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-8">
@@ -155,8 +155,8 @@ export const Step1 = (props: Props) => {
                       : 'border-gray-600 focus:border-blue-500'
                   } 
                   focus:ring-1 focus:ring-blue-500 font-mono text-sm min-h-[6rem] resize-none`}
-                placeholder="Format: <66-char-hex-pubkey>@<host>:<port>
-Example: 039257e0669aa5dea5df7c971048699a39f9023333d550a90800b9412f231ee8e7@lsp.signet.kaleidoswap.com:9735"
+                placeholder={`${t('steps.step1.nodeInfo.pubkeyLabel')}
+                ${t('steps.step1.nodeInfo.pubkeyExample')}`}
                 {...field}
                 onChange={(e) => {
                   field.onChange(e)
@@ -171,18 +171,18 @@ Example: 039257e0669aa5dea5df7c971048699a39f9023333d550a90800b9412f231ee8e7@lsp.
                 </p>
               )}
               <p className="text-gray-400 text-xs">
-                The connection string should be a 66-character hex public key,
-                followed by @ symbol, then the host address, and port number
-                (e.g. :9735)
+                {t('steps.step1.nodeInfo.pubkeyHelp')}
               </p>
             </div>
           )}
         />
 
-        <div className="text-center py-6 font-medium text-gray-400">or</div>
+        <div className="text-center py-6 font-medium text-gray-400">
+          {t('steps.step1.nodeInfo.or')}
+        </div>
 
         <div className="mb-6 text-center font-medium text-white">
-          Select from Suggested Nodes
+          {t('steps.step1.nodeInfo.title')}
         </div>
 
         <div className="flex justify-center space-x-6">
@@ -206,7 +206,7 @@ Example: 039257e0669aa5dea5df7c971048699a39f9023333d550a90800b9412f231ee8e7@lsp.
           <div className="flex justify-center items-center mt-4">
             <Spinner color="#3B82F6" size={24} />
             <span className="ml-2 text-gray-400">
-              Loading LSP information...
+              {t('steps.step1.nodeInfo.loadingLsp')}
             </span>
           </div>
         )}
@@ -228,7 +228,7 @@ Example: 039257e0669aa5dea5df7c971048699a39f9023333d550a90800b9412f231ee8e7@lsp.
             flex items-center"
           type="submit"
         >
-          Next
+          {t('steps.common.next')}
           <svg
             className="w-5 h-5 ml-2"
             fill="none"
@@ -250,17 +250,17 @@ Example: 039257e0669aa5dea5df7c971048699a39f9023333d550a90800b9412f231ee8e7@lsp.
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-gray-800/50 backdrop-blur-sm p-8 rounded-xl border border-gray-700/50 max-w-md w-full mx-4">
             <h3 className="text-2xl font-bold text-white mb-4">
-              Connect to Peer
+              {t('steps.step1.connectDialog.title')}
             </h3>
             <p className="text-gray-400 mb-6">
-              Would you like to connect to this peer before opening a channel?
+              {t('steps.step1.connectDialog.message')}
             </p>
 
             {isConnecting && (
               <div className="flex items-center justify-center mb-4">
                 <Spinner color="#3B82F6" size={24} />
                 <span className="ml-2 text-gray-400">
-                  Connecting to peer...
+                  {t('steps.step1.connectDialog.connecting')}
                 </span>
               </div>
             )}
@@ -274,7 +274,7 @@ Example: 039257e0669aa5dea5df7c971048699a39f9023333d550a90800b9412f231ee8e7@lsp.
                 onClick={() => setShowConnectionDialog(false)}
                 type="button"
               >
-                Cancel
+                {t('steps.step1.connectDialog.cancel')}
               </button>
               <button
                 className="px-6 py-2 rounded-lg font-medium text-white
@@ -285,7 +285,7 @@ Example: 039257e0669aa5dea5df7c971048699a39f9023333d550a90800b9412f231ee8e7@lsp.
                 onClick={handleConnect}
                 type="button"
               >
-                Connect
+                {t('steps.step1.connectDialog.connect')}
               </button>
             </div>
           </div>
@@ -303,7 +303,7 @@ Example: 039257e0669aa5dea5df7c971048699a39f9023333d550a90800b9412f231ee8e7@lsp.
             },
             {} as Record<string, string[]>
           )}
-          message="Please check the form for errors"
+          message={t('formError.checkForm')}
         />
       )}
     </form>

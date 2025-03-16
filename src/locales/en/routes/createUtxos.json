@@ -1,0 +1,60 @@
+{
+  "title": "Create Colored UTXOs",
+  "description": {
+    "line1": "Colored UTXOs are necessary for opening RGB asset lightning channels.",
+    "line2": "They allow for the creation of asset-specific payment channels, enabling fast and secure transactions of RGB assets over the Lightning Network."
+  },
+  "form": {
+    "numberOfUtxos": {
+      "label": "Number of UTXOs",
+      "placeholder": "Enter amount",
+      "validation": {
+        "min": "Minimum number of UTXOs is 1",
+        "max": "Maximum number of UTXOs is 10"
+      }
+    },
+    "utxoSize": {
+      "label": "UTXO Size (in satoshis)",
+      "placeholder": "Enter size",
+      "satoshis": "satoshis",
+      "validation": {
+        "min": "Size must be greater than 0",
+        "max": "Size cannot exceed available balance"
+      }
+    },
+    "feeRate": {
+      "label": "Fee Rate",
+      "options": {
+        "slow": "Slow ({{rate}} sat/vB)",
+        "normal": "Normal ({{rate}} sat/vB)",
+        "fast": "Fast ({{rate}} sat/vB)",
+        "custom": "Custom"
+      },
+      "customRate": {
+        "label": "Custom fee rate",
+        "placeholder": "Enter custom fee rate in sat/vB"
+      }
+    }
+  },
+  "balance": {
+    "available": "Available Balance: {{amount}} sats",
+    "insufficient": "Insufficient balance for selected size"
+  },
+  "buttons": {
+    "back": "Back",
+    "create": "Create UTXOs",
+    "creating": "Creating..."
+  },
+  "notifications": {
+    "success": "UTXOs created successfully",
+    "error": "Error creating UTXOs: {{message}}",
+    "balanceError": "Insufficient balance for the requested operation",
+    "feeError": "Error fetching fee rates",
+    "networkError": "Network connection error"
+  },
+  "aria": {
+    "backButton": "Go back to previous page",
+    "rangeSlider": "UTXO size slider",
+    "loadingSpinner": "Loading indicator"
+  }
+}

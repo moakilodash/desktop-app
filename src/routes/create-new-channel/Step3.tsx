@@ -1,4 +1,5 @@
 import { useAppSelector } from '../../app/store/hooks'
+import { useAppTranslation } from '../../hooks/useAppTranslation'
 import {
   channelSliceSelectors,
   TNewChannelForm,
@@ -21,6 +22,8 @@ const formatPubKey = (pubKey: string) => {
 }
 
 export const Step3 = (props: Props) => {
+  const { t } = useAppTranslation('createNewChannel')
+
   const newChannelForm = useAppSelector(
     (state) => channelSliceSelectors.form(state, 'new') as TNewChannelForm
   )
@@ -30,16 +33,16 @@ export const Step3 = (props: Props) => {
     <div className="max-w-lg mx-auto">
       <div className="text-center mb-10">
         <h3 className="text-3xl font-bold text-white mb-4">
-          Open a Channel - Step 3
+          {t('steps.step3.title')}
         </h3>
-        <p className="text-gray-400">Review and confirm your channel details</p>
+        <p className="text-gray-400">{t('steps.step3.subtitle')}</p>
       </div>
 
       <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-8 space-y-8">
         {/* Channel Capacity Section */}
         <div>
           <h4 className="text-sm font-medium text-gray-400 mb-3">
-            Channel Capacity
+            {t('steps.step3.capacity.label')}
           </h4>
           <div className="bg-gray-900/50 p-6 rounded-lg text-center">
             <div className="text-3xl font-bold text-blue-400">
@@ -56,7 +59,7 @@ export const Step3 = (props: Props) => {
         {/* Node Connection Details */}
         <div>
           <h4 className="text-sm font-medium text-gray-400 mb-3">
-            Connected Node
+            {t('steps.step3.node.title')}
           </h4>
           <div className="bg-gray-900/50 p-6 rounded-lg space-y-4">
             <div>
@@ -66,15 +69,17 @@ export const Step3 = (props: Props) => {
                 <button
                   className="ml-2 text-blue-400 hover:text-blue-300 text-xs"
                   onClick={() => navigator.clipboard.writeText(pubKey)}
-                  title="Copy full pubkey"
+                  title={t('steps.step3.node.copyPubkey')}
                   type="button"
                 >
-                  {formatPubKey(pubKey)} (click to copy)
+                  {formatPubKey(pubKey)} ({t('steps.step3.node.copyPubkey')})
                 </button>
               </div>
             </div>
             <div>
-              <span className="text-gray-400 text-sm">Host:</span>
+              <span className="text-gray-400 text-sm">
+                t('steps.step3.node.host')
+              </span>
               <div className="font-mono text-sm break-all mt-1">
                 <span className="text-white">{address}</span>
               </div>
@@ -85,23 +90,27 @@ export const Step3 = (props: Props) => {
         {/* Fee Rate Info */}
         <div>
           <h4 className="text-sm font-medium text-gray-400 mb-3">
-            Transaction Fee Rate
+            {t('steps.step3.fee.title')}
           </h4>
           <div className="bg-gray-900/50 p-6 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-gray-400">Selected Rate:</div>
+                <div className="text-gray-400">
+                  {t('steps.step3.fee.selectedRate')}
+                </div>
                 <div className="text-lg font-medium text-white mt-1">
                   {newChannelForm.fee.charAt(0).toUpperCase() +
                     newChannelForm.fee.slice(1)}
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-gray-400">Fee Rate:</div>
+                <div className="text-gray-400">
+                  {t('steps.step3.fee.feeRate')}
+                </div>
                 <div className="text-lg font-medium text-white mt-1">
                   {props.feeRates && props.feeRates[newChannelForm.fee]
                     ? `${props.feeRates[newChannelForm.fee] / 1000} sat/vB`
-                    : 'Loading...'}
+                    : t('steps.step3.fee.loading')}
                 </div>
               </div>
             </div>
@@ -132,7 +141,7 @@ export const Step3 = (props: Props) => {
               strokeWidth={2}
             />
           </svg>
-          Back
+          {t('steps.common.back')}
         </button>
 
         <button
@@ -144,7 +153,7 @@ export const Step3 = (props: Props) => {
             flex items-center"
           onClick={props.onNext}
         >
-          Confirm
+          {t('steps.common.confirm')}
           <svg
             className="w-5 h-5 ml-2"
             fill="none"

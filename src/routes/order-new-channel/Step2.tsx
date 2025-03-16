@@ -8,6 +8,7 @@ import { useAppDispatch } from '../../app/store/hooks'
 import { AssetSelector } from '../../components/AssetSelector'
 import { Select } from '../../components/Select'
 import { MIN_CHANNEL_CAPACITY, MAX_CHANNEL_CAPACITY } from '../../constants'
+import { useAppTranslation } from '../../hooks/useAppTranslation'
 import {
   orderChannelSliceActions,
   OrderChannelFormSchema,
@@ -187,6 +188,7 @@ const NumberInput: React.FC<NumberInputProps> = ({
 }
 
 export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
+  const { t } = useAppTranslation('orderNewChannel')
   const dispatch = useAppDispatch()
   const [assetMap, setAssetMap] = useState<Record<string, AssetInfo>>({})
   const [addAsset, setAddAsset] = useState(false)
@@ -224,7 +226,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
           setAssetMap(tmpMap)
         }
       } catch (error) {
-        toast.error('Error fetching data. Please try again later.', {
+        toast.error(t('step2.errors.fetchError'), {
           autoClose: 5000,
           position: 'bottom-right',
         })
@@ -313,9 +315,9 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
-            Configure Your Channel
+            {t('step2.title')}
           </h2>
-          <p className="text-gray-400 mt-2">Set up your channel parameters</p>
+          <p className="text-gray-400 mt-2">{t('step2.subtitle')}</p>
         </div>
 
         <div className="flex justify-between mb-8">
@@ -324,8 +326,12 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
               1
             </div>
             <div className="ml-3">
-              <p className="font-medium text-white">Connect LSP</p>
-              <p className="text-sm text-gray-400">Completed</p>
+              <p className="font-medium text-white">
+                {t('common.steps.connect')}
+              </p>
+              <p className="text-sm text-gray-400">
+                {t('common.steps.completed')}
+              </p>
             </div>
           </div>
           <div className="flex-1 mx-4 mt-5">
@@ -338,8 +344,12 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
               2
             </div>
             <div className="ml-3">
-              <p className="font-medium text-white">Configure</p>
-              <p className="text-sm text-gray-400">Current step</p>
+              <p className="font-medium text-white">
+                {t('common.steps.configure')}
+              </p>
+              <p className="text-sm text-gray-400">
+                {t('common.steps.current')}
+              </p>
             </div>
           </div>
           <div className="flex-1 mx-4 mt-5">
@@ -350,8 +360,10 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
               3
             </div>
             <div className="ml-3">
-              <p className="font-medium text-white">Payment</p>
-              <p className="text-sm text-gray-400">Next step</p>
+              <p className="font-medium text-white">
+                {t('common.steps.payment')}
+              </p>
+              <p className="text-sm text-gray-400">{t('common.steps.next')}</p>
             </div>
           </div>
         </div>
@@ -368,21 +380,21 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
           </h4>
 
           {isLoading ? (
-            <div className="text-center">Loading...</div>
+            <div className="text-center">{t('common.loading')}</div>
           ) : (
             <div className="space-y-8">
               <div className="bg-gray-800 p-6 rounded-lg">
                 <NumberInput
                   className="group transition-all duration-300 hover:translate-x-1"
                   error={formState.errors.capacitySat?.message}
-                  label="Channel Capacity (sats)"
+                  label={t('step2.channelCapacity.label')}
                   max={MAX_CHANNEL_CAPACITY}
                   min={MIN_CHANNEL_CAPACITY}
                   onChange={(value) => setValue('capacitySat', value)}
                   onSliderChange={(e) =>
                     setValue('capacitySat', e.target.value)
                   }
-                  placeholder="Enter amount"
+                  placeholder={t('step2.channelCapacity.placeholder')}
                   showSlider
                   sliderStep={1000}
                   sliderValue={parseInt(
@@ -397,7 +409,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                 <NumberInput
                   className="group transition-all duration-300 hover:translate-x-1"
                   error={formState.errors.clientBalanceSat?.message}
-                  label="Your Channel Liquidity (sats)"
+                  label={t('step2.yourLiquidity.label')}
                   max={parseInt(
                     parseFormattedNumber(watch('capacitySat')) || '0',
                     10
@@ -407,7 +419,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                   onSliderChange={(e) =>
                     setValue('clientBalanceSat', e.target.value)
                   }
-                  placeholder="Enter amount"
+                  placeholder={t('step2.yourLiquidity.placeholder')}
                   showSlider
                   sliderStep={1000}
                   sliderValue={parseInt(
@@ -420,7 +432,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
 
               <div className="bg-gray-800 p-6 rounded-lg">
                 <label className="block text-sm font-medium mb-2">
-                  Channel Lock Duration
+                  {t('step2.lockDuration.label')}
                   <span className="ml-2 text-gray-400 hover:text-gray-300 cursor-help relative group">
                     ⓘ
                     <span
@@ -428,9 +440,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                       bg-gray-900 text-white text-sm rounded py-1 px-2 w-64 
                       shadow-lg z-50 top-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                     >
-                      The minimum amount of time the LSP guarantees to keep your
-                      channel open. Longer durations may provide more stability
-                      for your lightning network operations.
+                      {t('step2.lockDuration.tooltip')}
                     </span>
                   </span>
                 </label>
@@ -442,10 +452,16 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                       active={field.value.toString()}
                       onSelect={(value) => field.onChange(parseInt(value))}
                       options={[
-                        { label: '1 week', value: (6 * 24 * 7).toString() },
-                        { label: '1 month', value: (6 * 24 * 30).toString() },
                         {
-                          label: '6 months',
+                          label: t('step2.lockDuration.options.week'),
+                          value: (6 * 24 * 7).toString(),
+                        },
+                        {
+                          label: t('step2.lockDuration.options.month'),
+                          value: (6 * 24 * 30).toString(),
+                        },
+                        {
+                          label: t('step2.lockDuration.options.sixMonths'),
                           value: (6 * 24 * 30 * 6).toString(),
                         },
                       ]}
@@ -463,14 +479,16 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                     onChange={(e) => setAddAsset(e.target.checked)}
                     type="checkbox"
                   />
-                  <span className="text-lg font-medium">Add Asset</span>
+                  <span className="text-lg font-medium">
+                    {t('step2.asset.addAsset')}
+                  </span>
                 </label>
 
                 {addAsset && (
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium mb-2">
-                        Select Asset
+                        {t('step2.asset.label')}
                       </label>
                       <AssetSelector
                         assetMap={assetMap}
@@ -484,14 +502,14 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
                         <NumberInput
                           className="group transition-all duration-300 hover:translate-x-1"
                           error={formState.errors.assetAmount?.message}
-                          label={`Asset Amount (${assetMap[assetId]?.ticker || ''})`}
+                          label={`${t('step2.asset.amount.label')} (${assetMap[assetId]?.ticker || ''})`}
                           max={getAssetMaxAmount()}
                           min={0}
                           onChange={(value) => setValue('assetAmount', value)}
                           onSliderChange={(e) =>
                             setValue('assetAmount', e.target.value)
                           }
-                          placeholder="Enter amount"
+                          placeholder={t('step2.asset.amount.placeholder')}
                           precision={getAssetPrecision(assetId)}
                           showSlider
                           sliderStep={
@@ -516,7 +534,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
               onClick={onBack}
               type="button"
             >
-              Back
+              {t('common.back')}
             </button>
             <button
               className={`px-6 py-3 rounded-lg text-lg font-bold ${
@@ -527,7 +545,7 @@ export const Step2: React.FC<Props> = ({ onNext, onBack }) => {
               disabled={isLoading}
               type="submit"
             >
-              Next Step
+              {t('common.next')}
             </button>
           </div>
 

@@ -1,0 +1,216 @@
+{
+  "title": "Apri Nuovo Canale",
+  "subtitle": "Configura e stabilisci il tuo canale Lightning Network",
+  "form": {
+    "error": "Si è verificato un errore durante l'invio del modulo",
+    "defaultMessage": "Controlla il modulo e riprova",
+    "checkForm": "Controlla tutti i campi",
+    "fieldPrefix": "Errore nel campo:"
+  },
+  "common": {
+    "back": "Indietro",
+    "next": "Avanti",
+    "loading": "Caricamento...",
+    "checkingBalance": "Controllo del saldo...",
+    "errors": {
+      "tryAgainLater": "Riprova più tardi",
+      "insufficientBalance": "Saldo insufficiente",
+      "depositRequired": "Deposito aggiuntivo richiesto"
+    },
+    "navigation": {
+      "goToDashboard": "Vai alla Dashboard",
+      "returnToTrade": "Torna al Trading"
+    }
+  },
+  "step1": {
+    "title": "Connetti al LSP",
+    "subtitle": "Scegli il tuo Lightning Service Provider",
+    "howItWorks": {
+      "title": "Come Funziona l'Apertura del Canale",
+      "description": "Completa questi passaggi per aprire il tuo canale",
+      "steps": {
+        "connect": "Connettiti a un Lightning Service Provider (LSP) che ti aiuterà a stabilire il tuo canale",
+        "configure": "Configura i parametri del canale inclusi capacità e distribuzione del saldo",
+        "payment": "Effettua un pagamento per coprire i costi di creazione del canale e il saldo iniziale"
+      }
+    },
+    "lspUrl": {
+      "label": "URL LSP Attuale",
+      "placeholder": "Inserisci URL LSP",
+      "description": "Puoi modificare l'URL LSP qui o utilizzare l'LSP predefinito",
+      "useDefault": "Usa LSP Kaleidoswap predefinito"
+    },
+    "connectionString": {
+      "label": "Stringa di Connessione LSP",
+      "placeholder": "La stringa di connessione apparirà qui",
+      "description": "Questo è l'URL di connessione univoco per il tuo LSP",
+      "copySuccess": "Stringa di connessione LSP copiata negli appunti"
+    },
+    "connect": {
+      "button": "Connetti al LSP",
+      "loading": "Connessione in corso...",
+      "connected": "Connesso al LSP",
+      "waitingForUrl": "In attesa dell'URL LSP...",
+      "continueWithConnected": "Continua con LSP Connesso"
+    },
+    "errors": {
+      "connectionFailed": "Connessione al LSP fallita",
+      "invalidUrl": "URL LSP non valido",
+      "noLspInfo": "Impossibile recuperare le informazioni LSP",
+      "fetchError": "Errore nel recupero dei dati LSP"
+    },
+    "dialog": {
+      "title": "Connetti al LSP",
+      "message": "Vuoi connetterti al LSP a questo indirizzo?",
+      "cancel": "Annulla",
+      "confirm": "Connetti",
+      "alreadyConnected": {
+        "title": "Già Connesso",
+        "message": "Sei già connesso a questo LSP",
+        "confirm": "OK"
+      }
+    }
+  },
+  "step2": {
+    "title": "Configura Canale",
+    "subtitle": "Imposta i parametri del tuo canale",
+    "channelCapacity": {
+      "label": "Capacità del Canale (sats)",
+      "placeholder": "Inserisci importo",
+      "description": "La capacità totale del tuo canale",
+      "available": "Disponibile",
+      "total": "Totale"
+    },
+    "yourLiquidity": {
+      "label": "Tua Liquidità nel Canale (sats)",
+      "placeholder": "Inserisci importo",
+      "description": "Il tuo saldo iniziale nel canale"
+    },
+    "lockDuration": {
+      "label": "Durata del Blocco del Canale",
+      "tooltip": "Il tempo minimo garantito dall'LSP per mantenere aperto il tuo canale",
+      "options": {
+        "week": "1 settimana",
+        "month": "1 mese",
+        "sixMonths": "6 mesi"
+      }
+    },
+    "asset": {
+      "label": "Seleziona Asset",
+      "addAsset": "Aggiungi Asset",
+      "selectAsset": "Seleziona un asset",
+      "amount": {
+        "label": "Importo Asset",
+        "placeholder": "Inserisci importo asset"
+      },
+      "noAssets": "Nessun asset disponibile"
+    },
+    "validation": {
+      "insufficientCapacity": "Capacità del canale insufficiente",
+      "invalidAmount": "Importo non valido",
+      "maxCapacity": "Supera la capacità massima",
+      "minCapacity": "Inferiore alla capacità minima",
+      "requiredField": "Questo campo è obbligatorio"
+    }
+  },
+  "step3": {
+    "title": "Completa il Pagamento",
+    "subtitle": "Scegli il metodo di pagamento e completa la configurazione",
+    "orderSummary": {
+      "title": "Riepilogo Ordine",
+      "orderId": {
+        "label": "ID Ordine",
+        "copy": "Copia ID ordine",
+        "copied": "ID ordine copiato negli appunti"
+      },
+      "capacity": {
+        "title": "Ripartizione Capacità Canale",
+        "yourBalance": "Tuo Saldo",
+        "lspBalance": "Saldo LSP",
+        "total": "Capacità Totale"
+      },
+      "asset": {
+        "title": "Informazioni Asset",
+        "name": "Nome Asset",
+        "yourBalance": "Tuo Saldo",
+        "lspBalance": "Saldo LSP",
+        "total": "Importo Totale Asset",
+        "details": "Dettagli Asset"
+      },
+      "costs": {
+        "title": "Ripartizione Costi",
+        "channelAmount": "Importo Canale",
+        "serviceFee": "Commissione Servizio",
+        "total": "Costo Totale"
+      },
+      "duration": {
+        "label": "Durata Canale",
+        "blocks": "blocchi",
+        "timeEstimate": "tempo stimato"
+      },
+      "expiry": {
+        "label": "L'ordine scade il",
+        "datetime": "Data e ora"
+      }
+    },
+    "payment": {
+      "title": "Metodo di Pagamento",
+      "methods": {
+        "lightning": "⚡ Lightning",
+        "onchain": "₿ On-chain"
+      },
+      "wallet": {
+        "title": "Pagamento dal Portafoglio",
+        "useWallet": "Paga con Fondi del Portafoglio",
+        "available": "Disponibile",
+        "loading": "Caricamento saldo portafoglio...",
+        "insufficient": {
+          "title": "Saldo Insufficiente",
+          "message": {
+            "lightning": "I tuoi canali lightning non hanno sufficiente liquidità in uscita per questo pagamento",
+            "onchain": "Il tuo portafoglio non ha sufficiente saldo on-chain per questo pagamento"
+          },
+          "required": "Richiesto",
+          "available": "Disponibile"
+        },
+        "confirmation": {
+          "title": "Conferma Pagamento",
+          "message": "Verifica tutti i dettagli prima di confermare. Questa azione non può essere annullata.",
+          "processing": "Elaborazione del tuo pagamento...",
+          "cancel": "Annulla",
+          "confirm": "Conferma Pagamento"
+        }
+      },
+      "fees": {
+        "title": "Commissione di Transazione",
+        "slow": "Lenta",
+        "normal": "Normale",
+        "fast": "Veloce",
+        "custom": "Personalizzata",
+        "rate": "sat/vB",
+        "customPlaceholder": "Inserisci commissione personalizzata (sat/vB)"
+      },
+      "external": {
+        "title": "Pagamento Esterno",
+        "copyInvoice": "Copia Fattura",
+        "copyAddress": "Copia Indirizzo",
+        "amountToPay": "Importo da Pagare",
+        "copied": "Dettagli pagamento copiati negli appunti"
+      }
+    }
+  },
+  "step4": {
+    "success": {
+      "title": "Pagamento Completato!",
+      "message": "Il tuo pagamento è stato ricevuto e il canale è in fase di apertura",
+      "progress": "Apertura del canale in corso",
+      "button": "Vai alla Pagina dei Canali"
+    },
+    "failure": {
+      "title": "Pagamento Fallito",
+      "message": "Si è verificato un problema con il tuo pagamento. Riprova",
+      "button": "Riprova",
+      "returnToTrade": "Torna al Trading"
+    }
+  }
+}

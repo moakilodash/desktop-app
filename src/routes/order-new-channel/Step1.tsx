@@ -7,6 +7,7 @@ import { toast } from 'react-toastify'
 import { RootState } from '../../app/store'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { NETWORK_DEFAULTS } from '../../constants/networks'
+import { useAppTranslation } from '../../hooks/useAppTranslation'
 import { KaleidoswapBoxIcon } from '../../icons/KaleidoswapBox'
 import { makerApi } from '../../slices/makerApi/makerApi.slice'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
@@ -21,72 +22,82 @@ const ConnectPopup: React.FC<{
   onConfirm: () => void
   connectionUrl: string
   isAlreadyConnected: boolean
-}> = ({ onClose, onConfirm, connectionUrl, isAlreadyConnected }) => (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div className="bg-blue-dark p-8 rounded-lg max-w-md w-full">
-      <h3 className="text-2xl font-semibold mb-4">Connect to LSP</h3>
-      {isAlreadyConnected ? (
-        <>
-          <div className="mb-6 flex items-center bg-green-800 text-white p-4 rounded-lg">
-            <CheckCircle className="text-green-300 mr-3" size={24} />
-            <p className="font-medium">
-              You are already connected to this LSP.
-            </p>
-          </div>
-        </>
-      ) : (
-        <p className="mb-6 text-gray-300">
-          Do you want to connect to the LSP at this address?
-        </p>
-      )}
-      <p className="mb-6 text-sm bg-gray-700 p-4 rounded-lg break-all">
-        {connectionUrl}
-      </p>
-      <div className="flex justify-end space-x-4">
+}> = ({ onClose, onConfirm, connectionUrl, isAlreadyConnected }) => {
+  const { t } = useAppTranslation('orderNewChannel')
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-blue-dark p-8 rounded-lg max-w-md w-full">
+        <h3 className="text-2xl font-semibold mb-4">Connect to LSP</h3>
         {isAlreadyConnected ? (
-          <button
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            onClick={onConfirm}
-          >
-            OK
-          </button>
-        ) : (
           <>
-            <button
-              className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors font-medium"
-              onClick={onClose}
-            >
-              Cancel
-            </button>
+            <div className="mb-6 flex items-center bg-green-800 text-white p-4 rounded-lg">
+              <CheckCircle className="text-green-300 mr-3" size={24} />
+              <p className="font-medium">
+                {t('step1.dialog.alreadyConnected.message')}
+              </p>
+            </div>
+          </>
+        ) : (
+          <p className="mb-6 text-gray-300">{t('step1.dialog.message')}</p>
+        )}
+        <p className="mb-6 text-sm bg-gray-700 p-4 rounded-lg break-all">
+          {connectionUrl}
+        </p>
+        <div className="flex justify-end space-x-4">
+          {isAlreadyConnected ? (
             <button
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
               onClick={onConfirm}
             >
-              Connect
+              {t('step1.dialog.alreadyConnected.confirm')}
             </button>
-          </>
-        )}
+          ) : (
+            <>
+              <button
+                className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-500 transition-colors font-medium"
+                onClick={onClose}
+              >
+                {t('step1.dialog.cancel')}
+              </button>
+              <button
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                onClick={onConfirm}
+              >
+                {t('step1.dialog.confirm')}
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
-  </div>
-)
+  )
+}
 
 export const Step1: React.FC<Props> = ({ onNext }) => {
+  // Hooks for translation and state management
+  const { t } = useAppTranslation('orderNewChannel')
+  const dispatch = useAppDispatch()
+
+  // Local states
   const [isLoading, setIsLoading] = useState(false)
   const [showConnectPopup, setShowConnectPopup] = useState(false)
   const [isAlreadyConnected, setIsAlreadyConnected] = useState(false)
   const [connectionUrl, setConnectionUrl] = useState('')
+
+  // API queries
   const [getInfo] = makerApi.endpoints.get_info.useLazyQuery()
   const [connectPeer] = nodeApi.endpoints.connectPeer.useMutation()
   const [listPeers] = nodeApi.endpoints.listPeers.useLazyQuery()
   const [getNetworkInfo] = nodeApi.endpoints.networkInfo.useLazyQuery()
 
-  const dispatch = useAppDispatch()
+  // Select node settings from the store
   const currentAccount = useAppSelector(
     (state: RootState) => state.nodeSettings.data
   )
   const lspUrl = currentAccount.default_lsp_url
 
+  // Effect for initial loading of LSP information
   useEffect(() => {
     console.log('Fetching LSP Info...')
     fetchLspInfo()
@@ -102,7 +113,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
           setConnectionUrl(response.lsp_connection_url)
           checkPeerConnection(response.lsp_connection_url)
         } else {
-          toast.error('Failed to get LSP connection URL')
+          toast.error(t('step1.errors.noLspInfo'))
         }
       } catch (error) {
         console.error('Error fetching LSP info:', error)
@@ -127,7 +138,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
       }
     } catch (error) {
       console.error('Error checking peer connection:', error)
-      toast.error('Failed to check peer connection status')
+      toast.error(t('step1.errors.connectionFailed'))
     }
   }
 
@@ -135,14 +146,14 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
     if (connectionUrl) {
       setShowConnectPopup(true)
     } else {
-      toast.error('Please wait for LSP connection URL to be fetched')
+      toast.error(t('step1.errors.waitingForUrl'))
     }
   }
 
   const handleConnect = async () => {
     setShowConnectPopup(false)
     if (isAlreadyConnected) {
-      toast.success('Already connected to LSP')
+      toast.success(t('step1.connect.connected'))
       onNext({ connectionUrl, success: true })
       return
     }
@@ -154,11 +165,11 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
         const errorMessage =
           error.data && typeof error.data === 'object' && 'error' in error.data
             ? String(error.data.error)
-            : 'Failed to connect to peer'
+            : t('step1.errors.connectionFailed')
         throw new Error(errorMessage)
       }
       console.log('Connect peer response:', response)
-      toast.success('Successfully connected to LSP')
+      toast.success(t('step1.connect.connected'))
       onNext({ connectionUrl, success: true })
     } catch (error) {
       console.error('Failed to connect to peer:', error)
@@ -176,7 +187,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
       const networkInfo = await getNetworkInfo().unwrap()
 
       if (!networkInfo?.network) {
-        throw new Error('Network information not available')
+        throw new Error(t('step1.errors.noLspInfo'))
       }
 
       const network = networkInfo.network
@@ -204,7 +215,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
       await fetchLspInfo()
     } catch (error) {
       console.error('Error selecting Kaleidoswap LSP:', error)
-      toast.error(`Failed to select Kaleidoswap LSP`)
+      toast.error(t('step1.errors.fetchError'))
     } finally {
       setIsLoading(false)
     }
@@ -225,7 +236,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
       await fetchLspInfo()
     } catch (error) {
       console.error('Error selecting Kaleidoswap LSP:', error)
-      toast.error('Failed to select Kaleidoswap LSP')
+      toast.error(t('step1.errors.fetchError'))
     } finally {
       setIsLoading(false)
     }
@@ -236,7 +247,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
       return {
         className: 'opacity-50 cursor-not-allowed',
         disabled: true,
-        text: 'Connecting...',
+        text: t('step1.connect.loading'),
       }
     }
     if (!connectionUrl) {
@@ -244,7 +255,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
         className:
           'opacity-50 cursor-not-allowed bg-gradient-to-r from-gray-500 to-gray-600',
         disabled: true,
-        text: 'Waiting for LSP URL...',
+        text: t('step1.connect.waitingForUrl'),
       }
     }
     if (isAlreadyConnected) {
@@ -252,14 +263,14 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
         className:
           'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700',
         disabled: false,
-        text: 'Continue with Connected LSP',
+        text: t('step1.connect.continueWithConnected'),
       }
     }
     return {
       className:
         'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700',
       disabled: false,
-      text: 'Connect to LSP',
+      text: t('step1.connect.button'),
     }
   }
 
@@ -268,11 +279,9 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
-            Buy a New Channel from LSP
+            {t('step1.title')}
           </h2>
-          <p className="text-gray-400 mt-2">
-            Complete these steps to open your channel
-          </p>
+          <p className="text-gray-400 mt-2">{t('step1.subtitle')}</p>
         </div>
 
         <div className="flex justify-between mb-8">
@@ -281,7 +290,9 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
               1
             </div>
             <div className="ml-3">
-              <p className="font-medium text-white">Connect LSP</p>
+              <p className="font-medium text-white">
+                {t('step1.connect.button')}
+              </p>
               <p className="text-sm text-gray-400">Current step</p>
             </div>
           </div>
@@ -315,7 +326,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
 
         <div className="bg-blue-900/50 border border-blue-700/50 p-6 rounded-xl mb-8">
           <h3 className="text-xl font-semibold text-white mb-4">
-            How Channel Opening Works
+            {t('step1.howItWorks.title')}
           </h3>
           <div className="space-y-4">
             <div className="flex items-start">
@@ -323,8 +334,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
                 1
               </div>
               <p className="text-blue-100">
-                Connect to a Lightning Service Provider (LSP) that will help
-                establish your channel
+                {t('step1.howItWorks.steps.connect')}
               </p>
             </div>
             <div className="flex items-start">
@@ -332,8 +342,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
                 2
               </div>
               <p className="text-blue-100">
-                Configure your channel parameters including capacity and balance
-                distribution
+                {t('step1.howItWorks.steps.configure')}
               </p>
             </div>
             <div className="flex items-start">
@@ -341,8 +350,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
                 3
               </div>
               <p className="text-blue-100">
-                Make a payment to cover the channel creation costs and initial
-                balance
+                {t('step1.howItWorks.steps.payment')}
               </p>
             </div>
           </div>
@@ -350,7 +358,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
 
         <div className="bg-gray-800 p-6 rounded-lg">
           <label className="block text-lg font-medium mb-2">
-            Current LSP URL
+            {t('step1.lspUrl.label')}
           </label>
           <div className="flex items-center space-x-4">
             <div className="relative flex-grow">
@@ -366,8 +374,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
             </div>
           </div>
           <p className="mt-2 text-sm text-gray-400">
-            You can modify the LSP URL here or click the Kaleidoswap button to
-            use the default LSP.
+            {t('step1.lspUrl.description')}
           </p>
           <div className="flex flex-col items-center">
             <button
@@ -376,7 +383,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
               }`}
               disabled={isLoading}
               onClick={handleKaleidoswapSelect}
-              title="Use default Kaleidoswap LSP"
+              title={t('step1.lspUrl.useDefault')}
             >
               <div className="flex flex-col items-center">
                 <KaleidoswapBoxIcon />
@@ -387,18 +394,19 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
 
         <div className="bg-gray-800 p-6 rounded-lg mt-6">
           <label className="block text-lg font-medium mb-2">
-            LSP Connection String
+            {t('step1.connectionString.label')}
           </label>
           <div className="relative">
             <Link className="absolute left-3 top-3 text-gray-400" size={20} />
             <textarea
               className="w-full bg-gray-700 text-white pl-10 pr-12 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all h-24 resize-none"
+              placeholder={t('step1.connectionString.placeholder')}
               readOnly
               value={connectionUrl}
             />
             <CopyToClipboard
               onCopy={() =>
-                toast.success('LSP connection string copied to clipboard')
+                toast.success(t('step1.connectionString.copySuccess'))
               }
               text={connectionUrl}
             >
@@ -411,7 +419,7 @@ export const Step1: React.FC<Props> = ({ onNext }) => {
             </CopyToClipboard>
           </div>
           <p className="mt-2 text-sm text-gray-400">
-            This is the unique connection URL for your LSP.
+            {t('step1.connectionString.description')}
           </p>
         </div>
 

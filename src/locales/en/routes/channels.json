@@ -1,0 +1,27 @@
+{
+  "dashboard": {
+    "title": "Lightning Wallet Dashboard",
+    "refresh": {
+      "button": "Refresh",
+      "loading": "Refreshing..."
+    }
+  },
+  "metrics": {
+    "totalBalance": {
+      "title": "Total Balance",
+      "value": "{{amount}} sats"
+    },
+    "inboundLiquidity": {
+      "title": "Total Inbound Liquidity",
+      "value": "{{amount}} sats"
+    },
+    "outboundLiquidity": {
+      "title": "Total Outbound Liquidity",
+      "value": "{{amount}} sats"
+    }
+  },
+  "channels": {
+    "empty": "You don't have any open channels yet.",
+    "info": "Channel liquidity changes as you send and receive payments. Keep your channels balanced for optimal performance."
+  }
+}

@@ -3,6 +3,7 @@ import { useCallback, useState, useEffect, useRef } from 'react'
 import { ClipLoader } from 'react-spinners'
 import { toast } from 'react-toastify'
 
+import { useAppTranslation } from '../../hooks/useAppTranslation'
 import {
   makerApi,
   Lsps1CreateOrderResponse,
@@ -16,6 +17,8 @@ import { Step4 } from './Step4'
 import 'react-toastify/dist/ReactToastify.css'
 
 export const Component = () => {
+  const { t } = useAppTranslation('orderNewChannel')
+
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
   const [loading, setLoading] = useState(false)
   const [orderId, setOrderId] = useState<string | null>(null)
@@ -45,7 +48,7 @@ export const Component = () => {
         toast.dismiss(toastIdRef.current)
       }
 
-      toastIdRef.current = toast.loading('Waiting for payment...', {
+      toastIdRef.current = toast.loading(t('common.waiting'), {
         position: 'bottom-right',
       })
 
@@ -60,7 +63,7 @@ export const Component = () => {
             toast.update(toastIdRef.current, {
               autoClose: 5000,
               isLoading: false,
-              render: 'Payment completed. Channel is being set up.',
+              render: t('step3.payment.success.completed'),
               type: 'success',
             })
           }
@@ -72,7 +75,7 @@ export const Component = () => {
             toast.update(toastIdRef.current, {
               autoClose: 5000,
               isLoading: false,
-              render: 'Payment failed. Please try again.',
+              render: t('step3.payment.error.failed'),
               type: 'error',
             })
           }
@@ -94,7 +97,7 @@ export const Component = () => {
       if (data.success) {
         setStep(2)
       } else {
-        toast.error('Failed to connect to LSP. Please try again.', {
+        toast.error(t('step1.errors.connectionFailed'), {
           autoClose: 5000,
           position: 'bottom-right',
         })
@@ -161,10 +164,10 @@ export const Component = () => {
       const channelResponse = await createOrderRequest(payload)
       setLoading(false)
       if (channelResponse.error) {
-        let errorMessage = 'An error occurred'
+        let errorMessage = t('common.errors.unknown')
         if ('status' in channelResponse.error) {
           const fetchError = channelResponse.error as FetchBaseQueryError
-          errorMessage = `Error ${fetchError.status}: ${JSON.stringify(fetchError.data)}`
+          errorMessage = `${t('common.errors.status')} ${fetchError.status}: ${JSON.stringify(fetchError.data)}`
         } else {
           errorMessage = channelResponse.error.message || errorMessage
         }
@@ -215,24 +218,21 @@ export const Component = () => {
       />
       <div className="bg-gray-800 rounded-xl p-6 max-w-md w-full relative z-10">
         <h3 className="text-xl font-bold text-white mb-4">
-          Are you sure you want to go back?
+          {t('common.confirmBack.title')}
         </h3>
-        <p className="text-gray-300 mb-6">
-          Going back will cancel your current order. You'll need to create a new
-          order if you want to proceed later.
-        </p>
+        <p className="text-gray-300 mb-6">{t('common.confirmBack.message')}</p>
         <div className="flex gap-4">
           <button
             className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
             onClick={() => setShowBackConfirmation(false)}
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             onClick={handleConfirmBack}
           >
-            Go Back
+            {t('common.confirmBack.confirm')}
           </button>
         </div>
       </div>

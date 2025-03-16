@@ -16,8 +16,10 @@ import { toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import { useAppSelector } from '../../app/store/hooks'
 import { formatBitcoinAmount } from '../../helpers/number'
+import { useAppTranslation } from '../../hooks/useAppTranslation'
 import { Lsps1CreateOrderResponse } from '../../slices/makerApi/makerApi.slice'
 import { nodeApi, NiaAsset } from '../../slices/nodeApi/nodeApi.slice'
+import { TFunction } from 'i18next'
 
 interface StepProps {
   onBack: () => void
@@ -40,20 +42,21 @@ const getFeeIcon = (type: string) => {
 }
 
 // Function to convert blocks to human-readable time
-const blocksToTime = (blocks: number) => {
+const blocksToTime = (blocks: number, t: TFunction) => {
   const minutes = blocks * 10
   const days = Math.floor(minutes / 1440)
   const hours = Math.floor((minutes % 1440) / 60)
   const mins = minutes % 60
 
   let timeString = ''
-  if (days > 0) timeString += `${days} day${days > 1 ? 's' : ''}`
+  if (days > 0)
+    timeString += `${days} ${days > 1 ? t('time.days') : t('time.day')}`
   if (hours > 0)
-    timeString += `${timeString ? ', ' : ''}${hours} hour${hours > 1 ? 's' : ''}`
+    timeString += `${timeString ? ', ' : ''}${hours} ${hours > 1 ? t('time.hours') : t('time.hour')}`
   if (mins > 0)
-    timeString += `${timeString ? ', ' : ''}${mins} minute${mins > 1 ? 's' : ''}`
+    timeString += `${timeString ? ', ' : ''}${mins} ${mins > 1 ? t('time.minutes') : t('time.minute')}`
 
-  return timeString || 'less than a minute'
+  return timeString || t('time.lessThanMinute')
 }
 
 // Add this helper function near the top of the file
@@ -66,6 +69,7 @@ const formatAssetAmount = (
 }
 
 export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
+  const { t } = useAppTranslation('orderNewChannel')
   const [paymentMethod, setPaymentMethod] = useState<'lightning' | 'onchain'>(
     'lightning'
   )
@@ -89,10 +93,10 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
 
   // Define fee rates
   const feeRates = [
-    { label: 'Slow', rate: 1, value: 'slow' },
-    { label: 'Normal', rate: 2, value: 'normal' },
-    { label: 'Fast', rate: 3, value: 'fast' },
-    { label: 'Custom', rate: customFee, value: 'custom' },
+    { label: t('step3.payment.fees.slow'), rate: 1, value: 'slow' },
+    { label: t('step3.payment.fees.normal'), rate: 2, value: 'normal' },
+    { label: t('step3.payment.fees.fast'), rate: 3, value: 'fast' },
+    { label: t('step3.payment.fees.custom'), rate: customFee, value: 'custom' },
   ]
 
   // Add new state for payment status
@@ -191,7 +195,7 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
     try {
       if (paymentMethod === 'lightning' && order?.payment?.bolt11) {
         await sendPayment({ invoice: order.payment.bolt11.invoice })
-        toast.success('Lightning payment sent successfully!')
+        toast.success(t('step3.payment.success.lightning'))
       } else if (paymentMethod === 'onchain' && order?.payment?.onchain) {
         const feeRate =
           selectedFee === 'custom'
@@ -202,19 +206,19 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
           amount: order.payment.onchain.order_total_sat,
           fee_rate: feeRate,
         })
-        toast.success('On-chain payment sent successfully!')
+        toast.success(t('step3.payment.success.onchain'))
       }
       setPaymentStatus('paid')
       setShowWalletConfirmation(false)
     } catch (error) {
-      toast.error('Payment failed: ' + (error as Error).message)
+      toast.error(t('step3.payment.error', { error: (error as Error).message }))
     } finally {
       setIsProcessingWalletPayment(false)
     }
   }
 
   const handleCopy = useCallback(() => {
-    toast.success('Payment details copied to clipboard!')
+    toast.success(t('step3.payment.external.copied'))
   }, [])
 
   if (loading || !order) {
@@ -222,7 +226,7 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
       <div className="flex justify-center items-center h-screen bg-gradient-to-b from-gray-900 to-gray-800">
         <div className="bg-gray-800/50 backdrop-blur-sm p-8 rounded-xl border border-gray-700/50">
           <ClipLoader color={'#3B82F6'} loading={true} size={50} />
-          <span className="ml-4 text-gray-300">Loading order details...</span>
+          <span className="ml-4 text-gray-300">{t('common.loading')}</span>
         </div>
       </div>
     )
@@ -232,13 +236,13 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-800 text-white">
         <h3 className="text-2xl font-semibold mb-4">
-          Error: Invalid order data
+          {t('step3.errors.invalidOrder')}
         </h3>
         <button
           className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 focus:outline-none"
           onClick={onBack}
         >
-          Back
+          {t('common.back')}
         </button>
       </div>
     )
@@ -282,10 +286,10 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                 />
               </div>
               <h3 className="text-xl font-bold text-white mb-2">
-                Processing Payment
+                {t('step3.payment.wallet.confirmation.processing')}
               </h3>
               <p className="text-slate-400 text-center">
-                Please wait while we process your payment...
+                {t('step3.payment.wallet.confirmation.wait')}
               </p>
             </div>
           ) : (
@@ -293,7 +297,7 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
               <div className="flex items-center gap-3 mb-4">
                 <AlertTriangle className="w-6 h-6 text-yellow-500" />
                 <h3 className="text-xl font-bold text-white">
-                  Confirm Payment
+                  {t('step3.payment.wallet.confirmation.title')}
                 </h3>
               </div>
               <div className="space-y-4">
@@ -305,12 +309,12 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                       {paymentMethod === 'lightning' ? (
                         <>
                           <Zap className="w-4 h-4 text-yellow-500" />
-                          Lightning
+                          {t('step3.payment.methods.lightning')}
                         </>
                       ) : (
                         <>
                           <ChainIcon className="w-4 h-4 text-blue-500" />
-                          On-chain
+                          {t('step3.payment.methods.onchain')}
                         </>
                       )}
                     </span>
@@ -320,7 +324,9 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                 {/* Balance Section */}
                 <div className="bg-slate-800/50 rounded-xl p-4 space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Available Balance:</span>
+                    <span className="text-slate-400">
+                      {t('step3.payment.wallet.available')}
+                    </span>
                     <span className="text-white font-medium">
                       {paymentMethod === 'lightning'
                         ? `${formatBitcoinAmount(outboundLiquidity, bitcoinUnit)}`
@@ -329,7 +335,9 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Amount to Pay:</span>
+                    <span className="text-slate-400">
+                      {t('step3.payment.external.amountToPay')}
+                    </span>
                     <span className="text-white font-medium">
                       {formatBitcoinAmount(
                         currentPayment?.order_total_sat || 0,
@@ -339,7 +347,9 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Remaining Balance:</span>
+                    <span className="text-slate-400">
+                      {t('step3.payment.wallet.remaining')}
+                    </span>
                     <span className="text-white font-medium">
                       {formatBitcoinAmount(
                         paymentMethod === 'lightning'
@@ -358,7 +368,9 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                 {paymentMethod === 'onchain' && (
                   <div className="bg-slate-800/50 rounded-xl p-4">
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Fee Rate:</span>
+                      <span className="text-slate-400">
+                        {t('step3.payment.fees.rate')}
+                      </span>
                       <span className="text-white font-medium">
                         {selectedFee === 'custom'
                           ? `${customFee} sat/vB`
@@ -370,8 +382,7 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
 
                 <div className="border-t border-slate-800 my-4" />
                 <p className="text-yellow-500/80 text-sm">
-                  Please verify all details before confirming. This action
-                  cannot be undone.
+                  {t('step3.payment.wallet.confirmation.warning')}
                 </p>
                 <div className="flex gap-3 mt-6">
                   <button
@@ -380,7 +391,7 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                     onClick={() => setShowWalletConfirmation(false)}
                     type="button"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-700
@@ -388,7 +399,7 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                     onClick={handleWalletPayment}
                     type="button"
                   >
-                    Confirm Payment
+                    {t('step3.payment.wallet.confirmation.confirm')}
                   </button>
                 </div>
               </div>
@@ -412,7 +423,9 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
         <div className="bg-gray-900/50 rounded-xl p-6 mb-6">
           <div className="flex items-center justify-center gap-3 p-4">
             <ClipLoader color="#3B82F6" size={24} />
-            <span className="text-gray-400">Loading wallet balance...</span>
+            <span className="text-gray-400">
+              {t('step3.payment.wallet.loading')}
+            </span>
           </div>
         </div>
       )
@@ -430,14 +443,12 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
             <AlertTriangle className="w-6 h-6 text-red-500 flex-shrink-0" />
             <div>
               <h4 className="text-red-500 font-medium mb-1">
-                Insufficient{' '}
-                {paymentMethod === 'lightning' ? 'Lightning' : 'On-chain'}{' '}
-                Balance
+                {t('step3.payment.wallet.insufficient.title')}
               </h4>
               <p className="text-gray-400 text-sm">
-                {paymentMethod === 'lightning'
-                  ? "Your lightning channels don't have enough outbound liquidity for this payment. You can either use an external lightning wallet or switch to on-chain payment."
-                  : "Your wallet doesn't have enough on-chain balance for this payment. You can either use an external bitcoin wallet or switch to lightning payment if you have sufficient outbound capacity."}
+                {t(
+                  `step3.payment.wallet.insufficient.message.${paymentMethod}`
+                )}
               </p>
               <div className="mt-2 text-sm">
                 <span className="text-gray-400">Required: </span>
@@ -449,11 +460,16 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                   {bitcoinUnit}
                 </span>
                 <span className="text-gray-400 mx-2">|</span>
-                <span className="text-gray-400">Available: </span>
+                <span className="text-gray-400">
+                  {t('step3.payment.wallet.insufficient.available')}:{' '}
+                </span>
                 <span className="text-white font-medium">
-                  {paymentMethod === 'lightning'
-                    ? `${formatBitcoinAmount(outboundLiquidity, bitcoinUnit)}`
-                    : `${formatBitcoinAmount(onChainBalance, bitcoinUnit)}`}{' '}
+                  {formatBitcoinAmount(
+                    paymentMethod === 'lightning'
+                      ? outboundLiquidity
+                      : onChainBalance,
+                    bitcoinUnit
+                  )}{' '}
                   {bitcoinUnit}
                 </span>
               </div>
@@ -470,15 +486,19 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                   type="checkbox"
                 />
                 <span className="text-white font-medium">
-                  Pay with Wallet Funds
+                  {t('step3.payment.wallet.useWallet')}
                 </span>
               </label>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-400">Available:</span>
+                <span className="text-sm text-gray-400">
+                  {t('step3.payment.wallet.available')}:
+                </span>
                 {isLoadingData ? (
                   <div className="flex items-center gap-2">
                     <ClipLoader color="#3B82F6" size={16} />
-                    <span className="text-gray-400">Loading...</span>
+                    <span className="text-gray-400">
+                      {t('step3.payment.wallet.loading')}
+                    </span>
                   </div>
                 ) : (
                   <span className="text-white font-medium">
@@ -496,7 +516,7 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                 {paymentMethod === 'onchain' && (
                   <div>
                     <label className="text-sm font-medium text-slate-400 mb-2 block">
-                      Transaction Fee
+                      {t('step3.payment.fees.title')}
                     </label>
                     <div className="grid grid-cols-2 gap-4">
                       {feeRates.map((rate) => (
@@ -534,7 +554,7 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                         onChange={(e) =>
                           setCustomFee(parseFloat(e.target.value))
                         }
-                        placeholder="Enter custom fee rate (sat/vB)"
+                        placeholder={t('step3.payment.fees.customPlaceholder')}
                         step="0.1"
                         type="number"
                         value={customFee}
@@ -566,15 +586,17 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                 >
                   <span className="flex items-center gap-2">
                     {paymentMethod === 'lightning' ? '⚡' : '₿'}
-                    Pay{' '}
-                    {formatBitcoinAmount(
-                      currentPayment?.order_total_sat || 0,
-                      bitcoinUnit
-                    )}{' '}
-                    {bitcoinUnit}
-                    <span className="text-sm opacity-75">
-                      {paymentMethod === 'lightning' ? 'off-chain' : 'on-chain'}
-                    </span>
+                    {t('step3.payment.wallet.pay', {
+                      amount: formatBitcoinAmount(
+                        currentPayment?.order_total_sat || 0,
+                        bitcoinUnit
+                      ),
+                      type:
+                        paymentMethod === 'lightning'
+                          ? 'off-chain'
+                          : 'on-chain',
+                      unit: bitcoinUnit,
+                    })}
                   </span>
                 </button>
               </div>
@@ -605,15 +627,16 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
           </svg>
         </div>
         <h3 className="text-xl font-bold text-white mb-2">
-          Payment Successful!
+          {t('step3.payment.success.title')}
         </h3>
         <p className="text-gray-400 mb-4">
-          Your payment has been sent successfully. Please wait while we confirm
-          the channel setup with the LSP.
+          {t('step3.payment.success.message')}
         </p>
         <div className="w-full max-w-sm bg-gray-900/50 rounded-lg p-4">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-gray-400">Payment Amount:</span>
+            <span className="text-gray-400">
+              {t('step3.payment.external.amountToPay')}:
+            </span>
             <span className="text-white font-medium">
               {formatBitcoinAmount(
                 currentPayment?.order_total_sat || 0,
@@ -623,17 +646,19 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
             </span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-gray-400">Payment Method:</span>
+            <span className="text-gray-400">
+              {t('step3.payment.methods.title')}:
+            </span>
             <span className="text-white font-medium flex items-center gap-2">
               {paymentMethod === 'lightning' ? (
                 <>
                   <Zap className="w-4 h-4 text-yellow-500" />
-                  Lightning
+                  {t('step3.payment.methods.lightning')}
                 </>
               ) : (
                 <>
                   <ChainIcon className="w-4 h-4 text-blue-500" />
-                  On-chain
+                  {t('step3.payment.methods.onchain')}
                 </>
               )}
             </span>
@@ -641,7 +666,7 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
         </div>
         <div className="mt-6 flex items-center gap-2 text-blue-400">
           <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-          <span>Waiting for LSP confirmation...</span>
+          <span>{t('step3.payment.success.waiting')}</span>
         </div>
       </div>
     </div>
@@ -653,11 +678,9 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
         {/* Header with Flow Description */}
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
-            Complete Your Channel Order
+            {t('step3.title')}
           </h2>
-          <p className="text-gray-400 mt-2">
-            Choose your preferred payment method
-          </p>
+          <p className="text-gray-400 mt-2">{t('step3.subtitle')}</p>
         </div>
 
         {/* Step Progress */}
@@ -667,8 +690,12 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
               1
             </div>
             <div className="ml-3">
-              <p className="font-medium text-white">Connect LSP</p>
-              <p className="text-sm text-gray-400">Completed</p>
+              <p className="font-medium text-white">
+                {t('common.steps.connect')}
+              </p>
+              <p className="text-sm text-gray-400">
+                {t('common.steps.completed')}
+              </p>
             </div>
           </div>
           <div className="flex-1 mx-4 mt-5">
@@ -681,8 +708,12 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
               2
             </div>
             <div className="ml-3">
-              <p className="font-medium text-white">Configure</p>
-              <p className="text-sm text-gray-400">Completed</p>
+              <p className="font-medium text-white">
+                {t('common.steps.configure')}
+              </p>
+              <p className="text-sm text-gray-400">
+                {t('common.steps.completed')}
+              </p>
             </div>
           </div>
           <div className="flex-1 mx-4 mt-5">
@@ -693,8 +724,12 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
               3
             </div>
             <div className="ml-3">
-              <p className="font-medium text-white">Payment</p>
-              <p className="text-sm text-gray-400">Current step</p>
+              <p className="font-medium text-white">
+                {t('common.steps.payment')}
+              </p>
+              <p className="text-sm text-gray-400">
+                {t('common.steps.current')}
+              </p>
             </div>
           </div>
         </div>
@@ -704,13 +739,15 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
           <h3 className="text-xl font-semibold text-white mb-6 flex items-center justify-between">
             <div className="flex items-center">
               <span className="bg-blue-500 w-2 h-2 rounded-full mr-2"></span>
-              Order Summary
+              {t('step3.orderSummary.title')}
             </div>
             {order.order_id && (
               <div className="text-sm text-gray-400 flex items-center gap-2">
-                Order ID:
+                {t('step3.orderSummary.orderId.label')}:
                 <CopyToClipboard
-                  onCopy={() => toast.success('Order ID copied to clipboard!')}
+                  onCopy={() =>
+                    toast.success(t('step3.orderSummary.orderId.copied'))
+                  }
                   text={order.order_id}
                 >
                   <button className="font-mono bg-gray-900/50 px-2 py-1 rounded hover:bg-gray-900/80 transition-colors cursor-pointer">
@@ -725,18 +762,22 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
             {/* Channel Capacity Breakdown */}
             <div className="bg-gray-900/50 rounded-lg p-4">
               <span className="text-sm text-gray-400">
-                Channel Capacity Breakdown
+                {t('step3.orderSummary.capacity.title')}
               </span>
               <div className="mt-2 space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Your Balance:</span>
+                  <span className="text-gray-400">
+                    {t('step3.orderSummary.capacity.yourBalance')}:
+                  </span>
                   <span className="text-white font-medium">
                     {formatBitcoinAmount(order.client_balance_sat, bitcoinUnit)}{' '}
                     {bitcoinUnit}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400">LSP Balance:</span>
+                  <span className="text-gray-400">
+                    {t('step3.orderSummary.capacity.lspBalance')}:
+                  </span>
                   <span className="text-white font-medium">
                     {formatBitcoinAmount(order.lsp_balance_sat, bitcoinUnit)}{' '}
                     {bitcoinUnit}
@@ -745,7 +786,7 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                 <div className="h-px bg-gray-700 my-2"></div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 font-medium">
-                    Total Capacity:
+                    {t('step3.orderSummary.capacity.total')}:
                   </span>
                   <span className="text-white font-semibold">
                     {formatBitcoinAmount(totalCapacity, bitcoinUnit)}{' '}
@@ -759,7 +800,7 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
               <div className="bg-gray-900/50 rounded-lg p-4 mt-4">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm text-gray-400">
-                    Asset Information
+                    {t('step3.orderSummary.asset.title')}
                   </span>
                   <span className="px-2 py-1 bg-blue-500/10 rounded-md text-blue-400 text-xs">
                     RGB Asset
@@ -767,13 +808,17 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                 </div>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Asset Name:</span>
+                    <span className="text-gray-400">
+                      {t('step3.orderSummary.asset.name')}:
+                    </span>
                     <span className="text-white font-medium">
                       {assetInfo.name} ({assetInfo.ticker})
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Your Balance:</span>
+                    <span className="text-gray-400">
+                      {t('step3.orderSummary.asset.yourBalance')}:
+                    </span>
                     <span className="text-white font-medium">
                       {formatAssetAmount(
                         order.client_asset_amount,
@@ -783,7 +828,9 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-400">LSP Balance:</span>
+                    <span className="text-gray-400">
+                      {t('step3.orderSummary.asset.lspBalance')}:
+                    </span>
                     <span className="text-white font-medium">
                       {formatAssetAmount(
                         order.lsp_asset_amount,
@@ -795,7 +842,7 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                   <div className="h-px bg-gray-700 my-2"></div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400 font-medium">
-                      Total Asset Amount:
+                      {t('step3.orderSummary.asset.total')}:
                     </span>
                     <span className="text-white font-semibold">
                       {formatAssetAmount(
@@ -811,7 +858,7 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                   <div className="mt-3 p-3 bg-gray-800/50 rounded-lg">
                     <div className="flex items-center gap-2 text-sm text-gray-400">
                       <Info className="w-4 h-4" />
-                      <span>Asset Details:</span>
+                      <span>{t('step3.orderSummary.asset.details')}:</span>
                     </div>
                     <p className="mt-1 text-sm text-gray-300">
                       {assetInfo.details}
@@ -823,10 +870,14 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
 
             {/* Cost Breakdown */}
             <div className="bg-gray-900/50 rounded-lg p-4">
-              <span className="text-sm text-gray-400">Cost Breakdown</span>
+              <span className="text-sm text-gray-400">
+                {t('step3.orderSummary.costs.title')}
+              </span>
               <div className="mt-2 space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Channel Amount:</span>
+                  <span className="text-gray-400">
+                    {t('step3.orderSummary.costs.channelAmount')}:
+                  </span>
                   <span className="text-white font-medium">
                     {formatBitcoinAmount(
                       (currentPayment?.order_total_sat || 0) -
@@ -837,7 +888,9 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Service Fee:</span>
+                  <span className="text-gray-400">
+                    {t('step3.orderSummary.costs.serviceFee')}:
+                  </span>
                   <span className="text-white font-medium">
                     {formatBitcoinAmount(
                       currentPayment?.fee_total_sat || 0,
@@ -848,7 +901,9 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                 </div>
                 <div className="h-px bg-gray-700 my-2"></div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400 font-medium">Total Cost:</span>
+                  <span className="text-gray-400 font-medium">
+                    {t('step3.orderSummary.costs.total')}:
+                  </span>
                   <span className="text-white font-semibold">
                     {formatBitcoinAmount(
                       currentPayment?.order_total_sat || 0,
@@ -863,11 +918,14 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
             {/* Channel Duration */}
             <div className="bg-gray-900/50 rounded-lg p-4">
               <div className="flex justify-between items-center">
-                <span className="text-gray-400">Channel Duration:</span>
+                <span className="text-gray-400">
+                  {t('step3.orderSummary.duration.label')}:
+                </span>
                 <span className="text-white font-medium">
-                  {order.channel_expiry_blocks} blocks
+                  {order.channel_expiry_blocks}{' '}
+                  {t('step3.orderSummary.duration.blocks')}
                   <span className="text-gray-400 ml-2">
-                    ({blocksToTime(order.channel_expiry_blocks)})
+                    ({blocksToTime(order.channel_expiry_blocks, t)})
                   </span>
                 </span>
               </div>
@@ -876,7 +934,9 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
 
           <div className="mt-4 bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
             <div className="flex items-center gap-2 text-blue-400">
-              <span className="text-sm">Order expires at:</span>
+              <span className="text-sm">
+                {t('step3.orderSummary.expiry.label')}:
+              </span>
               <span className="font-medium">
                 {new Date(currentPayment?.expires_at || '').toLocaleString()}
               </span>
@@ -893,7 +953,7 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6 mb-6">
               <h3 className="text-xl font-semibold text-white mb-6 flex items-center">
                 <span className="bg-blue-500 w-2 h-2 rounded-full mr-2"></span>
-                Payment Method
+                {t('step3.payment.title')}
               </h3>
 
               <div className="flex justify-center mb-6">
@@ -910,7 +970,9 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                         setPaymentMethod(method as 'lightning' | 'onchain')
                       }
                     >
-                      {method === 'lightning' ? '⚡ Lightning' : '₿ On-chain'}
+                      {method === 'lightning'
+                        ? t('step3.payment.methods.lightning')
+                        : t('step3.payment.methods.onchain')}
                     </button>
                   ))}
                 </div>
@@ -927,7 +989,7 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                   <div className="flex flex-col space-y-4">
                     <div className="bg-gray-900/50 p-4 rounded-lg">
                       <h4 className="text-sm text-gray-400 mb-1">
-                        Amount to Pay
+                        {t('step3.payment.external.amountToPay')}
                       </h4>
                       <p className="text-2xl font-bold text-white">
                         {formatBitcoinAmount(
@@ -951,8 +1013,9 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                                        transform transition-all duration-200 hover:scale-105 focus:outline-none 
                                        focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
                       >
-                        Copy{' '}
-                        {paymentMethod === 'lightning' ? 'Invoice' : 'Address'}
+                        {paymentMethod === 'lightning'
+                          ? t('step3.payment.external.copyInvoice')
+                          : t('step3.payment.external.copyAddress')}
                       </button>
                     </CopyToClipboard>
                   </div>
@@ -971,7 +1034,7 @@ export const Step3: React.FC<StepProps> = ({ onBack, loading, order }) => {
                        focus:ring-gray-500 focus:ring-opacity-50"
               onClick={onBack}
             >
-              ← Back
+              {t('common.back')}
             </button>
           </div>
         )}

@@ -1,0 +1,216 @@
+{
+  "title": "Open New Channel",
+  "subtitle": "Configure and establish your Lightning Network channel",
+  "form": {
+    "error": "There was an error submitting the form",
+    "defaultMessage": "Please check the form and try again",
+    "checkForm": "Please check all fields",
+    "fieldPrefix": "Field error:"
+  },
+  "common": {
+    "back": "Back",
+    "next": "Next",
+    "loading": "Loading...",
+    "checkingBalance": "Checking balance...",
+    "errors": {
+      "tryAgainLater": "Please try again later",
+      "insufficientBalance": "Insufficient balance",
+      "depositRequired": "Additional deposit required"
+    },
+    "navigation": {
+      "goToDashboard": "Go to Dashboard",
+      "returnToTrade": "Return to Trade"
+    }
+  },
+  "step1": {
+    "title": "Connect to LSP",
+    "subtitle": "Choose your Lightning Service Provider",
+    "howItWorks": {
+      "title": "How Channel Opening Works",
+      "description": "Complete these steps to open your channel",
+      "steps": {
+        "connect": "Connect to a Lightning Service Provider (LSP) that will help establish your channel",
+        "configure": "Configure your channel parameters including capacity and balance distribution",
+        "payment": "Make a payment to cover the channel creation costs and initial balance"
+      }
+    },
+    "lspUrl": {
+      "label": "Current LSP URL",
+      "placeholder": "Enter LSP URL",
+      "description": "You can modify the LSP URL here or use the default LSP",
+      "useDefault": "Use default Kaleidoswap LSP"
+    },
+    "connectionString": {
+      "label": "LSP Connection String",
+      "placeholder": "Connection string will appear here",
+      "description": "This is the unique connection URL for your LSP",
+      "copySuccess": "LSP connection string copied to clipboard"
+    },
+    "connect": {
+      "button": "Connect to LSP",
+      "loading": "Connecting...",
+      "connected": "Connected to LSP",
+      "waitingForUrl": "Waiting for LSP URL...",
+      "continueWithConnected": "Continue with Connected LSP"
+    },
+    "errors": {
+      "connectionFailed": "Failed to connect to LSP",
+      "invalidUrl": "Invalid LSP URL",
+      "noLspInfo": "Could not retrieve LSP information",
+      "fetchError": "Error fetching LSP data"
+    },
+    "dialog": {
+      "title": "Connect to LSP",
+      "message": "Do you want to connect to the LSP at this address?",
+      "cancel": "Cancel",
+      "confirm": "Connect",
+      "alreadyConnected": {
+        "title": "Already Connected",
+        "message": "You are already connected to this LSP",
+        "confirm": "OK"
+      }
+    }
+  },
+  "step2": {
+    "title": "Configure Channel",
+    "subtitle": "Set up your channel parameters",
+    "channelCapacity": {
+      "label": "Channel Capacity (sats)",
+      "placeholder": "Enter amount",
+      "description": "The total capacity of your channel",
+      "available": "Available",
+      "total": "Total"
+    },
+    "yourLiquidity": {
+      "label": "Your Channel Liquidity (sats)",
+      "placeholder": "Enter amount",
+      "description": "Your initial balance in the channel"
+    },
+    "lockDuration": {
+      "label": "Channel Lock Duration",
+      "tooltip": "The minimum amount of time the LSP guarantees to keep your channel open",
+      "options": {
+        "week": "1 week",
+        "month": "1 month",
+        "sixMonths": "6 months"
+      }
+    },
+    "asset": {
+      "label": "Select Asset",
+      "addAsset": "Add Asset",
+      "selectAsset": "Select an asset",
+      "amount": {
+        "label": "Asset Amount",
+        "placeholder": "Enter asset amount"
+      },
+      "noAssets": "No assets available"
+    },
+    "validation": {
+      "insufficientCapacity": "Insufficient channel capacity",
+      "invalidAmount": "Invalid amount",
+      "maxCapacity": "Exceeds maximum capacity",
+      "minCapacity": "Below minimum capacity",
+      "requiredField": "This field is required"
+    }
+  },
+  "step3": {
+    "title": "Complete Payment",
+    "subtitle": "Choose your payment method and complete the setup",
+    "orderSummary": {
+      "title": "Order Summary",
+      "orderId": {
+        "label": "Order ID",
+        "copy": "Copy order ID",
+        "copied": "Order ID copied to clipboard"
+      },
+      "capacity": {
+        "title": "Channel Capacity Breakdown",
+        "yourBalance": "Your Balance",
+        "lspBalance": "LSP Balance",
+        "total": "Total Capacity"
+      },
+      "asset": {
+        "title": "Asset Information",
+        "name": "Asset Name",
+        "yourBalance": "Your Balance",
+        "lspBalance": "LSP Balance",
+        "total": "Total Asset Amount",
+        "details": "Asset Details"
+      },
+      "costs": {
+        "title": "Cost Breakdown",
+        "channelAmount": "Channel Amount",
+        "serviceFee": "Service Fee",
+        "total": "Total Cost"
+      },
+      "duration": {
+        "label": "Channel Duration",
+        "blocks": "blocks",
+        "timeEstimate": "estimated time"
+      },
+      "expiry": {
+        "label": "Order expires at",
+        "datetime": "Date and time"
+      }
+    },
+    "payment": {
+      "title": "Payment Method",
+      "methods": {
+        "lightning": "⚡ Lightning",
+        "onchain": "₿ On-chain"
+      },
+      "wallet": {
+        "title": "Wallet Payment",
+        "useWallet": "Pay with Wallet Funds",
+        "available": "Available",
+        "loading": "Loading wallet balance...",
+        "insufficient": {
+          "title": "Insufficient Balance",
+          "message": {
+            "lightning": "Your lightning channels don't have enough outbound liquidity for this payment",
+            "onchain": "Your wallet doesn't have enough on-chain balance for this payment"
+          },
+          "required": "Required",
+          "available": "Available"
+        },
+        "confirmation": {
+          "title": "Confirm Payment",
+          "message": "Please verify all details before confirming. This action cannot be undone.",
+          "processing": "Processing your payment...",
+          "cancel": "Cancel",
+          "confirm": "Confirm Payment"
+        }
+      },
+      "fees": {
+        "title": "Transaction Fee",
+        "slow": "Slow",
+        "normal": "Normal",
+        "fast": "Fast",
+        "custom": "Custom",
+        "rate": "sat/vB",
+        "customPlaceholder": "Enter custom fee rate (sat/vB)"
+      },
+      "external": {
+        "title": "External Payment",
+        "copyInvoice": "Copy Invoice",
+        "copyAddress": "Copy Address",
+        "amountToPay": "Amount to Pay",
+        "copied": "Payment details copied to clipboard"
+      }
+    }
+  },
+  "step4": {
+    "success": {
+      "title": "Payment Completed!",
+      "message": "Your payment has been received and the channel is being opened",
+      "progress": "Channel opening in progress",
+      "button": "Go to Channels Page"
+    },
+    "failure": {
+      "title": "Payment Failed",
+      "message": "There was an issue with your payment. Please try again",
+      "button": "Try Again",
+      "returnToTrade": "Return to Trade"
+    }
+  }
+}

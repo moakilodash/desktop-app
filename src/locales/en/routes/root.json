@@ -1,0 +1,10 @@
+{
+  "title": "Node Connection",
+  "loadingTitle": "Connecting to Node",
+  "loadingDescription": "Please wait while we establish connection...",
+  "errorTitle": "Connection Error",
+  "errorNoWalletDescription": "No wallet found. Please set up your wallet to continue.",
+  "errorNodeConnectionDescription": "The node is not running. Please try restarting the app.",
+  "errorReturnButton": "Return to Wallet Setup",
+  "errorDetailsPrefix": "Error:"
+}

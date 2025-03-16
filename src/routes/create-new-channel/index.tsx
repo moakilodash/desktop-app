@@ -5,6 +5,7 @@ import { TRADE_PATH, WALLET_DASHBOARD_PATH } from '../../app/router/paths'
 import { useAppDispatch, useAppSelector } from '../../app/store/hooks'
 import { Spinner } from '../../components/Spinner'
 import { MIN_CHANNEL_CAPACITY } from '../../constants'
+import { useAppTranslation } from '../../hooks/useAppTranslation'
 import {
   channelSliceActions,
   channelSliceSelectors,
@@ -24,6 +25,8 @@ const FEE_RATES = {
 }
 
 export const Component = () => {
+  const { t } = useAppTranslation('createNewChannel')
+
   const dispatch = useAppDispatch()
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
   const [feeRates, setFeeRates] = useState(FEE_RATES)
@@ -147,7 +150,7 @@ export const Component = () => {
           speed="normal"
           thickness={4}
         />
-        <div className="ml-4">Checking balance...</div>
+        <div className="ml-4">{t('loading.checkingBalance')}</div>
       </div>
     )
   }
@@ -155,7 +158,7 @@ export const Component = () => {
   if (error) {
     return (
       <div className="text-center text-red-500">
-        {error}. Please try again later.
+        {error}. {t('error.tryAgainLater')}
       </div>
     )
   }
@@ -165,17 +168,16 @@ export const Component = () => {
       {insufficientBalance ? (
         <div className="text-center">
           <p className="text-red-500 mb-4">
-            Insufficient balance to open a channel. You need at least{' '}
-            {MIN_CHANNEL_CAPACITY} satoshis.
+            {t('error.insufficientBalance', {
+              amount: MIN_CHANNEL_CAPACITY,
+            })}
           </p>
-          <p className="text-red-500 mb-4">
-            Deposit some funds to your wallet to continue.
-          </p>
+          <p className="text-red-500 mb-4">{t('error.depositRequired')}</p>
           <button
             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
             onClick={() => navigate(WALLET_DASHBOARD_PATH)}
           >
-            Go to Dashboard Page
+            {t('navigation.goToDashboard')}
           </button>
         </div>
       ) : (

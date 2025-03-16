@@ -29,6 +29,7 @@ import { WALLET_SETUP_PATH } from '../../app/router/paths'
 import { RootState } from '../../app/store'
 import { useAppSelector } from '../../app/store/hooks'
 import { BackupModal } from '../../components/BackupModal'
+import { useAppTranslation } from '../../hooks/useAppTranslation'
 import { useBackup } from '../../hooks/useBackup'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 import { nodeSettingsActions } from '../../slices/nodeSettings/nodeSettings.slice'
@@ -298,6 +299,12 @@ export const Component: React.FC = () => {
     return () => clearInterval(interval)
   }, [nodeInfo])
 
+  const { t, i18n } = useAppTranslation('settings') // Use the hook for translations and language switching
+
+  const changeLanguage = (lng: string) => {
+    i18n.changeLanguage(lng) // Switch language dynamically
+  }
+
   return (
     <div className="flex flex-col min-h-screen py-8 px-4">
       {/* Page Header */}
@@ -305,10 +312,8 @@ export const Component: React.FC = () => {
         <div className="flex items-center gap-3 mb-2">
           <Settings className="w-10 h-10 text-blue-400" />
           <div>
-            <h1 className="text-4xl font-bold text-white">Settings</h1>
-            <p className="text-gray-400">
-              Manage your node and application preferences
-            </p>
+            <h1 className="text-4xl font-bold text-white">{t('title')}</h1>
+            <p className="text-gray-400">{t('subtitle')}</p>
           </div>
         </div>
       </div>
@@ -325,7 +330,7 @@ export const Component: React.FC = () => {
                 <div className="flex items-center gap-2 mb-6">
                   <Settings className="w-5 h-5 text-blue-400" />
                   <h3 className="text-xl font-semibold text-white">
-                    Application Settings
+                    {t('applicationSettings')}
                   </h3>
                 </div>
 
@@ -333,9 +338,26 @@ export const Component: React.FC = () => {
                   {/* General Settings */}
                   <div>
                     <h4 className="text-sm font-semibold text-gray-400 mb-4">
-                      General Settings
+                      {t('generalSettings')}
                     </h4>
                     <div className="space-y-6">
+                      {/* Language Selector */}
+                      <div className="group transition-all duration-300 hover:translate-x-1">
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">
+                          {t('language')}
+                        </label>
+                        <div className="relative">
+                          <select
+                            className="block w-full pl-4 pr-10 py-3 text-white bg-gray-700/50 border border-gray-600 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                            onChange={(e) => changeLanguage(e.target.value)}
+                            value={i18n.language}
+                          >
+                            <option value="en">English</option>
+                            <option value="it">Italiano</option>
+                          </select>
+                          <ChevronDown className="absolute right-3 top-3.5 h-5 w-5 text-gray-400 pointer-events-none" />
+                        </div>
+                      </div>
                       {/* Bitcoin Unit */}
                       <Controller
                         control={control}
@@ -343,7 +365,7 @@ export const Component: React.FC = () => {
                         render={({ field }) => (
                           <div className="group transition-all duration-300 hover:translate-x-1">
                             <label className="block text-sm font-semibold text-gray-300 mb-2">
-                              Bitcoin Unit
+                              {t('bitcoinUnit')}
                             </label>
                             <div className="relative">
                               <select
@@ -383,7 +405,7 @@ export const Component: React.FC = () => {
                   {/* Maker Settings */}
                   <div className="pt-6 border-t border-gray-700">
                     <h4 className="text-sm font-semibold text-gray-400 mb-4">
-                      Maker Settings
+                      {t('maker.title')}
                     </h4>
                     <div className="space-y-6">
                       {/* Default Maker URL */}
@@ -393,7 +415,7 @@ export const Component: React.FC = () => {
                         render={({ field }) => (
                           <div className="group transition-all duration-300 hover:translate-x-1">
                             <label className="block text-sm font-semibold text-gray-300 mb-2">
-                              Default Maker URL
+                              {t('maker.url')}
                             </label>
                             <input
                               {...field}
@@ -408,7 +430,7 @@ export const Component: React.FC = () => {
                       {/* Additional Maker URLs */}
                       <div>
                         <label className="block text-sm font-semibold text-gray-300 mb-4">
-                          Additional Maker URLs
+                          {t('maker.additionalURLs')}
                         </label>
                         <Controller
                           control={control}
@@ -487,7 +509,7 @@ export const Component: React.FC = () => {
                                 }
                                 type="button"
                               >
-                                Add Maker URL
+                                {t('maker.addURL')}
                               </button>
                             </div>
                           )}
@@ -504,13 +526,13 @@ export const Component: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <Server className="w-5 h-5 text-blue-400" />
                     <h3 className="text-xl font-semibold text-white">
-                      Node Connection Settings
+                      {t('nodeConnection.title')}
                     </h3>
                   </div>
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                     <AlertTriangle className="w-4 h-4 text-yellow-500" />
                     <span className="text-xs text-yellow-500">
-                      Requires restart
+                      {t('nodeConnection.restartRequired')}
                     </span>
                   </div>
                 </div>
@@ -523,7 +545,7 @@ export const Component: React.FC = () => {
                     render={({ field }) => (
                       <div className="group transition-all duration-300 hover:translate-x-1">
                         <label className="block text-sm font-semibold text-gray-300 mb-2">
-                          Node Connection String
+                          {t('nodeConnection.connectionString')}
                         </label>
                         <input
                           {...field}
@@ -542,7 +564,7 @@ export const Component: React.FC = () => {
                     render={({ field }) => (
                       <div className="group transition-all duration-300 hover:translate-x-1">
                         <label className="block text-sm font-semibold text-gray-300 mb-2">
-                          Bitcoind RPC Connection URL
+                          {t('nodeConnection.rpcUrl')}
                         </label>
                         <input
                           {...field}
@@ -561,7 +583,7 @@ export const Component: React.FC = () => {
                     render={({ field }) => (
                       <div className="group transition-all duration-300 hover:translate-x-1">
                         <label className="block text-sm font-semibold text-gray-300 mb-2">
-                          Indexer URL
+                          {t('nodeConnection.indexerUrl')}
                         </label>
                         <input
                           {...field}
@@ -580,7 +602,7 @@ export const Component: React.FC = () => {
                     render={({ field }) => (
                       <div className="group transition-all duration-300 hover:translate-x-1">
                         <label className="block text-sm font-semibold text-gray-300 mb-2">
-                          RGB Proxy Endpoint
+                          {t('nodeConnection.proxyEndpoint')}
                         </label>
                         <input
                           {...field}
@@ -604,14 +626,14 @@ export const Component: React.FC = () => {
                       type="button"
                     >
                       <Undo className="w-5 h-5 mr-2.5" />
-                      Reset Changes
+                      {t('resetChanges')}
                     </button>
                     <button
                       className="flex-1 flex items-center justify-center px-6 py-3.5 bg-[#4361EE] text-white rounded-xl hover:bg-[#3651DE] focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
                       type="submit"
                     >
                       <Save className="w-5 h-5 mr-2.5" />
-                      Save Settings
+                      {t('saveSettings')}
                     </button>
                   </div>
                 </div>
@@ -626,7 +648,7 @@ export const Component: React.FC = () => {
               <div className="flex items-center gap-2 mb-6">
                 <Activity className="w-5 h-5 text-blue-400" />
                 <h3 className="text-xl font-semibold text-white">
-                  Node Status
+                  {t('nodeStatus.title')}
                 </h3>
               </div>
 
@@ -656,7 +678,13 @@ export const Component: React.FC = () => {
                         isNodeRunning ? 'text-green-400' : 'text-red-400'
                       }`}
                     >
-                      Node is {isNodeRunning ? 'Running' : 'Offline'}
+                      {t('nodeStatus.status', {
+                        replace: {
+                          status: isNodeRunning
+                            ? t('nodeStatus.online')
+                            : t('nodeStatus.offline'),
+                        },
+                      })}
                     </span>
                   </div>
                 </div>
@@ -665,10 +693,18 @@ export const Component: React.FC = () => {
                 <div className="p-4 bg-gray-700/30 rounded-xl border border-gray-700">
                   <div className="flex items-center gap-2 text-gray-400 mb-1">
                     <Server className="w-4 h-4" />
-                    <span className="text-sm font-medium">Connection Type</span>
+                    <span className="text-sm font-medium">
+                      {t('nodeStatus.connectionType')}
+                    </span>
                   </div>
                   <p className="text-white font-medium ml-6">
-                    {isLocalNode ? 'Local Node' : 'Remote Node'}
+                    {t('nodeStatus.status', {
+                      replace: {
+                        status: isLocalNode
+                          ? t('nodeStatus.localNode')
+                          : t('nodeStatus.remoteNode'),
+                      },
+                    })}
                   </p>
                 </div>
               </div>
@@ -680,7 +716,7 @@ export const Component: React.FC = () => {
                   onClick={() => setShowBackupModal(true)}
                 >
                   <Shield className="w-5 h-5 mr-2" />
-                  Backup Wallet
+                  {t('backup.title')}
                 </button>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -697,7 +733,7 @@ export const Component: React.FC = () => {
                     onClick={handleShutdown}
                   >
                     <Power className="w-5 h-5 mr-2" />
-                    Shutdown
+                    {t('shutdown.shutdown')}
                   </button>
                 </div>
               </div>
@@ -714,14 +750,16 @@ export const Component: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Activity className="w-5 h-5 text-blue-400" />
                   <h3 className="text-xl font-semibold text-white">
-                    Node Logs
+                    {t('logs.title')}
                   </h3>
                 </div>
 
                 <div className="flex items-center gap-3">
                   {/* Entry selector */}
                   <div className="flex items-center gap-2 bg-gray-700/30 px-2 py-1 rounded-lg border border-gray-600">
-                    <span className="text-sm text-gray-400">Show</span>
+                    <span className="text-sm text-gray-400">
+                      {t('logs.show')}
+                    </span>
                     <select
                       className="bg-transparent text-white text-sm focus:outline-none focus:ring-0 border-0"
                       onChange={(e) => setMaxLogEntries(Number(e.target.value))}
@@ -733,7 +771,9 @@ export const Component: React.FC = () => {
                       <option value="1000">1000</option>
                       <option value="5000">5000</option>
                     </select>
-                    <span className="text-sm text-gray-400">entries</span>
+                    <span className="text-sm text-gray-400">
+                      {t('logs.entries')}
+                    </span>
                   </div>
 
                   {/* Action buttons */}
@@ -742,14 +782,14 @@ export const Component: React.FC = () => {
                       className="p-2 text-sm bg-gray-700/30 hover:bg-gray-600/50 text-white rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-600"
                       disabled={nodeLogs.length === 0}
                       onClick={handleExportLogs}
-                      title="Export logs"
+                      title={t('logs.actions.export.title')}
                     >
                       <Download className="w-4 h-4" />
                     </button>
                     <button
                       className="p-2 text-sm bg-gray-700/30 hover:bg-gray-600/50 text-white rounded-lg transition-colors border border-gray-600"
                       onClick={fetchNodeLogs}
-                      title="Refresh logs"
+                      title={t('logs.actions.refresh.title')}
                     >
                       <RefreshCw className="w-4 h-4" />
                     </button>
@@ -757,7 +797,7 @@ export const Component: React.FC = () => {
                       className="p-2 text-sm bg-gray-700/30 hover:bg-gray-600/50 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-gray-600"
                       disabled={nodeLogs.length === 0}
                       onClick={() => setNodeLogs([])}
-                      title="Clear logs"
+                      title={t('logs.actions.clear.title')}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -770,11 +810,13 @@ export const Component: React.FC = () => {
             <div className="bg-gray-900/95">
               <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700/50 bg-gray-800/50">
                 <span className="text-sm font-medium text-gray-300">
-                  Live Node Logs
+                  {t('logs.display.liveTitle')}
                 </span>
                 <span className="text-xs text-gray-500">
-                  Showing {Math.min(maxLogEntries, nodeLogs.length)} of{' '}
-                  {nodeLogs.length} entries
+                  {t('logs.display.showing', {
+                    current: Math.min(maxLogEntries, nodeLogs.length),
+                    total: nodeLogs.length,
+                  })}
                 </span>
               </div>
 
@@ -783,7 +825,7 @@ export const Component: React.FC = () => {
                   <div className="flex items-center justify-center h-full text-gray-500">
                     <span className="flex items-center gap-2">
                       <Activity className="w-4 h-4" />
-                      No logs available
+                      {t('logs.display.noLogs')}
                     </span>
                   </div>
                 ) : (
@@ -815,11 +857,9 @@ export const Component: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm">
             <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-              Settings Saved
+              {t('modals.settingsSaved.title')}
             </h2>
-            <p className="text-gray-600">
-              Your settings have been successfully saved.
-            </p>
+            <p className="text-gray-600">{t('modals.settingsSaved.message')}</p>
           </div>
         </div>
       )}
@@ -831,10 +871,10 @@ export const Component: React.FC = () => {
               <AlertTriangle size={48} />
             </div>
             <h2 className="text-2xl font-bold mb-4 text-center text-white">
-              Confirm Logout
+              {t('logout.confirmTitle')}
             </h2>
             <p className="text-gray-300 text-center mb-6">
-              Are you sure you want to logout? This will lock your node.
+              {t('logout.confirmMessage')}
             </p>
             <div className="flex justify-between space-x-4">
               <button
@@ -842,14 +882,14 @@ export const Component: React.FC = () => {
                 onClick={() => setShowLogoutConfirmation(false)}
                 type="button"
               >
-                Cancel
+                {t('logout.cancel')}
               </button>
               <button
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
                 onClick={confirmLogout}
                 type="button"
               >
-                Confirm Logout
+                {t('logout.confirm')}
               </button>
             </div>
           </div>
@@ -865,10 +905,10 @@ export const Component: React.FC = () => {
                   <div className="w-full h-full border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2">
-                  Shutting Down Node
+                  {t('shutdown.Shutting Down Node')}
                 </h3>
                 <p className="text-gray-400 text-center">
-                  Please wait while the node is being shut down...
+                  {t('shutdown.inProgress')}
                 </p>
               </div>
             ) : (
@@ -877,11 +917,10 @@ export const Component: React.FC = () => {
                   <AlertTriangle size={48} />
                 </div>
                 <h2 className="text-2xl font-bold mb-4 text-center text-white">
-                  Confirm Shutdown
+                  {t('shutdown.confirmTitle')}
                 </h2>
                 <p className="text-gray-300 text-center mb-6">
-                  Are you sure you want to shut down the node? This action
-                  cannot be undone.
+                  {t('shutdown.confirmMessage')}
                 </p>
                 <div className="flex justify-between space-x-4">
                   <button
@@ -889,14 +928,14 @@ export const Component: React.FC = () => {
                     onClick={() => setShowShutdownConfirmation(false)}
                     type="button"
                   >
-                    Cancel
+                    {t('shutdown.cancel')}
                   </button>
                   <button
                     className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800"
                     onClick={confirmShutdown}
                     type="button"
                   >
-                    Confirm Shutdown
+                    {t('shutdown.shutdown')}
                   </button>
                 </div>
               </>

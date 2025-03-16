@@ -8,6 +8,7 @@ import {
 import React, { useCallback, useEffect, useState } from 'react'
 
 import { ChannelCard } from '../../components/ChannelCard'
+import { useAppTranslation } from '../../hooks/useAppTranslation'
 import { nodeApi } from '../../slices/nodeApi/nodeApi.slice'
 
 interface CardProps {
@@ -94,10 +95,12 @@ export const Component: React.FC = () => {
     refreshData()
   }
 
+  const { t } = useAppTranslation('channels')
+
   return (
     <div className="bg-gray-900 py-8 px-6 rounded w-full text-white">
       <div className="flex justify-between items-center mb-8">
-        <div className="text-2xl font-semibold">Lightning Wallet Dashboard</div>
+        <div className="text-2xl font-semibold">{t('dashboard.title')}</div>
         <button
           className={`px-6 py-3 rounded border text-lg font-bold border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white transition flex items-center ${
             isLoading ? 'opacity-50 cursor-not-allowed' : ''
@@ -108,40 +111,50 @@ export const Component: React.FC = () => {
           <RefreshCw
             className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
           />
-          {isLoading ? 'Refreshing...' : 'Refresh'}
+          {isLoading
+            ? t('dashboard.refresh.loading')
+            : t('dashboard.refresh.button')}
         </button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3 mb-8">
         <Card>
           <div className="flex justify-between items-center mb-2">
-            <h2 className="text-sm font-medium text-gray-400">Total Balance</h2>
+            <h2 className="text-sm font-medium text-gray-400">
+              {t('metrics.totalBalance.title')}
+            </h2>
             <Zap className="h-4 w-4 text-gray-400" />
           </div>
           <div className="text-2xl font-bold">
-            {totalBalance.toLocaleString()} sats
+            {t('metrics.totalBalance.value', {
+              amount: totalBalance.toLocaleString(),
+            })}
           </div>
         </Card>
         <Card>
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-sm font-medium text-gray-400">
-              Total Inbound Liquidity
+              {t('metrics.inboundLiquidity.title')}
             </h2>
             <ArrowDownRight className="h-4 w-4 text-gray-400" />
           </div>
           <div className="text-2xl font-bold">
-            {totalInboundLiquidity.toLocaleString()} sats
+            {t('metrics.inboundLiquidity.value', {
+              amount: totalInboundLiquidity.toLocaleString(),
+            })}
           </div>
         </Card>
         <Card>
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-sm font-medium text-gray-400">
-              Total Outbound Liquidity
+              {t('metrics.outboundLiquidity.title')}
             </h2>
             <ArrowUpRight className="h-4 w-4 text-gray-400" />
           </div>
           <div className="text-2xl font-bold">
-            {totalOutboundLiquidity.toLocaleString()} sats
+            {t('metrics.outboundLiquidity.value', {
+              amount: totalOutboundLiquidity.toLocaleString(),
+            })}
           </div>
         </Card>
       </div>
@@ -163,17 +176,14 @@ export const Component: React.FC = () => {
           </div>
         ) : (
           <div className="text-lg text-gray-400 text-center">
-            You don't have any open channels yet.
+            {t('channels.empty')}
           </div>
         )}
       </div>
 
       <div className="flex items-center space-x-2 text-sm text-gray-400 mt-4">
         <Info className="h-4 w-4" />
-        <p>
-          Channel liquidity changes as you send and receive payments. Keep your
-          channels balanced for optimal performance.
-        </p>
+        <p>{t('channels.info')}</p>
       </div>
     </div>
   )

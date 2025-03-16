@@ -1,0 +1,60 @@
+{
+  "title": "Crea UTXO Colorati",
+  "description": {
+    "line1": "Gli UTXO colorati sono necessari per aprire canali lightning con asset RGB.",
+    "line2": "Permettono la creazione di canali di pagamento specifici per asset, abilitando transazioni veloci e sicure di asset RGB sulla rete Lightning."
+  },
+  "form": {
+    "numberOfUtxos": {
+      "label": "Numero di UTXO",
+      "placeholder": "Inserisci quantità",
+      "validation": {
+        "min": "Il numero minimo di UTXO è 1",
+        "max": "Il numero massimo di UTXO è 10"
+      }
+    },
+    "utxoSize": {
+      "label": "Dimensione UTXO (in satoshi)",
+      "placeholder": "Inserisci dimensione",
+      "satoshis": "satoshi",
+      "validation": {
+        "min": "La dimensione deve essere maggiore di 0",
+        "max": "La dimensione non può superare il saldo disponibile"
+      }
+    },
+    "feeRate": {
+      "label": "Commissione",
+      "options": {
+        "slow": "Lenta ({{rate}} sat/vB)",
+        "normal": "Normale ({{rate}} sat/vB)",
+        "fast": "Veloce ({{rate}} sat/vB)",
+        "custom": "Personalizzata"
+      },
+      "customRate": {
+        "label": "Commissione personalizzata",
+        "placeholder": "Inserisci commissione in sat/vB"
+      }
+    }
+  },
+  "balance": {
+    "available": "Saldo disponibile: {{amount}} sats",
+    "insufficient": "Saldo insufficiente per la dimensione selezionata"
+  },
+  "buttons": {
+    "back": "Indietro",
+    "create": "Crea UTXO",
+    "creating": "Creazione in corso..."
+  },
+  "notifications": {
+    "success": "UTXO creati con successo",
+    "error": "Errore nella creazione degli UTXO: {{message}}",
+    "balanceError": "Saldo insufficiente per l'operazione richiesta",
+    "feeError": "Errore nel recupero delle commissioni",
+    "networkError": "Errore di connessione alla rete"
+  },
+  "aria": {
+    "backButton": "Torna alla pagina precedente",
+    "rangeSlider": "Slider dimensione UTXO",
+    "loadingSpinner": "Indicatore di caricamento"
+  }
+}

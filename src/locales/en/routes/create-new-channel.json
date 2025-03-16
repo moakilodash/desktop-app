@@ -1,0 +1,98 @@
+{
+  "loading": {
+    "checkingBalance": "Checking balance..."
+  },
+  "error": {
+    "tryAgainLater": "Please try again later.",
+    "insufficientBalance": "Insufficient balance to open a channel. You need at least {{amount}} satoshis.",
+    "depositRequired": "Deposit some funds to your wallet to continue."
+  },
+  "navigation": {
+    "goToDashboard": "Go to Dashboard Page"
+  },
+  "formError": {
+    "defaultMessage": "There was an error submitting the form.",
+    "checkForm": "Please check the form for errors",
+    "fieldPrefix": "Field"
+  },
+  "steps": {
+    "common": {
+      "back": "Back",
+      "next": "Next",
+      "confirm": "Confirm"
+    },
+    "step1": {
+      "title": "Open a Channel - Step 1",
+      "subtitle": "Open channels to other nodes on the network to start using the Lightning Network.",
+      "nodeInfo": {
+        "title": "Select from Suggested Nodes",
+        "loadingLsp": "Loading LSP information...",
+        "pubkeyLabel": "Format: <66-char-hex-pubkey>@<host>:<port>",
+        "pubkeyExample": "Example: 039257e0669aa5dea5df7c971048699a39f9023333d550a90800b9412f231ee8e7@lsp.signet.kaleidoswap.com:9735",
+        "pubkeyHelp": "The connection string should be a 66-character hex public key, followed by @ symbol, then the host address, and port number (e.g. :9735)",
+        "or": "or"
+      },
+      "connectDialog": {
+        "title": "Connect to Peer",
+        "message": "Would you like to connect to this peer before opening a channel?",
+        "connecting": "Connecting to peer...",
+        "cancel": "Cancel",
+        "connect": "Connect"
+      }
+    },
+    "step2": {
+      "title": "Open a Channel - Step 2",
+      "subtitle": "Configure your channel capacity and assets",
+      "channelWith": "Opening Channel with Node:",
+      "capacity": {
+        "label": "Channel Capacity (satoshis)",
+        "help": "(The amount of BTC you want to allocate to this channel)",
+        "max": "max",
+        "enterAmount": "Enter amount"
+      },
+      "assets": {
+        "title": "RGB Assets",
+        "addAsset": "Add Asset",
+        "selectAsset": "Select Asset",
+        "amount": "Asset Amount",
+        "enterAmount": "Enter asset amount",
+        "noAssets": "You do not have any spendable on-chain RGB assets to open a channel with."
+      },
+      "fee": {
+        "label": "Transaction Fee",
+        "rate": "sat/vB"
+      }
+    },
+    "step3": {
+      "title": "Open a Channel - Step 3",
+      "subtitle": "Review and confirm your channel details",
+      "capacity": {
+        "label": "Channel Capacity"
+      },
+      "node": {
+        "title": "Connected Node",
+        "id": "Node ID:",
+        "host": "Host:",
+        "copyPubkey": "click to copy"
+      },
+      "fee": {
+        "title": "Transaction Fee Rate",
+        "selectedRate": "Selected Rate:",
+        "feeRate": "Fee Rate:",
+        "loading": "Loading..."
+      }
+    },
+    "step4": {
+      "success": {
+        "title": "Channel successfully created!",
+        "message": "The channel has been successfully created, you can now start trading.",
+        "button": "Go to Trade Page"
+      },
+      "error": {
+        "title": "Channel creation failed",
+        "tryAgain": "Try Again",
+        "goToTrade": "Go to Trade Page"
+      }
+    }
+  }
+}

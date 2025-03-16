@@ -1,4 +1,5 @@
 import { SuccessCheckmark } from '../../components/SuccessCheckmark'
+import { useAppTranslation } from '../../hooks/useAppTranslation'
 
 interface Props {
   error: string | null
@@ -7,6 +8,8 @@ interface Props {
 }
 
 export const Step4 = (props: Props) => {
+  const { t } = useAppTranslation('createNewChannel')
+
   if (props.error) {
     return (
       <div className="flex flex-col items-center justify-center">
@@ -14,7 +17,7 @@ export const Step4 = (props: Props) => {
 
         <div className="text-center mt-6">
           <h3 className="text-3xl font-bold text-white mb-4">
-            Channel creation failed
+            {t('steps.step4.error.title')}
           </h3>
 
           <p className="text-red-500 mb-6">{props.error}</p>
@@ -27,7 +30,7 @@ export const Step4 = (props: Props) => {
               shadow-md hover:shadow-lg mr-4"
             onClick={props.onRetry}
           >
-            Try Again
+            {t('steps.step4.error.tryAgain')}
           </button>
 
           <button
@@ -38,7 +41,7 @@ export const Step4 = (props: Props) => {
               shadow-lg hover:shadow-xl"
             onClick={props.onFinish}
           >
-            Go to Trade Page
+            {t('steps.step4.error.goToTrade')}
           </button>
         </div>
       </div>
@@ -51,12 +54,10 @@ export const Step4 = (props: Props) => {
 
       <div className="text-center mt-6">
         <h3 className="text-3xl font-bold text-white mb-4">
-          Channel successfully created!
+          {t('steps.step4.success.title')}
         </h3>
 
-        <p className="text-gray-400 mb-6">
-          The channel has been successfully created, you can now start trading.
-        </p>
+        <p className="text-gray-400 mb-6">{t('steps.step4.success.message')}</p>
 
         <button
           className="px-8 py-3 rounded-lg text-lg font-bold text-white
@@ -66,7 +67,7 @@ export const Step4 = (props: Props) => {
             shadow-lg hover:shadow-xl"
           onClick={props.onFinish}
         >
-          Go to Trade Page
+          {t('steps.step4.success.button')}
         </button>
       </div>
     </div>
