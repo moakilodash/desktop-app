@@ -6,7 +6,6 @@ import { useAssetIcon } from '../../helpers/utils'
 import { useOnClickOutside } from '../../hooks/useOnClickOutside'
 import { ArrowDownIcon } from '../../icons/ArrowDown'
 
-
 interface AssetOptionProps {
   ticker?: string
 }
@@ -69,18 +68,19 @@ const Select: React.FC<SelectProps> = (props) => {
       {!props.disabled && (
         <ul
           className={twJoin(
-            'absolute top-full left-0 right-0 bg-section-lighter divide-y divide-divider rounded z-50 mt-1 shadow-lg',
-            !isOpen ? 'hidden' : undefined
+            'absolute top-full left-0 right-0 bg-section-lighter divide-y divide-divider rounded z-50 mt-1 shadow-lg max-h-60 overflow-y-auto',
+            !isOpen ? 'hidden' : 'block'
           )}
         >
           {props.options.map((option) => (
             <li
-              className="px-4 py-3 cursor-pointer hover:bg-divider first:rounded-t last:rounded-b"
+              className="px-4 py-3 cursor-pointer hover:bg-divider first:rounded-t last:rounded-b whitespace-nowrap"
               key={option.value}
               onClick={() => {
                 props.onSelect(option.value)
                 setIsOpen(false)
               }}
+              title={option.ticker || option.value}
             >
               <AssetOption ticker={option.ticker} />
             </li>

@@ -27,7 +27,7 @@ const Select: React.FC<SelectProps> = (props) => {
     <div className="relative" ref={menuRef}>
       <div
         className={twJoin(
-          'flex items-center justify-between px-4 py-3 rounded cursor-pointer w-32',
+          'flex items-center justify-between px-4 py-3 rounded cursor-pointer min-w-[8rem] w-auto',
           props.theme === 'dark' ? 'bg-blue-dark' : 'bg-section-lighter',
           props.disabled ? 'opacity-50 cursor-not-allowed' : ''
         )}
@@ -40,18 +40,19 @@ const Select: React.FC<SelectProps> = (props) => {
       {!props.disabled && (
         <ul
           className={twJoin(
-            'absolute top-full bg-section-lighter divide-y divide-divider rounded',
-            !isOpen ? 'hidden' : undefined
+            'absolute top-full left-0 z-50 min-w-full w-auto bg-section-lighter divide-y divide-divider rounded shadow-lg overflow-visible',
+            !isOpen ? 'hidden' : 'block'
           )}
         >
           {props.options.map((option) => (
             <li
-              className="px-4 py-3 cursor-pointer hover:bg-divider first:rounded-t last:rounded-b"
+              className="px-4 py-3 cursor-pointer hover:bg-divider first:rounded-t last:rounded-b whitespace-nowrap"
               key={option.value}
               onClick={() => {
                 props.onSelect(option.value)
                 setIsOpen(false)
               }}
+              title={option.ticker || option.value}
             >
               <AssetOption ticker={option.ticker} />
             </li>

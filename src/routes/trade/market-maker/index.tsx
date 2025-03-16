@@ -1,17 +1,15 @@
-import { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import { Copy } from 'lucide-react'
-import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import { useForm, SubmitHandler } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
-import { v4 as uuidv4 } from 'uuid'
 
 import { webSocketService } from '../../../app/hubs/websocketService'
 import { useAppDispatch, useAppSelector } from '../../../app/store/hooks'
 import { Loader } from '../../../components/Loader'
-import { StatusToast } from '../../../components/StatusToast'
+// import { StatusToast } from '../../../components/StatusToast'
 import { SwapConfirmation } from '../../../components/SwapConfirmation'
-import { SwapDetails, SwapRecap } from '../../../components/SwapRecap'
+import { SwapRecap } from '../../../components/SwapRecap'
 import {
   SwapInputField,
   ExchangeRateSection,
@@ -19,7 +17,12 @@ import {
   MakerSelector,
 } from '../../../components/Trade'
 import {
-  formatNumberInput,
+  NoTradingChannelsMessage,
+  createTradingChannelsMessageProps,
+  WebSocketDisconnectedMessage,
+} from '../../../components/Trade/NoChannelsMessage'
+import { MIN_CHANNEL_CAPACITY } from '../../../constants'
+import {
   getAssetPrecision,
   formatAssetAmountWithPrecision,
   parseAssetAmountWithPrecision,
@@ -39,17 +42,34 @@ import {
   NiaAsset,
 } from '../../../slices/nodeApi/nodeApi.slice'
 import { logger } from '../../../utils/logger'
-import './index.css'
-import { NoTradingChannelsMessage } from '../../../components/Trade/NoChannelsMessage'
-import { MIN_CHANNEL_CAPACITY } from '../../../constants'
 
-interface Fields {
-  rfq_id: string
-  from: string
-  fromAsset: string
-  to: string
-  toAsset: string
-}
+// Import channel utilities
+import {
+  createSetFromAmountHelper,
+  createSizeClickHandler,
+  createRefreshAmountsHandler,
+  createUpdateToAmountHandler,
+} from './amountUtils'
+import {
+  createAssetChangeHandler,
+  createSwapAssetsHandler,
+  getAvailableAssets as getAvailableAssetsUtil,
+  createFetchAndSetPairsHandler,
+} from './assetUtils'
+import { hasTradableChannels, logChannelDiagnostics } from './channelUtils'
+
+// Import our utility modules
+import { getValidationError } from './errorMessages'
+import {
+  createFromAmountChangeHandler,
+  createToAmountChangeHandler,
+} from './formUtils'
+import {
+  createSwapExecutor,
+  copyToClipboard as copyToClipboardUtil,
+  SwapDetails as SwapDetailsType,
+} from './swapUtils'
+import { Fields } from './types'
 
 const MSATS_PER_SAT = 1000
 
@@ -97,14 +117,14 @@ export const Component = () => {
   const [hasValidChannelsForTrading, setHasValidChannelsForTrading] =
     useState(false)
   const [debouncedFromAmount, setDebouncedFromAmount] = useState('')
-  const [debouncedToAmount] = useState('')
+  const [debouncedToAmount, setDebouncedToAmount] = useState('')
+  const [updatePending, setUpdatePending] = useState(false)
   const previousFromAmount = usePrevious(form.getValues().from)
   const previousToAmount = usePrevious(form.getValues().to)
 
   const [showRecap, setShowRecap] = useState<boolean>(false)
-  const [swapRecapDetails, setSwapRecapDetails] = useState<SwapDetails | null>(
-    null
-  )
+  const [swapRecapDetails, setSwapRecapDetails] =
+    useState<SwapDetailsType | null>(null)
   const [showConfirmation, setShowConfirmation] = useState(false)
 
   const makerConnectionUrl = useAppSelector(
@@ -138,6 +158,19 @@ export const Component = () => {
       refetchOnReconnect: false,
     }
   )
+
+  // Add the missing diagnostic log function
+  // const logDiagnosticInfo = useCallback(() => {
+  //   logger.info('--------- Trading Interface Diagnostic Info ---------');
+  //   logger.info(`WebSocket connected: ${wsConnected}`);
+  //   logger.info(`Loading step: ${loadingStep}/4`);
+  //   logger.info(`Valid channels for trading: ${hasValidChannelsForTrading}`);
+  //   logger.info(`Tradable pairs count: ${tradablePairs.length}`);
+  //   logger.info(`Channels count: ${channels.length}`);
+  //   logger.info(`Selected pair: ${selectedPair ? `${selectedPair.base_asset}/${selectedPair.quote_asset}` : 'none'}`);
+  //   logger.info(`Maker connection URL: ${makerConnectionUrl || 'none'}`);
+  //   logger.info('--------------------------------------------------');
+  // }, [wsConnected, loadingStep, hasValidChannelsForTrading, tradablePairs.length, channels.length, selectedPair, makerConnectionUrl]);
 
   const getAssetPrecisionWrapper = useCallback(
     (asset: string): number => {
@@ -193,27 +226,28 @@ export const Component = () => {
     return 1
   }, [selectedPairFeed, selectedPair, form, isPairInverted])
 
-  // Update "to" amount based on "from" amount and exchange rate
-  const updateToAmount = useCallback(
-    (fromAmount: string) => {
-      if (selectedPairFeed) {
-        const fromAsset = form.getValues().fromAsset
-        const toAsset = form.getValues().toAsset
-        const fromAmountValue = parseAssetAmount(fromAmount, fromAsset)
-        const rate = calculateRate()
-
-        let toAmountValue = fromAmountValue * rate
-        const formattedToAmount = formatAmount(
-          Math.round(toAmountValue),
-          toAsset
-        )
-        form.setValue('to', formattedToAmount)
-      }
-    },
-    [selectedPairFeed, form, parseAssetAmount, formatAmount, calculateRate]
+  // Use our utility function to create the updateToAmount handler
+  const updateToAmount = useMemo(
+    () =>
+      createUpdateToAmountHandler(
+        selectedPairFeed,
+        form,
+        parseAssetAmount,
+        formatAmount,
+        calculateRate,
+        maxToAmount
+      ),
+    [
+      selectedPairFeed,
+      form,
+      parseAssetAmount,
+      formatAmount,
+      calculateRate,
+      maxToAmount,
+    ]
   )
 
-  // Calculate max tradable amount
+  // Use most of the existing calculateMaxTradableAmount function
   const calculateMaxTradableAmount = useCallback(
     async (asset: string, isFrom: boolean): Promise<number> => {
       if (!assetsData) {
@@ -223,11 +257,25 @@ export const Component = () => {
       const assetsList = assetsData.nia
 
       if (asset === 'BTC') {
-        const maxHtlcLimit = Math.max(
-          ...channels.map(
-            (c) => c.next_outbound_htlc_limit_msat / MSATS_PER_SAT
-          )
+        if (channels.length === 0) {
+          logger.warn('No channels available for BTC')
+          return 0
+        }
+
+        const channelHtlcLimits = channels.map(
+          (c) => c.next_outbound_htlc_limit_msat / MSATS_PER_SAT
         )
+
+        // If no channels have limits, return 0
+        if (
+          channelHtlcLimits.length === 0 ||
+          Math.max(...channelHtlcLimits) <= 0
+        ) {
+          logger.warn('No valid HTLC limits found')
+          return 0
+        }
+
+        const maxHtlcLimit = Math.max(...channelHtlcLimits)
         setMaxOutboundHtlcSat(maxHtlcLimit)
         return maxHtlcLimit
       } else {
@@ -246,15 +294,16 @@ export const Component = () => {
           )
           return 0
         }
+
         let maxAssetAmount = 0
         if (isFrom) {
-          maxAssetAmount = Math.max(
-            ...assetChannels.map((c) => c.asset_local_amount)
-          )
+          const localAmounts = assetChannels.map((c) => c.asset_local_amount)
+          maxAssetAmount =
+            localAmounts.length > 0 ? Math.max(...localAmounts) : 0
         } else {
-          maxAssetAmount = Math.max(
-            ...assetChannels.map((c) => c.asset_remote_amount)
-          )
+          const remoteAmounts = assetChannels.map((c) => c.asset_remote_amount)
+          maxAssetAmount =
+            remoteAmounts.length > 0 ? Math.max(...remoteAmounts) : 0
         }
         return maxAssetAmount
       }
@@ -262,7 +311,7 @@ export const Component = () => {
     [channels, assetsData]
   )
 
-  // Update min and max amounts when selected pair changes
+  // Keep existing updateMinMaxAmounts for now
   const updateMinMaxAmounts = useCallback(async () => {
     if (selectedPair) {
       const fromAsset = form.getValues().fromAsset
@@ -296,324 +345,123 @@ export const Component = () => {
     calculateRate,
   ])
 
-  const handleFromAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    const fromAsset = form.getValues().fromAsset
-    const precision = getAssetPrecisionWrapper(fromAsset)
-
-    try {
-      const formattedValue = formatNumberInput(value, precision)
-      form.setValue('from', formattedValue)
-
-      // Only update the other field if we have a complete number
-      if (!formattedValue.endsWith('.') && formattedValue !== '') {
-        const numValue = parseAssetAmount(formattedValue, fromAsset)
-
-        if (numValue === 0) {
-          form.setValue('to', '')
-        } else if (numValue < minFromAmount) {
-          const minFormatted = formatAmount(minFromAmount, fromAsset)
-          setDebouncedFromAmount(minFormatted)
-        } else if (numValue > maxFromAmount) {
-          const maxFormatted = formatAmount(maxFromAmount, fromAsset)
-          setDebouncedFromAmount(maxFormatted)
-        } else {
-          setDebouncedFromAmount(formattedValue)
-        }
-      }
-    } catch (error) {
-      logger.error('Error handling amount change:', error)
-      form.setValue('from', '')
-      form.setValue('to', '')
-    }
-  }
-
-  const handleToAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    const toAsset = form.getValues().toAsset
-    const precision = getAssetPrecisionWrapper(toAsset)
-
-    try {
-      const formattedValue = formatNumberInput(value, precision)
-      form.setValue('to', formattedValue)
-
-      // Only update the other field if we have a complete number
-      if (!formattedValue.endsWith('.') && formattedValue !== '') {
-        const numValue = parseAssetAmount(formattedValue, toAsset)
-        const rate = calculateRate()
-
-        if (numValue === 0) {
-          form.setValue('from', '')
-        } else if (numValue > maxToAmount) {
-          const maxFormatted = formatAmount(maxToAmount, toAsset)
-          form.setValue('to', maxFormatted)
-          const fromAmount = maxToAmount / rate
-          form.setValue(
-            'from',
-            formatAmount(fromAmount, form.getValues().fromAsset)
-          )
-        } else {
-          const fromAmount = numValue / rate
-          const fromFormatted = formatAmount(
-            fromAmount,
-            form.getValues().fromAsset
-          )
-
-          // Check if the calculated fromAmount exceeds maxFromAmount
-          if (fromAmount > maxFromAmount) {
-            const maxFromFormatted = formatAmount(
-              maxFromAmount,
-              form.getValues().fromAsset
-            )
-            form.setValue('from', maxFromFormatted)
-            const adjustedToAmount = maxFromAmount * rate
-            form.setValue('to', formatAmount(adjustedToAmount, toAsset))
-          } else if (fromAmount < minFromAmount) {
-            const minFromFormatted = formatAmount(
-              minFromAmount,
-              form.getValues().fromAsset
-            )
-            form.setValue('from', minFromFormatted)
-            const adjustedToAmount = minFromAmount * rate
-            form.setValue('to', formatAmount(adjustedToAmount, toAsset))
-          } else {
-            form.setValue('from', fromFormatted)
-          }
-        }
-      }
-    } catch (error) {
-      logger.error('Error handling amount change:', error)
-      form.setValue('to', '')
-      form.setValue('from', '')
-    }
-  }
-
-  // Add debounce effect for updating the opposite amount
-  useEffect(() => {
-    if (!debouncedFromAmount || debouncedFromAmount.endsWith('.')) return
-
-    const timer = setTimeout(() => {
-      if (debouncedFromAmount !== previousFromAmount) {
-        updateToAmount(debouncedFromAmount)
-      }
-    }, 300)
-
-    return () => clearTimeout(timer)
-  }, [debouncedFromAmount])
-
-  useEffect(() => {
-    if (!debouncedToAmount || debouncedToAmount.endsWith('.')) return
-
-    const timer = setTimeout(() => {
-      if (debouncedToAmount !== previousToAmount) {
-        const fromAmount =
-          parseAssetAmount(debouncedToAmount, form.getValues().toAsset) /
-          calculateRate()
-        form.setValue(
-          'from',
-          formatAmount(fromAmount, form.getValues().fromAsset)
-        )
-      }
-    }, 300)
-
-    return () => clearTimeout(timer)
-  }, [debouncedToAmount])
-
-  // Swap assets
-  const onSwapAssets = useCallback(async () => {
-    if (selectedPair) {
-      const fromAsset = form.getValues().fromAsset
-      const toAsset = form.getValues().toAsset
-
-      form.setValue('fromAsset', toAsset)
-      form.setValue('toAsset', fromAsset)
-
-      await updateMinMaxAmounts()
-
-      logger.info('Swapped assets')
-    }
-  }, [
-    selectedPair,
-    form,
-    calculateMaxTradableAmount,
-    parseAssetAmount,
-    formatAmount,
-    calculateRate,
-    updateMinMaxAmounts,
-  ])
-
-  // Handle size button click
-  const onSizeClick = useCallback(
-    async (size: number) => {
-      setSelectedSize(size)
-      const fromAsset = form.getValues().fromAsset
-
-      const maxAmount = await calculateMaxTradableAmount(fromAsset, true)
-
-      const newAmount = (maxAmount * size) / 100
-      const formattedAmount = formatAmount(newAmount, fromAsset)
-      form.setValue('from', formattedAmount)
-      updateToAmount(formattedAmount)
-      logger.info(
-        `Size clicked: ${size}% - Amount: ${formattedAmount} ${fromAsset}`
-      )
-    },
-    [form, calculateMaxTradableAmount, formatAmount, updateToAmount]
+  // Create setFromAmount helper
+  const setFromAmount = useMemo(
+    () =>
+      createSetFromAmountHelper(
+        form,
+        formatAmount,
+        updateToAmount,
+        maxFromAmount,
+        setSelectedSize
+      ),
+    [form, formatAmount, updateToAmount, maxFromAmount, setSelectedSize]
   )
 
-  const handleAssetChange = useCallback(
-    (field: 'fromAsset' | 'toAsset', newValue: string) => {
-      const currentFromAsset = form.getValues().fromAsset
-      const currentToAsset = form.getValues().toAsset
-
-      if (field === 'fromAsset') {
-        form.setValue('fromAsset', newValue)
-
-        // If new fromAsset is same as current toAsset, change toAsset
-        if (newValue === currentToAsset) {
-          const newToAsset =
-            tradablePairs.find(
-              (pair) =>
-                (pair.base_asset === newValue &&
-                  pair.quote_asset !== newValue) ||
-                (pair.quote_asset === newValue && pair.base_asset !== newValue)
-            )?.base_asset === newValue
-              ? tradablePairs.find((pair) => pair.base_asset === newValue)
-                  ?.quote_asset
-              : tradablePairs.find((pair) => pair.quote_asset === newValue)
-                  ?.base_asset
-
-          if (!newToAsset) {
-            logger.error(
-              'Failed to find a valid toAsset for the selected fromAsset'
-            )
-            return
-          }
-          form.setValue('toAsset', newToAsset)
-        }
-      } else {
-        form.setValue('toAsset', newValue)
-
-        // If new toAsset is same as current fromAsset, change fromAsset
-        if (newValue === currentFromAsset) {
-          const newFromAsset =
-            tradablePairs.find(
-              (pair) =>
-                (pair.base_asset === newValue &&
-                  pair.quote_asset !== newValue) ||
-                (pair.quote_asset === newValue && pair.base_asset !== newValue)
-            )?.base_asset === newValue
-              ? tradablePairs.find((pair) => pair.base_asset === newValue)
-                  ?.quote_asset
-              : tradablePairs.find((pair) => pair.quote_asset === newValue)
-                  ?.base_asset
-
-          if (!newFromAsset) {
-            logger.error(
-              'Failed to find a valid fromAsset for the selected toAsset'
-            )
-            return
-          }
-          form.setValue('fromAsset', newFromAsset)
-        }
-      }
-
-      const selectedPair = tradablePairs.find(
-        (pair) =>
-          (pair.base_asset === form.getValues().fromAsset &&
-            pair.quote_asset === form.getValues().toAsset) ||
-          (pair.base_asset === form.getValues().toAsset &&
-            pair.quote_asset === form.getValues().fromAsset)
-      )
-
-      if (selectedPair) {
-        setSelectedPair(selectedPair)
-      } else {
-        logger.error('No matching tradable pair found')
-      }
-
-      updateMinMaxAmounts()
-    },
-    [form, tradablePairs, updateMinMaxAmounts]
+  // Create onSizeClick handler from our utility
+  const onSizeClick = useMemo(
+    () => createSizeClickHandler(form, maxFromAmount, setFromAmount),
+    [form, maxFromAmount, setFromAmount]
   )
-  const refreshAmounts = useCallback(async () => {
-    if (selectedPair) {
-      setIsLoading(true)
-      try {
-        // Recalculate max amounts
-        const fromAsset = form.getValues().fromAsset
-        const toAsset = form.getValues().toAsset
-        const newMaxFromAmount = await calculateMaxTradableAmount(
-          fromAsset,
-          true
-        )
-        const newMaxToAmount = await calculateMaxTradableAmount(toAsset, false)
-        setMaxFromAmount(newMaxFromAmount)
-        setMaxToAmount(newMaxToAmount)
 
-        // Update the 'from' amount based on the selected size
-        const newFromAmount = (newMaxFromAmount * selectedSize) / 100
-        const formattedFromAmount = formatAmount(newFromAmount, fromAsset)
-        form.setValue('from', formattedFromAmount)
+  // Create onSwapAssets handler from our utility
+  const onSwapAssets = useMemo(
+    () =>
+      createSwapAssetsHandler(
+        selectedPair,
+        form,
+        calculateMaxTradableAmount,
+        updateMinMaxAmounts,
+        setFromAmount,
+        setMaxFromAmount
+      ),
+    [
+      selectedPair,
+      form,
+      calculateMaxTradableAmount,
+      updateMinMaxAmounts,
+      setFromAmount,
+      setMaxFromAmount,
+    ]
+  )
 
-        // Update the 'to' amount
-        updateToAmount(formattedFromAmount)
+  // Create handleAssetChange handler from our utility
+  const handleAssetChange = useMemo(
+    () =>
+      createAssetChangeHandler(
+        form,
+        tradablePairs,
+        updateMinMaxAmounts,
+        calculateMaxTradableAmount,
+        setFromAmount,
+        setSelectedPair,
+        setMaxFromAmount
+      ),
+    [
+      form,
+      tradablePairs,
+      updateMinMaxAmounts,
+      calculateMaxTradableAmount,
+      setFromAmount,
+      setSelectedPair,
+      setMaxFromAmount,
+    ]
+  )
 
-        await updateMinMaxAmounts()
-
-        logger.info('Amounts refreshed')
-      } catch (error) {
-        logger.error('Error refreshing amounts:', error)
-        toast.error('Failed to refresh amounts. Please try again.')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-  }, [
-    selectedPair,
-    form,
-    calculateMaxTradableAmount,
-    formatAmount,
-    updateToAmount,
-    updateMinMaxAmounts,
-    selectedSize,
-  ])
+  // Create refreshAmounts handler from our utility
+  const refreshAmounts = useMemo(
+    () =>
+      createRefreshAmountsHandler(
+        selectedPair,
+        form,
+        calculateMaxTradableAmount,
+        updateMinMaxAmounts,
+        selectedSize,
+        setFromAmount,
+        setIsLoading,
+        setMaxFromAmount,
+        setMaxToAmount
+      ),
+    [
+      selectedPair,
+      form,
+      calculateMaxTradableAmount,
+      updateMinMaxAmounts,
+      selectedSize,
+      setFromAmount,
+      setMaxFromAmount,
+      setMaxToAmount,
+    ]
+  )
 
   // Update error message when amounts change
   useEffect(() => {
     const fromAmount = parseAssetAmount(
-      form.getValues().from,
-      form.getValues().fromAsset
+      form.watch('from'),
+      form.watch('fromAsset')
     )
-    const toAmount = parseAssetAmount(
-      form.getValues().to,
-      form.getValues().toAsset
+    const toAmount = parseAssetAmount(form.watch('to'), form.watch('toAsset'))
+
+    // Use our utility function to generate error messages
+    const errorMsg = getValidationError(
+      fromAmount,
+      toAmount,
+      minFromAmount,
+      maxFromAmount,
+      maxToAmount,
+      max_outbound_htlc_sat,
+      form.watch('fromAsset'),
+      form.watch('toAsset'),
+      formatAmount,
+      displayAsset
     )
 
-    if (fromAmount < minFromAmount) {
-      setErrorMessage(
-        `The amount you're trying to send (${formatAmount(fromAmount, form.getValues().fromAsset)} ${displayAsset(form.getValues().fromAsset)}) is too small. Minimum required: ${formatAmount(minFromAmount, form.getValues().fromAsset)} ${displayAsset(form.getValues().fromAsset)}`
-      )
-    } else if (fromAmount > maxFromAmount) {
-      setErrorMessage(
-        `The amount you're trying to send (${formatAmount(fromAmount, form.getValues().fromAsset)} ${displayAsset(form.getValues().fromAsset)}) exceeds your available balance. Maximum available: ${formatAmount(maxFromAmount, form.getValues().fromAsset)} ${displayAsset(form.getValues().fromAsset)}`
-      )
-    } else if (toAmount > maxToAmount) {
-      setErrorMessage(
-        `The amount you're trying to receive (${formatAmount(toAmount, form.getValues().toAsset)} ${displayAsset(form.getValues().toAsset)}) exceeds the maximum allowed. Maximum receivable: ${formatAmount(maxToAmount, form.getValues().toAsset)} ${displayAsset(form.getValues().toAsset)}`
-      )
-    } else if (
-      form.getValues().fromAsset === 'BTC' &&
-      fromAmount > max_outbound_htlc_sat
-    ) {
-      setErrorMessage(
-        `The amount you're trying to send (${formatAmount(fromAmount, 'BTC')} ${displayAsset('BTC')}) exceeds the maximum HTLC size. Maximum per transaction: ${formatAmount(max_outbound_htlc_sat, 'BTC')} ${displayAsset('BTC')}`
-      )
-    } else {
-      setErrorMessage(null)
-    }
+    setErrorMessage(errorMsg)
   }, [
-    form.getValues(),
+    form.watch('from'),
+    form.watch('to'),
+    form.watch('fromAsset'),
+    form.watch('toAsset'),
     minFromAmount,
     maxFromAmount,
     maxToAmount,
@@ -623,47 +471,210 @@ export const Component = () => {
     displayAsset,
   ])
 
+  const getAvailableAssets = useCallback((): string[] => {
+    // Use our utility function but pass in the channels and assets
+    logChannelDiagnostics(channels)
+    return getAvailableAssetsUtil(channels, assets)
+  }, [channels, assets])
+
+  // Use our utility function to create the fetch and set pairs handler
+  const fetchAndSetPairs = useMemo(
+    () =>
+      createFetchAndSetPairsHandler(
+        getPairs,
+        dispatch,
+        getAvailableAssets,
+        form,
+        formatAmount,
+        setTradingPairs,
+        setTradablePairs,
+        setSelectedPair
+      ),
+    [getPairs, dispatch, getAvailableAssets, form, formatAmount]
+  )
+
   // Initialize WebSocket connection
   useEffect(() => {
-    if (makerConnectionUrl && channels.length > 0) {
-      const hasValidChannels = channels.some(
-        (channel) =>
-          // Check for BTC channels or channels with asset_id that are ready and usable
-          channel.asset_id &&
-          channel.ready &&
-          (channel.outbound_balance_msat > 0 ||
-            channel.inbound_balance_msat > 0)
+    // Skip if no maker URL is provided
+    if (!makerConnectionUrl) {
+      logger.warn(
+        'No maker connection URL provided. WebSocket initialization skipped.'
       )
-
-      if (hasValidChannels) {
-        const clientId = uuidv4()
-        const baseUrl = makerConnectionUrl.endsWith('/')
-          ? makerConnectionUrl
-          : `${makerConnectionUrl}/`
-        try {
-          webSocketService.init(baseUrl, clientId, dispatch)
-          logger.info('WebSocket connection initialized')
-        } catch (error) {
-          logger.error('WebSocket initialization failed', error)
-          toast.error('WebSocket initialization failed')
-        }
-      } else {
-        logger.info(
-          'No valid channels with assets found, not connecting to maker'
-        )
-      }
-    } else if (channels.length === 0) {
-      logger.info('No channels available, not connecting to maker')
-    } else {
-      logger.error('No maker connection URL provided')
-      toast.error('No maker connection URL provided')
+      return
     }
+
+    // Log connection attempt
+    logger.info(
+      `Attempting to initialize WebSocket connection to ${makerConnectionUrl}`
+    )
+
+    // Track if component is mounted
+    let isMounted = true
+
+    // Function to initialize WebSocket
+    const initWebSocket = async () => {
+      // Check for valid channels before attempting to connect
+      const tradableAssetIds = channels
+        .filter(
+          (channel) =>
+            channel.ready &&
+            (channel.outbound_balance_msat > 0 ||
+              channel.inbound_balance_msat > 0) &&
+            channel.asset_id
+        )
+        .map((channel) => channel.asset_id as string)
+        .filter((id, index, self) => self.indexOf(id) === index)
+
+      if (tradableAssetIds.length === 0) {
+        logger.warn(
+          'No tradable channels with assets found. WebSocket initialization skipped.'
+        )
+        return
+      }
+
+      // Set loading state
+      if (isMounted) {
+        setIsLoading(true)
+      }
+
+      try {
+        // Create client ID based on pubkey or timestamp if not available
+        const clientId = pubKey || `client-${Date.now()}`
+
+        // Log connection attempt with detailed info
+        logger.info(
+          `Initializing WebSocket connection to ${makerConnectionUrl} with client ID ${clientId} and ${tradableAssetIds.length} tradable assets`
+        )
+
+        // Initialize the connection through the service
+        const success = webSocketService.init(
+          makerConnectionUrl,
+          clientId,
+          dispatch
+        )
+
+        if (success) {
+          logger.info('WebSocket initialization successful')
+
+          // Subscribe to the selected trading pair if available
+          if (selectedPair) {
+            const pairString = `${selectedPair.base_asset}/${selectedPair.quote_asset}`
+            logger.info(`Subscribing to initial trading pair: ${pairString}`)
+            webSocketService.subscribeToPair(pairString)
+          }
+
+          // Log WebSocket diagnostics
+          const diagnostics = webSocketService.getDiagnostics()
+          logger.info('WebSocket connection diagnostics:', diagnostics)
+        } else {
+          logger.error('WebSocket initialization failed')
+          if (isMounted) {
+            toast.error(
+              'Could not connect to market maker. Trading may be limited.'
+            )
+          }
+        }
+      } catch (error) {
+        logger.error('Error during WebSocket initialization:', error)
+        if (isMounted) {
+          toast.error(
+            'Error connecting to market maker. Please try again later.'
+          )
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    // Initialize WebSocket if we have channels and assets data
+    if (channels.length > 0 && assets.length > 0) {
+      initWebSocket()
+    }
+
+    // Clean up function
+    return () => {
+      isMounted = false
+      // Note: We don't close the WebSocket connection on component unmount
+      // The webSocketService manages its own lifecycle and will be reused across the app
+      logger.info(
+        'WebSocket initialization component unmounting - connection maintained by service'
+      )
+    }
+  }, [makerConnectionUrl, pubKey, dispatch, channels, assets, selectedPair])
+
+  // Subscribe to selected pair feed when it changes
+  useEffect(() => {
+    if (!selectedPair || !wsConnected) return
+
+    const pair = `${selectedPair.base_asset}/${selectedPair.quote_asset}`
+    logger.info(`Subscribing to trading pair: ${pair}`)
+
+    // Use the service to subscribe
+    webSocketService.subscribeToPair(pair)
+
+    // Dispatch Redux action to track subscription
+    dispatch(subscribeToPair(pair))
+
+    // Return cleanup function
+    return () => {
+      // Store the pair value in a closure to ensure we unsubscribe from the correct pair
+      // This ensures we unsubscribe from the previous pair when selectedPair changes
+      logger.info(
+        `Unsubscribing from pair ${pair} due to pair change or unmount`
+      )
+      webSocketService.unsubscribeFromPair(pair)
+      dispatch(unsubscribeFromPair(pair))
+    }
+  }, [selectedPair, wsConnected, dispatch])
+
+  // Restore the effect to update min and max amounts when selected pair changes
+  useEffect(() => {
+    if (selectedPair) {
+      updateMinMaxAmounts()
+    }
+  }, [selectedPair, updateMinMaxAmounts])
+
+  // Add a window beforeunload event listener to clean up connections when closing the app
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      logger.info('App closing, cleaning up WebSocket connection')
+      webSocketService.close()
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
 
     return () => {
-      webSocketService.close()
-      logger.info('WebSocket connection closed')
+      window.removeEventListener('beforeunload', handleBeforeUnload)
     }
-  }, [dispatch, makerConnectionUrl, channels])
+  }, [])
+
+  // Simplified retryConnection function
+  const retryConnection = useCallback(async () => {
+    logger.info('Manually reconnecting WebSocket...')
+    setIsLoading(true)
+
+    try {
+      // Use the service's reconnect method
+      const success = webSocketService.reconnect()
+
+      if (success) {
+        // Refresh pairs after reconnection
+        await fetchAndSetPairs()
+        toast.success('Successfully reconnected to market maker')
+      } else {
+        toast.error('Failed to reconnect. Please try again.')
+      }
+    } catch (error) {
+      logger.error('Error during manual WebSocket reconnection:', error)
+      toast.error('Failed to reconnect to market maker')
+    } finally {
+      // Refresh amounts after reconnection attempt
+      await refreshAmounts()
+      setIsLoading(false)
+    }
+  }, [fetchAndSetPairs, refreshAmounts])
 
   // Fetch initial data
   useEffect(() => {
@@ -745,87 +756,8 @@ export const Component = () => {
     dispatch,
     form,
     formatAmount,
+    fetchAndSetPairs,
   ])
-
-  const getAvailableAssets = useCallback(() => {
-    // Get unique assets from channels that are ready and usable
-    const channelAssets = new Set(
-      channels
-        .filter(
-          (c) =>
-            c.ready &&
-            (c.outbound_balance_msat > 0 || c.inbound_balance_msat > 0)
-        )
-        .map((c) => assets.find((a) => a.asset_id === c.asset_id)?.ticker)
-        .filter(Boolean)
-    )
-
-    // Always include BTC
-    channelAssets.add('BTC')
-
-    return Array.from(channelAssets)
-  }, [channels, assets])
-
-  const fetchAndSetPairs = async () => {
-    try {
-      const getPairsResponse = await getPairs()
-      if ('data' in getPairsResponse && getPairsResponse.data) {
-        dispatch(setTradingPairs(getPairsResponse.data.pairs))
-
-        const availableAssets = getAvailableAssets()
-
-        // Filter pairs where at least one asset is in user's channels or is BTC
-        const filteredPairs = getPairsResponse.data.pairs.filter(
-          (pair) =>
-            availableAssets.includes(pair.base_asset) ||
-            availableAssets.includes(pair.quote_asset)
-        )
-
-        setTradablePairs(filteredPairs)
-
-        if (filteredPairs.length > 0) {
-          // Try to find a pair with BTC first
-          const btcPair = filteredPairs.find(
-            (pair) => pair.base_asset === 'BTC' || pair.quote_asset === 'BTC'
-          )
-
-          const selectedPair = btcPair || filteredPairs[0]
-          setSelectedPair(selectedPair)
-
-          // Set initial assets based on the selected pair
-          const fromAsset = selectedPair.base_asset
-          const toAsset = selectedPair.quote_asset
-
-          form.setValue('fromAsset', fromAsset)
-          form.setValue('toAsset', toAsset)
-
-          const defaultMinAmount = selectedPair.min_order_size
-          form.setValue('from', formatAmount(defaultMinAmount, fromAsset))
-        }
-      }
-    } catch (error) {
-      logger.error('Error fetching pairs:', error)
-      toast.error('Failed to fetch trading pairs')
-    }
-  }
-
-  // Subscribe to selected pair feed
-  useEffect(() => {
-    if (selectedPair) {
-      const pair = `${selectedPair.base_asset}/${selectedPair.quote_asset}`
-      dispatch(subscribeToPair(pair))
-      webSocketService.subscribeToPair(pair)
-
-      return () => {
-        dispatch(unsubscribeFromPair(pair))
-        webSocketService.unsubscribeFromPair(pair)
-      }
-    }
-  }, [selectedPair, dispatch])
-
-  useEffect(() => {
-    updateMinMaxAmounts()
-  }, [selectedPair, updateMinMaxAmounts])
 
   // Update amounts when selected pair feed changes
   useEffect(() => {
@@ -844,6 +776,21 @@ export const Component = () => {
 
   // Submit handler
   const onSubmit: SubmitHandler<Fields> = async () => {
+    const fromAmount = parseAssetAmount(
+      form.getValues().from,
+      form.getValues().fromAsset
+    )
+    const toAmount = parseAssetAmount(
+      form.getValues().to,
+      form.getValues().toAsset
+    )
+
+    // Check for zero amounts
+    if (fromAmount === 0 || toAmount === 0) {
+      setErrorMessage('Cannot swap zero amounts. Please enter a valid amount.')
+      return
+    }
+
     if (
       !hasChannels ||
       !hasTradablePairs ||
@@ -856,382 +803,28 @@ export const Component = () => {
     setShowConfirmation(true)
   }
 
-  // Update the executeSwap function's error handling
-  const handleApiError = (error: FetchBaseQueryError): string => {
-    if (!error) return 'Unknown error occurred'
-
-    if (typeof error === 'string') return error
-
-    const errorData = error.data
-    if (!errorData) return 'No error details available'
-
-    // Handle string error responses
-    if (typeof errorData === 'string') return errorData
-
-    // Handle object error responses
-    if (typeof errorData === 'object') {
-      // First check for detail field which is common in API errors
-      if ('detail' in errorData && typeof errorData.detail === 'string') {
-        // Extract just the error message without the status code if possible
-        const match = errorData.detail.match(/\d{3}:\s*(.+)/)
-        return match ? match[1].trim() : errorData.detail
-      }
-      // Fallback to error field
-      if ('error' in errorData && typeof errorData.error === 'string') {
-        return errorData.error
-      }
-      // If no recognized error format, stringify the object
-      return JSON.stringify(errorData)
-    }
-
-    return String(errorData)
-  }
-
-  const executeSwap = async (data: Fields) => {
-    let toastId: string | number | null = null
-    let timeoutId: any | null = null
-
-    const clearToastAndTimeout = () => {
-      if (toastId !== null) {
-        toast.dismiss(toastId)
-      }
-      if (timeoutId !== null) {
-        clearTimeout(timeoutId)
-      }
-      setIsSwapInProgress(false)
-    }
-
+  // Wrapper around executeSwap to handle UI state
+  const handleExecuteSwap = async (data: Fields) => {
     try {
-      setIsSwapInProgress(true)
-      toastId = toast.loading('(1/3) Initializing swap...', {
-        autoClose: false,
-      })
-
-      // Set a timeout for the entire swap process (e.g., 60 seconds)
-      timeoutId = setTimeout(() => {
-        throw new Error('Swap operation timed out')
-      }, 60000)
-
-      logger.info('Initiating swap', data)
-
-      const pair = tradablePairs.find(
-        (p) =>
-          (p.base_asset === data.fromAsset && p.quote_asset === data.toAsset) ||
-          (p.base_asset === data.toAsset && p.quote_asset === data.fromAsset)
-      )
-
-      if (!pair) {
-        throw new Error('Invalid trading pair')
-      }
-
-      const fromAssetId =
-        assets.find((asset) => asset.ticker === data.fromAsset)?.asset_id ||
-        'btc'
-      const toAssetId =
-        assets.find((asset) => asset.ticker === data.toAsset)?.asset_id || 'btc'
-
-      if (!fromAssetId || !toAssetId) {
-        throw new Error('Invalid asset ID')
-      }
-      if (fromAssetId === toAssetId) {
-        throw new Error('Cannot swap the same asset')
-      }
-
-      let toAmount = parseAssetAmount(data.to, data.toAsset)
-      let fromAmount = parseAssetAmount(data.from, data.fromAsset)
-
-      // Multiply by 1000 if the asset is BTC
-      if (data.fromAsset.toLowerCase() === 'btc') {
-        fromAmount *= 1000
-      }
-      if (data.toAsset.toLowerCase() === 'btc') {
-        toAmount *= 1000
-      }
-      const rfq_id = data.rfq_id
-      if (!rfq_id) {
-        throw new Error('Invalid RFQ ID')
-      }
-      const payload = {
-        from_amount: fromAmount,
-        from_asset: fromAssetId,
-        rfq_id: rfq_id,
-        to_amount: toAmount,
-        to_asset: toAssetId,
-      }
-      logger.debug('Swap payload:', payload)
-
-      const initSwapResponse = await initSwap(payload)
-      if ('error' in initSwapResponse) {
-        const errorMessage = handleApiError(
-          initSwapResponse.error as FetchBaseQueryError
-        )
-        setErrorMessage(errorMessage)
-        throw new Error(errorMessage)
-      }
-
-      if (!initSwapResponse.data) {
-        throw new Error('No data received from swap initialization')
-      }
-
-      const { swapstring, payment_hash } = initSwapResponse.data
-
-      toast.update(toastId, {
-        isLoading: true,
-        render: '(2/3) Processing taker whitelisting...',
-      })
-
-      // Check if the swapstring is valid
-      if (!swapstring) {
-        throw new Error('Invalid swapstring')
-      }
-
-      // Validate swapstring format
-      const swap_parts = swapstring.split('/')
-      if (swap_parts.length !== 6) {
-        logger.error(`Invalid swap string format: ${swapstring}`)
-        throw new Error('Invalid swap string format.')
-      }
-
-      const [
-        swapFromAmount,
-        swapFromAsset,
-        swapToAmount,
-        swapToAsset,
-        _,
-        swapPaymentHash,
-      ] = swap_parts
-
-      // Validate swap string contents
-      if (
-        parseInt(swapFromAmount) !== fromAmount ||
-        swapFromAsset !== fromAssetId ||
-        parseInt(swapToAmount) !== toAmount ||
-        swapToAsset !== toAssetId ||
-        swapPaymentHash !== payment_hash
-      ) {
-        logger.error('Swap string contents do not match the payload')
-        logger.error(
-          `Expected: ${fromAmount}/${fromAssetId}/${toAmount}/${toAssetId}/${payment_hash}`
-        )
-        logger.error(
-          `Received: ${swapFromAmount}/${swapFromAsset}/${swapToAmount}/${swapToAsset}/${swapPaymentHash}`
-        )
-        throw new Error('Swap string contents do not match the payload')
-      }
-
-      const takerResponse = await taker({ swapstring })
-      if ('error' in takerResponse) {
-        throw new Error(
-          handleApiError(takerResponse.error as FetchBaseQueryError)
-        )
-      }
-
-      const confirmSwapPayload = {
-        payment_hash,
-        swapstring,
-        taker_pubkey: pubKey,
-      }
-      toast.update(toastId, {
-        isLoading: true,
-        render: '(3/3) Waiting for maker to execute swap...',
-      })
-
-      const confirmSwapResponse = await execSwap(confirmSwapPayload)
-      if ('error' in confirmSwapResponse) {
-        throw new Error(
-          handleApiError(confirmSwapResponse.error as FetchBaseQueryError)
-        )
-      }
-
-      logger.info('Swap executed successfully!')
-      toast.update(toastId, {
-        autoClose: 5000,
-        closeOnClick: true,
-        isLoading: false,
-        render: 'Swap executed successfully!',
-        type: 'success',
-      })
-
-      // Prepare and show the swap recap
-      const recapDetails: SwapDetails = {
-        fromAmount: formatAmount(
-          parseAssetAmount(data.from, data.fromAsset),
-          data.fromAsset
-        ),
-        fromAsset: data.fromAsset,
-        payment_hash: payment_hash,
-        price: selectedPairFeed.price / selectedPairFeed.size,
-        selectedPair: selectedPair,
-        selectedPairFeed: selectedPairFeed,
-        timestamp: new Date().toISOString(),
-        toAmount: formatAmount(
-          parseAssetAmount(data.to, data.toAsset),
-          data.toAsset
-        ),
-        toAsset: data.toAsset,
-      }
-      setSwapRecapDetails(recapDetails)
-      setShowRecap(true)
-    } catch (error) {
-      logger.error('Error executing swap', error)
-
-      // Extract error message
-      const errorMessage =
-        error instanceof Error ? error.message : 'An unknown error occurred'
-      setErrorMessage(errorMessage)
-
-      // Clear any existing toasts first
-      toast.dismiss()
-
-      toast.error(
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="font-medium">Swap Failed</span>
-            <button
-              className="p-1 hover:bg-slate-700/50 rounded transition-colors"
-              onClick={(e) => {
-                e.stopPropagation()
-                copyToClipboard(errorMessage)
-              }}
-              title="Copy error details"
-            >
-              <Copy className="w-4 h-4" />
-            </button>
-          </div>
-          <p className="text-sm">{errorMessage}</p>
-        </div>,
-        {
-          autoClose: 5000,
-          closeButton: true,
-          closeOnClick: false,
-          draggable: false,
-          isLoading: false,
-          onClick: (e) => e.stopPropagation(),
-          pauseOnFocusLoss: false,
-          pauseOnHover: true,
-        }
-      )
-
-      setIsSwapInProgress(false)
-      if (timeoutId !== null) {
-        clearTimeout(timeoutId)
-        timeoutId = null
-      }
-      return
+      await executeSwap(data)
     } finally {
       setShowConfirmation(false)
-      if (!errorMessage) {
-        clearToastAndTimeout()
-      }
     }
   }
 
-  const refreshData = useCallback(async () => {
-    setIsLoading(true)
-    try {
-      const [listChannelsResponse, getPairsResponse] = await Promise.all([
-        listChannels(),
-        getPairs(),
-      ])
-
-      if ('data' in listChannelsResponse && listChannelsResponse.data) {
-        setChannels(listChannelsResponse.data.channels)
-      }
-
-      if (assetsData) {
-        setAssets(assetsData.nia)
-      }
-
-      if ('data' in getPairsResponse && getPairsResponse.data) {
-        dispatch(setTradingPairs(getPairsResponse.data.pairs))
-        const tradableAssets = new Set([
-          ...channels.map((c) => c.asset_id).filter((id) => id !== null),
-        ])
-        const filteredPairs = getPairsResponse.data.pairs.filter(
-          (pair) =>
-            tradableAssets.has(pair.base_asset_id) ||
-            tradableAssets.has(pair.quote_asset_id)
-        )
-        setTradablePairs(filteredPairs)
-
-        if (filteredPairs.length > 0) {
-          setSelectedPair(filteredPairs[0])
-          form.setValue('fromAsset', filteredPairs[0].base_asset)
-          form.setValue('toAsset', filteredPairs[0].quote_asset)
-          const defaultMinAmount = filteredPairs[0].min_order_size
-          form.setValue(
-            'from',
-            formatAmount(defaultMinAmount, filteredPairs[0].base_asset)
-          )
-        }
-      }
-
-      await updateMinMaxAmounts()
-      await refreshAmounts()
-
-      logger.info('Data refreshed successfully')
-    } catch (error) {
-      logger.error('Error refreshing data:', error)
-      toast.error('Failed to refresh data. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [
-    listChannels,
-    getPairs,
-    dispatch,
-    form,
-    channels,
-    assetsData,
-    formatAmount,
-    updateMinMaxAmounts,
-    refreshAmounts,
-  ])
-
-  // Check for available channels
-  const hasChannels = useMemo(() => channels.length > 0, [channels])
-
-  // Check for tradable pairs
-  const hasTradablePairs = useMemo(
-    () => tradablePairs.length > 0,
-    [tradablePairs]
-  )
-
-  const getAssetOptions = useCallback(
-    (excludeAsset: string) => {
-      const availableAssets = getAvailableAssets()
-
-      return tradablePairs
-        .flatMap((pair) => [pair.base_asset, pair.quote_asset])
-        .filter(
-          (asset, index, self) =>
-            // Remove duplicates
-            self.indexOf(asset) === index &&
-            // Exclude the currently selected asset
-            asset !== excludeAsset &&
-            // Only include available assets
-            availableAssets.includes(asset)
-        )
-        .map((asset) => ({
-          ticker: displayAsset(asset),
-          value: asset,
-        }))
-    },
-    [tradablePairs, getAvailableAssets, displayAsset]
-  )
-
+  // Render the swap form UI
   const renderSwapForm = () => (
     <div className="swap-form-container w-full max-w-2xl">
-      <div className="bg-gradient-to-b from-slate-900/80 to-slate-800/80 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-lg w-full">
-        <div className="border-b border-slate-700/50 px-4 pt-4 pb-3">
-          <MakerSelector hasNoPairs={false} onMakerChange={refreshData} />
+      <div className="bg-gradient-to-b from-slate-900/95 to-slate-800/95 backdrop-blur-md rounded-2xl border border-slate-700/70 shadow-xl w-full">
+        <div className="border-b border-slate-700/70 px-4 pt-4 pb-3">
+          <MakerSelector hasNoPairs={false} onMakerChange={refreshAmounts} />
         </div>
 
         <div className="p-4">
           <form className="space-y-3" onSubmit={form.handleSubmit(onSubmit)}>
             <SwapInputField
               asset={form.getValues().fromAsset}
-              assetOptions={getAssetOptions(form.getValues().toAsset)}
+              assetOptions={fromAssetOptions}
               availableAmount={`${formatAmount(maxFromAmount, form.getValues().fromAsset)} ${displayAsset(form.getValues().fromAsset)}`}
               availableAmountLabel="Available:"
               disabled={!hasChannels || !hasTradablePairs || isSwapInProgress}
@@ -1274,7 +867,7 @@ export const Component = () => {
 
             <SwapInputField
               asset={form.getValues().toAsset}
-              assetOptions={getAssetOptions(form.getValues().fromAsset)}
+              assetOptions={toAssetOptions}
               availableAmount={`${formatAmount(maxToAmount, form.getValues().toAsset)} ${displayAsset(form.getValues().toAsset)}`}
               availableAmountLabel="Can receive up to:"
               disabled={!hasChannels || !hasTradablePairs || isSwapInProgress}
@@ -1338,14 +931,257 @@ export const Component = () => {
     </div>
   )
 
+  // Function to copy error details to clipboard
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.write([
-      new ClipboardItem({
-        'text/plain': new Blob([text], { type: 'text/plain' }),
-      }),
-    ])
-    toast.success('Error details copied to clipboard')
+    copyToClipboardUtil(text)
   }
+
+  // Use our utility function to create a swap executor
+  const executeSwap = useMemo(
+    () =>
+      createSwapExecutor(
+        assets,
+        pubKey,
+        selectedPairFeed,
+        selectedPair,
+        parseAssetAmount,
+        formatAmount,
+        tradablePairs,
+        initSwap,
+        taker,
+        execSwap,
+        setSwapRecapDetails,
+        setShowRecap,
+        setErrorMessage,
+        setIsSwapInProgress
+      ),
+    [
+      assets,
+      pubKey,
+      selectedPairFeed,
+      selectedPair,
+      parseAssetAmount,
+      formatAmount,
+      tradablePairs,
+      initSwap,
+      taker,
+      execSwap,
+    ]
+  )
+
+  // Check for available channels
+  const hasChannels = useMemo(() => channels.length > 0, [channels])
+
+  // Check for tradable pairs
+  const hasTradablePairs = useMemo(
+    () => tradablePairs.length > 0,
+    [tradablePairs]
+  )
+
+  const getAssetOptions = useCallback(
+    (excludeAsset: string) => {
+      const availableAssets = getAvailableAssets()
+      logger.debug(
+        `Available assets for trading: ${JSON.stringify(availableAssets)}`
+      )
+
+      // Get all unique assets from tradable pairs
+      const allPairAssets = tradablePairs
+        .flatMap((pair) => [pair.base_asset, pair.quote_asset])
+        .filter((asset, index, self) => self.indexOf(asset) === index)
+
+      logger.debug(
+        `All assets from tradable pairs: ${JSON.stringify(allPairAssets)}`
+      )
+
+      // Include all assets that are part of a valid trading pair
+      // This ensures all tradable assets appear in the dropdown
+      const tradableAssets = allPairAssets
+        // Remove the currently selected asset from options
+        .filter((asset) => asset !== excludeAsset)
+        .map((asset) => ({
+          // Don't disable any assets in the dropdown
+disabled: false,
+          
+ticker: displayAsset(asset),
+          
+          value: asset,
+        }))
+
+      logger.debug(
+        `Tradable asset options (excluding ${excludeAsset}): ${JSON.stringify(tradableAssets)}`
+      )
+
+      return tradableAssets
+    },
+    [tradablePairs, getAvailableAssets, displayAsset]
+  )
+
+  // Memoized asset options for both fields to prevent recomputation on every render
+  const fromAssetOptions = useMemo(
+    () => getAssetOptions(form.getValues().toAsset),
+    [getAssetOptions, form.getValues().toAsset, tradablePairs]
+  )
+
+  const toAssetOptions = useMemo(
+    () => getAssetOptions(form.getValues().fromAsset),
+    [getAssetOptions, form.getValues().fromAsset, tradablePairs]
+  )
+
+  // Create the amount change handlers using our utilities
+  const handleFromAmountChange = useMemo(
+    () =>
+      createFromAmountChangeHandler(
+        form,
+        getAssetPrecisionWrapper,
+        parseAssetAmount,
+        setDebouncedFromAmount
+      ),
+    [form, getAssetPrecisionWrapper, parseAssetAmount, setDebouncedFromAmount]
+  )
+
+  const handleToAmountChange = useMemo(
+    () =>
+      createToAmountChangeHandler(
+        form,
+        getAssetPrecisionWrapper,
+        parseAssetAmount,
+        setDebouncedToAmount
+      ),
+    [form, getAssetPrecisionWrapper, parseAssetAmount, setDebouncedToAmount]
+  )
+
+  // Debounce effect for updating opposite amount based on 'from' changes
+  useEffect(() => {
+    if (
+      !debouncedFromAmount ||
+      debouncedFromAmount.endsWith('.') ||
+      updatePending
+    )
+      return
+
+    setUpdatePending(true)
+    const timer = setTimeout(() => {
+      if (debouncedFromAmount !== previousFromAmount) {
+        setIsToAmountLoading(true)
+
+        // Log the values we're working with for debugging
+        logger.debug(
+          `Updating toAmount based on fromAmount change: ${debouncedFromAmount}`
+        )
+
+        // Call updateToAmount with the current from amount
+        updateToAmount(debouncedFromAmount)
+
+        // Ensure we validate the form after updating amounts
+        setTimeout(() => {
+          form.trigger('from')
+          form.trigger('to')
+          setIsToAmountLoading(false)
+        }, 10)
+      }
+      setUpdatePending(false)
+    }, 300)
+
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [debouncedFromAmount, previousFromAmount, updateToAmount, form])
+
+  // Debounce effect for updating opposite amount based on 'to' changes
+  useEffect(() => {
+    if (!debouncedToAmount || debouncedToAmount.endsWith('.') || updatePending)
+      return
+
+    setUpdatePending(true)
+    const timer = setTimeout(() => {
+      if (debouncedToAmount !== previousToAmount) {
+        try {
+          const rate = calculateRate()
+          const fromAmount =
+            parseAssetAmount(debouncedToAmount, form.getValues().toAsset) / rate
+          const formattedFromAmount = formatAmount(
+            fromAmount,
+            form.getValues().fromAsset
+          )
+
+          // Log the calculation for debugging
+          logger.debug(
+            `Updating fromAmount based on toAmount change: ${debouncedToAmount} / ${rate} = ${fromAmount}`
+          )
+
+          form.setValue('from', formattedFromAmount, { shouldValidate: true })
+
+          // Ensure we validate the form after updating amounts
+          setTimeout(() => {
+            form.trigger('from')
+            form.trigger('to')
+          }, 10)
+        } catch (error) {
+          logger.error('Error calculating from amount:', error)
+        }
+      }
+      setUpdatePending(false)
+    }, 300)
+
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [
+    debouncedToAmount,
+    previousToAmount,
+    calculateRate,
+    form,
+    parseAssetAmount,
+    formatAmount,
+  ])
+
+  // Add a window focus event listener to reconnect when the user tabs back to the app
+  useEffect(() => {
+    if (!makerConnectionUrl) return
+
+    // Track if the page has been in the background
+    let wasInBackground = false
+
+    // Handler for when the page loses focus
+    const handleBlur = () => {
+      logger.debug('Application window lost focus')
+      wasInBackground = true
+    }
+
+    // Handler for when the page gains focus
+    const handleFocus = async () => {
+      logger.debug('Application window gained focus')
+
+      // If the page was in the background and the WebSocket is disconnected, reconnect
+      if (wasInBackground && !wsConnected && makerConnectionUrl) {
+        logger.info(
+          'Application was in background and WebSocket is disconnected, attempting to reconnect'
+        )
+        wasInBackground = false
+
+        try {
+          // Attempt to reconnect
+          const success = webSocketService.reconnect()
+          if (success) {
+            logger.info('Successfully reconnected WebSocket after page focus')
+          }
+        } catch (error) {
+          logger.error('Error reconnecting WebSocket after page focus:', error)
+        }
+      }
+
+      wasInBackground = false
+    }
+
+    window.addEventListener('blur', handleBlur)
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      window.removeEventListener('blur', handleBlur)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [makerConnectionUrl, wsConnected])
 
   return (
     <div className="container mx-auto">
@@ -1356,17 +1192,32 @@ export const Component = () => {
       ) : !hasValidChannelsForTrading ? (
         <div className="w-full flex justify-center">
           <NoTradingChannelsMessage
-            hasEnoughBalance={hasEnoughBalance}
-            onMakerChange={refreshData}
-            onNavigate={navigate}
+            {...createTradingChannelsMessageProps(
+              assets,
+              tradablePairs,
+              hasEnoughBalance,
+              navigate,
+              refreshAmounts
+            )}
+          />
+        </div>
+      ) : !wsConnected && hasTradableChannels(channels) ? (
+        <div className="w-full flex justify-center">
+          <WebSocketDisconnectedMessage
+            makerUrl={makerConnectionUrl}
+            onMakerChange={retryConnection}
           />
         </div>
       ) : !wsConnected || tradablePairs.length === 0 ? (
         <div className="w-full flex justify-center">
           <NoTradingChannelsMessage
-            hasEnoughBalance={hasEnoughBalance}
-            onMakerChange={refreshData}
-            onNavigate={navigate}
+            {...createTradingChannelsMessageProps(
+              assets,
+              tradablePairs,
+              hasEnoughBalance,
+              navigate,
+              refreshAmounts
+            )}
           />
         </div>
       ) : (
@@ -1383,7 +1234,7 @@ export const Component = () => {
         isLoading={isSwapInProgress}
         isOpen={showConfirmation}
         onClose={() => setShowConfirmation(false)}
-        onConfirm={() => executeSwap(form.getValues())}
+        onConfirm={() => handleExecuteSwap(form.getValues())}
         selectedPair={selectedPair}
         toAmount={form.getValues().to}
         toAsset={form.getValues().toAsset}
@@ -1396,13 +1247,14 @@ export const Component = () => {
           isOpen={showRecap}
           onClose={() => {
             setShowRecap(false)
-            refreshData()
+            refreshAmounts()
           }}
           swapDetails={swapRecapDetails}
         />
       )}
-
-      {!showRecap && assets.length > 0 && <StatusToast assets={assets} />}
+      {/* <div className="w-full max-w-4xl mx-auto"> 
+        {assets.length > 0 && <StatusToast assets={assets} />}
+      </div> */}
     </div>
   )
 }

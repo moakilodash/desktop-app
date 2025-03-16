@@ -1,10 +1,27 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useState, useEffect, useRef } from 'react'
 
 import { SATOSHIS_PER_BTC } from '../../helpers/number'
 import { SparkIcon } from '../../icons/Spark'
 import { TradingPair } from '../../slices/makerApi/makerApi.slice'
 
 import { AssetOption } from './AssetComponents'
+
+// Helper function to format time difference
+const formatTimeDifference = (timestamp: number): string => {
+  const now = Date.now()
+  const diffInSeconds = Math.floor((now - timestamp) / 1000)
+
+  if (diffInSeconds < 5) return 'just now'
+  if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`
+  if (diffInSeconds < 120) return '1 minute ago'
+  if (diffInSeconds < 3600)
+    return `${Math.floor(diffInSeconds / 60)} minutes ago`
+  if (diffInSeconds < 7200) return '1 hour ago'
+  return `${Math.floor(diffInSeconds / 3600)} hours ago`
+}
+
+// Constants for price freshness
+const PRICE_FRESH_THRESHOLD = 30000 // 30 seconds
 
 interface ExchangeRateDisplayProps {
   fromAsset: string
@@ -14,6 +31,7 @@ interface ExchangeRateDisplayProps {
   bitcoinUnit: string
   formatAmount: (amount: number, asset: string) => string
   getAssetPrecision: (asset: string) => number
+  priceUpdated: boolean
 }
 
 export const ExchangeRateDisplay: React.FC<ExchangeRateDisplayProps> = ({
@@ -23,6 +41,7 @@ export const ExchangeRateDisplay: React.FC<ExchangeRateDisplayProps> = ({
   selectedPair,
   bitcoinUnit,
   getAssetPrecision,
+  priceUpdated,
 }) => {
   const calculateAndFormatRate = useCallback(
     (
@@ -87,13 +106,17 @@ export const ExchangeRateDisplay: React.FC<ExchangeRateDisplayProps> = ({
           </div>
           <span className="text-slate-400">=</span>
           <div className="flex items-center gap-1.5">
-            <span className="text-white font-medium">{formattedRate}</span>
+            <span
+              className={`text-white font-medium ${priceUpdated ? 'text-update-flash' : ''}`}
+            >
+              {formattedRate}
+            </span>
             <AssetOption ticker={toUnit} />
           </div>
         </div>
       )
     },
-    [bitcoinUnit, getAssetPrecision]
+    [bitcoinUnit, getAssetPrecision, priceUpdated]
   )
 
   const displayRate = calculateAndFormatRate(
@@ -127,10 +150,90 @@ export const ExchangeRateSection: React.FC<ExchangeRateSectionProps> = ({
   formatAmount,
   getAssetPrecision,
 }) => {
+  const [showPriceUpdate, setShowPriceUpdate] = useState(false)
+  const [prevPrice, setPrevPrice] = useState<number | null>(null)
+  const [lastQuoteTimestamp, setLastQuoteTimestamp] = useState<number | null>(
+    null
+  )
+  const [showTimestampOverlay, setShowTimestampOverlay] = useState(false)
+  const [formattedTimeDiff, setFormattedTimeDiff] = useState<string>('')
+  const [isPriceFresh, setIsPriceFresh] = useState(true)
+
+  // Store the previous selectedPairFeed in a ref to detect changes
+  const prevSelectedPairFeedRef = useRef<any>(null)
+
+  // Effect to detect price updates
+  useEffect(() => {
+    const currentPrice = selectedPairFeed?.price
+    const currentFeed = selectedPairFeed
+    const prevFeed = prevSelectedPairFeedRef.current
+
+    // Update the ref with the current feed
+    prevSelectedPairFeedRef.current = currentFeed
+
+    // Only trigger animation if we have a previous price and it changed
+    if (
+      prevPrice !== null &&
+      currentPrice !== null &&
+      prevPrice !== currentPrice
+    ) {
+      setShowPriceUpdate(true)
+      setLastQuoteTimestamp(Date.now())
+      setIsPriceFresh(true)
+
+      // Reset animation after it completes
+      const timer = setTimeout(() => {
+        setShowPriceUpdate(false)
+      }, 400) // Shorter animation duration
+
+      return () => clearTimeout(timer)
+    }
+
+    // Check if the feed object itself changed (new quote received)
+    if (prevFeed && currentFeed && prevFeed !== currentFeed) {
+      // If the feed object changed but the price didn't, we still want to update the timestamp
+      if (prevFeed.price === currentFeed.price) {
+        setLastQuoteTimestamp(Date.now())
+        setIsPriceFresh(true)
+      }
+    }
+
+    // Update previous price and set initial timestamp if first load
+    if (currentPrice !== null) {
+      setPrevPrice(currentPrice)
+      if (lastQuoteTimestamp === null) {
+        setLastQuoteTimestamp(Date.now())
+        setIsPriceFresh(true)
+      }
+    }
+  }, [selectedPairFeed, prevPrice, lastQuoteTimestamp])
+
+  // Update the formatted time difference every second and check price freshness
+  useEffect(() => {
+    if (lastQuoteTimestamp === null) return
+
+    const updateFormattedTime = () => {
+      setFormattedTimeDiff(formatTimeDifference(lastQuoteTimestamp))
+
+      // Check if price is fresh (less than threshold)
+      const now = Date.now()
+      const timeSinceLastUpdate = now - lastQuoteTimestamp
+      setIsPriceFresh(timeSinceLastUpdate < PRICE_FRESH_THRESHOLD)
+    }
+
+    // Initial update
+    updateFormattedTime()
+
+    // Set up interval to update every second
+    const intervalId = setInterval(updateFormattedTime, 1000)
+
+    return () => clearInterval(intervalId)
+  }, [lastQuoteTimestamp])
+
   if (!selectedPair) return null
 
   return (
-    <div className="exchange-rate-section">
+    <div className="exchange-rate-section relative">
       <div className="text-center text-xs text-slate-400 flex items-center justify-center gap-1 mb-1">
         <div className="w-1 h-1 rounded-full bg-emerald-500" />
         Best Exchange Rate Available
@@ -138,9 +241,37 @@ export const ExchangeRateSection: React.FC<ExchangeRateSectionProps> = ({
       <div className="bg-slate-800/50 rounded-lg p-2 space-y-1.5">
         <div className="flex justify-between items-center text-xs text-slate-400">
           <span>Exchange Rate</span>
-          <div className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/50 animate-pulse" />
-            Live Price
+          <div className="flex items-center gap-1 relative">
+            {/* Status indicator dot */}
+            <div
+              className="relative"
+              onMouseEnter={() => setShowTimestampOverlay(true)}
+              onMouseLeave={() => setShowTimestampOverlay(false)}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${isPriceFresh ? 'bg-emerald-500/50 animate-pulse' : 'bg-red-500/50'}`}
+              />
+
+              {/* Timestamp Tooltip */}
+              {showTimestampOverlay && lastQuoteTimestamp && (
+                <div className="absolute right-0 top-5 z-10 w-48 bg-slate-900 border border-slate-700 rounded-md shadow-lg p-2 text-left">
+                  <div className="text-white text-xs font-medium">
+                    Last Quote Received
+                  </div>
+                  <div
+                    className={`text-xs ${isPriceFresh ? 'text-emerald-400' : 'text-red-400'}`}
+                  >
+                    {formattedTimeDiff}
+                  </div>
+                  {lastQuoteTimestamp && (
+                    <div className="text-xs text-slate-400 mt-0.5">
+                      {new Date(lastQuoteTimestamp).toLocaleTimeString()}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <span>{isPriceFresh ? 'Live Price' : 'Price Not Updated'}</span>
           </div>
         </div>
 
@@ -160,6 +291,7 @@ export const ExchangeRateSection: React.FC<ExchangeRateSectionProps> = ({
                 fromAsset={fromAsset}
                 getAssetPrecision={getAssetPrecision}
                 price={selectedPairFeed ? selectedPairFeed.price : null}
+                priceUpdated={showPriceUpdate}
                 selectedPair={selectedPair}
                 toAsset={toAsset}
               />

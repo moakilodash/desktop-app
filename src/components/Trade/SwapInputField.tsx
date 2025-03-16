@@ -88,7 +88,7 @@ export const SwapInputField: React.FC<SwapInputFieldProps> = ({
       {isLoading ? (
         <div
           className={`flex-1 px-3 py-1.5 bg-slate-900/50 rounded-lg border border-slate-700 
-                     text-slate-400 min-h-[34px] flex items-center ${amountAnimationClass}`}
+                     text-slate-400 min-h-[34px] flex items-center input-loading ${amountAnimationClass}`}
         >
           {isLoadingLabel}
         </div>
