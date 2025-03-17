@@ -2,7 +2,7 @@ import { Download, Upload, History } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
-import { WALLET_HISTORY_PATH } from '../../app/router/paths'
+import { WALLET_HISTORY_ASSETS_PATH } from '../../app/router/paths'
 import { useAppDispatch } from '../../app/store/hooks'
 import defaultRgbIcon from '../../assets/rgb-symbol-color.svg'
 import { useAssetIcon } from '../../helpers/utils'
@@ -139,7 +139,11 @@ export const AssetRow: React.FC<AssetRowProps> = ({
           <div className="relative group">
             <button
               className="p-2 rounded-lg border border-purple/30 hover:border-purple/60 hover:bg-purple/10 transition-all duration-200"
-              onClick={() => navigate(WALLET_HISTORY_PATH)}
+              onClick={() =>
+                navigate(
+                  `${WALLET_HISTORY_ASSETS_PATH}?assetId=${asset.asset_id}`
+                )
+              }
             >
               <History className="w-4 h-4 text-purple" />
             </button>

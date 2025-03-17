@@ -277,6 +277,30 @@ interface ListPaymentsResponse {
   }[]
 }
 
+interface ListTransfersRequest {
+  asset_id: string
+}
+
+export interface Transfer {
+  idx: number
+  created_at: number
+  updated_at: number
+  status: 'WaitingCounterparty' | 'WaitingConfirmations' | 'Settled' | 'Failed'
+  amount: number
+  kind: 'Issuance' | 'ReceiveBlind' | 'ReceiveWitness' | 'Send'
+  txid: string
+  recipient_id?: string
+  transport_endpoints?: Array<{
+    endpoint: string
+    transport_type: string
+    used: boolean
+  }>
+}
+
+interface ListTransfersResponse {
+  transfers: Transfer[]
+}
+
 interface TakerRequest {
   swapstring: string
 }
@@ -659,6 +683,13 @@ export const nodeApi = createApi({
         body,
         method: 'POST',
         url: '/listtransactions',
+      }),
+    }),
+    listTransfers: builder.query<ListTransfersResponse, ListTransfersRequest>({
+      query: (body) => ({
+        body,
+        method: 'POST',
+        url: '/listtransfers',
       }),
     }),
     listUnspents: builder.query<ListUnspentsResponse, ListUnspentsRequest>({
