@@ -251,12 +251,6 @@ class WebSocketService {
     // Don't close the connection on error, just log it
     // Instead, try to check the connection status
     this.checkConnection()
-
-    // Notify the user about the connection issue
-    toast.warning('Connection issue detected. Attempting to recover...', {
-      autoClose: 5000,
-      toastId: 'websocket-error',
-    })
   }
 
   /**

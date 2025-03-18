@@ -100,8 +100,8 @@ export const retryConnection = async (): Promise<boolean> => {
   logger.info('Attempting to manually reconnect WebSocket')
 
   try {
-    const success = webSocketService.reconnect()
-    return success
+    const reconnectResult = webSocketService.reconnect()
+    return Boolean(reconnectResult)
   } catch (error) {
     logger.error('Error during manual WebSocket reconnection:', error)
     return false

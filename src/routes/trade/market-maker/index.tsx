@@ -70,6 +70,7 @@ import {
   SwapDetails as SwapDetailsType,
 } from './swapUtils'
 import { Fields } from './types'
+import { subscribeToPairFeed } from './websocketUtils'
 
 const MSATS_PER_SAT = 1000
 
@@ -372,7 +373,6 @@ export const Component = () => {
         form,
         calculateMaxTradableAmount,
         updateMinMaxAmounts,
-        setFromAmount,
         setMaxFromAmount
       ),
     [
@@ -888,6 +888,7 @@ export const Component = () => {
                 fromAsset={form.getValues().fromAsset}
                 getAssetPrecision={getAssetPrecisionWrapper}
                 isPriceLoading={isPriceLoading}
+                onReconnect={handleReconnectToMaker}
                 selectedPair={selectedPair}
                 selectedPairFeed={selectedPairFeed}
                 toAsset={form.getValues().toAsset}
@@ -1182,6 +1183,29 @@ export const Component = () => {
       window.removeEventListener('focus', handleFocus)
     }
   }, [makerConnectionUrl, wsConnected])
+
+  // Add the reconnect handler and pass it to ExchangeRateSection
+  const handleReconnectToMaker = async () => {
+    try {
+      // Try to reconnect the WebSocket
+      const reconnected = Boolean(await retryConnection())
+
+      if (reconnected) {
+        console.log('Successfully reconnected to market maker')
+        // Re-subscribe to the current pair if needed
+        if (selectedPair) {
+          const pairString = `${selectedPair.base_asset}/${selectedPair.quote_asset}`
+          subscribeToPairFeed(pairString)
+        }
+      } else {
+        console.error('Failed to reconnect to market maker')
+        toast.error('Failed to reconnect to price feed. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error reconnecting to market maker:', error)
+      toast.error('Failed to reconnect to price feed. Please try again.')
+    }
+  }
 
   return (
     <div className="container mx-auto">
