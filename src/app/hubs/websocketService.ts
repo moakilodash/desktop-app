@@ -9,7 +9,6 @@ import {
 } from '../../slices/makerApi/pairs.slice'
 import { logger } from '../../utils/logger'
 
-
 /**
  * Centralized WebSocket service that manages a single connection to the maker
  * and handles subscription management, heartbeat, reconnection, etc.
@@ -248,7 +247,16 @@ class WebSocketService {
    */
   private handleError(event: Event): void {
     logger.error('WebSocketService: WebSocket error', event)
+
+    // Don't close the connection on error, just log it
+    // Instead, try to check the connection status
     this.checkConnection()
+
+    // Notify the user about the connection issue
+    toast.warning('Connection issue detected. Attempting to recover...', {
+      autoClose: 5000,
+      toastId: 'websocket-error',
+    })
   }
 
   /**
@@ -256,33 +264,56 @@ class WebSocketService {
    */
   private startHeartbeat(): void {
     this.stopHeartbeat()
+
     this.lastHeartbeatResponse = Date.now()
 
     this.heartbeatInterval = window.setInterval(() => {
-      if (this.socket?.readyState === WebSocket.OPEN) {
-        // Check if we've received a heartbeat in the timeout period
-        if (Date.now() - this.lastHeartbeatResponse > this.heartbeatTimeout) {
-          logger.warn('WebSocketService: Heartbeat timeout - reconnecting')
-          this.reconnect()
-          return
-        }
+      // Check if we're still connected
+      if (this.socket?.readyState !== WebSocket.OPEN) {
+        logger.warn('WebSocketService: Socket not open during heartbeat check')
+        return
+      }
 
+      // Send heartbeat
+      try {
+        this.socket.send(JSON.stringify({ action: 'heartbeat' }))
+      } catch (err) {
+        logger.error('WebSocketService: Failed to send heartbeat', err)
+      }
+
+      // Check for heartbeat timeout
+      const now = Date.now()
+      const elapsed = now - this.lastHeartbeatResponse
+
+      if (elapsed > this.heartbeatTimeout) {
+        logger.warn(
+          `WebSocketService: Heartbeat timeout (${elapsed}ms) - attempting recovery`
+        )
+
+        // Instead of closing and forcing reconnect, try to send a heartbeat first
         try {
-          // Always send 'heartbeat' action to match the server's expectation
           this.socket.send(JSON.stringify({ action: 'heartbeat' }))
-        } catch (error) {
+
+          // Give it one more chance before trying to reconnect
+          setTimeout(() => {
+            const newElapsed = Date.now() - this.lastHeartbeatResponse
+            if (newElapsed > this.heartbeatTimeout) {
+              logger.warn(
+                'WebSocketService: Recovery heartbeat failed, reconnecting'
+              )
+              this.checkConnection()
+            }
+          }, 2000)
+        } catch (err) {
+          // If sending fails, then try to reconnect
           logger.error(
-            'WebSocketService startHeartbeat: Error sending heartbeat',
-            error
+            'WebSocketService: Failed to send recovery heartbeat',
+            err
           )
-          this.reconnect()
+          this.checkConnection()
         }
-      } else {
-        this.stopHeartbeat()
       }
     }, 5000)
-
-    logger.debug('WebSocketService: Heartbeat started')
   }
 
   /**
@@ -297,49 +328,107 @@ class WebSocketService {
   }
 
   /**
-   * Check if WebSocket connection is healthy
+   * Check connection status and reconnect if needed
    */
   private checkConnection(): void {
-    if (this.socket && this.socket.readyState !== WebSocket.OPEN) {
-      logger.warn('WebSocketService: Connection check failed - reconnecting')
-      this.reconnect()
+    if (
+      !this.socket ||
+      this.socket.readyState === WebSocket.CLOSED ||
+      this.socket.readyState === WebSocket.CLOSING
+    ) {
+      logger.info(
+        'WebSocketService: Connection check - Socket is closed or closing'
+      )
+      this.handleReconnect()
+    } else if (this.socket.readyState === WebSocket.CONNECTING) {
+      logger.info('WebSocketService: Connection check - Socket is connecting')
+      // Wait for the connection to finish
+    } else {
+      // Socket is OPEN, try sending a ping
+      try {
+        this.socket.send(JSON.stringify({ action: 'ping' }))
+        logger.info(
+          'WebSocketService: Connection check - Socket is open, ping sent'
+        )
+      } catch (err) {
+        logger.error(
+          'WebSocketService: Connection check - Failed to send ping',
+          err
+        )
+        this.handleReconnect()
+      }
     }
   }
 
   /**
-   * Handle reconnection with exponential backoff
+   * Handle reconnection logic with exponential backoff
    */
   private handleReconnect(): void {
     if (this.isReconnecting) {
-      logger.info('WebSocketService: Reconnection already in progress')
+      logger.info('WebSocketService: Already attempting to reconnect')
       return
     }
 
-    if (this.reconnectAttempts < this.maxReconnectAttempts) {
-      this.isReconnecting = true
-      this.reconnectAttempts++
+    this.isReconnecting = true
 
-      // Calculate backoff time with exponential increase
-      const backoffTime = Math.min(
-        this.reconnectInterval * Math.pow(2, this.reconnectAttempts - 1),
-        30000
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      logger.warn(
+        `WebSocketService: Maximum reconnect attempts (${this.maxReconnectAttempts}) reached`
       )
 
-      logger.info(
-        `WebSocketService: Reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${backoffTime}ms`
+      // Set wsConnected to false but don't give up - keep the connectionInitialized flag
+      // so users can manually retry
+      if (this.dispatch) {
+        this.dispatch(setWsConnected(false))
+      }
+
+      // Show a toast to the user
+      toast.error(
+        'Could not establish a stable connection. Please try refreshing the connection.',
+        {
+          autoClose: false,
+          toastId: 'websocket-max-reconnects', // Keep it visible until user dismisses
+        }
       )
 
-      setTimeout(() => {
-        this.connect()
-        this.isReconnecting = false
-      }, backoffTime)
-    } else {
-      logger.error(
-        `WebSocketService: Max reconnection attempts (${this.maxReconnectAttempts}) reached`
-      )
-      toast.error('Connection to maker lost. Please refresh the page.')
-      this.connectionInitialized = false
+      this.isReconnecting = false
+      return
     }
+
+    // Calculate delay with exponential backoff
+    const delay = Math.min(
+      this.reconnectInterval * Math.pow(1.5, this.reconnectAttempts),
+      30000 // Cap at 30 seconds
+    )
+
+    logger.info(
+      `WebSocketService: Reconnecting in ${delay}ms (attempt ${
+        this.reconnectAttempts + 1
+      } of ${this.maxReconnectAttempts})`
+    )
+
+    setTimeout(() => {
+      // Double check we still need to reconnect
+      if (this.isConnected()) {
+        logger.info('WebSocketService: Already reconnected, skipping')
+        this.isReconnecting = false
+        return
+      }
+
+      this.reconnectAttempts++
+      this.socket = null // Clean up the old socket
+      this.isReconnecting = false
+
+      if (this.reconnectAttempts === 1) {
+        // Only show the first reconnect toast
+        toast.info('Attempting to reconnect...', {
+          autoClose: 5000,
+          toastId: 'websocket-reconnecting',
+        })
+      }
+
+      this.connect()
+    }, delay)
   }
 
   /**

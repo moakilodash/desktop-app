@@ -1001,10 +1001,10 @@ export const Component = () => {
         .filter((asset) => asset !== excludeAsset)
         .map((asset) => ({
           // Don't disable any assets in the dropdown
-disabled: false,
-          
-ticker: displayAsset(asset),
-          
+          disabled: false,
+
+          ticker: displayAsset(asset),
+
           value: asset,
         }))
 
@@ -1186,8 +1186,16 @@ ticker: displayAsset(asset),
   return (
     <div className="container mx-auto">
       {isLoading ? (
-        <div className="flex justify-center items-center h-64">
+        <div className="flex flex-col justify-center items-center h-64 gap-4">
           <Loader />
+          <div className="text-center">
+            <p className="text-blue-400 font-medium">
+              Connecting to Market Maker
+            </p>
+            <p className="text-slate-400 text-sm mt-1">
+              Fetching available trading pairs and checking channel balances...
+            </p>
+          </div>
         </div>
       ) : !hasValidChannelsForTrading ? (
         <div className="w-full flex justify-center">
