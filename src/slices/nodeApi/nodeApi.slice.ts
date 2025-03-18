@@ -45,6 +45,8 @@ interface Balance {
   settled: number
   future: number
   spendable: number
+  offchain_outbound?: number
+  offchain_inbound?: number
 }
 
 export interface NiaAsset {

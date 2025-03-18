@@ -460,7 +460,14 @@ export const Component = () => {
 
           {assetsResponse.data?.nia.map((asset) => (
             <AssetRow
-              asset={asset}
+              asset={{
+                ...asset,
+                balance: {
+                  future: assetBalances[asset.asset_id]?.onChain || 0,
+                  settled: assetBalances[asset.asset_id]?.onChain || 0,
+                  spendable: assetBalances[asset.asset_id]?.onChain || 0,
+                },
+              }}
               isLoading={!assetBalances[asset.asset_id]}
               key={asset.asset_id}
               offChainBalance={assetBalances[asset.asset_id]?.offChain || 0}
