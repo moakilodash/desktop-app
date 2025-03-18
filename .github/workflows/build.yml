@@ -87,15 +87,15 @@ jobs:
           echo "" >> manifest.txt
           echo "File checksums (SHA256):" >> manifest.txt
           
-          cd ${{ steps.tauri_build.outputs.artifactPath }}/../
-          for file in *.{dmg,AppImage,deb,msi,exe}; do
+          ARTIFACTS_DIR=${{ steps.tauri_build.outputs.artifactPath }}/../
+          for file in $ARTIFACTS_DIR*.{dmg,AppImage,deb,msi,exe}; do
             if [ -f "$file" ]; then
               CHECKSUM=$(sha256sum "$file" | awk '{print $1}')
-              echo "$file: $CHECKSUM" >> ../../manifest.txt
+              echo "$(basename $file): $CHECKSUM" >> manifest.txt
             fi
           done
           
-          cat ../../manifest.txt
+          cat manifest.txt
 
       - name: Upload manifest.txt
         uses: actions/upload-artifact@v4
@@ -103,5 +103,3 @@ jobs:
           name: manifest-${{ matrix.platform }}-${{ matrix.args || 'default' }}
           path: manifest.txt
           if-no-files-found: error
-
-     
