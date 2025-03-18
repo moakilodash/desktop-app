@@ -355,9 +355,7 @@ export const WithdrawModalContent = () => {
             nodeApi.endpoints.btcBalance.initiate({ skip_sync: false })
           ).unwrap()
           if (bitcoinUnit === 'SAT') {
-            setAssetBalance(
-              balance.vanilla.spendable + balance.colored.spendable
-            )
+            setAssetBalance(balance.vanilla.spendable)
           } else {
             setAssetBalance(balance.vanilla.spendable / 100000000)
           }
