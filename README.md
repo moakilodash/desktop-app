@@ -109,6 +109,13 @@ You can install the app in two ways:
 3. **Tauri Prerequisites**  
    Confirm correct installation of Rust, Node.js, npm, and pnpm.
 
+#### Arch Linux (AUR)
+
+- Install via an AUR helper like `yay`:
+  ```sh
+  yay -S kaleidoswap
+  ```
+
 #### Building and Running
 
 1. **Install dependencies**:  
